@@ -1,0 +1,27 @@
+{
+  "name": "daiso-mcp",
+  "version": "1.0.0",
+  "description": "Daiso MCP Server for mobile access via Cloudflare Workers",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "cf-typegen": "wrangler types"
+  },
+  "keywords": [
+    "mcp",
+    "daiso",
+    "cloudflare-workers",
+    "serverless"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250110.0",
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2",
+    "wrangler": "^3.103.0"
+  }
+}
