@@ -25,6 +25,8 @@
     "wrangler": "^3.103.0"
   },
   "dependencies": {
-    "playwright": "^1.58.2"
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "hono": "^4.12.3",
+    "workers-mcp": "^0.0.13"
   }
 }
