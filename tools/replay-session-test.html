@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>다이소 API 리플레이 세션 테스트</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .info {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 다이소 API 리플레이 세션 테스트</h1>
+    <p class="info">이 도구는 다이소 웹사이트의 실제 API 요청을 분석하고 재현합니다.</p>
+
+    <!-- 매장 검색 테스트 -->
+    <div class="section">
+        <h2>1. 매장 검색 API 테스트</h2>
+        <input type="text" id="shopName" placeholder="매장명 입력 (예: 강남)" value="강남">
+        <button onclick="testShopSearch()">매장 검색</button>
+        <button onclick="testShopSearchWithHeaders()">헤더 포함 검색</button>
+        <div id="shopResult"></div>
+    </div>
+
+    <!-- 시도 목록 테스트 -->
+    <div class="section">
+        <h2>2. 시도 목록 API 테스트</h2>
+        <button onclick="testSidoList()">시도 목록 조회</button>
+        <div id="sidoResult"></div>
+    </div>
+
+    <!-- 시군구 목록 테스트 -->
+    <div class="section">
+        <h2>3. 시군구 목록 API 테스트</h2>
+        <select id="sidoSelect">
+            <option value="서울특별시">서울특별시</option>
+            <option value="경기도">경기도</option>
+            <option value="인천광역시">인천광역시</option>
+        </select>
+        <button onclick="testGugunList()">시군구 목록 조회</button>
+        <div id="gugunResult"></div>
+    </div>
+
+    <!-- 요청 캡처 -->
+    <div class="section">
+        <h2>4. 요청 정보 캡처</h2>
+        <p class="info">위 버튼들을 클릭하면 실제 브라우저가 보내는 요청 정보가 여기에 표시됩니다.</p>
+        <button onclick="clearCapture()">캡처 내용 지우기</button>
+        <pre id="captureResult"></pre>
+    </div>
+
+    <script>
+        let capturedRequests = [];
+
+        // 요청 캡처 함수
+        function captureRequest(name, url, method, headers, body) {
+            const capture = {
+                name: name,
+                url: url,
+                method: method,
+                headers: Object.fromEntries(headers.entries ? headers.entries() : Object.entries(headers)),
+                body: body,
+                timestamp: new Date().toISOString()
+            };
+            capturedRequests.push(capture);
+            updateCaptureDisplay();
+        }
+
+        function updateCaptureDisplay() {
+            const display = document.getElementById('captureResult');
+            display.textContent = JSON.stringify(capturedRequests, null, 2);
+        }
+
+        function clearCapture() {
+            capturedRequests = [];
+            updateCaptureDisplay();
+        }
+
+        // 1. 매장 검색 (기본)
+        async function testShopSearch() {
+            const shopName = document.getElementById('shopName').value;
+            const resultDiv = document.getElementById('shopResult');
+            resultDiv.innerHTML = '<p>요청 중...</p>';
+
+            try {
+                const formData = new FormData();
+                formData.append('name_address', shopName);
+
+                const response = await fetch('https://www.daiso.co.kr/cs/ajax/shop_search', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const text = await response.text();
+
+                captureRequest('shop_search_basic', response.url, 'POST', response.headers, `name_address=${shopName}`);
+
+                resultDiv.innerHTML = `
+                    <p class="success">응답 받음 (${response.status})</p>
+                    <pre>${text.substring(0, 500)}...</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">에러: ${error.message}</p>`;
+            }
+        }
+
+        // 2. 매장 검색 (헤더 포함)
+        async function testShopSearchWithHeaders() {
+            const shopName = document.getElementById('shopName').value;
+            const resultDiv = document.getElementById('shopResult');
+            resultDiv.innerHTML = '<p>요청 중...</p>';
+
+            try {
+                const formData = new FormData();
+                formData.append('name_address', shopName);
+
+                const headers = new Headers({
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Referer': 'https://www.daiso.co.kr/cs/shop'
+                });
+
+                const response = await fetch('https://www.daiso.co.kr/cs/ajax/shop_search', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                const text = await response.text();
+
+                captureRequest('shop_search_with_headers', response.url, 'POST', headers, `name_address=${shopName}`);
+
+                // JSON 파싱 시도
+                try {
+                    const json = JSON.parse(text);
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ JSON 응답 받음!</p>
+                        <pre>${JSON.stringify(json, null, 2)}</pre>
+                    `;
+                } catch {
+                    resultDiv.innerHTML = `
+                        <p class="error">HTML 응답 (${response.status})</p>
+                        <pre>${text.substring(0, 500)}...</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">에러: ${error.message}</p>`;
+            }
+        }
+
+        // 3. 시도 목록
+        async function testSidoList() {
+            const resultDiv = document.getElementById('sidoResult');
+            resultDiv.innerHTML = '<p>요청 중...</p>';
+
+            try {
+                const headers = new Headers({
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Referer': 'https://www.daiso.co.kr/cs/shop'
+                });
+
+                const response = await fetch('https://www.daiso.co.kr/cs/ajax/sido_search', {
+                    method: 'POST',
+                    headers: headers,
+                    credentials: 'include'
+                });
+
+                const text = await response.text();
+
+                captureRequest('sido_list', response.url, 'POST', headers, '');
+
+                try {
+                    const json = JSON.parse(text);
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ JSON 응답: ${json.length}개 시도</p>
+                        <pre>${JSON.stringify(json, null, 2)}</pre>
+                    `;
+                } catch {
+                    resultDiv.innerHTML = `
+                        <p class="error">파싱 실패</p>
+                        <pre>${text}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">에러: ${error.message}</p>`;
+            }
+        }
+
+        // 4. 시군구 목록
+        async function testGugunList() {
+            const sido = document.getElementById('sidoSelect').value;
+            const resultDiv = document.getElementById('gugunResult');
+            resultDiv.innerHTML = '<p>요청 중...</p>';
+
+            try {
+                const formData = new FormData();
+                formData.append('sido', sido);
+
+                const headers = new Headers({
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Referer': 'https://www.daiso.co.kr/cs/shop'
+                });
+
+                const response = await fetch('https://www.daiso.co.kr/cs/ajax/gugun_search', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                const text = await response.text();
+
+                captureRequest('gugun_list', response.url, 'POST', headers, `sido=${sido}`);
+
+                try {
+                    const json = JSON.parse(text);
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ JSON 응답: ${json.length}개 시군구</p>
+                        <pre>${JSON.stringify(json, null, 2)}</pre>
+                    `;
+                } catch {
+                    resultDiv.innerHTML = `
+                        <p class="error">파싱 실패</p>
+                        <pre>${text}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">에러: ${error.message}</p>`;
+            }
+        }
+
+        // 페이지 로드 시 안내
+        window.addEventListener('load', () => {
+            console.log('다이소 API 리플레이 세션 테스트 도구 준비 완료');
+            console.log('브라우저 개발자 도구 (F12) → Network 탭을 열어 실제 요청을 확인하세요');
+        });
+    </script>
+
+    <div class="section">
+        <h2>📝 사용 방법</h2>
+        <ol>
+            <li>브라우저 개발자 도구 (F12)를 열고 Network 탭으로 이동</li>
+            <li>위 버튼들을 클릭하여 API 요청 테스트</li>
+            <li>Network 탭에서 실제 요청 헤더, 쿠키, 응답 확인</li>
+            <li>성공한 요청의 정보를 복사하여 curl 또는 코드로 재현</li>
+        </ol>
+        <p class="info">
+            💡 <strong>Tip:</strong> Network 탭에서 요청을 우클릭 → "Copy as cURL" 선택하면
+            curl 명령어로 복사할 수 있습니다.
+        </p>
+    </div>
+</body>
+</html>

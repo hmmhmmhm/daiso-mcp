@@ -23,5 +23,8 @@
     "@types/node": "^22.10.5",
     "typescript": "^5.7.2",
     "wrangler": "^3.103.0"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2"
   }
 }
