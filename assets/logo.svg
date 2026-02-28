@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@700&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="200" height="200" rx="40" fill="#D70011"/>
+
+  <!-- 첫번째 줄 원 3개 (테두리만) -->
+  <circle cx="65" cy="50" r="10" fill="none" stroke="white" stroke-width="4.5"/>
+  <circle cx="100" cy="50" r="10" fill="none" stroke="white" stroke-width="4.5"/>
+  <circle cx="135" cy="50" r="10" fill="none" stroke="white" stroke-width="4.5"/>
+
+  <!-- 두번째 줄 원 3개 (테두리만) -->
+  <circle cx="65" cy="85" r="10" fill="none" stroke="white" stroke-width="4.5"/>
+  <circle cx="100" cy="85" r="10" fill="none" stroke="white" stroke-width="4.5"/>
+  <circle cx="135" cy="85" r="10" fill="none" stroke="white" stroke-width="4.5"/>
+
+  <!-- daiso 소문자 텍스트 -->
+  <text x="100" y="135" font-family="Quicksand, sans-serif" font-size="36" font-weight="700" fill="white" text-anchor="middle">daiso</text>
+
+  <!-- MCP 뱃지 -->
+  <rect x="60" y="155" width="80" height="24" rx="12" fill="white"/>
+  <text x="100" y="172" font-family="Quicksand, sans-serif" font-size="14" font-weight="700" fill="#D70011" text-anchor="middle">MCP</text>
+</svg>

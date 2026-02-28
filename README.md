@@ -1,51 +1,41 @@
 <div align="center">
 
+<img src="./assets/logo.svg" alt="Daiso MCP" width="120" height="120">
+
+<br>
+<br>
+
 # Daiso MCP Server
 
 다이소(Daiso) 제품 정보를 제공하는 MCP 서버
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange.svg)](https://workers.cloudflare.com/)
+<br>
 
-[서버 URL](#서버-url) · [연결 가이드](#ai-앱에서-mcp-연결하기) · [기능](#기능) · [개발](#개발)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020.svg)](https://workers.cloudflare.com/)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-8B5CF6.svg)](https://modelcontextprotocol.io/)
 
 </div>
 
+<br>
+
 ---
 
-## 서버 URL
+<br>
+
+## AI 앱에서 MCP 연결하기
+
+MCP 서버 URL:
 
 ```
 https://mcp.aka.page/mcp
 ```
 
-<table>
-  <tr>
-    <th>엔드포인트</th>
-    <th>설명</th>
-  </tr>
-  <tr>
-    <td><code>/mcp</code></td>
-    <td>MCP 프로토콜 엔드포인트</td>
-  </tr>
-  <tr>
-    <td><code>/health</code></td>
-    <td>헬스 체크</td>
-  </tr>
-  <tr>
-    <td><code>/</code></td>
-    <td>서버 정보</td>
-  </tr>
-</table>
-
----
-
-## AI 앱에서 MCP 연결하기
-
-<details>
-<summary><b>ChatGPT (Pro 이상)</b></summary>
-
 <br>
+
+### ChatGPT
+
+> Pro 이상 플랜 필요
 
 1. 프로필 아이콘 → **Settings** 클릭
 2. **Connectors** → **Advanced Settings** 이동
@@ -57,32 +47,25 @@ https://mcp.aka.page/mcp
 6. "I trust this application" 체크 후 생성
 7. 새 채팅에서 Developer Mode 선택 후 사용
 
-> 참고: [OpenAI MCP 가이드](https://platform.openai.com/docs/guides/tools-connectors-mcp)
-
-</details>
-
-<details>
-<summary><b>Claude (Pro/Max/Team/Enterprise)</b></summary>
+참고: [OpenAI MCP 가이드](https://platform.openai.com/docs/guides/tools-connectors-mcp)
 
 <br>
+
+### Claude
+
+> Pro / Max / Team / Enterprise 플랜 필요
 
 1. **Settings** → **Connectors** 이동
 2. **Add custom connector** 클릭
-3. 원격 MCP 서버 URL 입력:
-   ```
-   https://mcp.aka.page/mcp
-   ```
+3. 원격 MCP 서버 URL 입력: `https://mcp.aka.page/mcp`
 4. **Add** 클릭하여 완료
 5. 대화창에서 **+** 버튼 → **Connectors** → 토글로 활성화
 
-> 참고: [Claude Remote MCP 가이드](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
-
-</details>
-
-<details>
-<summary><b>Gemini CLI</b></summary>
+참고: [Claude Remote MCP 가이드](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
 
 <br>
+
+### Gemini CLI
 
 `settings.json`에 다음 설정 추가:
 
@@ -102,17 +85,13 @@ https://mcp.aka.page/mcp
 gemini mcp add daiso --url https://mcp.aka.page/mcp
 ```
 
-연결 확인:
+참고: [Gemini CLI MCP 가이드](https://geminicli.com/docs/tools/mcp-server/)
 
-```bash
-gemini mcp list
-```
-
-> 참고: [Gemini CLI MCP 가이드](https://geminicli.com/docs/tools/mcp-server/)
-
-</details>
+<br>
 
 ---
+
+<br>
 
 ## 기능
 
@@ -126,6 +105,8 @@ gemini mcp list
 | `page` | | 페이지 번호 (기본값: 1) |
 | `pageSize` | | 페이지당 결과 수 (기본값: 30) |
 
+<br>
+
 ### find_stores
 
 다이소 매장을 검색합니다.
@@ -137,6 +118,8 @@ gemini mcp list
 | `gugun` | | 구/군 (예: 강남구) |
 | `dong` | | 동 (예: 역삼동) |
 | `limit` | | 최대 매장 수 (기본값: 50) |
+
+<br>
 
 ### check_inventory
 
@@ -151,6 +134,8 @@ gemini mcp list
 | `page` | | 페이지 번호 (기본값: 1) |
 | `pageSize` | | 페이지당 결과 수 (기본값: 30) |
 
+<br>
+
 ### get_price_info
 
 제품의 가격 정보를 조회합니다.
@@ -160,7 +145,11 @@ gemini mcp list
 | `productId` | | 제품 ID |
 | `productName` | | 제품명 (productId가 없을 경우 사용) |
 
+<br>
+
 ---
+
+<br>
 
 ## 사용 예시
 
@@ -175,7 +164,11 @@ AI: check_inventory 도구로 특정 매장 재고 확인
 AI: find_stores 도구로 매장 검색
 ```
 
+<br>
+
 ---
+
+<br>
 
 ## 개발
 
@@ -190,7 +183,11 @@ npm run dev
 npm run deploy
 ```
 
+<br>
+
 ---
+
+<br>
 
 ## 아키텍처
 
@@ -201,7 +198,11 @@ npm run deploy
 | 프로토콜 | MCP (Model Context Protocol) |
 | 전송 | SSE (Server-Sent Events) |
 
+<br>
+
 ---
+
+<br>
 
 ## 프로젝트 구조
 
@@ -220,10 +221,16 @@ daiso-mcp/
 └── package.json
 ```
 
+<br>
+
 ---
 
 <div align="center">
 
+<br>
+
 MIT License
+
+<br>
 
 </div>
