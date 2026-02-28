@@ -72,9 +72,10 @@ const createMcpServer = () => {
     {
       title: '재고 확인',
       description:
-        '특정 제품의 매장별 재고를 확인합니다. 위치 기반으로 가까운 매장부터 재고를 조회합니다.',
+        '특정 제품의 매장별 재고를 확인합니다. 매장명/주소 검색 또는 위치 기반으로 조회합니다.',
       inputSchema: {
         productId: z.string().describe('제품 ID (search_products로 조회한 상품의 id)'),
+        storeQuery: z.string().optional().describe('매장 검색어 (매장명 또는 주소, 예: 안산 중앙역)'),
         latitude: z.number().optional().default(37.5665).describe('위도 (기본값: 서울 시청 37.5665)'),
         longitude: z.number().optional().default(126.978).describe('경도 (기본값: 서울 시청 126.978)'),
         page: z.number().optional().default(1).describe('페이지 번호 (기본값: 1)'),

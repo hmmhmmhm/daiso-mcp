@@ -15,6 +15,7 @@ import { fetchJson } from '../utils/fetch.js';
 
 interface CheckInventoryArgs {
   productId: string;
+  storeQuery?: string;
   latitude?: number;
   longitude?: number;
   page?: number;
@@ -45,7 +46,8 @@ async function fetchStoreInventory(
   lat: number,
   lng: number,
   page: number = 1,
-  pageSize: number = 30
+  pageSize: number = 30,
+  keyword: string = ''
 ): Promise<{ stores: StoreInventory[]; totalCount: number }> {
   const data = await fetchJson<StoreInventoryResponse>(
     'https://mapi.daisomall.co.kr/ms/msg/newIntSelStr',
@@ -53,7 +55,7 @@ async function fetchStoreInventory(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        keyword: '',
+        keyword,
         pdNo: productNo,
         curLttd: lat,
         curLitd: lng,
@@ -98,6 +100,7 @@ async function fetchStoreInventory(
 export async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
   const {
     productId,
+    storeQuery = '',
     latitude = 37.5665, // 기본값: 서울 시청
     longitude = 126.978,
     page = 1,
@@ -111,7 +114,7 @@ export async function checkInventory(args: CheckInventoryArgs): Promise<McpToolR
   // 온라인 재고와 매장 재고 동시 조회
   const [onlineStock, storeResult] = await Promise.all([
     fetchOnlineStock(productId),
-    fetchStoreInventory(productId, latitude, longitude, page, pageSize),
+    fetchStoreInventory(productId, latitude, longitude, page, pageSize, storeQuery),
   ]);
 
   // 재고 있는 매장과 없는 매장 분류
