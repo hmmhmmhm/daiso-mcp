@@ -1,63 +1,83 @@
-// 제품 검색 도구
-export async function searchProducts(args: any) {
-  const { query, category, maxPrice } = args;
+/**
+ * 제품 검색 도구
+ *
+ * 다이소몰 API를 사용하여 제품을 검색합니다.
+ * API: https://prdm.daisomall.co.kr/ssn/search/FindStoreGoods
+ */
 
-  // TODO: 실제 다이소 API 또는 데이터베이스와 연동
-  // 현재는 목업 데이터를 반환합니다
-  const mockProducts = [
-    {
-      id: 'P001',
-      name: '다용도 수납박스',
-      category: '주방/생활',
-      price: 5000,
-      description: '투명 플라스틱 수납박스',
-      inStock: true,
-    },
-    {
-      id: 'P002',
-      name: '볼펜 10입',
-      category: '문구',
-      price: 3000,
-      description: '0.5mm 흑색 볼펜 세트',
-      inStock: true,
-    },
-    {
-      id: 'P003',
-      name: '주방 행주 5매',
-      category: '주방/생활',
-      price: 2000,
-      description: '극세사 주방 행주',
-      inStock: false,
-    },
-  ];
+import type { Product, ProductSearchResponse, McpToolResponse } from '../types/index.js';
+import { fetchJson } from '../utils/fetch.js';
 
-  // 검색 필터링
-  let results = mockProducts.filter((product) =>
-    product.name.toLowerCase().includes(query.toLowerCase())
-  );
+interface SearchProductsArgs {
+  query: string;
+  page?: number;
+  pageSize?: number;
+}
 
-  if (category) {
-    results = results.filter((product) => product.category === category);
+// 이미지 URL 생성
+function getImageUrl(path?: string): string | undefined {
+  if (!path) return undefined;
+  return `https://img.daisomall.co.kr${path}`;
+}
+
+// 다이소몰 API에서 상품 검색
+async function fetchProducts(
+  query: string,
+  page: number = 1,
+  pageSize: number = 30
+): Promise<{ products: Product[]; totalCount: number }> {
+  const url = new URL('https://prdm.daisomall.co.kr/ssn/search/FindStoreGoods');
+  url.searchParams.set('searchTerm', query);
+  url.searchParams.set('cntPerPage', pageSize.toString());
+  url.searchParams.set('pageNum', page.toString());
+
+  const data = await fetchJson<ProductSearchResponse>(url.toString());
+
+  // 결과가 없는 경우
+  if (!data.resultSet?.result?.[0]?.resultDocuments) {
+    return { products: [], totalCount: 0 };
   }
 
-  if (maxPrice) {
-    results = results.filter((product) => product.price <= maxPrice);
+  const result = data.resultSet.result[0];
+  const totalCount = result.totalSize || 0;
+
+  const products: Product[] = result.resultDocuments.map((doc) => ({
+    id: doc.PD_NO,
+    name: doc.PDNM || doc.EXH_PD_NM || '',
+    price: parseInt(doc.PD_PRC) || 0,
+    imageUrl: getImageUrl(doc.ATCH_FILE_URL),
+    brand: doc.BRND_NM || undefined,
+    soldOut: doc.SOLD_OUT_YN === 'Y',
+    isNew: doc.NEW_PD_YN === 'Y',
+    pickupAvailable: doc.PKUP_OR_PSBL_YN === 'Y',
+  }));
+
+  return { products, totalCount };
+}
+
+export async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse> {
+  const { query, page = 1, pageSize = 30 } = args;
+
+  if (!query || query.trim().length === 0) {
+    throw new Error('검색어를 입력해주세요.');
   }
+
+  const { products, totalCount } = await fetchProducts(query, page, pageSize);
+
+  const result = {
+    query,
+    page,
+    pageSize,
+    totalCount,
+    count: products.length,
+    products,
+  };
 
   return {
     content: [
       {
         type: 'text',
-        text: JSON.stringify(
-          {
-            query,
-            filters: { category, maxPrice },
-            count: results.length,
-            products: results,
-          },
-          null,
-          2
-        ),
+        text: JSON.stringify(result, null, 2),
       },
     ],
   };
