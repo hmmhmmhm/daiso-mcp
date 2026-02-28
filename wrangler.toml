@@ -2,10 +2,5 @@ name = "daiso-mcp"
 main = "src/index.ts"
 compatibility_date = "2025-01-23"
 
-# 커스텀 도메인 설정
-routes = [
-  { pattern = "mcp.aka.page", custom_domain = true }
-]
-
 [observability]
 enabled = true
