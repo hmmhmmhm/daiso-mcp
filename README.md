@@ -14,37 +14,59 @@
 
 ## AI 앱에서 MCP 연결하기
 
-### ChatGPT
+### ChatGPT (Pro 이상)
 
-1. ChatGPT 앱 설정으로 이동
-2. **플러그인** 또는 **MCP 서버** 메뉴 선택
-3. **서버 추가** 클릭
-4. 다음 URL 입력:
+1. 프로필 아이콘 → **Settings** 클릭
+2. **Connectors** → **Advanced Settings** 이동
+3. **Developer Mode (beta)** 활성화
+4. **Create** 버튼 클릭
+5. 다음 정보 입력:
+   - **Name:** Daiso MCP
+   - **MCP Server URL:** `https://mcp.aka.page/mcp`
+6. "I trust this application" 체크 후 생성
+7. 새 채팅에서 Developer Mode 선택 후 사용
+
+> 참고: [OpenAI MCP 가이드](https://platform.openai.com/docs/guides/tools-connectors-mcp)
+
+### Claude (Pro/Max/Team/Enterprise)
+
+1. **Settings** → **Connectors** 이동
+2. **Add custom connector** 클릭
+3. 원격 MCP 서버 URL 입력:
    ```
    https://mcp.aka.page/mcp
    ```
-5. 연결 확인 후 사용
+4. **Add** 클릭하여 완료
+5. 대화창에서 **+** 버튼 → **Connectors** → 토글로 활성화
 
-### Claude 앱
+> 참고: [Claude Remote MCP 가이드](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
 
-1. Claude 앱 설정으로 이동
-2. **MCP 서버** 메뉴 선택
-3. **새 서버 추가** 클릭
-4. 다음 정보 입력:
-   - **이름:** Daiso MCP
-   - **URL:** `https://mcp.aka.page/mcp`
-5. 저장 후 사용
+### Gemini CLI
 
-### Gemini 앱
+`settings.json`에 다음 설정 추가:
 
-1. Gemini 앱 설정으로 이동
-2. **확장 프로그램** 또는 **MCP** 메뉴 선택
-3. **MCP 서버 추가** 클릭
-4. 다음 URL 입력:
-   ```
-   https://mcp.aka.page/mcp
-   ```
-5. 연결 확인 후 사용
+```json
+{
+  "mcpServers": {
+    "daiso": {
+      "httpUrl": "https://mcp.aka.page/mcp"
+    }
+  }
+}
+```
+
+또는 CLI 명령어 사용:
+
+```bash
+gemini mcp add daiso --url https://mcp.aka.page/mcp
+```
+
+연결 확인:
+```bash
+gemini mcp list
+```
+
+> 참고: [Gemini CLI MCP 가이드](https://geminicli.com/docs/tools/mcp-server/)
 
 ## 기능
 
