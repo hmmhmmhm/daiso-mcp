@@ -16,8 +16,16 @@
     "cloudflare-workers",
     "serverless"
   ],
-  "author": "",
+  "author": "hmmhmmhm",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hmmhmmhm/daiso-mcp.git"
+  },
+  "homepage": "https://github.com/hmmhmmhm/daiso-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/hmmhmmhm/daiso-mcp/issues"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250110.0",
     "@types/node": "^22.10.5",
