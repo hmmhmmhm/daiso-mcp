@@ -126,17 +126,25 @@ app.use(
   })
 );
 
-// 기본 정보 엔드포인트
+// 기본 정보 엔드포인트 (GET 요청만)
 app.get('/', (c) => {
   return c.json({
     name: 'daiso-mcp',
     version: '1.0.0',
     description: 'Daiso MCP Server for Cloudflare Workers',
     endpoints: {
-      mcp: '/mcp (POST) - MCP 프로토콜 엔드포인트',
+      mcp: '/ 또는 /mcp (POST) - MCP 프로토콜 엔드포인트',
       health: '/health (GET) - 헬스 체크',
     },
   });
+});
+
+// 루트 경로에서 MCP 요청 처리 (POST, DELETE, OPTIONS)
+app.on(['POST', 'DELETE', 'OPTIONS'], '/', async (c) => {
+  const transport = new WebStandardStreamableHTTPServerTransport();
+  const server = createMcpServer();
+  await server.connect(transport);
+  return transport.handleRequest(c.req.raw);
 });
 
 // 헬스 체크 엔드포인트

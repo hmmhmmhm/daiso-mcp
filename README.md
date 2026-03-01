@@ -28,7 +28,7 @@
 MCP 서버 URL:
 
 ```
-https://mcp.aka.page/mcp
+https://mcp.aka.page
 ```
 
 <br>
@@ -43,7 +43,7 @@ https://mcp.aka.page/mcp
 4. **Create** 버튼 클릭
 5. 다음 정보 입력:
    - **Name:** `Daiso MCP`
-   - **MCP Server URL:** `https://mcp.aka.page/mcp`
+   - **MCP Server URL:** `https://mcp.aka.page`
 6. "I trust this application" 체크 후 생성
 7. 새 채팅에서 Developer Mode 선택 후 사용
 
@@ -57,7 +57,7 @@ https://mcp.aka.page/mcp
 
 1. **Settings** → **Connectors** 이동
 2. **Add custom connector** 클릭
-3. 원격 MCP 서버 URL 입력: `https://mcp.aka.page/mcp`
+3. 원격 MCP 서버 URL 입력: `https://mcp.aka.page`
 4. **Add** 클릭하여 완료
 5. 대화창에서 **+** 버튼 → **Connectors** → 토글로 활성화
 
@@ -73,7 +73,7 @@ https://mcp.aka.page/mcp
 {
   "mcpServers": {
     "daiso": {
-      "httpUrl": "https://mcp.aka.page/mcp"
+      "httpUrl": "https://mcp.aka.page"
     }
   }
 }
@@ -82,7 +82,7 @@ https://mcp.aka.page/mcp
 또는 CLI 명령어 사용:
 
 ```bash
-gemini mcp add daiso --url https://mcp.aka.page/mcp
+gemini mcp add daiso --url https://mcp.aka.page
 ```
 
 참고: [Gemini CLI MCP 가이드](https://geminicli.com/docs/tools/mcp-server/)
