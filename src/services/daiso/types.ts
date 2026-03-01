@@ -134,4 +134,5 @@ export interface ProductDoc {
   ATCH_FILE_URL?: string;
   BRND_NM?: string;
   SOLD_OUT_YN?: string;
+  NEW_PD_YN?: string;
 }

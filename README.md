@@ -65,9 +65,27 @@ https://mcp.aka.page
 
 <br>
 
-### ![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white)
+### ![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white) · ![Copilot](https://img.shields.io/badge/Copilot-000000?logo=github&logoColor=white) · 기타 AI 서비스
 
-> 현재 Gemini 웹/모바일 앱에서는 커스텀 MCP 서버 연결을 지원하지 않습니다.
+> MCP를 지원하지 않는 AI 서비스도 REST API를 통해 다이소 기능을 사용할 수 있습니다.
+
+**프롬프트 페이지 URL:**
+```
+https://mcp.aka.page/prompt
+```
+
+사용 방법:
+1. AI 에이전트에게 `https://mcp.aka.page/prompt` 페이지를 읽어달라고 요청
+2. 에이전트가 API 사용법을 이해하고 GET 요청으로 기능 실행
+
+예시 대화:
+```
+사용자: https://mcp.aka.page/prompt 를 읽어줘
+AI: (페이지를 읽고 API 사용법 이해)
+
+사용자: 수납박스 검색해줘
+AI: (https://mcp.aka.page/api/daiso/products?q=수납박스 호출 후 결과 제공)
+```
 
 <br>
 
@@ -126,6 +144,77 @@ https://mcp.aka.page
 |:---------|:----:|:-----|
 | `productId` | | 제품 ID |
 | `productName` | | 제품명 (productId가 없을 경우 사용) |
+
+<br>
+
+---
+
+<br>
+
+## REST API
+
+MCP를 지원하지 않는 서비스를 위한 GET 기반 REST API입니다.
+
+### 엔드포인트
+
+| 엔드포인트 | 설명 |
+|:-----------|:-----|
+| `GET /prompt` | API 사용법 설명 페이지 (에이전트용) |
+| `GET /api/daiso/products` | 제품 검색 |
+| `GET /api/daiso/products/:id` | 제품 상세 정보 |
+| `GET /api/daiso/stores` | 매장 검색 |
+| `GET /api/daiso/inventory` | 재고 확인 |
+
+### 제품 검색
+
+```
+GET /api/daiso/products?q={검색어}&page={페이지}&pageSize={개수}
+```
+
+| 파라미터 | 필수 | 설명 |
+|:---------|:----:|:-----|
+| `q` | O | 검색 키워드 |
+| `page` | | 페이지 번호 (기본값: 1) |
+| `pageSize` | | 페이지당 결과 수 (기본값: 30) |
+
+### 매장 검색
+
+```
+GET /api/daiso/stores?keyword={키워드}&sido={시도}&limit={개수}
+```
+
+| 파라미터 | 필수 | 설명 |
+|:---------|:----:|:-----|
+| `keyword` | △ | 매장명/주소 키워드 (keyword 또는 sido 중 하나 필수) |
+| `sido` | △ | 시/도 |
+| `gugun` | | 구/군 |
+| `dong` | | 동 |
+| `limit` | | 최대 결과 수 (기본값: 50) |
+
+### 재고 확인
+
+```
+GET /api/daiso/inventory?productId={제품ID}&lat={위도}&lng={경도}
+```
+
+| 파라미터 | 필수 | 설명 |
+|:---------|:----:|:-----|
+| `productId` | O | 제품 ID |
+| `lat` | | 위도 (기본값: 37.5665) |
+| `lng` | | 경도 (기본값: 126.978) |
+| `keyword` | | 매장 검색어 |
+| `page` | | 페이지 번호 (기본값: 1) |
+| `pageSize` | | 페이지당 결과 수 (기본값: 30) |
+
+### 응답 형식
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "meta": { "total": 100, "page": 1, "pageSize": 30 }
+}
+```
 
 <br>
 
@@ -202,6 +291,10 @@ daiso-mcp/
 │   │       ├── types.ts
 │   │       ├── api.ts
 │   │       └── tools/
+│   ├── api/                  # REST API (MCP 미지원 서비스용)
+│   │   └── handlers.ts       # GET API 핸들러
+│   ├── pages/                # 정적 페이지
+│   │   └── prompt.ts         # 에이전트용 프롬프트 페이지
 │   └── utils/                # 유틸리티
 ├── wrangler.toml             # Cloudflare Workers 설정
 └── package.json

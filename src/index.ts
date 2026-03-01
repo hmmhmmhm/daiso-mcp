@@ -12,6 +12,13 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 
 import { ServiceRegistry } from './core/registry.js';
 import { createDaisoService } from './services/daiso/index.js';
+import { createPromptResponse } from './pages/prompt.js';
+import {
+  handleSearchProducts,
+  handleGetProduct,
+  handleFindStores,
+  handleCheckInventory,
+} from './api/handlers.js';
 
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
@@ -82,6 +89,18 @@ app.on(['POST', 'DELETE', 'OPTIONS'], '/', async (c) => {
 
 // 헬스 체크 엔드포인트
 app.get('/health', (c) => c.json({ status: 'ok' }));
+
+// 프롬프트 페이지 (MCP 미지원 에이전트용)
+app.get('/prompt', (c) => {
+  const baseUrl = new URL(c.req.url).origin;
+  return createPromptResponse(baseUrl);
+});
+
+// GET API 엔드포인트 (MCP 미지원 에이전트용)
+app.get('/api/daiso/products', handleSearchProducts);
+app.get('/api/daiso/products/:id', handleGetProduct);
+app.get('/api/daiso/stores', handleFindStores);
+app.get('/api/daiso/inventory', handleCheckInventory);
 
 // MCP 엔드포인트
 app.all('/mcp', async (c) => {

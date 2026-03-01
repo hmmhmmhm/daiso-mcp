@@ -19,7 +19,7 @@ interface GetPriceInfoArgs {
 /**
  * 상품 ID로 검색
  */
-async function fetchProductById(productId: string): Promise<ProductDoc | null> {
+export async function fetchProductById(productId: string): Promise<ProductDoc | null> {
   const url = new URL(DAISOMALL_API.SEARCH_PRODUCTS);
   url.searchParams.set('searchTerm', productId);
   url.searchParams.set('cntPerPage', '10');
