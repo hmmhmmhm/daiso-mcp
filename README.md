@@ -33,7 +33,7 @@ https://mcp.aka.page
 
 <br>
 
-### ChatGPT
+### ![ChatGPT](https://img.shields.io/badge/ChatGPT-74aa9c?logo=openai&logoColor=white)
 
 > Pro 이상 플랜 필요
 
@@ -51,7 +51,7 @@ https://mcp.aka.page
 
 <br>
 
-### Claude
+### ![Claude](https://img.shields.io/badge/Claude-D4A27F?logo=anthropic&logoColor=white)
 
 > Pro / Max / Team / Enterprise 플랜 필요
 
@@ -65,7 +65,7 @@ https://mcp.aka.page
 
 <br>
 
-### Gemini CLI
+### ![Gemini](https://img.shields.io/badge/Gemini_CLI-8E75B2?logo=googlegemini&logoColor=white)
 
 `settings.json`에 다음 설정 추가:
 
