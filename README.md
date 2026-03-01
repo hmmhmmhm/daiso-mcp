@@ -33,7 +33,7 @@ https://mcp.aka.page
 
 <br>
 
-### ![ChatGPT](https://img.shields.io/badge/ChatGPT-74aa9c?logo=openai&logoColor=white)
+### ![ChatGPT](https://img.shields.io/badge/ChatGPT-74aa9c?logo=chatgpt&logoColor=white)
 
 > Pro 이상 플랜 필요
 
