@@ -35,7 +35,7 @@
     "@vitest/coverage-v8": "^4.0.18",
     "typescript": "^5.7.2",
     "vitest": "^4.0.18",
-    "wrangler": "^3.103.0"
+    "wrangler": "^4.69.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
