@@ -47,6 +47,12 @@ https://mcp.aka.page
 6. "I trust this application" 체크 후 생성
 7. 새 채팅에서 Developer Mode 선택 후 사용
 
+사용 예시:
+```
+다이소 mcp를 사용해서 수납박스 검색해줘
+다이소 mcp를 사용해서 강남역 근처 매장 찾아줘
+```
+
 참고: [OpenAI MCP 가이드](https://platform.openai.com/docs/guides/tools-connectors-mcp)
 
 <br>
@@ -60,6 +66,12 @@ https://mcp.aka.page
 3. 원격 MCP 서버 URL 입력: `https://mcp.aka.page`
 4. **Add** 클릭하여 완료
 5. 대화창에서 **+** 버튼 → **Connectors** → 토글로 활성화
+
+사용 예시:
+```
+다이소 mcp를 사용해서 수납박스 검색해줘
+다이소 mcp를 사용해서 강남역 근처 매장 찾아줘
+```
 
 참고: [Claude Remote MCP 가이드](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
 
