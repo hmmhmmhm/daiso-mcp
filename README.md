@@ -65,9 +65,9 @@ https://mcp.aka.page
 
 <br>
 
-### ![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white) · ![Copilot](https://img.shields.io/badge/Copilot-000000?logo=github&logoColor=white) · 기타 AI 서비스
+### ![Grok](https://img.shields.io/badge/Grok-000000?logo=x&logoColor=white)
 
-> MCP를 지원하지 않는 AI 서비스도 REST API를 통해 다이소 기능을 사용할 수 있습니다.
+> 모바일 앱에서만 동작 (웹 버전 미지원)
 
 **프롬프트 페이지 URL:**
 ```
@@ -75,7 +75,7 @@ https://mcp.aka.page/prompt
 ```
 
 사용 방법:
-1. AI 에이전트에게 `https://mcp.aka.page/prompt` 페이지를 읽어달라고 요청
+1. Grok 모바일 앱에서 `https://mcp.aka.page/prompt` 페이지를 읽어달라고 요청
 2. 에이전트가 API 사용법을 이해하고 GET 요청으로 기능 실행
 
 예시 대화:
@@ -86,6 +86,15 @@ AI: (페이지를 읽고 API 사용법 이해)
 사용자: 수납박스 검색해줘
 AI: (https://mcp.aka.page/api/daiso/products?q=수납박스 호출 후 결과 제공)
 ```
+
+<br>
+
+### 미지원 서비스
+
+| 서비스 | 상태 |
+|:-------|:-----|
+| ![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white) Google Gemini | ❌ 미지원 |
+| ![Copilot](https://img.shields.io/badge/Copilot-000000?logo=github&logoColor=white) GitHub Copilot | ❌ 미지원 |
 
 <br>
 
