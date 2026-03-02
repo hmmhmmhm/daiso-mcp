@@ -14,6 +14,7 @@ import { ServiceRegistry } from './core/registry.js';
 import { createDaisoService } from './services/daiso/index.js';
 import { createPromptResponse } from './pages/prompt.js';
 import { createOpenApiJsonResponse, createOpenApiYamlResponse } from './pages/openapi.js';
+import { createPrivacyResponse } from './pages/privacy.js';
 import {
   handleSearchProducts,
   handleGetProduct,
@@ -106,6 +107,12 @@ app.get('/openapi.json', (c) => {
 app.get('/openapi.yaml', (c) => {
   const baseUrl = new URL(c.req.url).origin;
   return createOpenApiYamlResponse(baseUrl);
+});
+
+// 개인정보 처리방침 페이지
+app.get('/privacy', (c) => {
+  const baseUrl = new URL(c.req.url).origin;
+  return createPrivacyResponse(baseUrl);
 });
 
 // GET API 엔드포인트 (MCP 미지원 에이전트용)
