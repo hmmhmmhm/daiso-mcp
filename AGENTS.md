@@ -289,10 +289,24 @@ daiso-mcp/
 │   │           ├── checkInventory.ts
 │   │           └── getPriceInfo.ts
 │   └── utils/                # 유틸리티 함수
+├── tools/                    # 네트워크 파싱 분석 기록
 ├── examples/                 # 사용 예시
 ├── tests/                    # 테스트 파일
 ├── docs/                     # 문서
 └── scripts/                  # 빌드/배포 스크립트
+
+### 네트워크 파싱 기록
+
+`tools/` 폴더에는 API 엔드포인트 분석을 위한 네트워크 파싱 기록이 저장됩니다.
+새로운 서비스를 추가할 때 네트워크 분석 결과를 이 폴더에 `{서비스명}-` 접두사를 붙여 저장하세요.
+
+```
+tools/
+├── daiso-network-analysis-result.md    # 다이소 API 분석 결과
+├── daiso-playwright-network-analysis.md # Playwright 네트워크 분석
+├── daiso-replay-session-test.html      # 세션 테스트 HTML
+└── daiso-test-replay.js                # 테스트 리플레이 스크립트
+```
 ```
 
 ### 새 서비스 추가 방법
