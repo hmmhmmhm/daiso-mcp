@@ -39,6 +39,15 @@ describe('GET /', () => {
     expect(daisoService.name).toBe('다이소');
   });
 
+  it('올리브영 서비스가 등록되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    const oliveyoungService = data.services.find((s: { id: string }) => s.id === 'oliveyoung');
+    expect(oliveyoungService).toBeDefined();
+    expect(oliveyoungService.name).toBe('올리브영');
+  });
+
   it('다이소 도구들이 포함되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -47,6 +56,14 @@ describe('GET /', () => {
     expect(data.tools).toContain('daiso_find_stores');
     expect(data.tools).toContain('daiso_check_inventory');
     expect(data.tools).toContain('daiso_get_price_info');
+  });
+
+  it('올리브영 도구들이 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('oliveyoung_find_nearby_stores');
+    expect(data.tools).toContain('oliveyoung_check_inventory');
   });
 
   it('엔드포인트 정보를 포함한다', async () => {

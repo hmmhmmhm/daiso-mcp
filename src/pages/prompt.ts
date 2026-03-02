@@ -246,6 +246,8 @@ MCP 연결 정보: ${baseUrl}/mcp
 - daiso_find_stores: 매장 검색
 - daiso_check_inventory: 재고 확인
 - daiso_get_price_info: 가격 정보 조회
+- oliveyoung_find_nearby_stores: 올리브영 주변 매장 탐색
+- oliveyoung_check_inventory: 올리브영 재고 파악
 `;
 }
 

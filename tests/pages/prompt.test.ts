@@ -68,6 +68,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('daiso_find_stores');
     expect(text).toContain('daiso_check_inventory');
     expect(text).toContain('daiso_get_price_info');
+    expect(text).toContain('oliveyoung_find_nearby_stores');
+    expect(text).toContain('oliveyoung_check_inventory');
   });
 
   it('사용 팁을 포함한다', () => {

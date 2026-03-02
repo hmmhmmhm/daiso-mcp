@@ -12,6 +12,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 
 import { ServiceRegistry } from './core/registry.js';
 import { createDaisoService } from './services/daiso/index.js';
+import { createOliveyoungService } from './services/oliveyoung/index.js';
 import { createPromptResponse } from './pages/prompt.js';
 import { createOpenApiJsonResponse, createOpenApiYamlResponse } from './pages/openapi.js';
 import { createPrivacyResponse } from './pages/privacy.js';
@@ -26,29 +27,44 @@ import {
 const SERVER_NAME = 'multi-service-mcp';
 const SERVER_VERSION = '1.0.0';
 
-// 서비스 레지스트리 초기화
-const registry = new ServiceRegistry();
+interface AppBindings {
+  ZYTE_API_KEY?: string;
+}
 
-// 서비스 등록 (새 서비스 추가 시 여기에 한 줄 추가)
-registry.registerAll([createDaisoService]);
+/**
+ * 요청 컨텍스트 기반 서비스 레지스트리 생성
+ */
+const createRegistry = (bindings?: AppBindings) => {
+  const registry = new ServiceRegistry();
+
+  registry.registerAll([
+    createDaisoService,
+    () =>
+      createOliveyoungService({
+        zyteApiKey: bindings?.ZYTE_API_KEY,
+      }),
+  ]);
+
+  return registry;
+};
 
 /**
  * MCP 서버 생성 함수
  */
-const createMcpServer = () => {
+const createMcpServer = (bindings?: AppBindings) => {
+  const registry = createRegistry(bindings);
   const server = new McpServer({
     name: SERVER_NAME,
     version: SERVER_VERSION,
   });
 
-  // 레지스트리에 등록된 모든 서비스의 도구를 MCP 서버에 적용
   registry.applyToServer(server);
 
   return server;
 };
 
 // Hono 앱 생성
-const app = new Hono();
+const app = new Hono<{ Bindings: AppBindings }>();
 
 // CORS 설정
 app.use(
@@ -63,6 +79,7 @@ app.use(
 
 // 기본 정보 엔드포인트 (GET 요청만)
 app.get('/', (c) => {
+  const registry = createRegistry(c.env);
   const services = registry.getServicesInfo();
   const allTools = registry.getAllToolNames();
 
@@ -84,7 +101,7 @@ app.get('/', (c) => {
 // 루트 경로에서 MCP 요청 처리 (POST, DELETE, OPTIONS)
 app.on(['POST', 'DELETE', 'OPTIONS'], '/', async (c) => {
   const transport = new WebStandardStreamableHTTPServerTransport();
-  const server = createMcpServer();
+  const server = createMcpServer(c.env);
   await server.connect(transport);
   return transport.handleRequest(c.req.raw);
 });
@@ -124,7 +141,7 @@ app.get('/api/daiso/inventory', handleCheckInventory);
 // MCP 엔드포인트
 app.all('/mcp', async (c) => {
   const transport = new WebStandardStreamableHTTPServerTransport();
-  const server = createMcpServer();
+  const server = createMcpServer(c.env);
   await server.connect(transport);
   return transport.handleRequest(c.req.raw);
 });
