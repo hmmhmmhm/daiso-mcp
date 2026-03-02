@@ -307,6 +307,17 @@ tools/
 ├── daiso-replay-session-test.html      # 세션 테스트 HTML
 └── daiso-test-replay.js                # 테스트 리플레이 스크립트
 ```
+
+### 문서 기록
+
+`docs/` 폴더에는 API 리서치 및 스크래핑 분석 문서가 저장됩니다.
+새로운 서비스를 추가할 때 관련 문서를 이 폴더에 `{서비스명}-` 접두사를 붙여 저장하세요.
+
+```
+docs/
+├── daiso-API_RESEARCH.md       # 다이소 API 리서치 문서
+├── daiso-REPLAY_SESSION_TEST.md # 세션 테스트 문서
+└── daiso-SCRAPING_ANALYSIS.md  # 스크래핑 분석 문서
 ```
 
 ### 새 서비스 추가 방법
