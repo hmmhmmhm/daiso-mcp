@@ -13,6 +13,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { ServiceRegistry } from './core/registry.js';
 import { createDaisoService } from './services/daiso/index.js';
 import { createOliveyoungService } from './services/oliveyoung/index.js';
+import { withEdgeCache } from './utils/cache.js';
 import { createPromptResponse } from './pages/prompt.js';
 import { createOpenApiJsonResponse, createOpenApiYamlResponse } from './pages/openapi.js';
 import { createPrivacyResponse } from './pages/privacy.js';
@@ -135,12 +136,72 @@ app.get('/privacy', (c) => {
 });
 
 // GET API 엔드포인트 (MCP 미지원 에이전트용)
-app.get('/api/daiso/products', handleSearchProducts);
-app.get('/api/daiso/products/:id', handleGetProduct);
-app.get('/api/daiso/stores', handleFindStores);
-app.get('/api/daiso/inventory', handleCheckInventory);
-app.get('/api/oliveyoung/stores', handleOliveyoungFindStores);
-app.get('/api/oliveyoung/inventory', handleOliveyoungCheckInventory);
+app.get('/api/daiso/products', async (c) =>
+  withEdgeCache(
+    c.req.url,
+    {
+      ttlSeconds: 60 * 30,
+      staleWhileRevalidateSeconds: 60 * 3,
+      keyPrefix: 'daiso-products-v1',
+    },
+    () => handleSearchProducts(c)
+  )
+);
+app.get('/api/daiso/products/:id', async (c) =>
+  withEdgeCache(
+    c.req.url,
+    {
+      ttlSeconds: 60 * 60,
+      staleWhileRevalidateSeconds: 60 * 5,
+      keyPrefix: 'daiso-product-detail-v1',
+    },
+    () => handleGetProduct(c)
+  )
+);
+app.get('/api/daiso/stores', async (c) =>
+  withEdgeCache(
+    c.req.url,
+    {
+      ttlSeconds: 60 * 60 * 24,
+      staleWhileRevalidateSeconds: 60 * 5,
+      keyPrefix: 'daiso-stores-v1',
+    },
+    () => handleFindStores(c)
+  )
+);
+app.get('/api/daiso/inventory', async (c) =>
+  withEdgeCache(
+    c.req.url,
+    {
+      ttlSeconds: 60 * 10,
+      staleWhileRevalidateSeconds: 60,
+      keyPrefix: 'daiso-inventory-v1',
+    },
+    () => handleCheckInventory(c)
+  )
+);
+app.get('/api/oliveyoung/stores', async (c) =>
+  withEdgeCache(
+    c.req.url,
+    {
+      ttlSeconds: 60 * 60 * 24,
+      staleWhileRevalidateSeconds: 60 * 5,
+      keyPrefix: 'oliveyoung-stores-v1',
+    },
+    () => handleOliveyoungFindStores(c)
+  )
+);
+app.get('/api/oliveyoung/inventory', async (c) =>
+  withEdgeCache(
+    c.req.url,
+    {
+      ttlSeconds: 60 * 10,
+      staleWhileRevalidateSeconds: 60,
+      keyPrefix: 'oliveyoung-inventory-v1',
+    },
+    () => handleOliveyoungCheckInventory(c)
+  )
+);
 
 // MCP 엔드포인트
 app.all('/mcp', async (c) => {
