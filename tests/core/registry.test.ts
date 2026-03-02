@@ -1,0 +1,248 @@
+/**
+ * ServiceRegistry 테스트
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ServiceRegistry } from '../../src/core/registry.js';
+import type { ServiceProvider } from '../../src/core/interfaces.js';
+import type { ToolRegistration, McpToolResponse } from '../../src/core/types.js';
+
+// 테스트용 mock 서비스 생성
+function createMockService(id: string, tools: ToolRegistration[] = []): ServiceProvider {
+  return {
+    metadata: {
+      id,
+      name: `${id} Service`,
+      version: '1.0.0',
+      description: `${id} 테스트 서비스`,
+    },
+    getTools: () => tools,
+  };
+}
+
+// initialize/cleanup이 있는 mock 서비스
+function createMockServiceWithLifecycle(
+  id: string,
+  initialize?: () => Promise<void>,
+  cleanup?: () => Promise<void>
+): ServiceProvider {
+  return {
+    metadata: {
+      id,
+      name: `${id} Service`,
+      version: '1.0.0',
+    },
+    getTools: () => [],
+    initialize,
+    cleanup,
+  };
+}
+
+// mock 도구 생성
+function createMockTool(name: string): ToolRegistration {
+  return {
+    name,
+    metadata: {
+      title: `${name} Tool`,
+      description: `${name} 도구 설명`,
+      inputSchema: {},
+    },
+    handler: async (): Promise<McpToolResponse> => ({
+      content: [{ type: 'text', text: 'test result' }],
+    }),
+  };
+}
+
+describe('ServiceRegistry', () => {
+  let registry: ServiceRegistry;
+
+  beforeEach(() => {
+    registry = new ServiceRegistry();
+  });
+
+  describe('register', () => {
+    it('서비스 팩토리를 등록할 수 있다', () => {
+      const factory = () => createMockService('test');
+      registry.register(factory);
+
+      expect(registry.size).toBe(1);
+    });
+
+    it('동일한 ID의 서비스를 중복 등록하면 에러가 발생한다', () => {
+      const factory = () => createMockService('test');
+      registry.register(factory);
+
+      expect(() => registry.register(factory)).toThrow(
+        "서비스 'test'가 이미 등록되어 있습니다."
+      );
+    });
+  });
+
+  describe('registerAll', () => {
+    it('여러 서비스를 한 번에 등록할 수 있다', () => {
+      const factories = [
+        () => createMockService('service1'),
+        () => createMockService('service2'),
+        () => createMockService('service3'),
+      ];
+
+      registry.registerAll(factories);
+
+      expect(registry.size).toBe(3);
+    });
+  });
+
+  describe('initializeAll', () => {
+    it('모든 서비스의 initialize 메서드를 호출한다', async () => {
+      const init1 = vi.fn().mockResolvedValue(undefined);
+      const init2 = vi.fn().mockResolvedValue(undefined);
+
+      registry.register(() => createMockServiceWithLifecycle('svc1', init1));
+      registry.register(() => createMockServiceWithLifecycle('svc2', init2));
+
+      await registry.initializeAll();
+
+      expect(init1).toHaveBeenCalledTimes(1);
+      expect(init2).toHaveBeenCalledTimes(1);
+    });
+
+    it('initialize가 없는 서비스는 건너뛴다', async () => {
+      registry.register(() => createMockService('no-init'));
+      registry.register(() => createMockServiceWithLifecycle('with-init', vi.fn().mockResolvedValue(undefined)));
+
+      // 에러 없이 완료되어야 함
+      await expect(registry.initializeAll()).resolves.not.toThrow();
+    });
+  });
+
+  describe('cleanupAll', () => {
+    it('모든 서비스의 cleanup 메서드를 호출한다', async () => {
+      const cleanup1 = vi.fn().mockResolvedValue(undefined);
+      const cleanup2 = vi.fn().mockResolvedValue(undefined);
+
+      registry.register(() => createMockServiceWithLifecycle('svc1', undefined, cleanup1));
+      registry.register(() => createMockServiceWithLifecycle('svc2', undefined, cleanup2));
+
+      await registry.cleanupAll();
+
+      expect(cleanup1).toHaveBeenCalledTimes(1);
+      expect(cleanup2).toHaveBeenCalledTimes(1);
+    });
+
+    it('cleanup이 없는 서비스는 건너뛴다', async () => {
+      registry.register(() => createMockService('no-cleanup'));
+      registry.register(() => createMockServiceWithLifecycle('with-cleanup', undefined, vi.fn().mockResolvedValue(undefined)));
+
+      await expect(registry.cleanupAll()).resolves.not.toThrow();
+    });
+  });
+
+  describe('applyToServer', () => {
+    it('모든 도구를 MCP 서버에 등록한다', () => {
+      const tool1 = createMockTool('tool1');
+      const tool2 = createMockTool('tool2');
+      const service = createMockService('test', [tool1, tool2]);
+
+      registry.register(() => service);
+
+      // mock MCP server
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+
+      expect(mockServer.registerTool).toHaveBeenCalledTimes(2);
+      expect(mockServer.registerTool).toHaveBeenCalledWith('tool1', tool1.metadata, expect.any(Function));
+      expect(mockServer.registerTool).toHaveBeenCalledWith('tool2', tool2.metadata, expect.any(Function));
+    });
+
+    it('등록된 핸들러가 올바른 형식으로 결과를 반환한다', async () => {
+      const tool = createMockTool('test-tool');
+      const service = createMockService('test', [tool]);
+
+      registry.register(() => service);
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+
+      // 등록된 핸들러 가져오기
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+      const result = await registeredHandler({});
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'test result' }],
+      });
+    });
+  });
+
+  describe('getServicesInfo', () => {
+    it('등록된 서비스 정보 목록을 반환한다', () => {
+      const tool = createMockTool('test_tool');
+      registry.register(() => createMockService('svc1', [tool]));
+      registry.register(() => createMockService('svc2', []));
+
+      const info = registry.getServicesInfo();
+
+      expect(info).toHaveLength(2);
+      expect(info[0]).toEqual({
+        id: 'svc1',
+        name: 'svc1 Service',
+        version: '1.0.0',
+        description: 'svc1 테스트 서비스',
+        tools: ['test_tool'],
+      });
+      expect(info[1]).toEqual({
+        id: 'svc2',
+        name: 'svc2 Service',
+        version: '1.0.0',
+        description: 'svc2 테스트 서비스',
+        tools: [],
+      });
+    });
+  });
+
+  describe('getAllToolNames', () => {
+    it('모든 도구 이름을 반환한다', () => {
+      registry.register(() => createMockService('svc1', [createMockTool('tool1'), createMockTool('tool2')]));
+      registry.register(() => createMockService('svc2', [createMockTool('tool3')]));
+
+      const toolNames = registry.getAllToolNames();
+
+      expect(toolNames).toEqual(['tool1', 'tool2', 'tool3']);
+    });
+
+    it('등록된 서비스가 없으면 빈 배열을 반환한다', () => {
+      expect(registry.getAllToolNames()).toEqual([]);
+    });
+  });
+
+  describe('size', () => {
+    it('등록된 서비스 개수를 반환한다', () => {
+      expect(registry.size).toBe(0);
+
+      registry.register(() => createMockService('svc1'));
+      expect(registry.size).toBe(1);
+
+      registry.register(() => createMockService('svc2'));
+      expect(registry.size).toBe(2);
+    });
+  });
+
+  describe('getService', () => {
+    it('ID로 서비스를 조회할 수 있다', () => {
+      const service = createMockService('test');
+      registry.register(() => service);
+
+      const retrieved = registry.getService('test');
+
+      expect(retrieved).toBe(service);
+    });
+
+    it('존재하지 않는 ID는 undefined를 반환한다', () => {
+      expect(registry.getService('nonexistent')).toBeUndefined();
+    });
+  });
+});

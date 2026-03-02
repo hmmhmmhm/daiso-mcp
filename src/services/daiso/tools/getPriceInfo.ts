@@ -72,11 +72,11 @@ async function getPriceInfo(args: GetPriceInfoArgs): Promise<McpToolResponse> {
 
   let product: ProductDoc | null = null;
 
-  if (productId) {
-    product = await fetchProductById(productId);
-  } else if (productName) {
-    product = await fetchProductByName(productName);
-  }
+  // productId가 있으면 ID로 검색, 없으면 productName으로 검색
+  // 위에서 둘 다 없는 경우는 이미 에러 처리됨
+  product = productId
+    ? await fetchProductById(productId)
+    : await fetchProductByName(productName!);
 
   if (!product) {
     throw new Error(`상품을 찾을 수 없습니다: ${productId || productName}`);
