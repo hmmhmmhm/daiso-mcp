@@ -489,8 +489,14 @@ function jsonToYaml(obj: unknown, indent = 0): string {
       return '|\n' + lines.map((line) => spaces + '  ' + line).join('\n');
     }
     // 특수 문자가 포함된 경우 따옴표로 감싸기
-    if (obj.includes(':') || obj.includes('#') || obj.includes("'") || obj.includes('"')) {
-      return `"${obj.replace(/"/g, '\\"')}"`;
+    if (
+      obj.includes(':') ||
+      obj.includes('#') ||
+      obj.includes("'") ||
+      obj.includes('"') ||
+      obj.includes('\\')
+    ) {
+      return JSON.stringify(obj);
     }
     return obj;
   }
