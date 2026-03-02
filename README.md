@@ -44,6 +44,7 @@ https://mcp.aka.page
 5. 다음 정보 입력:
    - **Name:** `Daiso MCP`
    - **MCP Server URL:** `https://mcp.aka.page`
+   - **Authentication:** `None` 선택 (기본값 OAuth → None으로 변경)
 6. "I trust this application" 체크 후 생성
 7. 새 채팅에서 Developer Mode 선택 후 사용
 
