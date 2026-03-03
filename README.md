@@ -7,7 +7,7 @@
 
 # Daiso MCP Server
 
-내 주변 다이소/올리브영 매장을 찾고, 재고를 확인하는 기능을 AI에게 부여합니다.
+내 주변 다이소/올리브영 매장을 찾고, 재고를 확인하고, 메가박스 지점/영화/좌석 정보를 조회하는 기능을 AI에게 부여합니다.
 
 <br>
 
@@ -65,6 +65,8 @@ https://mcp.aka.page
 다이소 mcp를 사용해서 강남역 근처 매장 찾아줘
 올리브영 mcp를 사용해서 명동 근처 매장 찾아줘
 올리브영 mcp를 사용해서 선크림 재고 확인해줘
+메가박스 mcp를 사용해서 강남역 근처 지점 찾아줘
+메가박스 mcp를 사용해서 강남점 영화 목록이랑 잔여 좌석 확인해줘
 ```
 
 참고: [Claude Remote MCP 가이드](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
@@ -104,6 +106,9 @@ AI: (페이지를 읽고 API 사용법 이해)
 
 사용자: 수납박스 검색해줘
 AI: (https://mcp.aka.page/api/daiso/products?q=수납박스 호출 후 결과 제공)
+
+사용자: 강남역 근처 메가박스 지점 찾아줘
+AI: (https://mcp.aka.page/api/megabox/theaters?lat=37.4982&lng=127.0264 호출 후 결과 제공)
 ```
 
 <br>

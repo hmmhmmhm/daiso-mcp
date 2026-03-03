@@ -101,7 +101,7 @@ describe('handleMegaboxFindNearbyTheaters', () => {
       .mockRejectedValueOnce(new Error('failed'))
       .mockResolvedValueOnce(new Response('<dt>주소</dt><dd>좌표없음</dd>'))
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>서울</dd><a href=\"?lng=127.1&lat=37.6\">지도</a>')
+        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.1&lat=37.6">지도</a>')
       );
 
     const ctx = createMockContext({ lat: '37.5', lng: '127.0' });
@@ -130,10 +130,10 @@ describe('handleMegaboxFindNearbyTheaters', () => {
         )
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>서울</dd><a href=\"?lng=127.5&lat=37.5\">지도</a>')
+        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.5&lat=37.5">지도</a>')
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>서울</dd><a href=\"?lng=127.0&lat=37.5\">지도</a>')
+        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.0&lat=37.5">지도</a>')
       );
 
     const ctx = createMockContext({ lat: '37.5', lng: '127.0' });

@@ -55,6 +55,6 @@ describe('OpenAPI 페이지', () => {
     expect(__testOnlyJsonToYaml(123n)).toBe('123');
     expect(__testOnlyJsonToYaml([])).toBe('[]');
     expect(__testOnlyJsonToYaml({})).toBe('{}');
-    expect(__testOnlyJsonToYaml('a:b')).toBe('\"a:b\"');
+    expect(__testOnlyJsonToYaml('a:b')).toBe('"a:b"');
   });
 });
