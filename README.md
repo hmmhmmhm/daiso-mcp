@@ -18,7 +18,7 @@
 <br>
 <br>
 
-<img src="https://i.imgur.com/mPwS4Kv.png" width="200">&nbsp;&nbsp;<img src="https://i.imgur.com/MrndJ3g.png" width="400">
+<img src="https://i.imgur.com/mPwS4Kv.png" width="400">&nbsp;&nbsp;<img src="https://i.imgur.com/MrndJ3g.png" width="400">
 
 </div>
 
