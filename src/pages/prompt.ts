@@ -284,6 +284,56 @@ Base URL: ${baseUrl}
 
 ---
 
+### 10. CGV 극장 검색
+
+**설명**: 지역 코드 기준으로 CGV 극장 목록을 조회합니다.
+
+**URL**: ${baseUrl}/api/cgv/theaters?playDate={YYYYMMDD}
+
+**선택 파라미터**:
+- playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
+- regionCode: 지역 코드 (예: 01)
+- limit: 최대 결과 수 (기본값: 30)
+
+**예시**:
+- ${baseUrl}/api/cgv/theaters?playDate=20260304&regionCode=01
+- ${baseUrl}/api/cgv/theaters?playDate=20260304&limit=10
+
+---
+
+### 11. CGV 영화 검색
+
+**설명**: 날짜/극장 조건으로 CGV 영화 목록을 조회합니다.
+
+**URL**: ${baseUrl}/api/cgv/movies?playDate={YYYYMMDD}
+
+**선택 파라미터**:
+- playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
+- theaterCode: 극장 코드 (예: 0056)
+
+**예시**:
+- ${baseUrl}/api/cgv/movies?playDate=20260304&theaterCode=0056
+
+---
+
+### 12. CGV 시간표 조회
+
+**설명**: 날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다.
+
+**URL**: ${baseUrl}/api/cgv/timetable?playDate={YYYYMMDD}
+
+**선택 파라미터**:
+- playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
+- theaterCode: 극장 코드 (예: 0056)
+- movieCode: 영화 코드
+- limit: 최대 결과 수 (기본값: 50)
+
+**예시**:
+- ${baseUrl}/api/cgv/timetable?playDate=20260304&theaterCode=0056
+- ${baseUrl}/api/cgv/timetable?playDate=20260304&movieCode=200001
+
+---
+
 ## 응답 형식
 
 ### 성공 응답
@@ -324,6 +374,9 @@ Base URL: ${baseUrl}
 | MEGABOX_THEATER_SEARCH_FAILED | 메가박스 지점 조회 실패 |
 | MEGABOX_MOVIE_LIST_FAILED | 메가박스 영화 목록 조회 실패 |
 | MEGABOX_SEAT_LIST_FAILED | 메가박스 좌석 조회 실패 |
+| CGV_THEATER_SEARCH_FAILED | CGV 극장 조회 실패 |
+| CGV_MOVIE_SEARCH_FAILED | CGV 영화 목록 조회 실패 |
+| CGV_TIMETABLE_FETCH_FAILED | CGV 시간표 조회 실패 |
 
 ---
 
@@ -354,6 +407,9 @@ MCP 연결 정보: ${baseUrl}/mcp
 - megabox_find_nearby_theaters: 메가박스 주변 지점 탐색
 - megabox_list_now_showing: 메가박스 영화 목록 조회
 - megabox_get_remaining_seats: 메가박스 잔여 좌석 조회
+- cgv_find_theaters: CGV 극장 검색
+- cgv_search_movies: CGV 영화 검색
+- cgv_get_timetable: CGV 시간표 조회
 `;
 }
 

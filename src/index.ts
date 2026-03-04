@@ -14,6 +14,7 @@ import { ServiceRegistry } from './core/registry.js';
 import { createDaisoService } from './services/daiso/index.js';
 import { createOliveyoungService } from './services/oliveyoung/index.js';
 import { createMegaboxService } from './services/megabox/index.js';
+import { createCgvService } from './services/cgv/index.js';
 import { createPromptResponse } from './pages/prompt.js';
 import { createOpenApiJsonResponse, createOpenApiYamlResponse } from './pages/openapi.js';
 import { createPrivacyResponse } from './pages/privacy.js';
@@ -21,6 +22,7 @@ import type { AppBindings } from './api/response.js';
 import { registerDaisoRoutes } from './api/routes/daisoRoutes.js';
 import { registerOliveyoungRoutes } from './api/routes/oliveyoungRoutes.js';
 import { registerMegaboxRoutes } from './api/routes/megaboxRoutes.js';
+import { registerCgvRoutes } from './api/routes/cgvRoutes.js';
 
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
@@ -35,6 +37,7 @@ const createRegistry = (bindings?: AppBindings) => {
   registry.registerAll([
     createDaisoService,
     createMegaboxService,
+    createCgvService,
     () =>
       createOliveyoungService({
         zyteApiKey: bindings?.ZYTE_API_KEY,
@@ -132,6 +135,7 @@ app.get('/privacy', (c) => {
 registerDaisoRoutes(app);
 registerOliveyoungRoutes(app);
 registerMegaboxRoutes(app);
+registerCgvRoutes(app);
 
 // MCP 엔드포인트
 app.all('/mcp', async (c) => {

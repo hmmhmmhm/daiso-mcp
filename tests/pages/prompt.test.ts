@@ -37,6 +37,11 @@ describe('generatePromptText', () => {
     expect(text).toContain('/api/megabox/theaters');
     expect(text).toContain('/api/megabox/movies');
     expect(text).toContain('/api/megabox/seats');
+
+    // CGV API
+    expect(text).toContain('/api/cgv/theaters');
+    expect(text).toContain('/api/cgv/movies');
+    expect(text).toContain('/api/cgv/timetable');
   });
 
   it('파라미터 설명을 포함한다', () => {
@@ -72,6 +77,9 @@ describe('generatePromptText', () => {
     expect(text).toContain('MEGABOX_THEATER_SEARCH_FAILED');
     expect(text).toContain('MEGABOX_MOVIE_LIST_FAILED');
     expect(text).toContain('MEGABOX_SEAT_LIST_FAILED');
+    expect(text).toContain('CGV_THEATER_SEARCH_FAILED');
+    expect(text).toContain('CGV_MOVIE_SEARCH_FAILED');
+    expect(text).toContain('CGV_TIMETABLE_FETCH_FAILED');
   });
 
   it('MCP 연결 정보를 포함한다', () => {
@@ -87,6 +95,9 @@ describe('generatePromptText', () => {
     expect(text).toContain('megabox_find_nearby_theaters');
     expect(text).toContain('megabox_list_now_showing');
     expect(text).toContain('megabox_get_remaining_seats');
+    expect(text).toContain('cgv_find_theaters');
+    expect(text).toContain('cgv_search_movies');
+    expect(text).toContain('cgv_get_timetable');
   });
 
   it('사용 팁을 포함한다', () => {

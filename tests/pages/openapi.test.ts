@@ -25,6 +25,9 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/megabox/theaters']).toBeDefined();
     expect(spec.paths['/api/megabox/movies']).toBeDefined();
     expect(spec.paths['/api/megabox/seats']).toBeDefined();
+    expect(spec.paths['/api/cgv/theaters']).toBeDefined();
+    expect(spec.paths['/api/cgv/movies']).toBeDefined();
+    expect(spec.paths['/api/cgv/timetable']).toBeDefined();
   });
 
   it('OpenAPI JSON 응답을 생성한다', async () => {

@@ -51,6 +51,15 @@ describe('GET /', () => {
     expect(megaboxService.name).toBe('메가박스');
   });
 
+  it('CGV 서비스가 등록되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    const cgvService = data.services.find((s: { id: string }) => s.id === 'cgv');
+    expect(cgvService).toBeDefined();
+    expect(cgvService.name).toBe('CGV');
+  });
+
   it('다이소 도구들이 포함되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -76,6 +85,15 @@ describe('GET /', () => {
     expect(data.tools).toContain('megabox_find_nearby_theaters');
     expect(data.tools).toContain('megabox_list_now_showing');
     expect(data.tools).toContain('megabox_get_remaining_seats');
+  });
+
+  it('CGV 도구들이 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('cgv_find_theaters');
+    expect(data.tools).toContain('cgv_search_movies');
+    expect(data.tools).toContain('cgv_get_timetable');
   });
 
   it('엔드포인트 정보를 포함한다', async () => {
