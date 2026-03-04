@@ -193,14 +193,129 @@ describe('fetchCgvTimetable', () => {
     expect(result[0].remainingSeats).toBe(118);
   });
 
-  it('movieCode가 없으면 영화 목록에서 첫 영화를 사용한다', async () => {
+  it('이미 포맷된 시간과 비표준 시간 문자열을 그대로 유지한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          statusMessage: '조회 되었습니다.',
+          data: [
+            {
+              siteNo: '0056',
+              siteNm: 'CGV 강남',
+              scnYmd: '20260304',
+              scnSseq: '9',
+              movNo: '30000985',
+              movNm: '테스트 영화',
+              scnsrtTm: '12:30',
+              scnendTm: '12345',
+              stcnt: '123',
+              frSeatCnt: '118',
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await fetchCgvTimetable({
+      playDate: '20260304',
+      theaterCode: '0056',
+      movieCode: '30000985',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].startTime).toBe('12:30');
+    expect(result[0].endTime).toBe('12345');
+  });
+
+  it('시간/좌석 정보가 비어 있으면 기본값으로 정규화한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          statusMessage: '조회 되었습니다.',
+          data: [
+            {
+              siteNo: '0056',
+              siteNm: 'CGV 강남',
+              scnYmd: '20260304',
+              scnSseq: '10',
+              movNo: '30000985',
+              movNm: '테스트 영화',
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await fetchCgvTimetable({
+      playDate: '20260304',
+      theaterCode: '0056',
+      movieCode: '30000985',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].startTime).toBe('');
+    expect(result[0].endTime).toBe('');
+    expect(result[0].totalSeats).toBe(0);
+    expect(result[0].remainingSeats).toBe(0);
+  });
+
+  it('좌석 수 문자열이 숫자가 아니면 0으로 처리한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          statusMessage: '조회 되었습니다.',
+          data: [
+            {
+              siteNo: '0056',
+              siteNm: 'CGV 강남',
+              scnYmd: '20260304',
+              scnSseq: '11',
+              movNo: '30000985',
+              movNm: '테스트 영화',
+              scnsrtTm: '1230',
+              scnendTm: '1440',
+              stcnt: 'abc',
+              frSeatCnt: 'xyz',
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await fetchCgvTimetable({
+      playDate: '20260304',
+      theaterCode: '0056',
+      movieCode: '30000985',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].totalSeats).toBe(0);
+    expect(result[0].remainingSeats).toBe(0);
+  });
+
+  it('movieCode가 없으면 상영건이 있는 영화를 순차 탐색한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
             statusCode: 0,
             statusMessage: '조회 되었습니다.',
-            data: [{ movNo: '30000985', movNm: '테스트 영화' }],
+            data: [
+              { movNo: '30000985', movNm: '첫 영화' },
+              { movNo: '30000986', movNm: '둘째 영화' },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [],
           }),
         ),
       )
@@ -215,8 +330,8 @@ describe('fetchCgvTimetable', () => {
                 siteNm: 'CGV 강남',
                 scnYmd: '20260304',
                 scnSseq: '2',
-                movNo: '30000985',
-                movNm: '테스트 영화',
+                movNo: '30000986',
+                movNm: '둘째 영화',
                 scnsrtTm: '1230',
                 scnendTm: '1443',
                 stcnt: '123',
@@ -230,7 +345,9 @@ describe('fetchCgvTimetable', () => {
     const result = await fetchCgvTimetable({ playDate: '20260304', theaterCode: '0056' });
 
     expect(result).toHaveLength(1);
+    expect(result[0].movieCode).toBe('30000986');
     expect(result[0].remainingSeats).toBe(99);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
   it('Zyte 응답이 실패 상태면 에러를 반환한다', async () => {

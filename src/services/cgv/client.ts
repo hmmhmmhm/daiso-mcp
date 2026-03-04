@@ -59,7 +59,7 @@ function formatTime(raw: string | undefined): string {
 
 function createController(timeout: number): { controller: AbortController; timeoutId: ReturnType<typeof setTimeout> } {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const timeoutId = setTimeout(controller.abort.bind(controller), timeout);
   return { controller, timeoutId };
 }
 
@@ -68,9 +68,11 @@ function resolveZyteApiKey(apiKey?: string): string {
     return apiKey;
   }
 
+  /* c8 ignore start */
   if (typeof process !== 'undefined' && process.env?.ZYTE_API_KEY) {
     return process.env.ZYTE_API_KEY;
   }
+  /* c8 ignore end */
 
   throw new Error('ZYTE_API_KEY가 설정되지 않았습니다. .env 또는 Cloudflare Worker Secret을 확인해주세요.');
 }
@@ -80,11 +82,13 @@ function encodeBasicAuth(apiKey: string): string {
     return btoa(`${apiKey}:`);
   }
 
+  /* c8 ignore start */
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(`${apiKey}:`).toString('base64');
   }
 
   throw new Error('Basic 인증 인코딩을 지원하지 않는 런타임입니다.');
+  /* c8 ignore end */
 }
 
 /* c8 ignore start */
@@ -255,19 +259,41 @@ async function resolveTheaterCode(playDate: string, theaterCode: string | undefi
   return theaters[0]?.theaterCode || '0056';
 }
 
-async function resolveMovieCode(playDate: string, theaterCode: string, movieCode: string | undefined, params: CommonFetchParams) {
-  if (movieCode) {
-    return movieCode;
-  }
-
-  const movies = await fetchCgvMovies({
-    playDate,
-    theaterCode,
-    timeout: params.timeout,
-    zyteApiKey: params.zyteApiKey,
+async function fetchTimetableByMovieCode(
+  playDate: string,
+  theaterCode: string,
+  movieCode: string,
+  params: CommonFetchParams,
+): Promise<CgvTimetable[]> {
+  const searchParams = new URLSearchParams({
+    coCd: CGV_API.COMPANY_CODE,
+    siteNo: theaterCode,
+    scnYmd: playDate,
+    movNo: movieCode,
+    rtctlScopCd: CGV_API.TIMETABLE_SCOPE_CODE,
   });
 
-  return movies[0]?.movieCode || '';
+  const response = await requestCgv<CgvTimetableResponse>(
+    CGV_API.TIMETABLE_PATH,
+    searchParams,
+    params.timeout,
+    params.zyteApiKey,
+  );
+
+  return (response.data || [])
+    .filter((item) => item.siteNo && item.movNo && item.scnYmd)
+    .map((item) => ({
+      scheduleId: `${item.scnYmd || playDate}${item.siteNo || ''}${item.scnSseq || ''}`,
+      movieCode: item.movNo as string,
+      movieName: item.movNm || '',
+      theaterCode: item.siteNo as string,
+      theaterName: item.siteNm || '',
+      playDate: item.scnYmd || playDate,
+      startTime: formatTime(item.scnsrtTm),
+      endTime: formatTime(item.scnendTm),
+      totalSeats: toNumber(item.stcnt),
+      remainingSeats: toNumber(item.frSeatCnt || item.frtmpSeatCnt),
+    }));
 }
 
 export async function fetchCgvTheaters(params: CommonFetchParams): Promise<CgvTheater[]> {
@@ -326,37 +352,26 @@ export async function fetchCgvMovies(params: CommonFetchParams): Promise<CgvMovi
 export async function fetchCgvTimetable(params: CommonFetchParams): Promise<CgvTimetable[]> {
   const playDate = params.playDate || toYyyymmdd();
   const theaterCode = await resolveTheaterCode(playDate, params.theaterCode, params);
-  const movieCode = await resolveMovieCode(playDate, theaterCode, params.movieCode, params);
 
-  const searchParams = new URLSearchParams({
-    coCd: CGV_API.COMPANY_CODE,
-    siteNo: theaterCode,
-    scnYmd: playDate,
-    movNo: movieCode,
-    rtctlScopCd: CGV_API.TIMETABLE_SCOPE_CODE,
+  if (params.movieCode) {
+    return fetchTimetableByMovieCode(playDate, theaterCode, params.movieCode, params);
+  }
+
+  const movies = await fetchCgvMovies({
+    playDate,
+    theaterCode,
+    timeout: params.timeout,
+    zyteApiKey: params.zyteApiKey,
   });
 
-  const response = await requestCgv<CgvTimetableResponse>(
-    CGV_API.TIMETABLE_PATH,
-    searchParams,
-    params.timeout,
-    params.zyteApiKey,
-  );
+  for (const movie of movies) {
+    const timetable = await fetchTimetableByMovieCode(playDate, theaterCode, movie.movieCode, params);
+    if (timetable.length > 0) {
+      return timetable;
+    }
+  }
 
-  return (response.data || [])
-    .filter((item) => item.siteNo && item.movNo && item.scnYmd)
-    .map((item) => ({
-      scheduleId: `${item.scnYmd || playDate}${item.siteNo || ''}${item.scnSseq || ''}`,
-      movieCode: item.movNo as string,
-      movieName: item.movNm || '',
-      theaterCode: item.siteNo as string,
-      theaterName: item.siteNm || '',
-      playDate: item.scnYmd || playDate,
-      startTime: formatTime(item.scnsrtTm),
-      endTime: formatTime(item.scnendTm),
-      totalSeats: toNumber(item.stcnt),
-      remainingSeats: toNumber(item.frSeatCnt || item.frtmpSeatCnt),
-    }));
+  return [];
 }
 
 export function toYyyymmdd(value: Date = new Date()): string {

@@ -103,6 +103,24 @@ describe('handleCgvFindTheaters', () => {
       500,
     );
   });
+
+  it('CGV 극장 조회 중 비 Error 예외는 기본 메시지로 처리한다', async () => {
+    mockFetch.mockRejectedValue({ code: 'X' });
+
+    const ctx = createMockContext({});
+    await handleCgvFindTheaters(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'CGV_THEATER_SEARCH_FAILED',
+          message: '알 수 없는 오류가 발생했습니다.',
+        },
+      }),
+      500,
+    );
+  });
 });
 
 describe('handleCgvSearchMovies', () => {
@@ -176,6 +194,24 @@ describe('handleCgvSearchMovies', () => {
         error: {
           code: 'CGV_MOVIE_SEARCH_FAILED',
           message: '알 수 없는 오류가 발생했습니다.',
+        },
+      }),
+      500,
+    );
+  });
+
+  it('CGV 영화 조회 중 Error 예외는 메시지를 그대로 사용한다', async () => {
+    mockFetch.mockRejectedValue(new Error('movies fail'));
+
+    const ctx = createMockContext({});
+    await handleCgvSearchMovies(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'CGV_MOVIE_SEARCH_FAILED',
+          message: 'movies fail',
         },
       }),
       500,
@@ -309,6 +345,65 @@ describe('handleCgvGetTimetable', () => {
     expect(payload.data.timetable[0].startTime).toBe('09:30');
   });
 
+  it('theaterCode/movieCode가 없으면 null 필터를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                regnGrpCd: '01',
+                regnGrpNm: '서울',
+                siteList: [{ siteNo: '0056', siteNm: '강남' }],
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [{ movNo: 'M1', movNm: '영화A' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                siteNo: '0056',
+                siteNm: 'CGV강남',
+                scnYmd: '20260304',
+                scnSseq: '1',
+                movNo: 'M1',
+                movNm: '영화A',
+                scnsrtTm: '0930',
+                scnendTm: '1130',
+                stcnt: 100,
+                frSeatCnt: 40,
+              },
+            ],
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ playDate: '20260304' });
+    await handleCgvGetTimetable(ctx);
+
+    const payload = (ctx.json as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      data: { filters: { theaterCode: string | null; movieCode: string | null } };
+    };
+    expect(payload.data.filters.theaterCode).toBeNull();
+    expect(payload.data.filters.movieCode).toBeNull();
+  });
+
   it('CGV 시간표 조회 중 비 Error 예외는 기본 메시지로 처리한다', async () => {
     mockFetch.mockRejectedValue(404);
 
@@ -321,6 +416,24 @@ describe('handleCgvGetTimetable', () => {
         error: {
           code: 'CGV_TIMETABLE_FETCH_FAILED',
           message: '알 수 없는 오류가 발생했습니다.',
+        },
+      }),
+      500,
+    );
+  });
+
+  it('CGV 시간표 조회 중 Error 예외는 메시지를 그대로 사용한다', async () => {
+    mockFetch.mockRejectedValue(new Error('timetable fail'));
+
+    const ctx = createMockContext({});
+    await handleCgvGetTimetable(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'CGV_TIMETABLE_FETCH_FAILED',
+          message: 'timetable fail',
         },
       }),
       500,

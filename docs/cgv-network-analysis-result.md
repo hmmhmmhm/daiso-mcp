@@ -99,3 +99,53 @@
 - OIDC(`oidc.cgv.co.kr`) 기반 토큰 흐름이 필요한 API 범위 추가 분석
 - `rtctlScopCd` 값 체계 및 의미 문서화
 - 요일/상영관 유형 필터링 파라미터 정리
+
+## 문제 구간 업데이트 (2026-03-04, KST)
+
+스크래핑 플레이북의 "응답이 비어 있을 때 조건 변경 재검증" 절차에 따라
+`/api/cgv/timetable`만 별도 재검증했습니다.
+
+### 재검증 결과
+
+- 정상:
+  - `/api/cgv/theaters?playDate=20260304&limit=3` -> 극장 3건
+  - `/api/cgv/movies?playDate=20260304&theaterCode=0056` -> 영화 11건
+- 문제:
+  - `/api/cgv/timetable?playDate=20260304&limit=3` -> `timetable=[]`
+  - `/api/cgv/timetable?playDate=20260304&theaterCode=0056&limit=3` -> `timetable=[]`
+  - `/api/cgv/timetable?playDate=20260304&theaterCode=0056&movieCode=30001010&limit=5` -> `timetable=[]`
+  - `/api/cgv/timetable?playDate=20260305&theaterCode=0056&limit=5` -> `timetable=[]`
+
+### 현재 판정
+
+- `theaters`, `movies`는 실응답 정상
+- `timetable`은 성공 응답(`success=true`)이지만 데이터 0건으로 고정되는 현상 존재
+- 따라서 현재 시점에서는 "시간표 API 데이터 경로 이상/조건 불일치" 상태로 분류
+
+### 추정 원인 (실측 기반 가설)
+
+- `movieCode` 자동 선택 로직이 실제 상영 스케줄이 없는 코드로 고정될 가능성
+- CGV 상영 시간표 조회 조건(`movNo`, `rtctlScopCd`, 날짜/지점 조합) 유효성 변화 가능성
+- 데이터 공급 API는 성공하지만, 최종 스케줄 데이터셋이 빈 조건으로 조회되는 가능성
+
+### 다음 조사 포인트
+
+- Zyte 원본 응답에서 `searchSchByMov` 요청/응답 payload를 그대로 로그하여
+  빈 배열이 upstream인지, 정규화 단계인지 분리 확인
+- `movieCode` 미지정 시 "첫 영화 고정" 대신 상영건 존재하는 영화를 탐색하는 로직 검토
+
+### 원인 확인 및 코드 반영 (2026-03-04, KST)
+
+- 원인 확인:
+  - `movieCode` 미지정 시 첫 영화(`30001010`)를 고정 조회
+  - 해당 코드의 시간표가 0건이라 `/api/cgv/timetable` 기본 호출이 빈 배열로 귀결
+  - 같은 조건에서 `movieCode=30000985` 지정 시 시간표 2건 확인
+
+- 코드 반영:
+  - `src/services/cgv/client.ts`의 `fetchCgvTimetable`을 수정해
+    `movieCode`가 없을 때 영화 목록을 순차 조회하며 상영건이 있는 영화를 탐색
+  - 최초로 시간표가 1건 이상 나오는 영화의 결과를 반환하도록 변경
+
+- 검증:
+  - CGV 관련 테스트 재실행 통과
+  - `tests/services/cgv/client.test.ts`에 순차 탐색 동작 테스트 추가/갱신
