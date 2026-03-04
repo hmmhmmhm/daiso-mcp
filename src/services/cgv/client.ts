@@ -62,12 +62,12 @@ async function fetchTimetableByMovieCode(
   return (response.data || [])
     .filter((item) => item.siteNo && item.movNo && item.scnYmd)
     .map((item) => ({
-      scheduleId: `${item.scnYmd || playDate}${item.siteNo || ''}${item.scnSseq || ''}`,
+      scheduleId: `${item.scnYmd}${item.siteNo}${item.scnSseq || ''}`,
       movieCode: item.movNo as string,
       movieName: item.movNm || '',
       theaterCode: item.siteNo as string,
       theaterName: item.siteNm || '',
-      playDate: item.scnYmd || playDate,
+      playDate: item.scnYmd as string,
       startTime: formatTime(item.scnsrtTm),
       endTime: formatTime(item.scnendTm),
       totalSeats: toNumber(item.stcnt),

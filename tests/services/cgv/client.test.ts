@@ -99,6 +99,32 @@ describe('fetchCgvTheaters', () => {
 
     await expect(fetchCgvTheaters({})).rejects.toThrow('CGV API 요청 시간 초과');
   });
+
+  it('응답 필드 누락 시 빈 배열을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          data: [
+            {
+              siteList: [{}],
+            },
+            {},
+          ],
+        }),
+      ),
+    );
+
+    const result = await fetchCgvTheaters({});
+    expect(result).toEqual([]);
+  });
+
+  it('data가 없으면 빈 배열을 반환한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ statusCode: 0 })));
+
+    const result = await fetchCgvTheaters({});
+    expect(result).toEqual([]);
+  });
 });
 
 describe('fetchCgvMovies', () => {
@@ -152,6 +178,66 @@ describe('fetchCgvMovies', () => {
     expect(result).toHaveLength(1);
     expect(result[0].movieCode).toBe('30000985');
     expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('극장 목록이 비어 있으면 기본 극장 코드(0056)를 사용한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [],
+          }),
+        ),
+      );
+
+    await fetchCgvMovies({ playDate: '20260304' });
+
+    const calledUrl = String(mockFetch.mock.calls[1][0]);
+    expect(calledUrl).toContain('siteNo=0056');
+  });
+
+  it('playDate가 없으면 오늘 날짜를 사용한다', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-06T00:00:00.000Z'));
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          statusMessage: '조회 되었습니다.',
+          data: [],
+        }),
+      ),
+    );
+
+    await fetchCgvMovies({ theaterCode: '0056' });
+
+    const calledUrl = String(mockFetch.mock.calls[0][0]);
+    expect(calledUrl).toContain('scnYmd=20260306');
+    vi.useRealTimers();
+  });
+
+  it('영화 목록 data가 없으면 빈 배열을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+        }),
+      ),
+    );
+
+    const result = await fetchCgvMovies({ playDate: '20260304', theaterCode: '0056' });
+    expect(result).toEqual([]);
   });
 });
 
@@ -259,6 +345,36 @@ describe('fetchCgvTimetable', () => {
     expect(result[0].endTime).toBe('');
     expect(result[0].totalSeats).toBe(0);
     expect(result[0].remainingSeats).toBe(0);
+  });
+
+  it('응답 필드 일부가 비어 있어도 기본값으로 정규화한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          statusMessage: '조회 되었습니다.',
+          data: [
+            {
+              siteNo: '0056',
+              scnYmd: '20260304',
+              movNo: '30000985',
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await fetchCgvTimetable({
+      playDate: '20260304',
+      theaterCode: '0056',
+      movieCode: '30000985',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].scheduleId).toBe('202603040056');
+    expect(result[0].movieName).toBe('');
+    expect(result[0].theaterName).toBe('');
+    expect(result[0].playDate).toBe('20260304');
   });
 
   it('좌석 수 문자열이 숫자가 아니면 0으로 처리한다', async () => {
@@ -396,6 +512,38 @@ describe('fetchCgvTimetable', () => {
     );
 
     process.env.ZYTE_API_KEY = original;
+  });
+
+  it('playDate가 없으면 오늘 날짜를 사용한다', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-07T00:00:00.000Z'));
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          statusMessage: '조회 되었습니다.',
+          data: [],
+        }),
+      ),
+    );
+
+    await fetchCgvTimetable({ theaterCode: '0056', movieCode: '30000985' });
+
+    const calledUrl = String(mockFetch.mock.calls[0][0]);
+    expect(calledUrl).toContain('scnYmd=20260307');
+    vi.useRealTimers();
+  });
+
+  it('시간표 data가 없으면 빈 배열을 반환한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ statusCode: 0 })));
+
+    const result = await fetchCgvTimetable({
+      playDate: '20260304',
+      theaterCode: '0056',
+      movieCode: '30000985',
+    });
+
+    expect(result).toEqual([]);
   });
 
 });
