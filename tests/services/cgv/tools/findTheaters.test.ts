@@ -46,4 +46,22 @@ describe('createFindTheatersTool', () => {
     expect(parsed.theaters[0].theaterCode).toBe('0056');
     expect(parsed.filters.regionCode).toBe('01');
   });
+
+  it('regionCode가 없으면 null로 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          d: {
+            TheaterList: [{ TheaterCd: '0056', TheaterName: 'CGV강남', AreaCd: '01' }],
+          },
+        }),
+      ),
+    );
+
+    const tool = createFindTheatersTool();
+    const result = await tool.handler({ playDate: '20260304' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.filters.regionCode).toBeNull();
+  });
 });

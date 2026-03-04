@@ -70,6 +70,49 @@ describe('createGetTimetableTool', () => {
     expect(parsed.filters.movieCode).toBe('M1');
   });
 
+  it('동일 시작 시간은 극장명 오름차순으로 정렬한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          d: {
+            TimeTableList: [
+              {
+                ScheduleNo: 'SCH2',
+                MovieCd: 'M1',
+                MovieName: '영화A',
+                TheaterCd: '0100',
+                TheaterName: 'CGV홍대',
+                PlayYmd: '20260304',
+                StartTime: '0930',
+                EndTime: '1130',
+                TotalSeat: 120,
+                RemainSeat: 40,
+              },
+              {
+                ScheduleNo: 'SCH1',
+                MovieCd: 'M1',
+                MovieName: '영화A',
+                TheaterCd: '0056',
+                TheaterName: 'CGV강남',
+                PlayYmd: '20260304',
+                StartTime: '0930',
+                EndTime: '1130',
+                TotalSeat: 120,
+                RemainSeat: 50,
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const tool = createGetTimetableTool();
+    const result = await tool.handler({ playDate: '20260304' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.timetable[0].scheduleId).toBe('SCH1');
+  });
+
   it('필터가 없으면 null로 반환한다', async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ d: { TimeTableList: [] } })));
 
