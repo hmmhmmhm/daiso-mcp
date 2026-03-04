@@ -5,6 +5,7 @@
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { fetchCgvTimetable, toYyyymmdd } from '../client.js';
+import { filterAndSortTimetable } from '../timetable.js';
 
 interface GetTimetableArgs {
   playDate?: string;
@@ -31,16 +32,7 @@ async function getTimetable(args: GetTimetableArgs, apiKey?: string): Promise<Mc
     zyteApiKey: apiKey,
   });
 
-  const filtered = timetable
-    .filter((item) => (theaterCode ? item.theaterCode === theaterCode : true))
-    .filter((item) => (movieCode ? item.movieCode === movieCode : true))
-    .sort((a, b) => {
-      if (a.startTime === b.startTime) {
-        return a.theaterName.localeCompare(b.theaterName);
-      }
-      return a.startTime.localeCompare(b.startTime);
-    })
-    .slice(0, limit);
+  const filtered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
 
   const result = {
     playDate,

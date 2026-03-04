@@ -8,7 +8,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { StoreInventory, StoreInventoryResponse, OnlineStockResponse } from '../types.js';
 import { DAISOMALL_API } from '../api.js';
-import { fetchJson } from '../../../utils/fetch.js';
+import { fetchDaisoJson } from '../client.js';
 
 /** 도구 입력 인터페이스 */
 interface CheckInventoryArgs {
@@ -24,7 +24,7 @@ interface CheckInventoryArgs {
  * 온라인 재고 조회
  */
 export async function fetchOnlineStock(productNo: string): Promise<number> {
-  const data = await fetchJson<OnlineStockResponse>(DAISOMALL_API.ONLINE_STOCK, {
+  const data = await fetchDaisoJson<OnlineStockResponse>(DAISOMALL_API.ONLINE_STOCK, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pdNo: productNo }),
@@ -48,7 +48,7 @@ export async function fetchStoreInventory(
   pageSize: number = 30,
   keyword: string = ''
 ): Promise<{ stores: StoreInventory[]; totalCount: number }> {
-  const data = await fetchJson<StoreInventoryResponse>(DAISOMALL_API.STORE_INVENTORY, {
+  const data = await fetchDaisoJson<StoreInventoryResponse>(DAISOMALL_API.STORE_INVENTORY, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

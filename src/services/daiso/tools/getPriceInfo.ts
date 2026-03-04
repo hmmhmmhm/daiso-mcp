@@ -8,7 +8,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { ProductSearchResponse, ProductDoc } from '../types.js';
 import { DAISOMALL_API, getImageUrl } from '../api.js';
-import { fetchJson } from '../../../utils/fetch.js';
+import { fetchDaisoJson } from '../client.js';
 
 /** 도구 입력 인터페이스 */
 interface GetPriceInfoArgs {
@@ -25,7 +25,7 @@ export async function fetchProductById(productId: string): Promise<ProductDoc | 
   url.searchParams.set('cntPerPage', '10');
   url.searchParams.set('pageNum', '1');
 
-  const data = await fetchJson<ProductSearchResponse>(url.toString());
+  const data = await fetchDaisoJson<ProductSearchResponse>(url.toString());
 
   if (!data.resultSet?.result?.[0]?.resultDocuments) {
     return null;
@@ -51,7 +51,7 @@ async function fetchProductByName(productName: string): Promise<ProductDoc | nul
   url.searchParams.set('cntPerPage', '1');
   url.searchParams.set('pageNum', '1');
 
-  const data = await fetchJson<ProductSearchResponse>(url.toString());
+  const data = await fetchDaisoJson<ProductSearchResponse>(url.toString());
 
   if (!data.resultSet?.result?.[0]?.resultDocuments?.length) {
     return null;

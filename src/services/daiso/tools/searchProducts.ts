@@ -8,7 +8,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { Product, ProductSearchResponse } from '../types.js';
 import { DAISOMALL_API, getImageUrl } from '../api.js';
-import { fetchJson } from '../../../utils/fetch.js';
+import { fetchDaisoJson } from '../client.js';
 
 /** 도구 입력 인터페이스 */
 interface SearchProductsArgs {
@@ -30,7 +30,7 @@ export async function fetchProducts(
   url.searchParams.set('cntPerPage', pageSize.toString());
   url.searchParams.set('pageNum', page.toString());
 
-  const data = await fetchJson<ProductSearchResponse>(url.toString());
+  const data = await fetchDaisoJson<ProductSearchResponse>(url.toString());
 
   // 결과가 없는 경우
   if (!data.resultSet?.result?.[0]?.resultDocuments) {

@@ -8,7 +8,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { Store, StoreOptions } from '../types.js';
 import { DAISO_WEB_API, formatTime } from '../api.js';
-import { fetchHtml, fetchJson } from '../../../utils/fetch.js';
+import { fetchDaisoHtml, fetchDaisoJson } from '../client.js';
 
 /** 도구 입력 인터페이스 */
 interface FindStoresArgs {
@@ -109,7 +109,7 @@ export async function fetchStores(
   url.searchParams.set('gugun', gugun || '');
   url.searchParams.set('dong', dong || '');
 
-  const html = await fetchHtml(url.toString());
+  const html = await fetchDaisoHtml(url.toString());
   return parseStoresFromHtml(html);
 }
 
@@ -120,7 +120,7 @@ export async function getDistricts(sido: string): Promise<string[]> {
   const url = new URL(DAISO_WEB_API.SIDO_SEARCH);
   url.searchParams.set('sido', sido);
 
-  const data = await fetchJson<Array<{ value: string }>>(url.toString());
+  const data = await fetchDaisoJson<Array<{ value: string }>>(url.toString());
   return data.map((item) => item.value);
 }
 
@@ -132,7 +132,7 @@ export async function getNeighborhoods(sido: string, gugun: string): Promise<str
   url.searchParams.set('sido', sido);
   url.searchParams.set('gugun', gugun);
 
-  const data = await fetchJson<Array<{ value: string }>>(url.toString());
+  const data = await fetchDaisoJson<Array<{ value: string }>>(url.toString());
   return data.map((item) => item.value);
 }
 

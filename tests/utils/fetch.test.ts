@@ -17,24 +17,18 @@ afterEach(() => {
 });
 
 describe('daisoFetch', () => {
-  it('기본 헤더와 함께 요청을 보낸다', async () => {
+  it('기본 옵션으로 요청을 보낸다', async () => {
     mockFetch.mockResolvedValue(new Response('OK'));
 
     await daisoFetch('https://example.com/api');
 
     expect(mockFetch).toHaveBeenCalledWith(
       'https://example.com/api',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'User-Agent': expect.any(String),
-          Accept: 'application/json, text/html, */*',
-          'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        }),
-      })
+      expect.objectContaining({})
     );
   });
 
-  it('커스텀 헤더를 추가할 수 있다', async () => {
+  it('커스텀 헤더를 전달할 수 있다', async () => {
     mockFetch.mockResolvedValue(new Response('OK'));
 
     await daisoFetch('https://example.com/api', {
@@ -44,9 +38,7 @@ describe('daisoFetch', () => {
     expect(mockFetch).toHaveBeenCalledWith(
       'https://example.com/api',
       expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-Custom': 'value',
-        }),
+        headers: { 'X-Custom': 'value' },
       })
     );
   });

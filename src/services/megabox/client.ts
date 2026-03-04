@@ -10,6 +10,8 @@ import type {
   MegaboxTheater,
   MegaboxTheaterInfo,
 } from './types.js';
+import { formatTime, toNumber, toYyyymmdd } from '../../utils/format.js';
+import { createTimeoutController } from '../../utils/http.js';
 
 interface FetchBookingListParams {
   playDate: string;
@@ -17,39 +19,6 @@ interface FetchBookingListParams {
   theaterId?: string;
   areaCode?: string;
   timeout?: number;
-}
-
-function toNumber(value: number | string | undefined): number {
-  if (typeof value === 'number') {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const parsed = parseInt(value, 10);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function formatTime(raw: string | undefined): string {
-  if (!raw || raw.length < 3) {
-    return raw || '';
-  }
-
-  if (raw.includes(':')) {
-    return raw;
-  }
-
-  if (raw.length === 4) {
-    return `${raw.slice(0, 2)}:${raw.slice(2)}`;
-  }
-
-  return raw;
-}
-
-function createController(timeout: number): { controller: AbortController; timeoutId: ReturnType<typeof setTimeout> } {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  return { controller, timeoutId };
 }
 
 export async function fetchMegaboxBookingList(
@@ -73,7 +42,7 @@ export async function fetchMegaboxBookingList(
     form.set('brchNo1', params.theaterId);
   }
 
-  const { controller, timeoutId } = createController(timeout);
+  const { controller, timeoutId } = createTimeoutController(timeout);
 
   try {
     const response = await fetch(`${MEGABOX_API.BASE_URL}${MEGABOX_API.SELECT_BOOKING_LIST_PATH}`, {
@@ -170,7 +139,7 @@ export async function fetchMegaboxTheaterInfo(
     brchNo: theaterId,
   });
 
-  const { controller, timeoutId } = createController(timeout);
+  const { controller, timeoutId } = createTimeoutController(timeout);
 
   try {
     const response = await fetch(`${MEGABOX_API.BASE_URL}${MEGABOX_API.THEATER_INFO_PATH}`, {
@@ -208,9 +177,4 @@ export async function fetchMegaboxTheaterInfo(
   }
 }
 
-export function toYyyymmdd(value: Date = new Date()): string {
-  const year = value.getFullYear();
-  const month = `${value.getMonth() + 1}`.padStart(2, '0');
-  const day = `${value.getDate()}`.padStart(2, '0');
-  return `${year}${month}${day}`;
-}
+export { toYyyymmdd };

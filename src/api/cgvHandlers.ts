@@ -3,6 +3,7 @@
  */
 
 import { fetchCgvMovies, fetchCgvTheaters, fetchCgvTimetable, toYyyymmdd } from '../services/cgv/client.js';
+import { filterAndSortTimetable } from '../services/cgv/timetable.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 
 /**
@@ -96,16 +97,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
       zyteApiKey: c.env?.ZYTE_API_KEY,
     });
 
-    const filtered = timetable
-      .filter((item) => (theaterCode ? item.theaterCode === theaterCode : true))
-      .filter((item) => (movieCode ? item.movieCode === movieCode : true))
-      .sort((a, b) => {
-        if (a.startTime === b.startTime) {
-          return a.theaterName.localeCompare(b.theaterName);
-        }
-        return a.startTime.localeCompare(b.startTime);
-      })
-      .slice(0, limit);
+    const filtered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
 
     return successResponse(
       c,

@@ -4,13 +4,13 @@
  * Zyte extract API를 통해 올리브영 내부 API를 우회 호출합니다.
  */
 
-import { OLIVEYOUNG_API, ZYTE_API_URL } from './api.js';
+import { OLIVEYOUNG_API } from './api.js';
 import type {
   OliveyoungApiResponse,
   OliveyoungProduct,
   OliveyoungStore,
-  ZyteExtractResponse,
 } from './types.js';
+import { decodeBase64, requestByZyte } from '../../utils/zyte.js';
 
 interface RequestOptions {
   apiKey?: string;
@@ -32,83 +32,26 @@ interface SearchProductsParams {
   includeSoldOut: boolean;
 }
 
-function resolveApiKey(apiKey?: string): string {
-  if (apiKey && apiKey.trim().length > 0) {
-    return apiKey;
-  }
-
-  if (typeof process !== 'undefined' && process.env?.ZYTE_API_KEY) {
-    return process.env.ZYTE_API_KEY;
-  }
-
-  throw new Error('ZYTE_API_KEY가 설정되지 않았습니다. .env 또는 Cloudflare Worker Secret을 확인해주세요.');
-}
-
-function encodeBasicAuth(apiKey: string): string {
-  if (typeof btoa === 'function') {
-    return btoa(`${apiKey}:`);
-  }
-
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(`${apiKey}:`).toString('base64');
-  }
-
-  throw new Error('Basic 인증 인코딩을 지원하지 않는 런타임입니다.');
-}
-
-function decodeBase64(value: string): string {
-  if (typeof atob === 'function') {
-    const binary = atob(value);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    return new TextDecoder().decode(bytes);
-  }
-
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(value, 'base64').toString('utf8');
-  }
-
-  throw new Error('Base64 디코딩을 지원하지 않는 런타임입니다.');
-}
-
 async function zyteExtract(
   targetPath: string,
   requestBody: Record<string, unknown>,
   options: RequestOptions = {}
 ): Promise<OliveyoungApiResponse> {
-  const { timeout = 15000 } = options;
-  const apiKey = resolveApiKey(options.apiKey);
-  const auth = encodeBasicAuth(apiKey);
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const { timeout = 15000, apiKey } = options;
 
   try {
-    const response = await fetch(ZYTE_API_URL, {
+    const result = await requestByZyte({
+      apiKey,
+      timeout,
+      url: `${OLIVEYOUNG_API.BASE_URL}${targetPath}`,
       method: 'POST',
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        url: `${OLIVEYOUNG_API.BASE_URL}${targetPath}`,
-        httpRequestMethod: 'POST',
-        customHttpRequestHeaders: [
-          { name: 'Content-Type', value: 'application/json' },
-          { name: 'Accept', value: 'application/json' },
-          { name: 'X-Requested-With', value: 'XMLHttpRequest' },
-        ],
-        httpRequestText: JSON.stringify(requestBody),
-        httpResponseBody: true,
-      }),
-      signal: controller.signal,
+      headers: [
+        { name: 'Content-Type', value: 'application/json' },
+        { name: 'Accept', value: 'application/json' },
+        { name: 'X-Requested-With', value: 'XMLHttpRequest' },
+      ],
+      bodyText: JSON.stringify(requestBody),
     });
-
-    const result = (await response.json()) as ZyteExtractResponse;
-
-    if (!response.ok) {
-      throw new Error(`Zyte API 호출 실패: ${response.status} ${result.detail || result.title || ''}`.trim());
-    }
 
     if (result.statusCode !== 200 || !result.httpResponseBody) {
       throw new Error(`올리브영 API 응답 실패: ${result.statusCode || 'unknown'}`);
@@ -127,8 +70,6 @@ async function zyteExtract(
       throw new Error('올리브영 API 요청 시간 초과');
     }
     throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 
