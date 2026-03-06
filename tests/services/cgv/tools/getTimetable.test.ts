@@ -97,17 +97,6 @@ describe('createGetTimetableTool', () => {
             JSON.stringify({
               statusCode: 0,
               statusMessage: '조회 되었습니다.',
-              data: [{ movNo: 'M1', movNm: '영화A' }],
-            }),
-          ),
-        ),
-      )
-      .mockImplementationOnce(() =>
-        Promise.resolve(
-          new Response(
-            JSON.stringify({
-              statusCode: 0,
-              statusMessage: '조회 되었습니다.',
               data: [
                 {
                   siteNo: '0100',
@@ -171,15 +160,21 @@ describe('createGetTimetableTool', () => {
             JSON.stringify({
               statusCode: 0,
               statusMessage: '조회 되었습니다.',
-              data: [{ movNo: 'M1', movNm: '영화A' }],
+              data: [
+                {
+                  siteNo: '0056',
+                  siteNm: 'CGV강남',
+                  scnYmd: '20260304',
+                  scnSseq: '1',
+                  movNo: 'M1',
+                  movNm: '영화A',
+                  scnsrtTm: '0930',
+                  scnendTm: '1130',
+                  stcnt: 120,
+                  frSeatCnt: 50,
+                },
+              ],
             }),
-          ),
-        ),
-      )
-      .mockImplementationOnce(() =>
-        Promise.resolve(
-          new Response(
-            JSON.stringify({ statusCode: 0, statusMessage: '조회 되었습니다.', data: [] }),
           ),
         ),
       );

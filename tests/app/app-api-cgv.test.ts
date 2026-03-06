@@ -59,38 +59,28 @@ describe('GET /api/cgv/movies', () => {
 
 describe('GET /api/cgv/timetable', () => {
   it('CGV 시간표를 반환한다', async () => {
-    mockFetch
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            statusCode: 0,
-            statusMessage: '조회 되었습니다.',
-            data: [{ movNo: 'M1', movNm: '영화A' }],
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            statusCode: 0,
-            statusMessage: '조회 되었습니다.',
-            data: [
-              {
-                siteNo: '0056',
-                siteNm: 'CGV강남',
-                scnYmd: '20260304',
-                scnSseq: '1',
-                movNo: 'M1',
-                movNm: '영화A',
-                scnsrtTm: '0930',
-                scnendTm: '1130',
-                stcnt: 100,
-                frSeatCnt: 30,
-              },
-            ],
-          }),
-        ),
-      );
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          statusMessage: '조회 되었습니다.',
+          data: [
+            {
+              siteNo: '0056',
+              siteNm: 'CGV강남',
+              scnYmd: '20260304',
+              scnSseq: '1',
+              movNo: 'M1',
+              movNm: '영화A',
+              scnsrtTm: '0930',
+              scnendTm: '1130',
+              stcnt: 100,
+              frSeatCnt: 30,
+            },
+          ],
+        }),
+      ),
+    );
 
     const res = await app.request('/api/cgv/timetable?playDate=20260304&theaterCode=0056');
     expect(res.status).toBe(200);

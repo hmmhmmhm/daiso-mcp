@@ -23,6 +23,9 @@ interface CommonFetchParams {
   zyteApiKey?: string;
 }
 
+const DEFAULT_THEATER_CODE = '0056';
+const MAX_FALLBACK_THEATERS = 5;
+
 async function resolveTheaterCode(playDate: string, theaterCode: string | undefined, params: CommonFetchParams) {
   if (theaterCode) {
     return theaterCode;
@@ -35,7 +38,34 @@ async function resolveTheaterCode(playDate: string, theaterCode: string | undefi
     zyteApiKey: params.zyteApiKey,
   });
 
-  return theaters[0]?.theaterCode || '0056';
+  return theaters[0]?.theaterCode || DEFAULT_THEATER_CODE;
+}
+
+async function fetchMoviesByTheaterCode(
+  playDate: string,
+  theaterCode: string,
+  params: CommonFetchParams,
+): Promise<CgvMovie[]> {
+  const searchParams = new URLSearchParams({
+    coCd: CGV_API.COMPANY_CODE,
+    siteNo: theaterCode,
+    scnYmd: playDate,
+  });
+
+  const response = await requestCgv<CgvMovieListResponse>(
+    CGV_API.MOVIE_LIST_PATH,
+    searchParams,
+    params.timeout,
+    params.zyteApiKey,
+  );
+
+  return (response.data || [])
+    .filter((item) => item.movNo && item.movNm)
+    .map((item) => ({
+      movieCode: item.movNo as string,
+      movieName: item.movNm as string,
+      rating: item.cratgClsNm || undefined,
+    }));
 }
 
 async function fetchTimetableByMovieCode(
@@ -65,6 +95,41 @@ async function fetchTimetableByMovieCode(
       scheduleId: `${item.scnYmd}${item.siteNo}${item.scnSseq || ''}`,
       movieCode: item.movNo as string,
       movieName: item.movNm || '',
+      theaterCode: item.siteNo as string,
+      theaterName: item.siteNm || '',
+      playDate: item.scnYmd as string,
+      startTime: formatTime(item.scnsrtTm),
+      endTime: formatTime(item.scnendTm),
+      totalSeats: toNumber(item.stcnt),
+      remainingSeats: toNumber(item.frSeatCnt || item.frtmpSeatCnt),
+    }));
+}
+
+async function fetchTimetableBySite(
+  playDate: string,
+  theaterCode: string,
+  params: CommonFetchParams,
+): Promise<CgvTimetable[]> {
+  const searchParams = new URLSearchParams({
+    coCd: CGV_API.COMPANY_CODE,
+    siteNo: theaterCode,
+    scnYmd: playDate,
+    rtctlScopCd: CGV_API.TIMETABLE_SITE_SCOPE_CODE,
+  });
+
+  const response = await requestCgv<CgvTimetableResponse>(
+    CGV_API.TIMETABLE_BY_SITE_PATH,
+    searchParams,
+    params.timeout,
+    params.zyteApiKey,
+  );
+
+  return (response.data || [])
+    .filter((item) => item.siteNo && item.scnYmd)
+    .map((item) => ({
+      scheduleId: `${item.scnYmd}${item.siteNo}${item.scnSseq || ''}`,
+      movieCode: (item.movNo || '') as string,
+      movieName: item.movNm || item.prodNm || '',
       theaterCode: item.siteNo as string,
       theaterName: item.siteNm || '',
       playDate: item.scnYmd as string,
@@ -106,47 +171,60 @@ export async function fetchCgvMovies(params: CommonFetchParams): Promise<CgvMovi
   const playDate = params.playDate || toYyyymmdd();
   const theaterCode = await resolveTheaterCode(playDate, params.theaterCode, params);
 
-  const searchParams = new URLSearchParams({
-    coCd: CGV_API.COMPANY_CODE,
-    siteNo: theaterCode,
-    scnYmd: playDate,
-  });
+  return fetchMoviesByTheaterCode(playDate, theaterCode, params);
+}
 
-  const response = await requestCgv<CgvMovieListResponse>(
-    CGV_API.MOVIE_LIST_PATH,
-    searchParams,
-    params.timeout,
-    params.zyteApiKey,
+function pickFallbackTheaterCodes(theaters: CgvTheater[]): string[] {
+  const uniqueCodes = theaters
+    .map((theater) => theater.theaterCode)
+    .filter((code, index, array) => code && array.indexOf(code) === index);
+
+  return [DEFAULT_THEATER_CODE, ...uniqueCodes.filter((code) => code !== DEFAULT_THEATER_CODE)].slice(
+    0,
+    MAX_FALLBACK_THEATERS,
   );
-
-  return (response.data || [])
-    .filter((item) => item.movNo && item.movNm)
-    .map((item) => ({
-      movieCode: item.movNo as string,
-      movieName: item.movNm as string,
-      rating: item.cratgClsNm || undefined,
-    }));
 }
 
 export async function fetchCgvTimetable(params: CommonFetchParams): Promise<CgvTimetable[]> {
   const playDate = params.playDate || toYyyymmdd();
   const theaterCode = await resolveTheaterCode(playDate, params.theaterCode, params);
+  const timetableBySite = await fetchTimetableBySite(playDate, theaterCode, params);
+
+  if (timetableBySite.length > 0) {
+    if (params.movieCode) {
+      return timetableBySite.filter((item) => item.movieCode === params.movieCode);
+    }
+    return timetableBySite;
+  }
 
   if (params.movieCode) {
     return fetchTimetableByMovieCode(playDate, theaterCode, params.movieCode, params);
   }
 
-  const movies = await fetchCgvMovies({
-    playDate,
-    theaterCode,
-    timeout: params.timeout,
-    zyteApiKey: params.zyteApiKey,
-  });
+  const theaterCodes = params.theaterCode
+    ? [params.theaterCode]
+    : pickFallbackTheaterCodes(
+        await fetchCgvTheaters({
+          playDate,
+          regionCode: params.regionCode,
+          timeout: params.timeout,
+          zyteApiKey: params.zyteApiKey,
+        }),
+      );
 
-  for (const movie of movies) {
-    const timetable = await fetchTimetableByMovieCode(playDate, theaterCode, movie.movieCode, params);
-    if (timetable.length > 0) {
-      return timetable;
+  for (const theaterCode of theaterCodes) {
+    const movies = await fetchMoviesByTheaterCode(playDate, theaterCode, params);
+    const timetableByTheater: CgvTimetable[] = [];
+
+    for (const movie of movies) {
+      const timetable = await fetchTimetableByMovieCode(playDate, theaterCode, movie.movieCode, params);
+      if (timetable.length > 0) {
+        timetableByTheater.push(...timetable);
+      }
+    }
+
+    if (timetableByTheater.length > 0) {
+      return timetableByTheater;
     }
   }
 

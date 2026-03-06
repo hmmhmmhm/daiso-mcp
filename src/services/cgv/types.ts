@@ -47,6 +47,7 @@ interface CgvTimetableItem {
   scnSseq?: string;
   movNo?: string;
   movNm?: string;
+  prodNm?: string;
   scnsrtTm?: string;
   scnendTm?: string;
   stcnt?: number | string;

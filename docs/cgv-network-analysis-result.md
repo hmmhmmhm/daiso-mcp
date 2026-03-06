@@ -149,3 +149,41 @@
 - 검증:
   - CGV 관련 테스트 재실행 통과
   - `tests/services/cgv/client.test.ts`에 순차 탐색 동작 테스트 추가/갱신
+
+## 브라우저 재검증 업데이트 (2026-03-06, KST)
+
+사용자 제보 기준(웹 브라우저에서는 좌석이 보이는데 API는 비어 있음)으로
+Playwright 브라우저에서 CGV 예매 페이지를 직접 재검증했습니다.
+
+### 재현 결과
+
+- 브라우저 예매 UI:
+  - 경로: `https://cgv.co.kr/cnm/movieBook`
+  - 극장: `안산(0211)`
+  - 날짜: `20260306`
+  - 회차/잔여좌석이 실제로 노출됨
+    - 예: `왕과 사는 남자 22:30-24:37 175/248석`
+    - 예: `호퍼스 22:25-24:19 124/132석`
+
+- 우리 API:
+  - `GET /api/cgv/timetable?playDate=20260306&theaterCode=0211`
+  - 응답: `success=true`, `total=0`, `timetable=[]`
+
+### 브라우저 네트워크 실측
+
+- 브라우저가 실제로 호출한 시간표 API:
+  - `GET /cnm/atkt/searchMovScnInfo`
+  - 필수 파라미터: `coCd`, `siteNo`, `scnYmd`, `rtctlScopCd`
+  - 실측값: `rtctlScopCd=08`
+- 해당 응답은 `statusCode=0`이며 `data[]`에 `movNo`, `movNm`, `scnsrtTm`, `scnendTm`, `frSeatCnt`, `stcnt` 포함
+
+### 원인 결론
+
+- 기존 서버 구현은 주로 `searchSchByMov`(영화코드 중심) + `rtctlScopCd=01` 경로를 사용
+- 브라우저 실사용 경로는 `searchMovScnInfo` + `rtctlScopCd=08`
+- 따라서 극장/일자 조합에 따라 서버 경로에서는 빈 배열, 브라우저 경로에서는 정상 좌석 데이터가 발생
+
+### 반영 방향
+
+- 시간표 1차 조회를 `searchMovScnInfo + rtctlScopCd=08`로 전환
+- 비정상 시 기존 `searchSchByMov` 경로를 fallback으로 유지

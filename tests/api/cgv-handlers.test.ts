@@ -367,15 +367,6 @@ describe('handleCgvGetTimetable', () => {
           JSON.stringify({
             statusCode: 0,
             statusMessage: '조회 되었습니다.',
-            data: [{ movNo: 'M1', movNm: '영화A' }],
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            statusCode: 0,
-            statusMessage: '조회 되었습니다.',
             data: [
               {
                 siteNo: '0056',
