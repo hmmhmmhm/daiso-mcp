@@ -18,6 +18,7 @@
   },
   "type": "module",
   "scripts": {
+    "hooks:install": "git config core.hooksPath .githooks && chmod +x .githooks/pre-push",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "tsc && node scripts/generate-openapi.mjs",

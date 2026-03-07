@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+set -eu
+
+echo "[pre-push] 린트 검사 시작"
+npm run lint
+
+echo "[pre-push] 코드 커버리지 검사 시작"
+npm run test:coverage
+
+echo "[pre-push] 모든 검사 통과"
