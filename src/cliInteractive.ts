@@ -7,6 +7,13 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { pickFromList } from './cliPicker.js';
+import {
+  buildDaisoStoreKeywordVariants,
+  isRecord,
+  parseDaisoProducts,
+  parseStores,
+  toText,
+} from './utils/cliInteractiveHelpers.js';
 
 type FetchLike = typeof fetch;
 type WriteFn = (message: string) => void;
@@ -29,12 +36,6 @@ interface InteractiveStore {
   phone: string;
 }
 
-interface DaisoProduct {
-  id: string;
-  name: string;
-  price: number;
-}
-
 interface OliveyoungProductPreview {
   goodsNumber: string;
   goodsName: string;
@@ -43,17 +44,6 @@ interface OliveyoungProductPreview {
 }
 
 const BASE_URL = 'https://mcp.aka.page';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function toText(value: unknown): string {
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  return '';
-}
 
 function createPrompt(): InteractivePrompt {
   const rl = createInterface({ input, output });
@@ -87,66 +77,26 @@ async function fetchEnvelope(
   return (await response.json()) as unknown;
 }
 
-function parseStores(payload: unknown): InteractiveStore[] {
-  if (!isRecord(payload) || payload.success !== true || !isRecord(payload.data)) {
-    return [];
-  }
+async function fetchStoresWithKeywordFallback(
+  fetchImpl: FetchLike,
+  service: 'daiso' | 'oliveyoung',
+  keyword: string,
+): Promise<{ stores: InteractiveStore[]; matchedKeyword: string }> {
+  const candidates = service === 'daiso' ? buildDaisoStoreKeywordVariants(keyword) : [keyword];
+  const keywords = candidates.length > 0 ? candidates : [keyword];
 
-  const stores = payload.data.stores;
-  if (!Array.isArray(stores)) {
-    return [];
-  }
-
-  const result: InteractiveStore[] = [];
-  for (const store of stores) {
-    if (!isRecord(store)) {
-      continue;
-    }
-
-    const name = toText(store.name) || toText(store.storeName);
-    if (!name) {
-      continue;
-    }
-
-    result.push({
-      name,
-      address: toText(store.address),
-      phone: toText(store.phone),
+  for (const currentKeyword of keywords) {
+    const payload = await fetchEnvelope(fetchImpl, `/api/${service}/stores`, {
+      keyword: currentKeyword,
+      limit: '10',
     });
-  }
-
-  return result;
-}
-
-function parseDaisoProducts(payload: unknown): DaisoProduct[] {
-  if (!isRecord(payload) || payload.success !== true || !isRecord(payload.data)) {
-    return [];
-  }
-
-  const products = payload.data.products;
-  if (!Array.isArray(products)) {
-    return [];
-  }
-
-  const result: DaisoProduct[] = [];
-  for (const product of products) {
-    if (!isRecord(product)) {
-      continue;
+    const stores = parseStores(payload);
+    if (stores.length > 0) {
+      return { stores, matchedKeyword: currentKeyword };
     }
-
-    const id = toText(product.id);
-    const name = toText(product.name);
-    if (!id || !name) {
-      continue;
-    }
-
-    const priceRaw = product.price;
-    const price = typeof priceRaw === 'number' ? priceRaw : Number.parseInt(toText(priceRaw), 10) || 0;
-
-    result.push({ id, name, price });
   }
 
-  return result;
+  return { stores: [], matchedKeyword: keyword };
 }
 
 async function askMenu(prompt: InteractivePrompt, title: string, options: string[]): Promise<number> {
@@ -346,7 +296,9 @@ async function runOliveyoungItemSearch(
 export const cliInteractiveTestables = {
   isRecord,
   toText,
+  buildDaisoStoreKeywordVariants,
   fetchEnvelope,
+  fetchStoresWithKeywordFallback,
   parseStores,
   parseDaisoProducts,
   askMenu,
@@ -382,14 +334,19 @@ export async function runInteractiveCli(deps: InteractiveCliDeps): Promise<numbe
 
       const service = serviceChoice === 1 ? 'daiso' : 'oliveyoung';
       const storeKeyword = await askNonEmpty(prompt, '매장 검색 키워드를 입력하세요: ');
-      const storePayload = await fetchEnvelope(deps.fetchImpl, `/api/${service}/stores`, {
-        keyword: storeKeyword,
-        limit: '10',
-      });
+      const storeResult = await fetchStoresWithKeywordFallback(deps.fetchImpl, service, storeKeyword);
+      const stores = storeResult.stores;
 
-      const stores = parseStores(storePayload);
+      if (service === 'daiso' && stores.length > 0 && storeResult.matchedKeyword !== storeKeyword) {
+        deps.writeOut(
+          `입력 키워드 "${storeKeyword}" 대신 "${storeResult.matchedKeyword}"로 매장을 찾았습니다.`,
+        );
+      }
       if (stores.length === 0) {
         deps.writeOut('검색된 매장이 없습니다.');
+        if (service === 'daiso') {
+          deps.writeOut('힌트: "안산 중앙역" 대신 "안산중앙" 또는 "고잔"으로 검색해보세요.');
+        }
         keepRunning = await askYesNo(prompt, '다시 시도할까요? (y/n): ');
         continue;
       }

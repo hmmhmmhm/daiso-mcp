@@ -106,6 +106,51 @@ describe('runInteractiveCli', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it('다이소 매장 검색어를 자동 보정해 검색 결과를 찾는다', async () => {
+    const output: string[] = [];
+    const errors: string[] = [];
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(createJsonResponse({ success: true, data: { stores: [] } }))
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: { stores: [{ name: '안산중앙본점', address: '경기 안산', phone: '1522-4400' }] },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: { products: [{ id: 'P1', name: '롯데핫식스(250 ml)', price: 1000 }] },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: { storeInventory: { stores: [{ storeName: '안산중앙본점', quantity: 12 }] } },
+        }),
+      );
+
+    const exitCode = await runInteractiveCli({
+      fetchImpl,
+      writeOut: (message: string) => {
+        output.push(message);
+      },
+      writeErr: (message: string) => {
+        errors.push(message);
+      },
+      createPrompt: createPrompt(['1', '안산 중앙역', '1', '핫식스', '1', '3']),
+    });
+
+    expect(exitCode).toBe(0);
+    expect(errors).toEqual([]);
+    expect(output.join('\n')).toContain(
+      '입력 키워드 "안산 중앙역" 대신 "안산중앙역"로 매장을 찾았습니다.',
+    );
+    expect(output.join('\n')).toContain('재고 수량: 12');
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
   it('요청 중 오류가 발생하면 에러 코드로 종료한다', async () => {
     const errors: string[] = [];
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new Error('network fail'));

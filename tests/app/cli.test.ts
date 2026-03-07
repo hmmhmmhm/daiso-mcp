@@ -206,6 +206,36 @@ describe('CLI', () => {
     expect(output.join('\n')).toContain('옵션: --keyword, --sido, --gugun, --dong, --limit');
   });
 
+  it('stores 명령은 다이소 키워드 보정으로 재검색한다', async () => {
+    const { deps, output } = createDeps();
+    deps.fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ success: true, data: { stores: [] } }),
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          success: true,
+          data: { stores: [{ name: '안산중앙본점', address: '경기 안산', phone: '1522-4400' }] },
+        }),
+      } as unknown as Response);
+
+    const exitCode = await runCli(['stores', '안산 중앙역'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(deps.fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      'https://mcp.aka.page/api/daiso/stores?keyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD',
+    );
+    expect(deps.fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      'https://mcp.aka.page/api/daiso/stores?keyword=%EC%95%88%EC%82%B0%EC%A4%91%EC%95%99%EC%97%AD',
+    );
+    expect(output.join('\n')).toContain('입력 키워드 "안산 중앙역" 대신 "안산중앙역"로 매장을 찾았습니다.');
+  });
+
   it('inventory 명령은 productId로 재고 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({

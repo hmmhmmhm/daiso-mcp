@@ -69,6 +69,41 @@ describe('cliInteractiveTestables', () => {
     ]);
     expect(cliInteractiveTestables.parseDaisoProducts({ success: false })).toEqual([]);
     expect(cliInteractiveTestables.parseDaisoProducts({ success: true, data: { products: {} } })).toEqual([]);
+
+    expect(cliInteractiveTestables.buildDaisoStoreKeywordVariants('안산 중앙역')).toEqual([
+      '안산 중앙역',
+      '안산중앙역',
+      '안산중앙',
+    ]);
+  });
+
+  it('다이소 매장 검색어 fallback을 처리한다', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(createJsonResponse({ success: true, data: { stores: [] } }))
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: { stores: [{ name: '안산중앙본점', address: '경기 안산', phone: '1522-4400' }] },
+        }),
+      );
+
+    const result = await cliInteractiveTestables.fetchStoresWithKeywordFallback(
+      fetchImpl,
+      'daiso',
+      '안산 중앙역',
+    );
+
+    expect(result.matchedKeyword).toBe('안산중앙역');
+    expect(result.stores).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      'https://mcp.aka.page/api/daiso/stores?keyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD&limit=10',
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      'https://mcp.aka.page/api/daiso/stores?keyword=%EC%95%88%EC%82%B0%EC%A4%91%EC%95%99%EC%97%AD&limit=10',
+    );
   });
 
   it('fetchEnvelope는 HTTP 오류를 처리한다', async () => {
