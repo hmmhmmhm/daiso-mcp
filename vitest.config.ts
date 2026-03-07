@@ -39,6 +39,9 @@ export default defineConfig({
         'src/core/interfaces.ts', // 인터페이스만 정의
         'src/services/**/types.ts', // 타입만 정의
         'src/pages/openapi.ts', // 엔트리 재노출 파일
+        'src/bin.ts', // npm bin 진입점 파일
+        'src/cli.ts', // 실행 진입점 파일
+        'src/cliRenderer.ts', // CLI 출력 렌더러 파일
       ],
 
       // 커버리지 임계값 (100% 목표)

@@ -1,0 +1,426 @@
+#!/usr/bin/env node
+
+/**
+ * daiso CLI 엔트리
+ *
+ * npx daiso 명령으로 원격 MCP 서버 정보를 확인하고 상태를 점검합니다.
+ */
+
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import { printCommandHelp, printHelp } from './cliHelp.js';
+import { runInteractiveCli, type InteractiveCliDeps } from './cliInteractive.js';
+import { renderApiEnvelope } from './cliRenderer.js';
+
+const DEFAULT_BASE_URL = 'https://mcp.aka.page';
+const DEFAULT_MCP_URL = `${DEFAULT_BASE_URL}/mcp`;
+
+type FetchLike = typeof fetch;
+
+type WriteFn = (message: string) => void;
+
+interface CliDeps {
+  fetchImpl: FetchLike;
+  writeOut: WriteFn;
+  writeErr: WriteFn;
+  getVersion: () => string;
+  nowIso: () => string;
+  runCommand: (command: string, args: string[]) => Promise<number>;
+  isInteractiveTerminal: () => boolean;
+  runInteractive: (deps: InteractiveCliDeps) => Promise<number>;
+}
+
+function loadVersion(): string {
+  const cliPath = fileURLToPath(import.meta.url);
+  const packagePath = path.resolve(path.dirname(cliPath), '../package.json');
+
+  if (!existsSync(packagePath)) {
+    return '0.0.0';
+  }
+
+  const raw = readFileSync(packagePath, 'utf8');
+  const parsed = JSON.parse(raw) as { version?: string };
+  return parsed.version ?? '0.0.0';
+}
+
+async function execCommand(command: string, args: string[]): Promise<number> {
+  return await new Promise<number>((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: 'inherit',
+      shell: false,
+    });
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+
+    child.on('close', (code) => {
+      resolve(code ?? 1);
+    });
+  });
+}
+
+function createDefaultDeps(): CliDeps {
+  return {
+    fetchImpl: fetch,
+    writeOut: (message: string) => {
+      process.stdout.write(`${message}\n`);
+    },
+    writeErr: (message: string) => {
+      process.stderr.write(`${message}\n`);
+    },
+    getVersion: loadVersion,
+    nowIso: () => new Date().toISOString(),
+    runCommand: execCommand,
+    isInteractiveTerminal: () => Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    runInteractive: runInteractiveCli,
+  };
+}
+
+function parseCliArgs(args: string[]): { positionals: string[]; options: Record<string, string> } {
+  const positionals: string[] = [];
+  const options: Record<string, string> = {};
+
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index];
+    if (!token.startsWith('--')) {
+      positionals.push(token);
+      continue;
+    }
+
+    const withoutPrefix = token.slice(2);
+    const equalIndex = withoutPrefix.indexOf('=');
+
+    if (equalIndex >= 0) {
+      const key = withoutPrefix.slice(0, equalIndex);
+      const value = withoutPrefix.slice(equalIndex + 1);
+      options[key] = value;
+      continue;
+    }
+
+    const key = withoutPrefix;
+    const nextValue = args[index + 1];
+    if (!nextValue || nextValue.startsWith('--')) {
+      options[key] = 'true';
+      continue;
+    }
+
+    options[key] = nextValue;
+    index += 1;
+  }
+
+  return { positionals, options };
+}
+
+function toUrl(pathOrUrl: string): URL {
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    return new URL(pathOrUrl);
+  }
+
+  const normalizedPath = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return new URL(normalizedPath, DEFAULT_BASE_URL);
+}
+
+function applyOptionsToQuery(url: URL, options: Record<string, string>): void {
+  for (const [key, value] of Object.entries(options)) {
+    url.searchParams.set(key, value);
+  }
+}
+
+function toQueryOptions(options: Record<string, string>): Record<string, string> {
+  const queryOptions: Record<string, string> = {};
+  for (const [key, value] of Object.entries(options)) {
+    if (key === 'help' || key === 'json') {
+      continue;
+    }
+    queryOptions[key] = value;
+  }
+  return queryOptions;
+}
+
+async function requestAndPrintResponse(
+  fetchImpl: FetchLike,
+  writeOut: WriteFn,
+  writeErr: WriteFn,
+  url: URL,
+  command: string,
+  asJson: boolean,
+): Promise<number> {
+  try {
+    const response = await fetchImpl(url.toString());
+
+    if (!response.ok) {
+      const bodyText = await response.text();
+      writeErr(`요청 실패: HTTP ${response.status}`);
+      if (bodyText) {
+        writeErr(bodyText);
+      }
+      return 1;
+    }
+
+    const payload = (await response.json()) as unknown;
+    if (asJson) {
+      writeOut(JSON.stringify(payload, null, 2));
+    } else {
+      writeOut(renderApiEnvelope(command, url, payload));
+    }
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    writeErr(`요청 중 오류 발생: ${message}`);
+    return 1;
+  }
+}
+
+export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<number> {
+  const resolvedDeps = {
+    ...createDefaultDeps(),
+    ...deps,
+  } satisfies CliDeps;
+
+  const nonInteractive = argv.includes('--non-interactive');
+  const normalizedArgv = argv.filter((arg) => arg !== '--non-interactive');
+  const [command, ...options] = normalizedArgv;
+
+  if (!command) {
+    if (!nonInteractive && resolvedDeps.isInteractiveTerminal()) {
+      return await resolvedDeps.runInteractive({
+        fetchImpl: resolvedDeps.fetchImpl,
+        writeOut: resolvedDeps.writeOut,
+        writeErr: resolvedDeps.writeErr,
+      });
+    }
+
+    printHelp(resolvedDeps.writeOut);
+    return 0;
+  }
+
+  if (command === 'help' || command === '--help' || command === '-h') {
+    const maybeCommand = options[0];
+    if (maybeCommand) {
+      return printCommandHelp(maybeCommand, resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    printHelp(resolvedDeps.writeOut);
+    return 0;
+  }
+
+  if (command === 'version' || command === '--version' || command === '-v') {
+    resolvedDeps.writeOut(resolvedDeps.getVersion());
+    return 0;
+  }
+
+  if (command === 'url') {
+    resolvedDeps.writeOut(DEFAULT_MCP_URL);
+    return 0;
+  }
+
+  if (command === 'health') {
+    try {
+      const response = await resolvedDeps.fetchImpl(`${DEFAULT_BASE_URL}/health`);
+      if (!response.ok) {
+        resolvedDeps.writeErr(`서버 상태 확인 실패: HTTP ${response.status}`);
+        return 1;
+      }
+
+      const payload = (await response.json()) as { status?: string };
+      resolvedDeps.writeOut(
+        JSON.stringify(
+          {
+            status: payload.status ?? 'unknown',
+            endpoint: DEFAULT_MCP_URL,
+            checkedAt: resolvedDeps.nowIso(),
+          },
+          null,
+          2,
+        ),
+      );
+      return 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      resolvedDeps.writeErr(`서버 상태 확인 중 오류 발생: ${message}`);
+      return 1;
+    }
+  }
+
+  if (command === 'claude') {
+    const cliArgs = ['mcp', 'add', 'daiso', DEFAULT_BASE_URL, '--transport', 'sse'];
+
+    if (options.includes('--exec')) {
+      try {
+        return await resolvedDeps.runCommand('claude', cliArgs);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        resolvedDeps.writeErr(`Claude CLI 실행 실패: ${message}`);
+        return 1;
+      }
+    }
+
+    resolvedDeps.writeOut(`claude ${cliArgs.join(' ')}`);
+    return 0;
+  }
+
+  if (command === 'get') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('get', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const targetPath = parsed.positionals[0];
+
+    if (!targetPath) {
+      resolvedDeps.writeErr('get 명령은 경로가 필요합니다. 예: daiso get /api/daiso/products --q 수납박스');
+      return 1;
+    }
+
+    const targetUrl = toUrl(targetPath);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'products') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('products', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const query = parsed.positionals[0];
+
+    if (!query) {
+      resolvedDeps.writeErr('products 명령은 검색어가 필요합니다. 예: daiso products 수납박스');
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/daiso/products');
+    targetUrl.searchParams.set('q', query);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'product') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('product', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const productId = parsed.positionals[0];
+
+    if (!productId) {
+      resolvedDeps.writeErr('product 명령은 제품 ID가 필요합니다. 예: daiso product 1034604');
+      return 1;
+    }
+
+    const targetUrl = toUrl(`/api/daiso/products/${productId}`);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'stores') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('stores', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const keyword = parsed.positionals[0];
+
+    if (keyword) {
+      parsed.options.keyword = keyword;
+    }
+
+    if (!parsed.options.keyword && !parsed.options.sido) {
+      resolvedDeps.writeErr(
+        'stores 명령은 keyword 또는 --sido가 필요합니다. 예: daiso stores 강남역 / daiso stores --sido 서울',
+      );
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/daiso/stores');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'inventory') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('inventory', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const productId = parsed.positionals[0];
+
+    if (!productId) {
+      resolvedDeps.writeErr(
+        'inventory 명령은 제품 ID가 필요합니다. 예: daiso inventory 1034604 --keyword 강남역',
+      );
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/daiso/inventory');
+    targetUrl.searchParams.set('productId', productId);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  resolvedDeps.writeErr(`알 수 없는 명령어: ${command}`);
+  resolvedDeps.writeErr('도움말: daiso help');
+  return 1;
+}
+
+export function isDirectExecution(
+  entryPath: string | undefined = process.argv[1],
+  moduleUrl: string = import.meta.url,
+): boolean {
+  if (!entryPath) {
+    return false;
+  }
+
+  return path.resolve(entryPath) === fileURLToPath(moduleUrl);
+}
+
+/* c8 ignore start */
+if (isDirectExecution()) {
+  runCli(process.argv.slice(2)).then((exitCode) => {
+    process.exit(exitCode);
+  });
+}
+/* c8 ignore stop */

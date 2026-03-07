@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "다이소 MCP API",
-    "description": "다이소 제품 검색, 매장 찾기, 재고 확인을 위한 API입니다.\n\n## 주요 기능\n- 🔍 **제품 검색**: 키워드로 다이소 제품 검색\n- 🏪 **매장 찾기**: 지역/키워드로 매장 검색\n- 📦 **재고 확인**: 온라인 및 오프라인 매장 재고 조회\n\n## 사용 팁\n1. 한글 검색어는 URL 인코딩이 자동 처리됩니다\n2. 재고 확인 시 먼저 제품 검색으로 제품 ID를 확인하세요\n3. 위치 기반 재고 조회 시 lat, lng 파라미터를 활용하세요",
+    "description": "다이소 제품 검색, 매장 찾기, 재고 확인을 위한 API입니다.\n\n## 주요 기능\n- 🔍 **제품 검색**: 키워드로 다이소 제품 검색\n- 🏪 **매장 찾기**: 지역/키워드로 매장 검색\n- 📦 **재고 확인**: 온라인 및 오프라인 매장 재고 조회\n- 🎬 **메가박스 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회\n- 🎥 **CGV 지점/영화 조회**: 극장 목록, 영화 목록, 시간표 조회\n\n## 사용 팁\n1. 한글 검색어는 URL 인코딩이 자동 처리됩니다\n2. 재고 확인 시 먼저 제품 검색으로 제품 ID를 확인하세요\n3. 위치 기반 재고 조회 시 lat, lng 파라미터를 활용하세요",
     "version": "1.0.0",
     "contact": {
       "name": "GitHub Repository",
@@ -500,6 +500,428 @@
           },
           "500": {
             "description": "올리브영 API 호출 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/megabox/theaters": {
+      "get": {
+        "operationId": "megaboxFindNearbyTheaters",
+        "summary": "메가박스 주변 지점 조회",
+        "description": "좌표 기준으로 메가박스 지점을 거리순으로 조회합니다.",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "description": "위도 (기본값: 서울 시청 37.5665)",
+            "schema": {
+              "type": "number",
+              "format": "float",
+              "default": 37.5665
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "description": "경도 (기본값: 서울 시청 126.978)",
+            "schema": {
+              "type": "number",
+              "format": "float",
+              "default": 126.978
+            }
+          },
+          {
+            "name": "playDate",
+            "in": "query",
+            "required": false,
+            "description": "조회 날짜 (YYYYMMDD)",
+            "schema": {
+              "type": "string",
+              "example": "20260304"
+            }
+          },
+          {
+            "name": "areaCode",
+            "in": "query",
+            "required": false,
+            "description": "지역 코드 (기본값: 11, 서울)",
+            "schema": {
+              "type": "string",
+              "default": "11"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "최대 결과 수",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MegaboxTheaterSearchResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "메가박스 API 호출 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/megabox/movies": {
+      "get": {
+        "operationId": "megaboxListNowShowing",
+        "summary": "메가박스 영화/회차 목록 조회",
+        "description": "날짜, 지점, 영화 조건으로 메가박스 영화 및 상영 회차를 조회합니다.",
+        "parameters": [
+          {
+            "name": "playDate",
+            "in": "query",
+            "required": false,
+            "description": "조회 날짜 (YYYYMMDD)",
+            "schema": {
+              "type": "string",
+              "example": "20260304"
+            }
+          },
+          {
+            "name": "theaterId",
+            "in": "query",
+            "required": false,
+            "description": "지점 ID (예: 1372)",
+            "schema": {
+              "type": "string",
+              "example": "1372"
+            }
+          },
+          {
+            "name": "movieId",
+            "in": "query",
+            "required": false,
+            "description": "영화 ID (예: 25104500)",
+            "schema": {
+              "type": "string",
+              "example": "25104500"
+            }
+          },
+          {
+            "name": "areaCode",
+            "in": "query",
+            "required": false,
+            "description": "지역 코드 (기본값: 11, 서울)",
+            "schema": {
+              "type": "string",
+              "default": "11"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MegaboxMovieListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "메가박스 API 호출 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/megabox/seats": {
+      "get": {
+        "operationId": "megaboxGetRemainingSeats",
+        "summary": "메가박스 잔여 좌석 조회",
+        "description": "영화/지점/날짜 조건으로 회차별 잔여 좌석 수를 조회합니다.",
+        "parameters": [
+          {
+            "name": "playDate",
+            "in": "query",
+            "required": false,
+            "description": "조회 날짜 (YYYYMMDD)",
+            "schema": {
+              "type": "string",
+              "example": "20260304"
+            }
+          },
+          {
+            "name": "theaterId",
+            "in": "query",
+            "required": false,
+            "description": "지점 ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "movieId",
+            "in": "query",
+            "required": false,
+            "description": "영화 ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaCode",
+            "in": "query",
+            "required": false,
+            "description": "지역 코드 (기본값: 11, 서울)",
+            "schema": {
+              "type": "string",
+              "default": "11"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "최대 결과 수",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MegaboxSeatListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "메가박스 API 호출 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cgv/theaters": {
+      "get": {
+        "operationId": "cgvFindTheaters",
+        "summary": "CGV 극장 목록 조회",
+        "description": "날짜/지역 코드 조건으로 CGV 극장 목록을 조회합니다.",
+        "parameters": [
+          {
+            "name": "playDate",
+            "in": "query",
+            "required": false,
+            "description": "조회 날짜 (YYYYMMDD)",
+            "schema": {
+              "type": "string",
+              "example": "20260304"
+            }
+          },
+          {
+            "name": "regionCode",
+            "in": "query",
+            "required": false,
+            "description": "지역 코드 (예: 01 서울)",
+            "schema": {
+              "type": "string",
+              "example": "01"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "최대 결과 수",
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CgvTheaterSearchResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "CGV API 호출 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cgv/movies": {
+      "get": {
+        "operationId": "cgvSearchMovies",
+        "summary": "CGV 영화 목록 조회",
+        "description": "날짜/극장 조건으로 CGV 영화 목록을 조회합니다.",
+        "parameters": [
+          {
+            "name": "playDate",
+            "in": "query",
+            "required": false,
+            "description": "조회 날짜 (YYYYMMDD)",
+            "schema": {
+              "type": "string",
+              "example": "20260304"
+            }
+          },
+          {
+            "name": "theaterCode",
+            "in": "query",
+            "required": false,
+            "description": "극장 코드 (예: 0056)",
+            "schema": {
+              "type": "string",
+              "example": "0056"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CgvMovieSearchResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "CGV API 호출 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cgv/timetable": {
+      "get": {
+        "operationId": "cgvGetTimetable",
+        "summary": "CGV 시간표 조회",
+        "description": "날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다.",
+        "parameters": [
+          {
+            "name": "playDate",
+            "in": "query",
+            "required": false,
+            "description": "조회 날짜 (YYYYMMDD)",
+            "schema": {
+              "type": "string",
+              "example": "20260304"
+            }
+          },
+          {
+            "name": "theaterCode",
+            "in": "query",
+            "required": false,
+            "description": "극장 코드",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "movieCode",
+            "in": "query",
+            "required": false,
+            "description": "영화 코드",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "최대 결과 수",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CgvTimetableResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "CGV API 호출 실패",
             "content": {
               "application/json": {
                 "schema": {
@@ -1014,6 +1436,470 @@
                 "type": "integer"
               },
               "page": {
+                "type": "integer"
+              },
+              "pageSize": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "MegaboxTheater": {
+        "type": "object",
+        "properties": {
+          "theaterId": {
+            "type": "string",
+            "example": "1372"
+          },
+          "theaterName": {
+            "type": "string",
+            "example": "강남"
+          },
+          "address": {
+            "type": "string",
+            "example": "서울특별시 강남구 강남대로 438"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "float",
+            "example": 37.4982
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float",
+            "example": 127.0264
+          },
+          "distanceKm": {
+            "type": "number",
+            "format": "float",
+            "example": 0.5
+          }
+        }
+      },
+      "MegaboxShowtime": {
+        "type": "object",
+        "properties": {
+          "scheduleId": {
+            "type": "string",
+            "example": "2603041372011"
+          },
+          "movieId": {
+            "type": "string",
+            "example": "25104500"
+          },
+          "movieName": {
+            "type": "string",
+            "example": "미키 17"
+          },
+          "theaterId": {
+            "type": "string",
+            "example": "1372"
+          },
+          "theaterName": {
+            "type": "string",
+            "example": "강남"
+          },
+          "playDate": {
+            "type": "string",
+            "example": "20260304"
+          },
+          "startTime": {
+            "type": "string",
+            "example": "09:30"
+          },
+          "endTime": {
+            "type": "string",
+            "example": "11:20"
+          },
+          "totalSeats": {
+            "type": "integer",
+            "example": 120
+          },
+          "remainingSeats": {
+            "type": "integer",
+            "example": 42
+          }
+        }
+      },
+      "MegaboxTheaterSearchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "location": {
+                "type": "object",
+                "properties": {
+                  "latitude": {
+                    "type": "number",
+                    "format": "float"
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              },
+              "playDate": {
+                "type": "string"
+              },
+              "areaCode": {
+                "type": "string"
+              },
+              "theaters": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MegaboxTheater"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "pageSize": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "MegaboxMovieListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "playDate": {
+                "type": "string"
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "theaterId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "movieId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "areaCode": {
+                    "type": "string"
+                  }
+                }
+              },
+              "theaters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "theaterId": {
+                      "type": "string"
+                    },
+                    "theaterName": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "movies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "movieId": {
+                      "type": "string"
+                    },
+                    "movieName": {
+                      "type": "string"
+                    },
+                    "movieStatus": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "showtimes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MegaboxShowtime"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "MegaboxSeatListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "playDate": {
+                "type": "string"
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "theaterId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "movieId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "areaCode": {
+                    "type": "string"
+                  }
+                }
+              },
+              "seats": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MegaboxShowtime"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "pageSize": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "CgvTheater": {
+        "type": "object",
+        "properties": {
+          "theaterCode": {
+            "type": "string",
+            "example": "0056"
+          },
+          "theaterName": {
+            "type": "string",
+            "example": "CGV강남"
+          },
+          "regionCode": {
+            "type": "string",
+            "example": "01"
+          }
+        }
+      },
+      "CgvMovie": {
+        "type": "object",
+        "properties": {
+          "movieCode": {
+            "type": "string",
+            "example": "200001"
+          },
+          "movieName": {
+            "type": "string",
+            "example": "테스트 영화"
+          },
+          "rating": {
+            "type": "string",
+            "example": "12"
+          }
+        }
+      },
+      "CgvTimetable": {
+        "type": "object",
+        "properties": {
+          "scheduleId": {
+            "type": "string",
+            "example": "SCH1"
+          },
+          "movieCode": {
+            "type": "string",
+            "example": "200001"
+          },
+          "movieName": {
+            "type": "string",
+            "example": "테스트 영화"
+          },
+          "theaterCode": {
+            "type": "string",
+            "example": "0056"
+          },
+          "theaterName": {
+            "type": "string",
+            "example": "CGV강남"
+          },
+          "playDate": {
+            "type": "string",
+            "example": "20260304"
+          },
+          "startTime": {
+            "type": "string",
+            "example": "09:30"
+          },
+          "endTime": {
+            "type": "string",
+            "example": "11:20"
+          },
+          "totalSeats": {
+            "type": "integer",
+            "example": 150
+          },
+          "remainingSeats": {
+            "type": "integer",
+            "example": 42
+          }
+        }
+      },
+      "CgvTheaterSearchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "playDate": {
+                "type": "string"
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "regionCode": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "theaters": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CgvTheater"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "pageSize": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "CgvMovieSearchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "playDate": {
+                "type": "string"
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "theaterCode": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "movies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CgvMovie"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "CgvTimetableResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "playDate": {
+                "type": "string"
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "theaterCode": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "movieCode": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "timetable": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CgvTimetable"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
                 "type": "integer"
               },
               "pageSize": {

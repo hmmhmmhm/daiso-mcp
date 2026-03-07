@@ -37,6 +37,79 @@ MCP 서버 URL:
 https://mcp.aka.page
 ```
 
+CLI (npx):
+
+```bash
+# 인터랙티브 모드 (추천)
+npx daiso
+
+# 인터랙티브 비활성화 (CI/스크립트)
+npx daiso --non-interactive
+
+# 명령형 모드
+npx daiso help
+npx daiso help products
+npx daiso url
+npx daiso health
+npx daiso claude
+
+# AI 없이 직접 조회
+npx daiso products 수납박스
+npx daiso product 1034604
+npx daiso stores 강남역
+npx daiso inventory 1034604 --keyword 강남역
+npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056
+
+# 원본 JSON 필요 시
+npx daiso products 수납박스 --json
+```
+
+인터랙티브 예시:
+
+```text
+$ npx daiso
+daiso 인터랙티브 모드
+
+[서비스 선택]
+1. 다이소
+2. 올리브영
+서비스 번호를 선택하세요 (0: 종료): 1
+
+매장 검색 키워드를 입력하세요: 강남
+
+[매장 선택]
+1. 다이소 강남점 | 서울 강남구 ...
+2. 다이소 강남역점 | 서울 강남구 ...
+입력: 번호 선택 | /키워드 필터 | all 전체보기 | 0 다시 검색
+선택: /역점
+선택: 1
+
+[선택한 매장 정보]
+- 매장명: 다이소 강남역점
+- 주소: 서울 강남구 ...
+- 전화: 02-...
+
+찾을 상품 키워드를 입력하세요: 수납박스
+
+[상품 선택]
+1. 손잡이 수납박스 (2000원, ID: 1034604)
+2. 접이식 수납박스 (3000원, ID: 1034605)
+입력: 번호 선택 | /키워드 필터 | all 전체보기 | 0 취소
+선택: 1
+
+[재고 결과]
+- 상품: 손잡이 수납박스
+- 매장: 다이소 강남역점
+- 재고 수량: 7
+
+[다음 동작]
+1. 같은 매장에서 다른 상품 찾기
+2. 다른 매장/서비스 다시 선택하기
+3. 종료하기
+번호를 선택하세요: 3
+인터랙티브 모드를 종료합니다.
+```
+
 <br>
 
 ### ![ChatGPT](https://img.shields.io/badge/ChatGPT-74aa9c?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0id2hpdGUiIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHBhdGggZD0iTTE0Ljk0OSA2LjU0N2EzLjk0IDMuOTQgMCAwIDAtLjM0OC0zLjI3MyA0LjExIDQuMTEgMCAwIDAtNC40LTEuOTM0QTQuMSA0LjEgMCAwIDAgOC40MjMuMiA0LjE1IDQuMTUgMCAwIDAgNi4zMDUuMDg2YTQuMSA0LjEgMCAwIDAtMS44OTEuOTQ4IDQuMDQgNC4wNCAwIDAgMC0xLjE1OCAxLjc1MyA0LjEgNC4xIDAgMCAwLTEuNTYzLjY3OUE0IDQgMCAwIDAgLjU1NCA0LjcyYTMuOTkgMy45OSAwIDAgMCAuNTAyIDQuNzMxIDMuOTQgMy45NCAwIDAgMCAuMzQ2IDMuMjc0IDQuMTEgNC4xMSAwIDAgMCA0LjQwMiAxLjkzM2MuMzgyLjQyNS44NTIuNzY0IDEuMzc3Ljk5NS41MjYuMjMxIDEuMDk1LjM1IDEuNjcuMzQ2IDEuNzguMDAyIDMuMzU4LTEuMTMyIDMuOTAxLTIuODA0YTQuMSA0LjEgMCAwIDAgMS41NjMtLjY4IDQgNCAwIDAgMCAxLjE0LTEuMjUzIDMuOTkgMy45OSAwIDAgMC0uNTA2LTQuNzE2bS02LjA5NyA4LjQwNmEzLjA1IDMuMDUgMCAwIDEtMS45NDUtLjY5NGwuMDk2LS4wNTQgMy4yMy0xLjgzOGEuNTMuNTMgMCAwIDAgLjI2NS0uNDU1di00LjQ5bDEuMzY2Ljc3OHEuMDIuMDExLjAyNS4wMzV2My43MjJjLS4wMDMgMS42NTMtMS4zNjEgMi45OTItMy4wMzcgMi45OTZtLTYuNTMtMi43NWEyLjk1IDIuOTUgMCAwIDEtLjM2LTIuMDFsLjA5NS4wNTdMNS4yOSAxMi4wOWEuNTMuNTMgMCAwIDAgLjUyNyAwbDMuOTQ5LTIuMjQ2djEuNTU1YS4wNS4wNSAwIDAgMS0uMDIyLjA0MUw2LjQ3MyAxMy4zYy0xLjQ1NC44MjYtMy4zMTEuMzM1LTQuMTUtMS4wOThtLS44NS02Ljk0QTMuMDIgMy4wMiAwIDAgMSAzLjA3IDMuOTQ5djMuNzg1YS41MS41MSAwIDAgMCAuMjYyLjQ1MWwzLjkzIDIuMjM3LTEuMzY2Ljc3OWEuMDUuMDUgMCAwIDEtLjA0OCAwTDIuNTg1IDkuMzQyYTIuOTggMi45OCAwIDAgMS0xLjExMy00LjA5NHptMTEuMjE2IDIuNTcxTDguNzQ3IDUuNTc2bDEuMzYyLS43NzZhLjA1LjA1IDAgMCAxIC4wNDggMGwzLjI2NSAxLjg2YTMgMyAwIDAgMSAxLjE3MyAxLjIwNyAyLjk2IDIuOTYgMCAwIDEtLjI3IDMuMiAzLjA1IDMuMDUgMCAwIDEtMS4zNi45OTdWOC4yNzlhLjUyLjUyIDAgMCAwLS4yNzYtLjQ0NW0xLjM2LTIuMDE1LS4wOTctLjA1Ny0zLjIyNi0xLjg1NWEuNTMuNTMgMCAwIDAtLjUzIDBMNi4yNDkgNi4xNTNWNC41OThhLjA0LjA0IDAgMCAxIC4wMTktLjA0TDkuNTMzIDIuN2EzLjA3IDMuMDcgMCAwIDEgMy4yNTcuMTM5Yy40NzQuMzI1Ljg0My43NzggMS4wNjYgMS4zMDMuMjIzLjUyNi4yODkgMS4xMDMuMTkxIDEuNjY0ek01LjUwMyA4LjU3NSA0LjEzOSA3LjhhLjA1LjA1IDAgMCAxLS4wMjYtLjAzN1Y0LjA0OWMwLS41Ny4xNjYtMS4xMjcuNDc2LTEuNjA3cy43NTItLjg2NCAxLjI3NS0xLjEwNWEzLjA4IDMuMDggMCAwIDEgMy4yMzQuNDFsLS4wOTYuMDU0LTMuMjMgMS44MzhhLjUzLjUzIDAgMCAwLS4yNjUuNDU1em0uNzQyLTEuNTc3IDEuNzU4LTEgMS43NjIgMXYybC0xLjc1NSAxLTEuNzYyLTF6Ii8+PC9zdmc+)
@@ -600,6 +673,19 @@ npm run dev
 
 # 배포
 npm run deploy
+```
+
+## npm 퍼블리싱
+
+```bash
+# npm 로그인
+npm login
+
+# 배포 산출물/메타 검증
+npm run release:dry-run
+
+# 퍼블리시 (공개 패키지)
+npm run publish:public
 ```
 
 기여 가이드는 [CONTRIBUTING.md](./CONTRIBUTING.md)에서 확인할 수 있습니다.

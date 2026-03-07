@@ -1,14 +1,31 @@
 {
-  "name": "daiso-mcp",
-  "version": "1.0.0",
+  "name": "daiso",
+  "version": "1.0.4",
   "description": "Daiso MCP Server for mobile access via Cloudflare Workers",
   "main": "dist/index.js",
+  "bin": {
+    "daiso": "dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "openapi.json",
+    "openapi.yaml"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "tsc && node scripts/generate-openapi.mjs",
     "build:openapi": "node scripts/generate-openapi.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check && npm run build",
+    "release:dry-run": "npm pack --dry-run",
+    "publish:public": "npm publish --access public",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"vitest.config.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.mjs\" \"vitest.config.ts\" --fix",
