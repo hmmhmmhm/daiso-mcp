@@ -60,4 +60,28 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.location).toBeNull();
     expect(parsed.stores[0].storeCode).toBe('48806');
   });
+
+  it('좌표가 있으면 location 정보를 포함한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          totalCnt: 1,
+          storeList: [
+            {
+              storeCd: '1',
+              storeNm: '안산중앙점',
+              latVal: 37.318,
+              longVal: 126.838,
+            },
+          ],
+        }),
+      ),
+    );
+
+    const tool = createFindNearbyStoresTool();
+    const result = await tool.handler({ keyword: '안산', latitude: 37.3185, longitude: 126.838, limit: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.location).toEqual({ latitude: 37.3185, longitude: 126.838 });
+  });
 });

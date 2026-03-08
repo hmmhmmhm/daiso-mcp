@@ -66,6 +66,42 @@ describe('fetchCuStores', () => {
     );
   });
 
+  it('웹 매장 검색 응답이 실패하면 에러를 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response('fail', {
+        status: 500,
+        statusText: 'Internal Server Error',
+      }),
+    );
+
+    await expect(fetchCuStores({ searchWord: '안산 중앙역' })).rejects.toThrow(
+      'API 요청 실패: 500 Internal Server Error',
+    );
+  });
+
+  it('웹 매장 검색에서 이름 없는 행은 제외한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        `
+        <table>
+          <tbody>
+            <tr>
+              <td><span class="tel">031-111-1111</span></td>
+            </tr>
+            <tr>
+              <td><span class="name">안산중앙점</span></td>
+            </tr>
+          </tbody>
+        </table>
+        `,
+      ),
+    );
+
+    const result = await fetchCuStores({ searchWord: '안산' });
+    expect(result.stores).toHaveLength(1);
+    expect(result.stores[0].storeName).toBe('안산중앙점');
+  });
+
   it('CU 매장 목록을 정규화해서 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
