@@ -16,8 +16,8 @@ interface FindNearbyStoresArgs {
 
 async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResponse> {
   const {
-    latitude = 37.5665,
-    longitude = 126.978,
+    latitude,
+    longitude,
     keyword = '',
     limit = 20,
     timeoutMs = 15000,
@@ -42,7 +42,10 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
         type: 'text',
         text: JSON.stringify(
           {
-            location: { latitude, longitude },
+            location:
+              typeof latitude === 'number' && typeof longitude === 'number'
+                ? { latitude, longitude }
+                : null,
             keyword,
             totalCount,
             count: limitedStores.length,
@@ -63,8 +66,8 @@ export function createFindNearbyStoresTool(): ToolRegistration {
       title: 'CU 주변 매장 탐색',
       description: '위치(위도/경도)와 키워드로 CU 매장을 검색합니다.',
       inputSchema: {
-        latitude: z.number().optional().default(37.5665).describe('위도 (기본값: 서울 시청 37.5665)'),
-        longitude: z.number().optional().default(126.978).describe('경도 (기본값: 서울 시청 126.978)'),
+        latitude: z.number().optional().describe('위도 (없으면 키워드 기반 검색)'),
+        longitude: z.number().optional().describe('경도 (없으면 키워드 기반 검색)'),
         keyword: z.string().optional().describe('매장 검색 키워드 (예: 강남, 명동, 안산)'),
         limit: z.number().optional().default(20).describe('반환할 최대 매장 수 (기본값: 20)'),
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),

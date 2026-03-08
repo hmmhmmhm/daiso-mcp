@@ -11,8 +11,8 @@ interface RequestOptions {
 }
 
 interface FetchCuStoresParams {
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   searchWord?: string;
   itemCd?: string;
 }
@@ -27,6 +27,11 @@ interface FetchCuStockParams {
 const CU_DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
   Accept: 'application/json, text/javascript, */*; q=0.01',
+  'X-Requested-With': 'XMLHttpRequest',
+} as const;
+
+const CU_WEB_DEFAULT_HEADERS = {
+  'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
   'X-Requested-With': 'XMLHttpRequest',
 } as const;
 
@@ -79,6 +84,73 @@ async function requestCuJson<T>(path: string, body: Record<string, unknown>, tim
   });
 }
 
+async function requestCuWebHtml(
+  path: string,
+  body: Record<string, string>,
+  timeout = 15000,
+): Promise<string> {
+  const form = new URLSearchParams(body);
+  const response = await fetch(`${CU_API.WEB_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: CU_WEB_DEFAULT_HEADERS,
+    body: form.toString(),
+    signal: AbortSignal.timeout(timeout),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+  }
+
+  return response.text();
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function sanitizeHtmlText(value: string): string {
+  const stripped = value.replace(/<[^>]*>/g, ' ');
+  return decodeHtmlEntities(stripped).replace(/\s+/g, ' ').trim();
+}
+
+function parseCuWebStores(html: string): CuStore[] {
+  const rows = html.match(/<tr>[\s\S]*?<\/tr>/g) || [];
+  const stores: CuStore[] = [];
+
+  for (const row of rows) {
+    const nameMatch = row.match(/<span class="name">([\s\S]*?)<\/span>/);
+    if (!nameMatch) {
+      continue;
+    }
+
+    const phoneMatch = row.match(/<span class="tel">([\s\S]*?)<\/span>/);
+    const addressMatch = row.match(/<address>[\s\S]*?<a [^>]*>([\s\S]*?)<\/a>/);
+    const codeMatch = row.match(/searchLatLng\('[^']*',\s*'([^']+)'\)/);
+
+    stores.push({
+      storeCode: codeMatch?.[1] || '',
+      storeName: sanitizeHtmlText(nameMatch[1]),
+      phone: sanitizeHtmlText(phoneMatch?.[1] || ''),
+      address: sanitizeHtmlText(addressMatch?.[1] || ''),
+      latitude: 0,
+      longitude: 0,
+      distanceM: 0,
+      stock: 0,
+      deliveryYn: false,
+      pickupYn: false,
+      reserveYn: false,
+    });
+  }
+
+  return stores;
+}
+
 function normalizeCuStore(raw: NonNullable<CuStoreResponse['storeList']>[number]): CuStore {
   return {
     storeCode: raw.storeCd || '',
@@ -103,12 +175,52 @@ export async function fetchCuStores(
   options: RequestOptions = {},
 ): Promise<{ totalCount: number; stores: CuStore[] }> {
   const { timeout = 15000 } = options;
+  const searchWord = (params.searchWord || '').trim();
+  const hasLatitude = typeof params.latitude === 'number' && Number.isFinite(params.latitude);
+  const hasLongitude = typeof params.longitude === 'number' && Number.isFinite(params.longitude);
+
+  // 좌표가 없고 검색어가 있으면 웹 매장 검색으로 폴백합니다.
+  if (searchWord.length > 0 && (!hasLatitude || !hasLongitude)) {
+    const html = await requestCuWebHtml(
+      CU_API.WEB_STORE_LIST_PATH,
+      {
+        pageIndex: '1',
+        listType: '',
+        jumpoCode: '',
+        jumpoLotto: '',
+        jumpoToto: '',
+        jumpoCash: '',
+        jumpoHour: '',
+        jumpoCafe: '',
+        jumpoDelivery: '',
+        jumpoBakery: '',
+        jumpoFry: '',
+        jumpoMultiDevice: '',
+        jumpoPosCash: '',
+        jumpoBattery: '',
+        jumpoAdderss: '',
+        jumpoSido: '',
+        jumpoGugun: '',
+        jumpodong: '',
+        searchWord,
+      },
+      timeout,
+    );
+    const stores = parseCuWebStores(html);
+    return {
+      totalCount: stores.length,
+      stores,
+    };
+  }
+
+  const latitude = hasLatitude ? (params.latitude as number) : 37.5665;
+  const longitude = hasLongitude ? (params.longitude as number) : 126.978;
 
   const payload = {
-    latVal: String(params.latitude),
-    longVal: String(params.longitude),
-    baseLatVal: String(params.latitude),
-    baseLongVal: String(params.longitude),
+    latVal: String(latitude),
+    longVal: String(longitude),
+    baseLatVal: String(latitude),
+    baseLongVal: String(longitude),
     tabId: '2',
     filterSvcList: [],
     filterAdtList: [],
@@ -119,7 +231,7 @@ export async function fetchCuStores(
     areaTplNo: '0',
     childMealPickUpYn: 'N',
     isCurrentSearch: 'N',
-    searchWord: params.searchWord || '',
+    searchWord,
     itemCd: params.itemCd || '',
     item_cd: params.itemCd || '',
     onItemNo: '',

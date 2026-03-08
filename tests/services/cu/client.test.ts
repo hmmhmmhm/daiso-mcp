@@ -17,6 +17,55 @@ afterEach(() => {
 });
 
 describe('fetchCuStores', () => {
+  it('좌표 없이 키워드만 있으면 웹 매장 검색으로 조회한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        `
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <span class="name">안산중앙역에코점</span>
+                <span class="tel">031-000-0000</span>
+              </td>
+              <td>
+                <div class="detail_info">
+                  <address>
+                    <a href="#" onClick="searchLatLng('경기도 안산시 단원구 중앙대로 885', '48806'); return false;">
+                      경기도 안산시 단원구 중앙대로 885
+                    </a>
+                  </address>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        `,
+      ),
+    );
+
+    const result = await fetchCuStores({ searchWord: '안산 중앙역' });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://cu.bgfretail.com/store/list_Ajax.do',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest',
+        }),
+      }),
+    );
+    expect(result.totalCount).toBe(1);
+    expect(result.stores[0]).toEqual(
+      expect.objectContaining({
+        storeCode: '48806',
+        storeName: '안산중앙역에코점',
+        address: '경기도 안산시 단원구 중앙대로 885',
+      }),
+    );
+  });
+
   it('CU 매장 목록을 정규화해서 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(

@@ -10,22 +10,40 @@ const mockFetch = vi.fn();
 setupFetchMock(mockFetch);
 
 describe('GET /api/cu/stores', () => {
-  it('CU 매장 검색 결과를 반환한다', async () => {
+  it('키워드만으로 CU 매장 검색 결과를 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({
-          totalCnt: 1,
-          storeList: [{ storeCd: '1', storeNm: '강남점', latVal: 37.5, longVal: 127.0 }],
-        }),
+        `
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <span class="name">안산중앙역에코점</span>
+                <span class="tel"></span>
+              </td>
+              <td>
+                <div class="detail_info">
+                  <address>
+                    <a href="#" onClick="searchLatLng('경기도 안산시 단원구 중앙대로 885', '48806'); return false;">
+                      경기도 안산시 단원구 중앙대로 885
+                    </a>
+                  </address>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        `,
       ),
     );
 
-    const res = await app.request('/api/cu/stores?keyword=강남');
+    const res = await app.request('/api/cu/stores?keyword=안산%20중앙역');
     expect(res.status).toBe(200);
 
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.data.stores).toHaveLength(1);
+    expect(data.data.stores[0].storeName).toBe('안산중앙역에코점');
   });
 });
 

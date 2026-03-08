@@ -7,4 +7,6 @@ export const CU_API = {
   STORE_PATH: '/api/store',
   STOCK_DISPLAY_PATH: '/api/search/display/stock',
   STOCK_MAIN_PATH: '/api/search/rest/stock/main',
+  WEB_BASE_URL: 'https://cu.bgfretail.com',
+  WEB_STORE_LIST_PATH: '/store/list_Ajax.do',
 } as const;

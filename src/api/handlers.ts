@@ -259,9 +259,13 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
  */
 export async function handleCuFindStores(c: ApiContext) {
   const keyword = c.req.query('keyword') || '';
-  const lat = parseFloat(c.req.query('lat') || '37.5665');
-  const lng = parseFloat(c.req.query('lng') || '126.978');
+  const rawLat = c.req.query('lat');
+  const rawLng = c.req.query('lng');
   const limit = parseInt(c.req.query('limit') || '20');
+  const parsedLat = rawLat ? parseFloat(rawLat) : undefined;
+  const parsedLng = rawLng ? parseFloat(rawLng) : undefined;
+  const lat = typeof parsedLat === 'number' && Number.isFinite(parsedLat) ? parsedLat : undefined;
+  const lng = typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
 
   try {
     const result = await fetchCuStores(
@@ -278,7 +282,8 @@ export async function handleCuFindStores(c: ApiContext) {
     return successResponse(
       c,
       {
-        location: { latitude: lat, longitude: lng },
+        location:
+          typeof lat === 'number' && typeof lng === 'number' ? { latitude: lat, longitude: lng } : null,
         keyword,
         stores: result.stores.slice(0, limit),
       },
