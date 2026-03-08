@@ -49,8 +49,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
 
   const firstStockItem = stockResult.items.find((item) => item.itemCode.trim().length > 0) || null;
   const hasInputLocation = typeof latitude === 'number' && typeof longitude === 'number';
-  let resolvedLatitude = hasInputLocation ? latitude : undefined;
-  let resolvedLongitude = hasInputLocation ? longitude : undefined;
+  const resolvedLatitude = hasInputLocation ? latitude : undefined;
+  const resolvedLongitude = hasInputLocation ? longitude : undefined;
   let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null = null;
 
   // 좌표 미입력 + 매장 키워드 입력 시, 키워드 기반 매장 검색 결과를 우선 사용합니다.
