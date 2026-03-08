@@ -10,6 +10,7 @@ import { createSearchProductsTool } from './tools/searchProducts.js';
 import { createFindStoresTool } from './tools/findStores.js';
 import { createCheckInventoryTool } from './tools/checkInventory.js';
 import { createGetPriceInfoTool } from './tools/getPriceInfo.js';
+import { createGetDisplayLocationTool } from './tools/getDisplayLocation.js';
 
 /**
  * 다이소 서비스 메타데이터
@@ -33,6 +34,7 @@ class DaisoService implements ServiceProvider {
       createFindStoresTool(),
       createCheckInventoryTool(),
       createGetPriceInfoTool(),
+      createGetDisplayLocationTool(),
     ];
   }
 }

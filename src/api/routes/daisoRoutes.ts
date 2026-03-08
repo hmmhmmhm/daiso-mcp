@@ -9,6 +9,7 @@ import {
   handleGetProduct,
   handleFindStores,
   handleCheckInventory,
+  handleGetDisplayLocation,
 } from '../handlers.js';
 import type { AppBindings } from '../response.js';
 
@@ -58,6 +59,18 @@ export function registerDaisoRoutes(app: Hono<{ Bindings: AppBindings }>): void 
         keyPrefix: 'daiso-inventory-v1',
       },
       () => handleCheckInventory(c),
+    ),
+  );
+
+  app.get('/api/daiso/display-location', async (c) =>
+    withEdgeCache(
+      c.req.url,
+      {
+        ttlSeconds: 60 * 10,
+        staleWhileRevalidateSeconds: 60,
+        keyPrefix: 'daiso-display-location-v1',
+      },
+      () => handleGetDisplayLocation(c),
     ),
   );
 }

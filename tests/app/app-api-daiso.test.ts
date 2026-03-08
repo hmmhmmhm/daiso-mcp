@@ -113,3 +113,39 @@ describe('GET /api/daiso/inventory', () => {
     expect(data.error.code).toBe('MISSING_PRODUCT_ID');
   });
 });
+
+describe('GET /api/daiso/display-location', () => {
+  it('진열 위치 정보를 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: [{ zoneNo: '60', stairNo: '2', storeErp: '04515' }],
+        }),
+      ),
+    );
+
+    const res = await app.request('/api/daiso/display-location?productId=12345&storeCode=04515');
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.hasLocation).toBe(true);
+  });
+
+  it('productId 없이 요청하면 에러를 반환한다', async () => {
+    const res = await app.request('/api/daiso/display-location?storeCode=04515');
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error.code).toBe('MISSING_PRODUCT_ID');
+  });
+
+  it('storeCode 없이 요청하면 에러를 반환한다', async () => {
+    const res = await app.request('/api/daiso/display-location?productId=12345');
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error.code).toBe('MISSING_STORE_CODE');
+  });
+});

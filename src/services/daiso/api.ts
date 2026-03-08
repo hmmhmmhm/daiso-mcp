@@ -18,6 +18,9 @@ export const DAISOMALL_API = {
   /** 매장별 재고 조회 API */
   STORE_INVENTORY: 'https://mapi.daisomall.co.kr/ms/msg/newIntSelStr',
 
+  /** 매장 내 상품 진열 위치 조회 API */
+  DISPLAY_LOCATION: 'https://fapi.daisomall.co.kr/pdo/selIntPdStDispInfo',
+
   /** 이미지 CDN 베이스 URL */
   IMAGE_BASE_URL: 'https://img.daisomall.co.kr',
 } as const;

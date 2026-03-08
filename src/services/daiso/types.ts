@@ -125,6 +125,27 @@ export interface StoreInventoryResponse {
   success: boolean;
 }
 
+// 진열 위치 정보
+export interface DisplayLocation {
+  zoneNo: string;
+  stairNo: string;
+  storeErp: string;
+}
+
+// 진열 위치 조회 응답 (fapi.daisomall.co.kr API)
+export interface DisplayLocationResponse {
+  message: string | null;
+  data: Array<{
+    zoneNo: string;
+    stairNo: string;
+    storeErp: string;
+  }>;
+  extraData: Record<string, unknown>;
+  extraString: string | null;
+  returnCode: string | null;
+  success: boolean;
+}
+
 // 상품 문서 타입 (가격 조회용)
 export interface ProductDoc {
   PD_NO: string;

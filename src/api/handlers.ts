@@ -12,6 +12,7 @@ import {
   fetchStoreInventory,
 } from '../services/daiso/tools/checkInventory.js';
 import { fetchProductById } from '../services/daiso/tools/getPriceInfo.js';
+import { fetchDisplayLocation } from '../services/daiso/tools/getDisplayLocation.js';
 import { getImageUrl } from '../services/daiso/api.js';
 import {
   fetchOliveyoungProducts,
@@ -144,6 +145,32 @@ export async function handleCheckInventory(c: ApiContext) {
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'INVENTORY_CHECK_FAILED', message, 500);
+  }
+}
+
+/**
+ * 진열 위치 조회 API 핸들러
+ * GET /api/daiso/display-location?productId={상품ID}&storeCode={매장코드}
+ */
+export async function handleGetDisplayLocation(c: ApiContext) {
+  const productId = c.req.query('productId');
+  const storeCode = c.req.query('storeCode');
+
+  if (!productId) {
+    return errorResponse(c, 'MISSING_PRODUCT_ID', '상품 ID(productId)를 입력해주세요.');
+  }
+
+  if (!storeCode) {
+    return errorResponse(c, 'MISSING_STORE_CODE', '매장 코드(storeCode)를 입력해주세요.');
+  }
+
+  try {
+    const result = await fetchDisplayLocation(productId, storeCode);
+
+    return successResponse(c, result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return errorResponse(c, 'DISPLAY_LOCATION_FAILED', message, 500);
   }
 }
 
