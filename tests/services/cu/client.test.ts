@@ -79,6 +79,84 @@ describe('fetchCuStores', () => {
     );
   });
 
+  it('웹 검색이 400이면 Zyte로 재시도해 결과를 반환한다', async () => {
+    const zyteBody = Buffer.from(
+      `
+      <table>
+        <tbody>
+          <tr>
+            <td><span class="name">안산중앙역에코점</span></td>
+          </tr>
+        </tbody>
+      </table>
+      `,
+      'utf8',
+    ).toString('base64');
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response('bad request', {
+          status: 400,
+          statusText: 'Bad Request',
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: zyteBody,
+          }),
+        ),
+      );
+
+    const result = await fetchCuStores(
+      { searchWord: '안산 중앙역' },
+      {
+        apiKey: 'test-key',
+      },
+    );
+
+    expect(result.totalCount).toBe(1);
+    expect(result.stores[0].storeName).toBe('안산중앙역에코점');
+    expect(mockFetch).toHaveBeenNthCalledWith(2, 'https://api.zyte.com/v1/extract', expect.any(Object));
+  });
+
+  it('웹 검색 400 + Zyte 실패 시 원본 에러를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response('bad request', {
+          status: 400,
+          statusText: 'Bad Request',
+        }),
+      )
+      .mockRejectedValueOnce(new Error('zyte fail'));
+
+    await expect(fetchCuStores({ searchWord: '안산 중앙역' }, { apiKey: 'test-key' })).rejects.toThrow(
+      'API 요청 실패: 400 Bad Request',
+    );
+  });
+
+  it('웹 검색 400 + Zyte 본문 누락 시 원본 에러를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response('bad request', {
+          status: 400,
+          statusText: 'Bad Request',
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+          }),
+        ),
+      );
+
+    await expect(fetchCuStores({ searchWord: '안산 중앙역' }, { apiKey: 'test-key' })).rejects.toThrow(
+      'API 요청 실패: 400 Bad Request',
+    );
+  });
+
   it('웹 매장 검색에서 이름 없는 행은 제외한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(

@@ -167,7 +167,7 @@ export async function handleOliveyoungFindStores(c: ApiContext) {
         searchWords: keyword,
       },
       {
-        apiKey: c.env.ZYTE_API_KEY,
+        apiKey: c.env?.ZYTE_API_KEY,
       }
     );
 
@@ -276,6 +276,7 @@ export async function handleCuFindStores(c: ApiContext) {
       },
       {
         timeout: 15000,
+        apiKey: c.env.ZYTE_API_KEY,
       },
     );
 
@@ -323,6 +324,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
         },
         {
           timeout: 15000,
+          apiKey: c.env?.ZYTE_API_KEY,
         },
       ),
       fetchCuStock(

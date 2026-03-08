@@ -3,11 +3,13 @@
  */
 
 import { fetchJson } from '../../utils/http.js';
+import { decodeBase64, requestByZyte } from '../../utils/zyte.js';
 import { CU_API } from './api.js';
 import type { CuStockItem, CuStockMainResponse, CuStore, CuStoreResponse } from './types.js';
 
 interface RequestOptions {
   timeout?: number;
+  apiKey?: string;
 }
 
 interface FetchCuStoresParams {
@@ -91,21 +93,43 @@ async function requestCuJson<T>(path: string, body: Record<string, unknown>, tim
 async function requestCuWebHtml(
   path: string,
   body: Record<string, string>,
+  apiKey?: string,
   timeout = 15000,
 ): Promise<string> {
   const form = new URLSearchParams(body);
+  const formText = form.toString();
+  const targetUrl = `${CU_API.WEB_BASE_URL}${path}`;
   const response = await fetch(`${CU_API.WEB_BASE_URL}${path}`, {
     method: 'POST',
     headers: CU_WEB_DEFAULT_HEADERS,
-    body: form.toString(),
+    body: formText,
     signal: AbortSignal.timeout(timeout),
   });
 
-  if (!response.ok) {
-    throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+  if (response.ok) {
+    return response.text();
   }
 
-  return response.text();
+  if (response.status === 400 || response.status === 403 || response.status === 429) {
+    try {
+      const result = await requestByZyte({
+        apiKey,
+        url: targetUrl,
+        timeout,
+        method: 'POST',
+        headers: Object.entries(CU_WEB_DEFAULT_HEADERS).map(([name, value]) => ({ name, value })),
+        bodyText: formText,
+      });
+
+      if (result.statusCode === 200 && result.httpResponseBody) {
+        return decodeBase64(result.httpResponseBody);
+      }
+    } catch {
+      // 직접 호출 실패 시 Zyte 재시도도 실패하면 원본 에러를 반환합니다.
+    }
+  }
+
+  throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
 }
 
 function decodeHtmlEntities(value: string): string {
@@ -178,7 +202,7 @@ export async function fetchCuStores(
   params: FetchCuStoresParams,
   options: RequestOptions = {},
 ): Promise<{ totalCount: number; stores: CuStore[] }> {
-  const { timeout = 15000 } = options;
+  const { timeout = 15000, apiKey } = options;
   const searchWord = (params.searchWord || '').trim();
   const hasLatitude = typeof params.latitude === 'number' && Number.isFinite(params.latitude);
   const hasLongitude = typeof params.longitude === 'number' && Number.isFinite(params.longitude);
@@ -208,6 +232,7 @@ export async function fetchCuStores(
         jumpodong: '',
         searchWord,
       },
+      apiKey,
       timeout,
     );
     const stores = parseCuWebStores(html);

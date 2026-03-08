@@ -37,7 +37,9 @@ describe('GET /api/cu/stores', () => {
       ),
     );
 
-    const res = await app.request('/api/cu/stores?keyword=안산%20중앙역');
+    const res = await app.request('/api/cu/stores?keyword=안산%20중앙역', undefined, {
+      ZYTE_API_KEY: 'test-key',
+    });
     expect(res.status).toBe(200);
 
     const data = await res.json();
@@ -85,7 +87,9 @@ describe('GET /api/cu/inventory', () => {
         ),
       );
 
-    const res = await app.request('/api/cu/inventory?keyword=과자');
+    const res = await app.request('/api/cu/inventory?keyword=과자', undefined, {
+      ZYTE_API_KEY: 'test-key',
+    });
     expect(res.status).toBe(200);
 
     const data = await res.json();
