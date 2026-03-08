@@ -5,7 +5,7 @@
  * 다이소, 편의점, 백화점 등 다양한 서비스를 확장할 수 있습니다.
  */
 
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
@@ -29,6 +29,16 @@ import { registerCuRoutes } from './api/routes/cuRoutes.js';
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
 const SERVER_VERSION = '1.0.0';
+const SESSION_HEADER = 'mcp-session-id';
+
+// 세션별 MCP 전송 계층/서버를 유지해 GET/POST/DELETE를 일관 처리합니다.
+const mcpSessions = new Map<
+  string,
+  {
+    server: McpServer;
+    transport: WebStandardStreamableHTTPServerTransport;
+  }
+>();
 
 /**
  * 요청 컨텍스트 기반 서비스 레지스트리 생성
@@ -66,6 +76,88 @@ const createMcpServer = (bindings?: AppBindings) => {
   registry.applyToServer(server);
 
   return server;
+};
+
+/**
+ * initialize 요청 여부를 확인합니다.
+ */
+const isInitializeRequest = (body: unknown): boolean => {
+  if (Array.isArray(body)) {
+    return body.some(
+      (item) => typeof item === 'object' && item !== null && (item as { method?: unknown }).method === 'initialize'
+    );
+  }
+
+  return typeof body === 'object' && body !== null && (body as { method?: unknown }).method === 'initialize';
+};
+
+/**
+ * 새 세션 transport/server를 생성합니다.
+ */
+const createSessionTransport = (bindings?: AppBindings) => {
+  const server = createMcpServer(bindings);
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: () => crypto.randomUUID(),
+    onsessioninitialized: (sessionId) => {
+      mcpSessions.set(sessionId, { server, transport });
+    },
+    onsessionclosed: (sessionId) => {
+      mcpSessions.delete(sessionId);
+    },
+  });
+
+  return { server, transport };
+};
+
+/**
+ * /mcp 요청을 세션 기반으로 처리합니다.
+ */
+const handleMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
+  const sessionId = c.req.header(SESSION_HEADER);
+
+  if (sessionId) {
+    const existing = mcpSessions.get(sessionId);
+    if (!existing) {
+      return c.json(
+        {
+          error: 'Session not found',
+          message: '유효하지 않은 mcp-session-id 입니다. initialize 요청부터 다시 시작해주세요.',
+        },
+        404
+      );
+    }
+
+    return existing.transport.handleRequest(c.req.raw);
+  }
+
+  if (c.req.method === 'POST') {
+    const parsedBody = await c.req.raw
+      .clone()
+      .json()
+      .catch(() => undefined);
+
+    if (!isInitializeRequest(parsedBody)) {
+      return c.json(
+        {
+          error: 'Bad Request',
+          message: '세션이 없습니다. 먼저 initialize 요청으로 세션을 생성해주세요.',
+        },
+        400
+      );
+    }
+
+    const { server, transport } = createSessionTransport(c.env);
+    await server.connect(transport);
+    return transport.handleRequest(c.req.raw, { parsedBody });
+  }
+
+  return c.json(
+    {
+      error: 'Bad Request',
+      message: `세션이 없습니다. 먼저 POST /mcp initialize 요청 후 ${SESSION_HEADER} 헤더를 사용해주세요.`,
+    },
+    400
+  );
 };
 
 // Hono 앱 생성
@@ -145,11 +237,6 @@ registerMegaboxRoutes(app);
 registerCgvRoutes(app);
 
 // MCP 엔드포인트
-app.all('/mcp', async (c) => {
-  const transport = new WebStandardStreamableHTTPServerTransport();
-  const server = createMcpServer(c.env);
-  await server.connect(transport);
-  return transport.handleRequest(c.req.raw);
-});
+app.all('/mcp', handleMcpRequest);
 
 export default app;
