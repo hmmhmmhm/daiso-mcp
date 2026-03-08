@@ -17,6 +17,11 @@ interface FetchCuStoresParams {
   longitude?: number;
   searchWord?: string;
   itemCd?: string;
+  onItemNo?: string;
+  jipCd?: string;
+  isRecommend?: string;
+  recommendId?: string;
+  pageType?: string;
 }
 
 interface FetchCuStockParams {
@@ -260,10 +265,14 @@ export async function fetchCuStores(
     areaTplNo: '0',
     childMealPickUpYn: 'N',
     isCurrentSearch: 'N',
+    pageType: params.pageType || 'search_improve',
     searchWord,
+    isRecommend: params.isRecommend || '',
+    recommendId: params.recommendId || '',
+    jipCd: params.jipCd || params.itemCd || '',
     itemCd: params.itemCd || '',
     item_cd: params.itemCd || '',
-    onItemNo: '',
+    onItemNo: params.onItemNo || '',
   };
 
   const body = await requestCuJson<CuStoreResponse>(CU_API.STORE_PATH, payload, timeout);
@@ -318,6 +327,7 @@ export async function fetchCuStock(
     .filter((fields): fields is NonNullable<typeof fields> => Boolean(fields))
     .map((fields) => ({
       itemCode: fields.item_cd || '',
+      onItemNo: fields.on_item_no || '',
       itemName: fields.item_nm || '',
       price: toNumber(fields.hyun_maega),
       pickupYn: toYnBoolean(fields.pickup_yn),

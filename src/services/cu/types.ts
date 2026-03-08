@@ -18,6 +18,7 @@ export interface CuStore {
 
 export interface CuStockItem {
   itemCode: string;
+  onItemNo: string;
   itemName: string;
   price: number;
   pickupYn: boolean;
@@ -50,6 +51,7 @@ export interface CuStoreResponse {
 
 interface CuStockFields {
   item_cd?: string;
+  on_item_no?: string;
   item_nm?: string;
   hyun_maega?: number | string;
   pickup_yn?: string;

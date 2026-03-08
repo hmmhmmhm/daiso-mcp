@@ -235,6 +235,30 @@ describe('fetchCuStores', () => {
     );
   });
 
+  it('재고 시드 파라미터를 매장 조회 payload에 반영한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ totalCnt: 0, storeList: [] })));
+
+    await fetchCuStores({
+      latitude: 37.3177,
+      longitude: 126.8412,
+      itemCd: '2202000140047',
+      onItemNo: '2026020061628',
+      jipCd: '2202000140047',
+      isRecommend: 'Y',
+      recommendId: 'stock',
+      pageType: 'search_improve stock_sch_improve',
+    });
+
+    const requestInit = mockFetch.mock.calls[0][1] as RequestInit;
+    const body = JSON.parse(String(requestInit.body));
+    expect(body.itemCd).toBe('2202000140047');
+    expect(body.onItemNo).toBe('2026020061628');
+    expect(body.jipCd).toBe('2202000140047');
+    expect(body.isRecommend).toBe('Y');
+    expect(body.recommendId).toBe('stock');
+    expect(body.pageType).toBe('search_improve stock_sch_improve');
+  });
+
   it('도로명 주소와 boolean YN 값을 처리한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
@@ -340,6 +364,7 @@ describe('fetchCuStock', () => {
                     {
                       fields: {
                         item_cd: '8801',
+                        on_item_no: '2026020061628',
                         item_nm: '감자칩',
                         hyun_maega: '1700',
                         pickup_yn: 'Y',
@@ -370,6 +395,7 @@ describe('fetchCuStock', () => {
     expect(result.totalCount).toBe(2);
     expect(result.spellModifyYn).toBe('Y');
     expect(result.items[0].price).toBe(1700);
+    expect(result.items[0].onItemNo).toBe('2026020061628');
     expect(result.items[1].reserveYn).toBe(true);
   });
 
@@ -424,6 +450,7 @@ describe('fetchCuStock', () => {
     const result = await fetchCuStock({ keyword: '과자', limit: 8, offset: 0, searchSort: 'recom' });
 
     expect(result.items[0].itemCode).toBe('');
+    expect(result.items[0].onItemNo).toBe('');
     expect(result.items[0].itemName).toBe('');
   });
 });

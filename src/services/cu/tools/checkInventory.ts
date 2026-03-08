@@ -21,8 +21,8 @@ interface CheckInventoryArgs {
 async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
   const {
     keyword,
-    latitude = 37.5665,
-    longitude = 126.978,
+    latitude,
+    longitude,
     storeKeyword = '',
     size = 20,
     offset = 0,
@@ -35,29 +35,65 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     throw new Error('상품 검색어(keyword)를 입력해주세요.');
   }
 
-  const [storeResult, stockResult] = await Promise.all([
-    fetchCuStores(
+  const stockResult = await fetchCuStock(
+    {
+      keyword,
+      limit: size,
+      offset,
+      searchSort,
+    },
+    {
+      timeout: timeoutMs,
+    },
+  );
+
+  const firstStockItem = stockResult.items.find((item) => item.itemCode.trim().length > 0) || null;
+  const hasInputLocation = typeof latitude === 'number' && typeof longitude === 'number';
+  let resolvedLatitude = hasInputLocation ? latitude : undefined;
+  let resolvedLongitude = hasInputLocation ? longitude : undefined;
+  let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null = null;
+
+  // 좌표 미입력 + 매장 키워드 입력 시, 먼저 매장 검색 결과의 좌표를 재사용 시도합니다.
+  if (!hasInputLocation && storeKeyword.trim().length > 0) {
+    const keywordStoreResult = await fetchCuStores(
       {
-        latitude,
-        longitude,
         searchWord: storeKeyword,
       },
       {
         timeout: timeoutMs,
       },
-    ),
-    fetchCuStock(
+    );
+
+    const storeWithCoordinates = keywordStoreResult.stores.find(
+      (store) => store.latitude !== 0 && store.longitude !== 0,
+    );
+    if (storeWithCoordinates) {
+      resolvedLatitude = storeWithCoordinates.latitude;
+      resolvedLongitude = storeWithCoordinates.longitude;
+    } else {
+      storeResult = keywordStoreResult;
+    }
+  }
+
+  if (!storeResult) {
+    const hasStockSeed = !!firstStockItem?.itemCode;
+    storeResult = await fetchCuStores(
       {
-        keyword,
-        limit: size,
-        offset,
-        searchSort,
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude,
+        searchWord: storeKeyword,
+        itemCd: firstStockItem?.itemCode || '',
+        onItemNo: firstStockItem?.onItemNo || '',
+        jipCd: firstStockItem?.itemCode || '',
+        isRecommend: hasStockSeed ? 'Y' : '',
+        recommendId: hasStockSeed ? 'stock' : '',
+        pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
       },
       {
         timeout: timeoutMs,
       },
-    ),
-  ]);
+    );
+  }
 
   const limitedStores = storeResult.stores.slice(0, storeLimit);
 
@@ -69,13 +105,15 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       searchSort,
       storeKeyword,
     },
-    location: {
-      latitude,
-      longitude,
-    },
+    location:
+      typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number'
+        ? { latitude: resolvedLatitude, longitude: resolvedLongitude }
+        : null,
     nearbyStores: {
       totalCount: storeResult.totalCount,
       count: limitedStores.length,
+      stockItemCode: firstStockItem?.itemCode || null,
+      stockItemName: firstStockItem?.itemName || null,
       stores: limitedStores,
     },
     inventory: {
@@ -99,8 +137,8 @@ export function createCheckInventoryTool(): ToolRegistration {
       description: '상품 키워드로 CU 재고를 조회하고 주변 매장 정보를 함께 반환합니다.',
       inputSchema: {
         keyword: z.string().describe('재고를 확인할 상품 검색어 (예: 과자, 커피, 도시락)'),
-        latitude: z.number().optional().default(37.5665).describe('위도 (기본값: 서울 시청 37.5665)'),
-        longitude: z.number().optional().default(126.978).describe('경도 (기본값: 서울 시청 126.978)'),
+        latitude: z.number().optional().describe('위도 (없으면 storeKeyword 기반으로 좌표 추정 시도)'),
+        longitude: z.number().optional().describe('경도 (없으면 storeKeyword 기반으로 좌표 추정 시도)'),
         storeKeyword: z.string().optional().describe('주변 매장 필터 키워드 (예: 강남, 안산)'),
         size: z.number().optional().default(20).describe('재고 검색 결과 수 (기본값: 20)'),
         offset: z.number().optional().default(0).describe('재고 검색 시작 오프셋 (기본값: 0)'),

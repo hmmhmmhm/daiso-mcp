@@ -148,12 +148,10 @@ describe('handleCuCheckInventory', () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            totalCnt: 1,
-            storeList: [{ storeCd: '1', storeNm: '강남점', latVal: 37.5, longVal: 127.0 }],
+            areaList: [],
           }),
         ),
       )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -179,9 +177,17 @@ describe('handleCuCheckInventory', () => {
             },
           }),
         ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            totalCnt: 1,
+            storeList: [{ storeCd: '1', storeNm: '강남점', latVal: 37.5, longVal: 127.0, stock: '5' }],
+          }),
+        ),
       );
 
-    const ctx = createMockContext({ keyword: '과자' });
+    const ctx = createMockContext({ keyword: '과자', lat: '37.5', lng: '127.0' });
     await handleCuCheckInventory(ctx);
 
     expect(ctx.json).toHaveBeenCalledWith(
@@ -189,7 +195,34 @@ describe('handleCuCheckInventory', () => {
         success: true,
         data: expect.objectContaining({
           keyword: '과자',
+          location: { latitude: 37.5, longitude: 127 },
           inventory: expect.objectContaining({ totalCount: 1 }),
+          nearbyStores: expect.objectContaining({ stockItemCode: '8801' }),
+        }),
+      }),
+    );
+  });
+
+  it('storeKeyword만 있으면 위치를 null로 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: { stockResult: { result: { total_count: 0, rows: [] } } },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response('<table><tbody><tr><td><span class="name">안산중앙점</span></td></tr></tbody></table>'));
+
+    const ctx = createMockContext({ keyword: '치킨', storeKeyword: '안산 중앙역' });
+    await handleCuCheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          location: null,
         }),
       }),
     );

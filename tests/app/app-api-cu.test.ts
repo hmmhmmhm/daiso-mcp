@@ -55,12 +55,10 @@ describe('GET /api/cu/inventory', () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            totalCnt: 1,
-            storeList: [{ storeCd: '1', storeNm: '강남점', latVal: 37.5, longVal: 127.0 }],
+            areaList: [],
           }),
         ),
       )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -85,9 +83,17 @@ describe('GET /api/cu/inventory', () => {
             },
           }),
         ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            totalCnt: 1,
+            storeList: [{ storeCd: '1', storeNm: '강남점', latVal: 37.5, longVal: 127.0, stock: '4' }],
+          }),
+        ),
       );
 
-    const res = await app.request('/api/cu/inventory?keyword=과자', undefined, {
+    const res = await app.request('/api/cu/inventory?keyword=과자&lat=37.5&lng=127.0', undefined, {
       ZYTE_API_KEY: 'test-key',
     });
     expect(res.status).toBe(200);
@@ -95,6 +101,7 @@ describe('GET /api/cu/inventory', () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.data.inventory.items).toHaveLength(1);
+    expect(data.data.nearbyStores.stockItemCode).toBe('8801');
   });
 
   it('keyword 없이 요청하면 에러를 반환한다', async () => {

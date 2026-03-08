@@ -303,8 +303,12 @@ export async function handleCuFindStores(c: ApiContext) {
 export async function handleCuCheckInventory(c: ApiContext) {
   const keyword = c.req.query('keyword');
   const storeKeyword = c.req.query('storeKeyword') || '';
-  const lat = parseFloat(c.req.query('lat') || '37.5665');
-  const lng = parseFloat(c.req.query('lng') || '126.978');
+  const rawLat = c.req.query('lat');
+  const rawLng = c.req.query('lng');
+  const parsedLat = rawLat ? parseFloat(rawLat) : undefined;
+  const parsedLng = rawLng ? parseFloat(rawLng) : undefined;
+  const lat = typeof parsedLat === 'number' && Number.isFinite(parsedLat) ? parsedLat : undefined;
+  const lng = typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
   const size = parseInt(c.req.query('size') || '20');
   const offset = parseInt(c.req.query('offset') || '0');
   const searchSort = c.req.query('searchSort') || 'recom';
@@ -315,38 +319,79 @@ export async function handleCuCheckInventory(c: ApiContext) {
   }
 
   try {
-    const [storeResult, stockResult] = await Promise.all([
-      fetchCuStores(
+    const stockResult = await fetchCuStock(
+      {
+        keyword,
+        limit: size,
+        offset,
+        searchSort,
+      },
+      {
+        timeout: 15000,
+      },
+    );
+
+    const firstStockItem = stockResult.items.find((item) => item.itemCode.trim().length > 0) || null;
+    const hasInputLocation = typeof lat === 'number' && typeof lng === 'number';
+    let resolvedLat = hasInputLocation ? lat : undefined;
+    let resolvedLng = hasInputLocation ? lng : undefined;
+    let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null = null;
+
+    // 좌표 미입력 + 매장 키워드 입력 시, 먼저 매장 검색 결과의 좌표를 재사용 시도합니다.
+    if (!hasInputLocation && storeKeyword.trim().length > 0) {
+      const keywordStoreResult = await fetchCuStores(
         {
-          latitude: lat,
-          longitude: lng,
           searchWord: storeKeyword,
         },
         {
           timeout: 15000,
           apiKey: c.env?.ZYTE_API_KEY,
         },
-      ),
-      fetchCuStock(
+      );
+      const storeWithCoordinates = keywordStoreResult.stores.find(
+        (store) => store.latitude !== 0 && store.longitude !== 0,
+      );
+      if (storeWithCoordinates) {
+        resolvedLat = storeWithCoordinates.latitude;
+        resolvedLng = storeWithCoordinates.longitude;
+      } else {
+        storeResult = keywordStoreResult;
+      }
+    }
+
+    if (!storeResult) {
+      const hasStockSeed = !!firstStockItem?.itemCode;
+      storeResult = await fetchCuStores(
         {
-          keyword,
-          limit: size,
-          offset,
-          searchSort,
+          latitude: resolvedLat,
+          longitude: resolvedLng,
+          searchWord: storeKeyword,
+          itemCd: firstStockItem?.itemCode || '',
+          onItemNo: firstStockItem?.onItemNo || '',
+          jipCd: firstStockItem?.itemCode || '',
+          isRecommend: hasStockSeed ? 'Y' : '',
+          recommendId: hasStockSeed ? 'stock' : '',
+          pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
         },
         {
           timeout: 15000,
+          apiKey: c.env?.ZYTE_API_KEY,
         },
-      ),
-    ]);
+      );
+    }
 
     return successResponse(
       c,
       {
         keyword,
-        location: { latitude: lat, longitude: lng },
+        location:
+          typeof resolvedLat === 'number' && typeof resolvedLng === 'number'
+            ? { latitude: resolvedLat, longitude: resolvedLng }
+            : null,
         nearbyStores: {
           totalCount: storeResult.totalCount,
+          stockItemCode: firstStockItem?.itemCode || null,
+          stockItemName: firstStockItem?.itemName || null,
           stores: storeResult.stores.slice(0, storeLimit),
         },
         inventory: {

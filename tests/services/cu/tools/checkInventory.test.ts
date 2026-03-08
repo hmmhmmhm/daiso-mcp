@@ -35,20 +35,10 @@ describe('createCheckInventoryTool', () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            totalCnt: 1,
-            storeList: [
-              {
-                storeCd: '1',
-                storeNm: '강남점',
-                latVal: 37.5,
-                longVal: 127.0,
-                distance: 100,
-              },
-            ],
+            areaList: [],
           }),
         ),
       )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -74,14 +64,76 @@ describe('createCheckInventoryTool', () => {
             },
           }),
         ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            totalCnt: 1,
+            storeList: [
+              {
+                storeCd: '1',
+                storeNm: '강남점',
+                latVal: 37.5,
+                longVal: 127.0,
+                distance: 100,
+                stock: '7',
+              },
+            ],
+          }),
+        ),
       );
 
     const tool = createCheckInventoryTool();
-    const result = await tool.handler({ keyword: '과자', storeLimit: 5, size: 8 });
+    const result = await tool.handler({
+      keyword: '과자',
+      latitude: 37.5,
+      longitude: 127.0,
+      storeLimit: 5,
+      size: 8,
+    });
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.nearbyStores.totalCount).toBe(1);
     expect(parsed.inventory.totalCount).toBe(1);
     expect(parsed.inventory.items[0].itemCode).toBe('8801');
+    expect(parsed.nearbyStores.stockItemCode).toBe('8801');
+    expect(parsed.nearbyStores.stores[0].stock).toBe(7);
+  });
+
+  it('좌표 없이 storeKeyword만 있으면 기본 좌표를 강제하지 않는다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            spellModifyYn: 'N',
+            data: { stockResult: { result: { total_count: 0, rows: [] } } },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          `
+          <table>
+            <tbody>
+              <tr>
+                <td><span class="name">안산중앙역에코점</span></td>
+              </tr>
+            </tbody>
+          </table>
+          `,
+        ),
+      );
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ keyword: '치킨', storeKeyword: '안산 중앙역' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.location).toBeNull();
+    expect(parsed.nearbyStores.stores[0].storeName).toBe('안산중앙역에코점');
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      'https://cu.bgfretail.com/store/list_Ajax.do',
+      expect.any(Object),
+    );
   });
 });
