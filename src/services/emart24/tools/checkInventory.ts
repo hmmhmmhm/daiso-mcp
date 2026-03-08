@@ -116,18 +116,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         distanceM: calculateDistanceM(latitude, longitude, store.latitude, store.longitude),
       };
     })
-    .sort((a, b) => {
-      if (a.distanceM === null && b.distanceM === null) {
-        return 0;
-      }
-      if (a.distanceM === null) {
-        return 1;
-      }
-      if (b.distanceM === null) {
-        return -1;
-      }
-      return a.distanceM - b.distanceM;
-    });
+    .sort((a, b) => (a.distanceM ?? Number.MAX_SAFE_INTEGER) - (b.distanceM ?? Number.MAX_SAFE_INTEGER));
 
   const targetStores = sortedStores.filter((store) => store.storeCode.length > 0).slice(0, storeLimit);
   const stockResult = await searchEmart24StockByStores(

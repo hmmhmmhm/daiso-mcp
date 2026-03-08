@@ -64,6 +64,40 @@ describe('fetchEmart24Stores', () => {
       '이마트24 매장 조회 실패: error=1',
     );
   });
+
+  it('area/service 필터 파라미터를 요청 URL에 반영한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 0, count: 0, data: [] })));
+
+    await fetchEmart24Stores({
+      keyword: '강남',
+      area1: '서울특별시',
+      area2: '강남구',
+      service24h: true,
+      page: 2,
+    });
+
+    const calledUrl = String(mockFetch.mock.calls[0][0]);
+    expect(calledUrl).toContain('page=2');
+    expect(calledUrl).toContain('search=%EA%B0%95%EB%82%A8');
+    expect(calledUrl).toContain('AREA1=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C');
+    expect(calledUrl).toContain('AREA2=%EA%B0%95%EB%82%A8%EA%B5%AC');
+    expect(calledUrl).toContain('SVR_24=1');
+  });
+
+  it('SVR_24가 boolean이어도 24시간 여부를 해석한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: 0,
+          count: 1,
+          data: [{ CODE: '1', TITLE: '테스트점', SVR_24: true }],
+        }),
+      ),
+    );
+
+    const result = await fetchEmart24Stores({});
+    expect(result.stores[0].service24h).toBe(true);
+  });
 });
 
 describe('searchEmart24Products', () => {
@@ -94,6 +128,55 @@ describe('searchEmart24Products', () => {
         method: 'POST',
       }),
     );
+  });
+
+  it('PLU 코드가 비어 있는 항목은 제외한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          totalCnt: 2,
+          productList: [
+            { pluCd: '', goodsNm: '제외대상' },
+            { pluCd: '8801', goodsNm: '포함대상' },
+          ],
+        }),
+      ),
+    );
+
+    const result = await searchEmart24Products({ keyword: '테스트' });
+    expect(result.products).toHaveLength(1);
+    expect(result.products[0].pluCd).toBe('8801');
+  });
+});
+
+describe('정규화 보조 분기', () => {
+  it('매장 데이터가 없으면 빈 배열을 반환한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 0, count: 0 })));
+    const result = await fetchEmart24Stores({});
+    expect(result.stores).toEqual([]);
+  });
+
+  it('숫자/문자 fallback을 0으로 처리한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: 0,
+          count: 1,
+          data: [
+            {
+              CODE: '',
+              TITLE: '',
+              LATITUDE: 'abc',
+              LONGITUDE: Infinity,
+              SVR_24: 'N',
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await fetchEmart24Stores({});
+    expect(result.stores).toEqual([]);
   });
 });
 

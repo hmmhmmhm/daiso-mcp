@@ -54,18 +54,7 @@ export async function handleEmart24FindStores(c: ApiContext) {
           distanceM: calculateDistanceM(lat, lng, store.latitude, store.longitude),
         };
       })
-      .sort((a, b) => {
-        if (a.distanceM === null && b.distanceM === null) {
-          return 0;
-        }
-        if (a.distanceM === null) {
-          return 1;
-        }
-        if (b.distanceM === null) {
-          return -1;
-        }
-        return a.distanceM - b.distanceM;
-      })
+      .sort((a, b) => (a.distanceM ?? Number.MAX_SAFE_INTEGER) - (b.distanceM ?? Number.MAX_SAFE_INTEGER))
       .slice(0, limit);
 
     return successResponse(

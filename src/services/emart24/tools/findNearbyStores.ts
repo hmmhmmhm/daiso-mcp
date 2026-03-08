@@ -60,18 +60,9 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     };
   });
 
-  const sortedStores = [...withDistance].sort((a, b) => {
-    if (a.distanceM === null && b.distanceM === null) {
-      return 0;
-    }
-    if (a.distanceM === null) {
-      return 1;
-    }
-    if (b.distanceM === null) {
-      return -1;
-    }
-    return a.distanceM - b.distanceM;
-  });
+  const sortedStores = [...withDistance].sort(
+    (a, b) => (a.distanceM ?? Number.MAX_SAFE_INTEGER) - (b.distanceM ?? Number.MAX_SAFE_INTEGER),
+  );
 
   const stores = sortedStores.slice(0, limit);
 

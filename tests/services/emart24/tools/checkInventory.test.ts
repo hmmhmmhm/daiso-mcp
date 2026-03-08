@@ -89,4 +89,84 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.pluCd).toBe('8800244010504');
     expect(parsed.inventory.count).toBe(0);
   });
+
+  it('keyword 검색 결과에 PLU 코드가 없으면 에러를 던진다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          totalCnt: 1,
+          productList: [{ pluCd: '   ', goodsNm: '빈코드상품' }],
+        }),
+      ),
+    );
+
+    const tool = createCheckInventoryTool();
+    await expect(tool.handler({ keyword: '빈코드' })).rejects.toThrow(
+      '상품 검색 결과에서 PLU 코드를 찾을 수 없습니다.',
+    );
+  });
+
+  it('좌표 없는 매장은 재고 결과에서 distanceM이 null로 유지된다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 0,
+            count: 2,
+            data: [
+              { CODE: 'A', TITLE: '좌표없음', LATITUDE: 0, LONGITUDE: 0 },
+              { CODE: 'B', TITLE: '좌표있음', LATITUDE: 37.5, LONGITUDE: 127.0 },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storeGoodsInfo: { pluCd: '8800244010504', goodsNm: '두바이초콜릿' },
+            storeGoodsQty: [
+              { BIZNO: 'A', BIZQTY: '1' },
+              { BIZNO: 'B', BIZQTY: '2' },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ storeInfo: { storeNm: '좌표없음' } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ storeInfo: { storeNm: '좌표있음' } })));
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({
+      pluCd: '8800244010504',
+      latitude: 37.5,
+      longitude: 127.0,
+      storeLimit: 2,
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.nearbyStores.stores[0].storeCode).toBe('B');
+    expect(parsed.nearbyStores.stores[1].storeCode).toBe('A');
+    expect(parsed.inventory.stores[0].bizNo).toBe('A');
+    expect(parsed.inventory.stores[0].distanceM).toBeNull();
+  });
+
+  it('재고 응답에 수량/상품 정보가 없어도 빈 결과를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 0,
+            count: 1,
+            data: [{ CODE: 'A', TITLE: '테스트점', LATITUDE: 37.5, LONGITUDE: 127.0 }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({})));
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ pluCd: '8800244010504', latitude: 37.5, longitude: 127.0 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.inventory.goodsInfo).toBeNull();
+    expect(parsed.inventory.count).toBe(0);
+  });
 });

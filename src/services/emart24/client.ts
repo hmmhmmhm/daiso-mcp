@@ -51,7 +51,7 @@ const EMART24_FORM_HEADERS = {
 
 function toNumber(value: unknown): number {
   if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0;
+    return value;
   }
 
   if (typeof value === 'string') {

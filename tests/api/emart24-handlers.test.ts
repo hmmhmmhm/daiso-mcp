@@ -73,6 +73,46 @@ describe('handleEmart24FindStores', () => {
       500,
     );
   });
+
+  it('service24h 파라미터를 그대로 반영한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 0, count: 0, data: [] })));
+
+    const ctx = createMockContext({ keyword: '강남', service24h: 'true' });
+    await handleEmart24FindStores(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          service24h: true,
+        }),
+      }),
+    );
+  });
+
+  it('거리 정렬 분기를 처리한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: 0,
+          count: 3,
+          data: [
+            { CODE: 'N1', TITLE: '좌표없음1', LATITUDE: 0, LONGITUDE: 0 },
+            { CODE: 'Y1', TITLE: '좌표있음', LATITUDE: 37.5, LONGITUDE: 127.0 },
+            { CODE: 'N2', TITLE: '좌표없음2', LATITUDE: 0, LONGITUDE: 0 },
+          ],
+        }),
+      ),
+    );
+
+    const ctx = createMockContext({ lat: '37.5', lng: '127.0' });
+    await handleEmart24FindStores(ctx);
+
+    const payload = (ctx.json as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+      data: { stores: Array<{ storeCode: string }> };
+    };
+    expect(payload.data.stores[0].storeCode).toBe('Y1');
+  });
 });
 
 describe('handleEmart24SearchProducts', () => {
@@ -104,6 +144,24 @@ describe('handleEmart24SearchProducts', () => {
           products: expect.any(Array),
         }),
       }),
+    );
+  });
+
+  it('상품 검색의 알 수 없는 예외를 처리한다', async () => {
+    mockFetch.mockRejectedValue(undefined);
+
+    const ctx = createMockContext({ keyword: '과자' });
+    await handleEmart24SearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'EMART24_PRODUCT_SEARCH_FAILED',
+          message: '알 수 없는 오류가 발생했습니다.',
+        },
+      }),
+      500,
     );
   });
 });
@@ -155,6 +213,62 @@ describe('handleEmart24CheckInventory', () => {
           count: 1,
         }),
       }),
+    );
+  });
+
+  it('매장 상세/수량 일부 누락도 안전하게 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storeGoodsInfo: { pluCd: '8801' },
+            storeGoodsQty: [{ BIZNO: '28339', BIZQTY: '2' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ storeInfo: { storeNm: 'A' } })))
+      .mockRejectedValueOnce(new Error('detail fail'));
+
+    const ctx = createMockContext({ pluCd: '8801', bizNoArr: '28339,99999' });
+    await handleEmart24CheckInventory(ctx);
+
+    const payload = (ctx.json as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+      data: { stores: Array<{ bizNo: string; bizQty: number; storeName: string }> };
+    };
+    expect(payload.data.stores).toHaveLength(2);
+    expect(payload.data.stores[1].bizNo).toBe('99999');
+    expect(payload.data.stores[1].bizQty).toBe(0);
+    expect(payload.data.stores[1].storeName).toBe('');
+  });
+
+  it('bizNoArr가 비어 있으면 에러를 반환한다', async () => {
+    const ctx = createMockContext({ pluCd: '8801', bizNoArr: ' , ' });
+    await handleEmart24CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'MISSING_BIZ_NO_ARR', message: '매장 코드 목록(bizNoArr)을 입력해주세요.' },
+      }),
+      400,
+    );
+  });
+
+  it('재고 조회 중 알 수 없는 예외를 처리한다', async () => {
+    mockFetch.mockRejectedValue(undefined);
+
+    const ctx = createMockContext({ pluCd: '8801', bizNoArr: '28339' });
+    await handleEmart24CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'EMART24_INVENTORY_CHECK_FAILED',
+          message: '알 수 없는 오류가 발생했습니다.',
+        },
+      }),
+      500,
     );
   });
 });
