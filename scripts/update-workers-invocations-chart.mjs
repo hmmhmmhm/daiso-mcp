@@ -157,25 +157,21 @@ async function renderChart(points, summary, startDateText) {
         return;
       }
 
-      const panelWidth = 335;
-      const panelHeight = 175;
-      const x = chartArea.right - panelWidth - 10;
-      const y = chartArea.top + 12;
-      const rowHeight = 23;
-      const lines = [
-        { key: '전체', value: `${formatNumber(summary.total)}회` },
-        { key: '일평균', value: `${formatNumber(summary.average)}회` },
-        { key: '최근 7일', value: `${formatNumber(summary.recent7Total)}회` },
-        { key: '최대', value: `${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)})` },
-        { key: '최근', value: `${formatNumber(summary.latest.requests)}회 (${summary.latest.date.slice(5)})` },
-        {
-          key: '전일 대비',
-          value: `${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)})`,
-        },
-      ];
+      const x = chartArea.left;
+      const y = chartArea.bottom + 14;
+      const panelWidth = chartArea.right - chartArea.left;
+      const panelHeight = 56;
+      const line1 =
+        `전체 ${formatNumber(summary.total)}회   |   일평균 ${formatNumber(summary.average)}회   |   ` +
+        `최근 7일 ${formatNumber(summary.recent7Total)}회   |   ` +
+        `최대 ${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)})`;
+      const line2 =
+        `최근 ${formatNumber(summary.latest.requests)}회 (${summary.latest.date.slice(5)})   |   ` +
+        `전일 ${formatNumber(summary.previous.requests)}회 (${summary.previous.date.slice(5)})   |   ` +
+        `전일 대비 ${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)})`;
 
       ctx.save();
-      drawRoundRect(ctx, x, y, panelWidth, panelHeight, 10);
+      drawRoundRect(ctx, x, y, panelWidth, panelHeight, 8);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(15, 23, 42, 0.15)';
@@ -183,17 +179,14 @@ async function renderChart(points, summary, startDateText) {
       ctx.stroke();
 
       ctx.fillStyle = '#111827';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.fillText(`요약 (${startDateText} ~ 현재)`, x + 14, y + 24);
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(`요약 (${startDateText} ~ 현재)`, x + 12, y + 18);
 
-      ctx.font = '12px sans-serif';
-      lines.forEach((line, index) => {
-        const rowY = y + 48 + index * rowHeight;
-        ctx.fillStyle = '#374151';
-        ctx.fillText(line.key, x + 14, rowY);
-        ctx.fillStyle = '#111827';
-        ctx.fillText(line.value, x + 110, rowY);
-      });
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#1f2937';
+      ctx.fillText(line1, x + 12, y + 35);
+      ctx.fillStyle = '#374151';
+      ctx.fillText(line2, x + 12, y + 50);
       ctx.restore();
     },
   };
@@ -248,7 +241,7 @@ async function renderChart(points, summary, startDateText) {
           top: 28,
           right: 16,
           left: 8,
-          bottom: 8,
+          bottom: 84,
         },
       },
       plugins: {

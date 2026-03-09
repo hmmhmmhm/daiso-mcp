@@ -29,11 +29,11 @@
 
 ### Cloudflare Workers 호출량 (2026-03-01 ~ 현재, 9일)
 
-<img src="./assets/analytics/workers-invocations.png?v=2026-03-09T13:12:12.622Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 현재)" width="100%">
+<img src="./assets/analytics/workers-invocations.png?v=2026-03-09T13:14:46.861Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 현재)" width="100%">
 
 <sub>요약 지표는 차트 우측 상단 패널에 표시됩니다.</sub>
 <br>
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-03-09 22:12 KST</sub>
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-03-09 22:14 KST</sub>
 
 <!-- WORKERS_INVOCATIONS_CHART:END -->
 
