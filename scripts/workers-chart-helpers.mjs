@@ -200,13 +200,14 @@ export function buildReadmeSection({
   updatedAt,
   days,
   startDate,
+  endDate,
   cacheKey,
 }) {
   return [
     '<!-- WORKERS_INVOCATIONS_CHART:START -->',
-    `<h3>Cloudflare Workers 호출량 (${startDate} ~ 현재, ${days}일)</h3>`,
+    `<h3>Cloudflare Workers 호출량 (${startDate} ~ ${endDate}, ${days}일)</h3>`,
     '',
-    `<img src="./assets/analytics/workers-invocations.png?v=${cacheKey}" alt="Cloudflare Workers 호출량 그래프 (${startDate} ~ 현재)" width="100%">`,
+    `<img src="./assets/analytics/workers-invocations.png?v=${cacheKey}" alt="Cloudflare Workers 호출량 그래프 (${startDate} ~ ${endDate})" width="100%">`,
     '',
     `<sub>기준 워커: <code>${scriptName}</code> · 마지막 갱신: ${updatedAt}</sub>`,
     '',

@@ -2,8 +2,8 @@ name: Workers Invocations Chart
 
 on:
   schedule:
-    # 한국시간 00:00 = UTC 15:00 (전날)
-    - cron: '0 15 * * *'
+    # 한국시간 00:20 = UTC 15:20 (전날)
+    - cron: '20 15 * * *'
   workflow_dispatch:
     inputs:
       worker_script_name:

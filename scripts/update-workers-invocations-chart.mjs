@@ -50,8 +50,8 @@ async function fetchWorkerInvocations({
   apiToken,
   scriptName,
   startDateText,
+  endDateExclusive,
 }) {
-  const now = new Date();
   const start = parseKstDateText(startDateText);
 
   const query = `
@@ -86,7 +86,7 @@ async function fetchWorkerInvocations({
         accountTag: accountId,
         scriptName,
         start: start.toISOString(),
-        end: now.toISOString(),
+        end: endDateExclusive.toISOString(),
       },
     }),
   });
@@ -326,16 +326,19 @@ async function updateReadme(section) {
 
 async function main() {
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
+  const todayKstDate = formatKstDate(new Date());
+  const endDateExclusive = parseKstDateText(todayKstDate);
+  const endDateInclusive = formatKstDate(new Date(endDateExclusive.getTime() - 86400000));
 
   const rows = await fetchWorkerInvocations({
     accountId: ACCOUNT_ID,
     apiToken: API_TOKEN,
     scriptName: SCRIPT_NAME,
     startDateText: CHART_START_DATE,
+    endDateExclusive,
   });
 
-  const nowKstDate = formatKstDate(new Date());
-  const points = aggregateByKstDateRange(rows, CHART_START_DATE, nowKstDate);
+  const points = aggregateByKstDateRange(rows, CHART_START_DATE, endDateInclusive);
   const summary = calculateSummary(points);
   const chartBuffer = await renderChart(points, summary);
   await fs.writeFile(CHART_PATH, chartBuffer);
@@ -344,6 +347,7 @@ async function main() {
     timezone: 'Asia/Seoul',
     days: points.length,
     startDate: CHART_START_DATE,
+    endDate: endDateInclusive,
     updatedAt: new Date().toISOString(),
     ...summary,
     points,
@@ -355,6 +359,7 @@ async function main() {
     updatedAt: formatKstDateTime(new Date()),
     days: points.length,
     startDate: CHART_START_DATE,
+    endDate: endDateInclusive,
     cacheKey: payload.updatedAt,
   });
   await updateReadme(section);
