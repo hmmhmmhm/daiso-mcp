@@ -26,7 +26,7 @@
 
 <img src="./assets/analytics/workers-invocations.png" alt="Cloudflare Workers 호출량 그래프 (최근 30일)" width="860">
 
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 준비 중</sub>
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-03-09 21:44 KST</sub>
 
 <!-- WORKERS_INVOCATIONS_CHART:END -->
 

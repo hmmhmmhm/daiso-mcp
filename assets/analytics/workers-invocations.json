@@ -2,7 +2,128 @@
   "scriptName": "daiso-mcp",
   "timezone": "Asia/Seoul",
   "days": 30,
-  "updatedAt": null,
-  "total": 0,
-  "points": []
+  "updatedAt": "2026-03-09T12:44:46.664Z",
+  "total": 20563,
+  "points": [
+    {
+      "date": "2026-02-08",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-09",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-10",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-11",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-12",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-13",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-14",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-15",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-16",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-17",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-18",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-19",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-20",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-21",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-22",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-23",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-24",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-25",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-26",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-27",
+      "requests": 0
+    },
+    {
+      "date": "2026-02-28",
+      "requests": 0
+    },
+    {
+      "date": "2026-03-01",
+      "requests": 5
+    },
+    {
+      "date": "2026-03-02",
+      "requests": 26
+    },
+    {
+      "date": "2026-03-03",
+      "requests": 66
+    },
+    {
+      "date": "2026-03-04",
+      "requests": 2294
+    },
+    {
+      "date": "2026-03-05",
+      "requests": 1962
+    },
+    {
+      "date": "2026-03-06",
+      "requests": 3709
+    },
+    {
+      "date": "2026-03-07",
+      "requests": 2270
+    },
+    {
+      "date": "2026-03-08",
+      "requests": 5110
+    },
+    {
+      "date": "2026-03-09",
+      "requests": 5121
+    }
+  ]
 }
