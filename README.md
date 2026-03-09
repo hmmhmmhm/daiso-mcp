@@ -228,6 +228,16 @@ daiso 인터랙티브 모드
 
 <br>
 
+## Special Thanks
+
+이 프로젝트에 도움 주신 분들께 감사드립니다.
+
+- [@thecats1105](https://github.com/thecats1105): 다이소 진열 위치 조회 도구(`daiso_get_display_location`) 구현 및 API/테스트 연동
+- [@betterthanhajin](https://github.com/betterthanhajin): CGV 서비스 프로바이더 구현(극장/영화/시간표 도구, 라우트·스펙·테스트 추가)
+- [제로초님](https://youtube.com/shorts/ZgIqA1NCEp0?si=UW0pKsSpqmEi7lXG): 프로젝트 홍보 도움
+
+<br>
+
 ---
 
 <br>
