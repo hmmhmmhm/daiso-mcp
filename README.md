@@ -19,40 +19,30 @@
 
 <br>
 
-<!-- WORKERS_INVOCATIONS_CHART:START -->
-<br>
-
-<h3>Cloudflare Workers 호출량 (최근 9일)</h3>
-
-<img src="./assets/analytics/workers-invocations.png" alt="Cloudflare Workers 호출량 그래프 (최근 9일)" width="860">
-
-<table width="100%">
-  <thead>
-    <tr>
-      <th align="left">지표</th>
-      <th align="left">값</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td>전체 호출량</td><td>20,565회</td></tr>
-    <tr><td>일평균</td><td>2,285회</td></tr>
-    <tr><td>최근 7일 합계</td><td>20,534회</td></tr>
-    <tr><td>최대 호출량</td><td>5,165회 (03-09)</td></tr>
-    <tr><td>최근 호출량</td><td>5,165회 (03-09)</td></tr>
-    <tr><td>전일 호출량</td><td>5,094회 (03-08)</td></tr>
-    <tr><td>전일 대비</td><td>+71회 (+1.4%)</td></tr>
-  </tbody>
-</table>
-
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-03-09 22:04 KST</sub>
-
-<!-- WORKERS_INVOCATIONS_CHART:END -->
-
 <br>
 
 <img src="https://i.imgur.com/mPwS4Kv.png" width="400">&nbsp;&nbsp;<img src="https://i.imgur.com/MrndJ3g.png" width="400">
 
 </div>
+
+<!-- WORKERS_INVOCATIONS_CHART:START -->
+### Cloudflare Workers 호출량 (2026-03-01 ~ 현재, 9일)
+
+<img src="./assets/analytics/workers-invocations.png?v=2026-03-09T13:07:47.842Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 현재)" width="100%">
+
+| 지표 | 값 |
+| --- | --- |
+| 전체 호출량 | 20,776회 |
+| 일평균 | 2,308회 |
+| 최근 7일 합계 | 20,743회 |
+| 최대 호출량 | 5,204회 (03-08) |
+| 최근 호출량 | 5,160회 (03-09) |
+| 전일 호출량 | 5,204회 (03-08) |
+| 전일 대비 | -44회 (-0.8%) |
+
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-03-09 22:07 KST</sub>
+
+<!-- WORKERS_INVOCATIONS_CHART:END -->
 
 <br>
 

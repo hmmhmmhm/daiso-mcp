@@ -246,10 +246,16 @@ async function renderChart(points) {
 async function updateReadme(section) {
   const readme = await fs.readFile(README_PATH, 'utf8');
   const pattern = new RegExp(`${README_START}[\\s\\S]*?${README_END}`, 'm');
+  const withoutSection = readme.replace(pattern, '').replace(/\n{3,}/g, '\n\n');
+  const closingDiv = '</div>';
+  const divIndex = withoutSection.indexOf(closingDiv);
 
-  const next = pattern.test(readme)
-    ? readme.replace(pattern, section)
-    : readme.replace('</div>', `${section}\n\n</div>`);
+  const next =
+    divIndex >= 0
+      ? `${withoutSection.slice(0, divIndex + closingDiv.length)}\n\n${section}${withoutSection.slice(
+          divIndex + closingDiv.length,
+        )}`
+      : `${section}\n\n${withoutSection}`;
 
   await fs.writeFile(README_PATH, next, 'utf8');
 }
@@ -286,6 +292,8 @@ async function main() {
     updatedAt: formatKstDateTime(new Date()),
     days: points.length,
     summary,
+    startDate: CHART_START_DATE,
+    cacheKey: payload.updatedAt,
   });
   await updateReadme(section);
 
