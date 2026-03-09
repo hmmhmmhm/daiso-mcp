@@ -3,6 +3,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import {
+  aggregateByKstDate,
+  buildPointStyleArray,
+  buildReadmeSection,
+  calculateMovingAverage,
+  calculateSummary,
+  createWeekendShadePlugin,
+  findMinNonZero,
+  formatCompactNumber,
+  formatKstDateTime,
+  formatNumber,
+} from './workers-chart-helpers.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,43 +41,6 @@ if (!ACCOUNT_ID || !API_TOKEN) {
 
 if (!Number.isInteger(DAYS) || DAYS < 7 || DAYS > 90) {
   throw new Error('WORKERS_CHART_DAYS는 7~90 범위의 정수여야 합니다.');
-}
-
-function formatKstDate(date) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
-}
-
-function formatKstDateTime(date) {
-  const parts = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(date);
-
-  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute} KST`;
-}
-
-function buildKstDateRange(days, now = new Date()) {
-  const list = [];
-  for (let i = days - 1; i >= 0; i -= 1) {
-    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-    list.push(formatKstDate(date));
-  }
-  return list;
-}
-
-function formatNumber(value) {
-  return Number(value).toLocaleString('ko-KR');
 }
 
 async function fetchWorkerInvocations({ accountId, apiToken, scriptName, days }) {
@@ -127,41 +102,30 @@ async function fetchWorkerInvocations({ accountId, apiToken, scriptName, days })
   return rows;
 }
 
-function aggregateByKstDate(rows, days) {
-  const dateRange = buildKstDateRange(days);
-  const map = new Map(dateRange.map((date) => [date, 0]));
-
-  for (const row of rows) {
-    const datetime = row?.dimensions?.datetime;
-    const requests = Number(row?.sum?.requests ?? 0);
-    if (!datetime || Number.isNaN(requests)) {
-      continue;
-    }
-
-    const dateKey = formatKstDate(new Date(datetime));
-    if (map.has(dateKey)) {
-      map.set(dateKey, map.get(dateKey) + requests);
-    }
-  }
-
-  return Array.from(map.entries()).map(([date, requests]) => ({ date, requests }));
-}
-
 async function renderChart(points) {
-  const width = 1400;
-  const height = 560;
+  const movingAverage = calculateMovingAverage(points, 7);
+  const labels = points.map((point) => point.date.slice(5));
+  const values = points.map((point) => point.requests);
+  const latestIndex = points.length - 1;
+  const peakIndex = values.findIndex((value) => value === Math.max(...values));
+  const minNonZero = findMinNonZero(points);
+  const minNonZeroIndex = points.findIndex((point) => point.date === minNonZero.date);
+  const highlights = [
+    { index: latestIndex, value: 6 },
+    { index: peakIndex, value: 6 },
+    { index: minNonZeroIndex, value: 6 },
+  ];
+  const weekendShadePlugin = createWeekendShadePlugin(points);
 
   const canvas = new ChartJSNodeCanvas({
-    width,
-    height,
+    width: 1400,
+    height: 560,
     backgroundColour: '#ffffff',
     chartCallback: (ChartJS) => {
       ChartJS.register(ChartDataLabels);
+      ChartJS.register(weekendShadePlugin);
     },
   });
-
-  const labels = points.map((point) => point.date.slice(5));
-  const values = points.map((point) => point.requests);
 
   const configuration = {
     type: 'line',
@@ -176,8 +140,22 @@ async function renderChart(points) {
           borderWidth: 3,
           fill: true,
           tension: 0.25,
-          pointRadius: 2.5,
+          pointRadius: buildPointStyleArray(values.length, 2.5, highlights),
+          pointBackgroundColor: buildPointStyleArray(
+            values.length,
+            '#f48120',
+            highlights.map((item) => ({ ...item, value: '#b45309' })),
+          ),
           pointHoverRadius: 3,
+        },
+        {
+          label: '7일 이동평균',
+          data: movingAverage,
+          borderColor: '#0f766e',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          spanGaps: true,
         },
       ],
     },
@@ -193,13 +171,24 @@ async function renderChart(points) {
       },
       plugins: {
         legend: {
-          display: false,
+          display: true,
+          labels: {
+            boxWidth: 16,
+          },
         },
         datalabels: {
-          display: true,
-          color: '#7a4a1f',
+          display(context) {
+            return context.datasetIndex === 0;
+          },
+          color(context) {
+            const value = Number(context.dataset.data[context.dataIndex] ?? 0);
+            return value >= 1000 ? '#7a4a1f' : '#6b7280';
+          },
           anchor: 'end',
-          align: 'top',
+          align(context) {
+            const value = Number(context.dataset.data[context.dataIndex] ?? 0);
+            return value >= 1000 ? 'top' : 'end';
+          },
           offset: 2,
           clamp: true,
           formatter(value) {
@@ -233,7 +222,7 @@ async function renderChart(points) {
           beginAtZero: true,
           ticks: {
             callback(value) {
-              return formatNumber(value);
+              return formatCompactNumber(value);
             },
           },
           grid: {
@@ -245,23 +234,6 @@ async function renderChart(points) {
   };
 
   return canvas.renderToBuffer(configuration);
-}
-
-function buildReadmeSection({ scriptName, updatedAt, days, total, average, peak }) {
-  return [
-    README_START,
-    '<br>',
-    '',
-    `<h3>Cloudflare Workers 호출량 (최근 ${days}일)</h3>`,
-    '',
-    `<img src="./assets/analytics/workers-invocations.png" alt="Cloudflare Workers 호출량 그래프 (최근 ${days}일)" width="860">`,
-    '',
-    `<p><strong>전체 호출량:</strong> ${formatNumber(total)}회 · <strong>일평균:</strong> ${formatNumber(average)}회 · <strong>최대:</strong> ${formatNumber(peak.requests)}회 (${peak.date.slice(5)})</p>`,
-    '',
-    `<sub>기준 워커: <code>${scriptName}</code> · 마지막 갱신: ${updatedAt}</sub>`,
-    '',
-    README_END,
-  ].join('\n');
 }
 
 async function updateReadme(section) {
@@ -288,39 +260,28 @@ async function main() {
   const points = aggregateByKstDate(rows, DAYS);
   const chartBuffer = await renderChart(points);
   await fs.writeFile(CHART_PATH, chartBuffer);
-  const total = points.reduce((sum, point) => sum + point.requests, 0);
-  const average = Math.round(total / DAYS);
-  const peak = points.reduce(
-    (max, point) => (point.requests > max.requests ? point : max),
-    points[0] ?? { date: formatKstDate(new Date()), requests: 0 },
-  );
 
-  const summary = {
+  const summary = calculateSummary(points, DAYS);
+  const payload = {
     scriptName: SCRIPT_NAME,
     timezone: 'Asia/Seoul',
     days: DAYS,
     updatedAt: new Date().toISOString(),
-    total,
-    average,
-    peak,
+    ...summary,
     points,
   };
-
-  await fs.writeFile(DATA_PATH, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+  await fs.writeFile(DATA_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 
   const section = buildReadmeSection({
     scriptName: SCRIPT_NAME,
     updatedAt: formatKstDateTime(new Date()),
     days: DAYS,
-    total,
-    average,
-    peak,
+    summary,
   });
   await updateReadme(section);
 
-  // GitHub Actions 로그에서 빠르게 확인할 수 있도록 요약을 남깁니다.
   console.log(
-    `[workers-chart] script=${SCRIPT_NAME} days=${DAYS} total=${summary.total.toLocaleString('ko-KR')}`,
+    `[workers-chart] script=${SCRIPT_NAME} days=${DAYS} total=${formatNumber(payload.total)}`,
   );
 }
 
