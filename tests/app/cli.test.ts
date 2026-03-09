@@ -316,6 +316,75 @@ describe('CLI', () => {
     expect(errors[0]).toContain('검색어가 필요합니다');
   });
 
+  it('emart24-stores 명령은 이마트24 매장 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['emart24-stores', '강남', '--service24h', 'true', '--limit', '5'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/emart24/stores?service24h=true&limit=5&keyword=%EA%B0%95%EB%82%A8',
+    );
+  });
+
+  it('emart24-products 명령은 이마트24 상품 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['emart24-products', '두바이', '--page', '2', '--pageSize', '20'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/emart24/products?keyword=%EB%91%90%EB%B0%94%EC%9D%B4&page=2&pageSize=20',
+    );
+  });
+
+  it('emart24-products 명령은 검색어가 없으면 실패한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['emart24-products'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors[0]).toContain('검색어가 필요합니다');
+  });
+
+  it('emart24-inventory 명령은 이마트24 재고 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['emart24-inventory', '8800244010504', '--bizNoArr', '28339,05015'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/emart24/inventory?pluCd=8800244010504&bizNoArr=28339%2C05015',
+    );
+  });
+
+  it('emart24-inventory 명령은 필수 인자가 없으면 실패한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['emart24-inventory', '8800244010504'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors[0]).toContain('pluCd와 --bizNoArr가 필요합니다');
+  });
+
   it('health 명령은 서버 상태를 출력한다', async () => {
     const { output, deps } = createDeps();
 

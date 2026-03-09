@@ -557,6 +557,85 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     );
   }
 
+  if (command === 'emart24-stores') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('emart24-stores', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const keyword = parsed.positionals[0];
+    if (keyword) {
+      parsed.options.keyword = keyword;
+    }
+
+    const targetUrl = toUrl('/api/emart24/stores');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'emart24-products') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('emart24-products', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const keyword = parsed.positionals[0];
+    if (!keyword) {
+      resolvedDeps.writeErr('emart24-products 명령은 검색어가 필요합니다. 예: daiso emart24-products 두바이');
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/emart24/products');
+    targetUrl.searchParams.set('keyword', keyword);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'emart24-inventory') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('emart24-inventory', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const pluCd = parsed.positionals[0];
+    const bizNoArr = parsed.options.bizNoArr;
+    if (!pluCd || !bizNoArr) {
+      resolvedDeps.writeErr(
+        'emart24-inventory 명령은 pluCd와 --bizNoArr가 필요합니다. 예: daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015',
+      );
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/emart24/inventory');
+    targetUrl.searchParams.set('pluCd', pluCd);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
   resolvedDeps.writeErr(`알 수 없는 명령어: ${command}`);
   resolvedDeps.writeErr('도움말: daiso help');
   return 1;

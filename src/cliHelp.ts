@@ -15,7 +15,10 @@ export type CommandName =
   | 'inventory'
   | 'display-location'
   | 'cu-stores'
-  | 'cu-inventory';
+  | 'cu-inventory'
+  | 'emart24-stores'
+  | 'emart24-products'
+  | 'emart24-inventory';
 
 export const COMMAND_LIST: CommandName[] = [
   'help',
@@ -31,6 +34,9 @@ export const COMMAND_LIST: CommandName[] = [
   'display-location',
   'cu-stores',
   'cu-inventory',
+  'emart24-stores',
+  'emart24-products',
+  'emart24-inventory',
 ];
 
 const COMMAND_SUMMARY: Record<CommandName, string> = {
@@ -47,6 +53,9 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   'display-location': '다이소 진열 위치 조회',
   'cu-stores': 'CU 매장 검색',
   'cu-inventory': 'CU 재고 조회',
+  'emart24-stores': '이마트24 매장 검색',
+  'emart24-products': '이마트24 상품 검색',
+  'emart24-inventory': '이마트24 재고 조회',
 };
 
 const COMMAND_DETAIL: Record<CommandName, string[]> = {
@@ -146,6 +155,31 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '예시: daiso cu-inventory 과자',
     '예시: daiso cu-inventory 컵라면 --storeKeyword 강남 --size 10',
   ],
+  'emart24-stores': [
+    '명령: emart24-stores',
+    '설명: 이마트24 매장 검색 API를 호출합니다.',
+    '사용법: daiso emart24-stores [keyword] [--area1 값] [--area2 값] [--lat 값] [--lng 값] [--service24h true|false] [--limit N] [--json]',
+    '옵션: --keyword, --area1, --area2, --lat, --lng, --service24h, --limit, --json',
+    '예시: daiso emart24-stores 강남',
+    '예시: daiso emart24-stores --area1 서울특별시 --area2 강남구 --service24h true',
+  ],
+  'emart24-products': [
+    '명령: emart24-products',
+    '설명: 이마트24 상품 검색 API를 호출합니다.',
+    '사용법: daiso emart24-products <keyword> [--page N] [--pageSize N] [--sortType 값] [--saleProductYn Y|N] [--json]',
+    '필수: <keyword>',
+    '옵션: --page, --pageSize, --sortType, --saleProductYn, --json',
+    '예시: daiso emart24-products 두바이',
+    '예시: daiso emart24-products 도시락 --page 2 --pageSize 20',
+  ],
+  'emart24-inventory': [
+    '명령: emart24-inventory',
+    '설명: 이마트24 매장별 재고 API를 호출합니다.',
+    '사용법: daiso emart24-inventory <pluCd> --bizNoArr 코드1,코드2 [--json]',
+    '필수: <pluCd>, --bizNoArr',
+    '옵션: --bizNoArr, --json',
+    '예시: daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015,23233',
+  ],
 };
 
 export function printHelp(writeOut: (message: string) => void): void {
@@ -175,6 +209,9 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso display-location 1034604 04515');
   writeOut('  npx daiso cu-stores 강남');
   writeOut('  npx daiso cu-inventory 과자 --storeKeyword 강남');
+  writeOut('  npx daiso emart24-stores 강남 --limit 10');
+  writeOut('  npx daiso emart24-products 두바이 --pageSize 20');
+  writeOut('  npx daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015');
   writeOut('  npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056');
   writeOut('');
   writeOut('상세 도움말:');
@@ -189,7 +226,7 @@ export function printCommandHelp(
   if (!Object.hasOwn(COMMAND_DETAIL, command)) {
     writeErr(`도움말을 찾을 수 없는 명령어: ${command}`);
     writeErr(
-      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, cu-stores, cu-inventory',
+      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, cu-stores, cu-inventory, emart24-stores, emart24-products, emart24-inventory',
     );
     return 1;
   }
