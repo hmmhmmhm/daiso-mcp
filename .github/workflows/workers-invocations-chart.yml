@@ -14,6 +14,10 @@ on:
         description: '그래프 기간(일)'
         required: false
         default: '30'
+      start_date:
+        description: '그래프 시작일(YYYY-MM-DD)'
+        required: false
+        default: '2026-03-01'
 
 permissions:
   contents: write
@@ -40,6 +44,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_WORKER_SCRIPT_NAME: ${{ inputs.worker_script_name || vars.CF_WORKER_SCRIPT_NAME || 'daiso-mcp' }}
           WORKERS_CHART_DAYS: ${{ inputs.days || '30' }}
+          WORKERS_CHART_START_DATE: ${{ inputs.start_date || vars.WORKERS_CHART_START_DATE || '2026-03-01' }}
         run: npm run update:workers-chart
 
       - name: Commit changes

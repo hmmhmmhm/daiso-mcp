@@ -1,110 +1,27 @@
 {
   "scriptName": "daiso-mcp",
   "timezone": "Asia/Seoul",
-  "days": 30,
-  "updatedAt": "2026-03-09T12:56:26.250Z",
-  "total": 20565,
-  "average": 686,
+  "days": 9,
+  "startDate": "2026-03-01",
+  "updatedAt": "2026-03-09T13:02:21.661Z",
+  "total": 20568,
+  "average": 2285,
   "peak": {
     "date": "2026-03-09",
-    "requests": 5150
+    "requests": 5163
   },
-  "recent7Total": 20534,
+  "recent7Total": 20537,
   "latest": {
     "date": "2026-03-09",
-    "requests": 5150
+    "requests": 5163
   },
   "previous": {
     "date": "2026-03-08",
-    "requests": 5099
+    "requests": 5096
   },
-  "dayOverDayDiff": 51,
-  "dayOverDayPercent": 1.000196116885664,
+  "dayOverDayDiff": 67,
+  "dayOverDayPercent": 1.314756671899529,
   "points": [
-    {
-      "date": "2026-02-08",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-09",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-10",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-11",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-12",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-13",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-14",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-15",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-16",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-17",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-18",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-19",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-20",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-21",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-22",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-23",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-24",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-25",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-26",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-27",
-      "requests": 0
-    },
-    {
-      "date": "2026-02-28",
-      "requests": 0
-    },
     {
       "date": "2026-03-01",
       "requests": 5
@@ -119,27 +36,27 @@
     },
     {
       "date": "2026-03-04",
-      "requests": 2291
+      "requests": 2290
     },
     {
       "date": "2026-03-05",
-      "requests": 1959
+      "requests": 1957
     },
     {
       "date": "2026-03-06",
-      "requests": 3702
+      "requests": 3699
     },
     {
       "date": "2026-03-07",
-      "requests": 2267
+      "requests": 2266
     },
     {
       "date": "2026-03-08",
-      "requests": 5099
+      "requests": 5096
     },
     {
       "date": "2026-03-09",
-      "requests": 5150
+      "requests": 5163
     }
   ]
 }

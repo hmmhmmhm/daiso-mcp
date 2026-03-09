@@ -31,6 +31,22 @@ export function buildKstDateRange(days, now = new Date()) {
   return list;
 }
 
+export function parseKstDateText(dateText) {
+  return new Date(`${dateText}T00:00:00+09:00`);
+}
+
+export function buildKstDateRangeBetween(startDateText, endDateText) {
+  const start = parseKstDateText(startDateText);
+  const end = parseKstDateText(endDateText);
+  const list = [];
+
+  for (let cursor = start; cursor <= end; cursor = new Date(cursor.getTime() + 86400000)) {
+    list.push(formatKstDate(cursor));
+  }
+
+  return list;
+}
+
 export function formatNumber(value) {
   return Number(value).toLocaleString('ko-KR');
 }
@@ -47,6 +63,26 @@ export function formatCompactNumber(value) {
 
 export function aggregateByKstDate(rows, days) {
   const dateRange = buildKstDateRange(days);
+  const map = new Map(dateRange.map((date) => [date, 0]));
+
+  for (const row of rows) {
+    const datetime = row?.dimensions?.datetime;
+    const requests = Number(row?.sum?.requests ?? 0);
+    if (!datetime || Number.isNaN(requests)) {
+      continue;
+    }
+
+    const dateKey = formatKstDate(new Date(datetime));
+    if (map.has(dateKey)) {
+      map.set(dateKey, map.get(dateKey) + requests);
+    }
+  }
+
+  return Array.from(map.entries()).map(([date, requests]) => ({ date, requests }));
+}
+
+export function aggregateByKstDateRange(rows, startDateText, endDateText) {
+  const dateRange = buildKstDateRangeBetween(startDateText, endDateText);
   const map = new Map(dateRange.map((date) => [date, 0]));
 
   for (const row of rows) {
@@ -133,9 +169,9 @@ export function createWeekendShadePlugin(points) {
   };
 }
 
-export function calculateSummary(points, days) {
+export function calculateSummary(points) {
   const total = points.reduce((sum, point) => sum + point.requests, 0);
-  const average = Math.round(total / days);
+  const average = Math.round(total / Math.max(points.length, 1));
   const peak = points.reduce(
     (max, point) => (point.requests > max.requests ? point : max),
     points[0] ?? { date: formatKstDate(new Date()), requests: 0 },
@@ -183,10 +219,15 @@ export function buildReadmeSection({ scriptName, updatedAt, days, summary }) {
     '',
     `<img src="./assets/analytics/workers-invocations.png" alt="Cloudflare Workers 호출량 그래프 (최근 ${days}일)" width="860">`,
     '',
-    '<p><strong>요약 지표</strong></p>',
-    `<p><strong>전체 호출량:</strong> ${formatNumber(summary.total)}회 · <strong>일평균:</strong> ${formatNumber(summary.average)}회 · <strong>최근 7일:</strong> ${formatNumber(summary.recent7Total)}회</p>`,
-    `<p><strong>최대:</strong> ${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)}) · <strong>최근:</strong> ${formatNumber(summary.latest.requests)}회 (${summary.latest.date.slice(5)}) · <strong>전일:</strong> ${formatNumber(summary.previous.requests)}회 (${summary.previous.date.slice(5)})</p>`,
-    `<p><strong>전일 대비:</strong> ${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)})</p>`,
+    '| 지표 | 값 |',
+    '| --- | --- |',
+    `| 전체 호출량 | ${formatNumber(summary.total)}회 |`,
+    `| 일평균 | ${formatNumber(summary.average)}회 |`,
+    `| 최근 7일 합계 | ${formatNumber(summary.recent7Total)}회 |`,
+    `| 최대 호출량 | ${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)}) |`,
+    `| 최근 호출량 | ${formatNumber(summary.latest.requests)}회 (${summary.latest.date.slice(5)}) |`,
+    `| 전일 호출량 | ${formatNumber(summary.previous.requests)}회 (${summary.previous.date.slice(5)}) |`,
+    `| 전일 대비 | ${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)}) |`,
     '',
     `<sub>기준 워커: <code>${scriptName}</code> · 마지막 갱신: ${updatedAt}</sub>`,
     '',

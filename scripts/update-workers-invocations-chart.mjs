@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
-  aggregateByKstDate,
+  aggregateByKstDateRange,
   buildPointStyleArray,
   buildReadmeSection,
   calculateMovingAverage,
@@ -12,8 +12,10 @@ import {
   createWeekendShadePlugin,
   findMinNonZero,
   formatCompactNumber,
+  formatKstDate,
   formatKstDateTime,
   formatNumber,
+  parseKstDateText,
 } from './workers-chart-helpers.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,10 +30,10 @@ const DATA_PATH = path.join(OUTPUT_DIR, 'workers-invocations.json');
 const README_START = '<!-- WORKERS_INVOCATIONS_CHART:START -->';
 const README_END = '<!-- WORKERS_INVOCATIONS_CHART:END -->';
 
-const DAYS = Number(process.env.WORKERS_CHART_DAYS ?? '30');
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const SCRIPT_NAME = process.env.CF_WORKER_SCRIPT_NAME ?? 'daiso-mcp';
+const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE ?? '2026-03-01';
 
 if (!ACCOUNT_ID || !API_TOKEN) {
   throw new Error(
@@ -39,13 +41,18 @@ if (!ACCOUNT_ID || !API_TOKEN) {
   );
 }
 
-if (!Number.isInteger(DAYS) || DAYS < 7 || DAYS > 90) {
-  throw new Error('WORKERS_CHART_DAYS는 7~90 범위의 정수여야 합니다.');
+if (!/^\d{4}-\d{2}-\d{2}$/.test(CHART_START_DATE)) {
+  throw new Error('WORKERS_CHART_START_DATE 형식은 YYYY-MM-DD 이어야 합니다.');
 }
 
-async function fetchWorkerInvocations({ accountId, apiToken, scriptName, days }) {
+async function fetchWorkerInvocations({
+  accountId,
+  apiToken,
+  scriptName,
+  startDateText,
+}) {
   const now = new Date();
-  const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const start = parseKstDateText(startDateText);
 
   const query = `
     query WorkerInvocations($accountTag: string, $scriptName: string, $start: Time!, $end: Time!) {
@@ -201,7 +208,7 @@ async function renderChart(points) {
         },
         title: {
           display: true,
-          text: `Cloudflare Workers 호출량 (최근 ${DAYS}일)`,
+          text: `Cloudflare Workers 호출량 (최근 ${labels.length}일)`,
           color: '#111111',
           font: {
             size: 20,
@@ -254,18 +261,20 @@ async function main() {
     accountId: ACCOUNT_ID,
     apiToken: API_TOKEN,
     scriptName: SCRIPT_NAME,
-    days: DAYS,
+    startDateText: CHART_START_DATE,
   });
 
-  const points = aggregateByKstDate(rows, DAYS);
+  const nowKstDate = formatKstDate(new Date());
+  const points = aggregateByKstDateRange(rows, CHART_START_DATE, nowKstDate);
   const chartBuffer = await renderChart(points);
   await fs.writeFile(CHART_PATH, chartBuffer);
 
-  const summary = calculateSummary(points, DAYS);
+  const summary = calculateSummary(points);
   const payload = {
     scriptName: SCRIPT_NAME,
     timezone: 'Asia/Seoul',
-    days: DAYS,
+    days: points.length,
+    startDate: CHART_START_DATE,
     updatedAt: new Date().toISOString(),
     ...summary,
     points,
@@ -275,13 +284,13 @@ async function main() {
   const section = buildReadmeSection({
     scriptName: SCRIPT_NAME,
     updatedAt: formatKstDateTime(new Date()),
-    days: DAYS,
+    days: points.length,
     summary,
   });
   await updateReadme(section);
 
   console.log(
-    `[workers-chart] script=${SCRIPT_NAME} days=${DAYS} total=${formatNumber(payload.total)}`,
+    `[workers-chart] script=${SCRIPT_NAME} days=${points.length} total=${formatNumber(payload.total)}`,
   );
 }
 
