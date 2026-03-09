@@ -135,7 +135,7 @@ function drawRoundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-async function renderChart(points, summary, startDateText) {
+async function renderChart(points, summary) {
   const movingAverage = calculateMovingAverage(points, 7);
   const labels = points.map((point) => point.date.slice(5));
   const values = points.map((point) => point.requests);
@@ -158,16 +158,12 @@ async function renderChart(points, summary, startDateText) {
       }
 
       const x = chartArea.left;
-      const y = chartArea.bottom + 14;
+      const y = chartArea.bottom + 34;
       const panelWidth = chartArea.right - chartArea.left;
-      const panelHeight = 56;
-      const line1 =
-        `전체 ${formatNumber(summary.total)}회   |   일평균 ${formatNumber(summary.average)}회   |   ` +
-        `최근 7일 ${formatNumber(summary.recent7Total)}회   |   ` +
-        `최대 ${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)})`;
-      const line2 =
-        `최근 ${formatNumber(summary.latest.requests)}회 (${summary.latest.date.slice(5)})   |   ` +
-        `전일 ${formatNumber(summary.previous.requests)}회 (${summary.previous.date.slice(5)})   |   ` +
+      const panelHeight = 30;
+      const line =
+        `전체 ${formatNumber(summary.total)}회  |  일평균 ${formatNumber(summary.average)}회  |  ` +
+        `최근 7일 ${formatNumber(summary.recent7Total)}회  |  최대 ${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)})  |  ` +
         `전일 대비 ${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)})`;
 
       ctx.save();
@@ -178,15 +174,11 @@ async function renderChart(points, summary, startDateText) {
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      ctx.fillStyle = '#111827';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(`요약 (${startDateText} ~ 현재)`, x + 12, y + 18);
-
       ctx.font = '11px sans-serif';
-      ctx.fillStyle = '#1f2937';
-      ctx.fillText(line1, x + 12, y + 35);
-      ctx.fillStyle = '#374151';
-      ctx.fillText(line2, x + 12, y + 50);
+      ctx.fillStyle = '#111827';
+      const textWidth = ctx.measureText(line).width;
+      const centeredX = x + Math.max((panelWidth - textWidth) / 2, 12);
+      ctx.fillText(line, centeredX, y + 20);
       ctx.restore();
     },
   };
@@ -241,7 +233,7 @@ async function renderChart(points, summary, startDateText) {
           top: 28,
           right: 16,
           left: 8,
-          bottom: 84,
+          bottom: 86,
         },
       },
       plugins: {
@@ -341,7 +333,7 @@ async function main() {
   const nowKstDate = formatKstDate(new Date());
   const points = aggregateByKstDateRange(rows, CHART_START_DATE, nowKstDate);
   const summary = calculateSummary(points);
-  const chartBuffer = await renderChart(points, summary, CHART_START_DATE);
+  const chartBuffer = await renderChart(points, summary);
   await fs.writeFile(CHART_PATH, chartBuffer);
   const payload = {
     scriptName: SCRIPT_NAME,
