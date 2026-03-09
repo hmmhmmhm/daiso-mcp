@@ -29,19 +29,11 @@
 
 ### Cloudflare Workers 호출량 (2026-03-01 ~ 현재, 9일)
 
-<img src="./assets/analytics/workers-invocations.png?v=2026-03-09T13:07:47.842Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 현재)" width="100%">
+<img src="./assets/analytics/workers-invocations.png?v=2026-03-09T13:12:12.622Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 현재)" width="100%">
 
-| 지표          | 값              |
-| ------------- | --------------- |
-| 전체 호출량   | 20,776회        |
-| 일평균        | 2,308회         |
-| 최근 7일 합계 | 20,743회        |
-| 최대 호출량   | 5,204회 (03-08) |
-| 최근 호출량   | 5,160회 (03-09) |
-| 전일 호출량   | 5,204회 (03-08) |
-| 전일 대비     | -44회 (-0.8%)   |
-
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-03-09 22:07 KST</sub>
+<sub>요약 지표는 차트 우측 상단 패널에 표시됩니다.</sub>
+<br>
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-03-09 22:12 KST</sub>
 
 <!-- WORKERS_INVOCATIONS_CHART:END -->
 

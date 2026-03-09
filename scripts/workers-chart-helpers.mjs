@@ -195,26 +195,10 @@ export function calculateSummary(points) {
   };
 }
 
-function formatDelta(diff) {
-  if (diff > 0) {
-    return `+${formatNumber(diff)}`;
-  }
-  return formatNumber(diff);
-}
-
-function formatDeltaPercent(percent) {
-  if (percent === null) {
-    return 'N/A';
-  }
-  const sign = percent > 0 ? '+' : '';
-  return `${sign}${percent.toFixed(1)}%`;
-}
-
 export function buildReadmeSection({
   scriptName,
   updatedAt,
   days,
-  summary,
   startDate,
   cacheKey,
 }) {
@@ -224,16 +208,8 @@ export function buildReadmeSection({
     '',
     `<img src="./assets/analytics/workers-invocations.png?v=${cacheKey}" alt="Cloudflare Workers 호출량 그래프 (${startDate} ~ 현재)" width="100%">`,
     '',
-    '| 지표 | 값 |',
-    '| --- | --- |',
-    `| 전체 호출량 | ${formatNumber(summary.total)}회 |`,
-    `| 일평균 | ${formatNumber(summary.average)}회 |`,
-    `| 최근 7일 합계 | ${formatNumber(summary.recent7Total)}회 |`,
-    `| 최대 호출량 | ${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)}) |`,
-    `| 최근 호출량 | ${formatNumber(summary.latest.requests)}회 (${summary.latest.date.slice(5)}) |`,
-    `| 전일 호출량 | ${formatNumber(summary.previous.requests)}회 (${summary.previous.date.slice(5)}) |`,
-    `| 전일 대비 | ${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)}) |`,
-    '',
+    '<sub>요약 지표는 차트 우측 상단 패널에 표시됩니다.</sub>',
+    '<br>',
     `<sub>기준 워커: <code>${scriptName}</code> · 마지막 갱신: ${updatedAt}</sub>`,
     '',
     '<!-- WORKERS_INVOCATIONS_CHART:END -->',

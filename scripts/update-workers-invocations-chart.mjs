@@ -109,7 +109,33 @@ async function fetchWorkerInvocations({
   return rows;
 }
 
-async function renderChart(points) {
+function formatDelta(diff) {
+  if (diff > 0) {
+    return `+${formatNumber(diff)}`;
+  }
+  return formatNumber(diff);
+}
+
+function formatDeltaPercent(percent) {
+  if (percent === null) {
+    return 'N/A';
+  }
+  const sign = percent > 0 ? '+' : '';
+  return `${sign}${percent.toFixed(1)}%`;
+}
+
+function drawRoundRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+async function renderChart(points, summary, startDateText) {
   const movingAverage = calculateMovingAverage(points, 7);
   const labels = points.map((point) => point.date.slice(5));
   const values = points.map((point) => point.requests);
@@ -123,6 +149,54 @@ async function renderChart(points) {
     { index: minNonZeroIndex, value: 6 },
   ];
   const weekendShadePlugin = createWeekendShadePlugin(points);
+  const summaryPanelPlugin = {
+    id: 'summary-panel',
+    afterDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea) {
+        return;
+      }
+
+      const panelWidth = 335;
+      const panelHeight = 175;
+      const x = chartArea.right - panelWidth - 10;
+      const y = chartArea.top + 12;
+      const rowHeight = 23;
+      const lines = [
+        { key: '전체', value: `${formatNumber(summary.total)}회` },
+        { key: '일평균', value: `${formatNumber(summary.average)}회` },
+        { key: '최근 7일', value: `${formatNumber(summary.recent7Total)}회` },
+        { key: '최대', value: `${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)})` },
+        { key: '최근', value: `${formatNumber(summary.latest.requests)}회 (${summary.latest.date.slice(5)})` },
+        {
+          key: '전일 대비',
+          value: `${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)})`,
+        },
+      ];
+
+      ctx.save();
+      drawRoundRect(ctx, x, y, panelWidth, panelHeight, 10);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#111827';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(`요약 (${startDateText} ~ 현재)`, x + 14, y + 24);
+
+      ctx.font = '12px sans-serif';
+      lines.forEach((line, index) => {
+        const rowY = y + 48 + index * rowHeight;
+        ctx.fillStyle = '#374151';
+        ctx.fillText(line.key, x + 14, rowY);
+        ctx.fillStyle = '#111827';
+        ctx.fillText(line.value, x + 110, rowY);
+      });
+      ctx.restore();
+    },
+  };
 
   const canvas = new ChartJSNodeCanvas({
     width: 1400,
@@ -131,6 +205,7 @@ async function renderChart(points) {
     chartCallback: (ChartJS) => {
       ChartJS.register(ChartDataLabels);
       ChartJS.register(weekendShadePlugin);
+      ChartJS.register(summaryPanelPlugin);
     },
   });
 
@@ -272,10 +347,9 @@ async function main() {
 
   const nowKstDate = formatKstDate(new Date());
   const points = aggregateByKstDateRange(rows, CHART_START_DATE, nowKstDate);
-  const chartBuffer = await renderChart(points);
-  await fs.writeFile(CHART_PATH, chartBuffer);
-
   const summary = calculateSummary(points);
+  const chartBuffer = await renderChart(points, summary, CHART_START_DATE);
+  await fs.writeFile(CHART_PATH, chartBuffer);
   const payload = {
     scriptName: SCRIPT_NAME,
     timezone: 'Asia/Seoul',
@@ -291,7 +365,6 @@ async function main() {
     scriptName: SCRIPT_NAME,
     updatedAt: formatKstDateTime(new Date()),
     days: points.length,
-    summary,
     startDate: CHART_START_DATE,
     cacheKey: payload.updatedAt,
   });
