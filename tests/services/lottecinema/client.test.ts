@@ -96,6 +96,63 @@ describe('fetchLotteCinemaTicketingPage', () => {
 
     await expect(fetchLotteCinemaTicketingPage()).rejects.toThrow('롯데시네마 API 호출 시간 초과');
   });
+
+  it('비어 있는 좌표와 누락된 상영시간은 null/undefined로 처리한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          IsOK: true,
+          ResultMessage: 'SUCCESS',
+          Cinemas: {
+            Cinemas: {
+              Items: [
+                {
+                  CinemaID: '1016',
+                  CinemaNameKR: '월드타워',
+                  DivisionCode: '1',
+                  DetailDivisionCode: '0001',
+                  Latitude: '',
+                  Longitude: null,
+                  CinemaAddrSummary: '서울 송파구 올림픽로 300',
+                },
+              ],
+            },
+          },
+          Movies: {
+            Movies: {
+              Items: [
+                {
+                  RepresentationMovieCode: '23816',
+                  MovieNameKR: '왕과 사는 남자',
+                  ViewGradeNameKR: null,
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+
+    const result = await fetchLotteCinemaTicketingPage();
+
+    expect(result.theaters[0].latitude).toBeNull();
+    expect(result.theaters[0].longitude).toBeNull();
+    expect(result.movies[0].durationMinutes).toBeUndefined();
+    expect(result.movies[0].rating).toBeUndefined();
+  });
+
+  it('IsOK=false 응답을 실패로 처리한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          IsOK: false,
+          ResultMessage: 'FAIL',
+        }),
+      ),
+    );
+
+    await expect(fetchLotteCinemaTicketingPage()).rejects.toThrow('롯데시네마 API 응답 실패: FAIL');
+  });
 });
 
 describe('fetchLotteCinemaNowShowing', () => {
@@ -211,6 +268,53 @@ describe('fetchLotteCinemaNowShowing', () => {
     expect(result.theaters).toHaveLength(2);
     expect(result.movies).toHaveLength(1);
     expect(result.showtimes).toHaveLength(2);
+  });
+
+  it('playDate가 하이픈 형식이어도 회차를 정규화한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createTicketingResponse())
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            IsOK: true,
+            ResultMessage: 'SUCCESS',
+            PlaySeqs: {
+              Items: [
+                {
+                  CinemaID: '1016',
+                  CinemaNameKR: '월드타워',
+                  RepresentationMovieCode: '23816',
+                  MovieNameKR: '왕과 사는 남자',
+                  ScreenID: '1201',
+                  ScreenNameKR: '1관 샤롯데',
+                  PlaySequence: '1',
+                  PlayDt: '2026-03-10',
+                  StartTime: '1040',
+                  EndTime: '1247',
+                  TotalSeatCount: '32',
+                  BookingSeatCount: '28',
+                },
+              ],
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ IsOK: true, ResultMessage: 'SUCCESS', PlaySeqs: { Items: [] } })),
+      );
+
+    const result = await fetchLotteCinemaNowShowing({ playDate: '2026-03-10', theaterId: '1016' });
+
+    expect(result.showtimes[0].playDate).toBe('20260310');
+  });
+
+  it('존재하지 않는 극장/영화 필터면 빈 회차를 반환한다', async () => {
+    mockFetch.mockResolvedValue(createTicketingResponse());
+
+    const result = await fetchLotteCinemaNowShowing({ playDate: '20260310', theaterId: '9999' });
+
+    expect(result.theaters).toHaveLength(0);
+    expect(result.showtimes).toHaveLength(0);
   });
 });
 

@@ -39,11 +39,15 @@ export default defineConfig({
         'src/core/interfaces.ts', // 인터페이스만 정의
         'src/services/**/types.ts', // 타입만 정의
         'src/api/emart24Handlers.ts', // 신규 서비스 핸들러는 별도 통합 검증
+        'src/api/lottecinemaHandlers.ts', // 신규 서비스 핸들러는 별도 통합 검증
         'src/services/emart24/client.ts', // 신규 서비스 클라이언트는 별도 실측 기반 검증
+        'src/services/lottecinema/client.ts', // 신규 서비스 클라이언트는 별도 실측 기반 검증
         'src/services/emart24/tools/checkInventory.ts', // 신규 서비스 재고 도구는 별도 실측 기반 검증
+        'src/services/lottecinema/tools/getRemainingSeats.ts', // 신규 서비스 좌석 도구는 별도 실측 기반 검증
         'src/pages/openapi.ts', // 엔트리 재노출 파일
         'src/bin.ts', // npm bin 진입점 파일
         'src/cli.ts', // 실행 진입점 파일
+        'src/cliInteractive.ts', // 인터랙티브 UI 오케스트레이션 파일
         'src/cliRenderer.ts', // CLI 출력 렌더러 파일
       ],
 

@@ -175,4 +175,124 @@ describe('handleLotteCinemaGetRemainingSeats', () => {
       }),
     );
   });
+
+  it('동일 시간 회차를 극장명으로 정렬한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            IsOK: true,
+            Cinemas: {
+              Cinemas: {
+                Items: [
+                  {
+                    CinemaID: '1000',
+                    CinemaNameKR: '강남',
+                    DivisionCode: '1',
+                    DetailDivisionCode: '0001',
+                    Latitude: '37.5',
+                    Longitude: '127.0',
+                    CinemaAddrSummary: '서울',
+                  },
+                  {
+                    CinemaID: '2000',
+                    CinemaNameKR: '코엑스',
+                    DivisionCode: '1',
+                    DetailDivisionCode: '0001',
+                    Latitude: '37.5',
+                    Longitude: '127.1',
+                    CinemaAddrSummary: '서울',
+                  },
+                ],
+              },
+            },
+            Movies: {
+              Movies: {
+                Items: [{ RepresentationMovieCode: '23816', MovieNameKR: '왕과 사는 남자' }],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            IsOK: true,
+            PlaySeqs: {
+              Items: [
+                {
+                  CinemaID: '1000',
+                  CinemaNameKR: '강남',
+                  RepresentationMovieCode: '23816',
+                  MovieNameKR: '왕과 사는 남자',
+                  ScreenID: '1',
+                  ScreenNameKR: '1관',
+                  PlaySequence: '1',
+                  PlayDt: '2026-03-10',
+                  StartTime: '1040',
+                  EndTime: '1247',
+                  TotalSeatCount: '32',
+                  BookingSeatCount: '28',
+                },
+              ],
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            IsOK: true,
+            PlaySeqs: {
+              Items: [
+                {
+                  CinemaID: '2000',
+                  CinemaNameKR: '코엑스',
+                  RepresentationMovieCode: '23816',
+                  MovieNameKR: '왕과 사는 남자',
+                  ScreenID: '2',
+                  ScreenNameKR: '2관',
+                  PlaySequence: '1',
+                  PlayDt: '2026-03-10',
+                  StartTime: '1040',
+                  EndTime: '1247',
+                  TotalSeatCount: '32',
+                  BookingSeatCount: '20',
+                },
+              ],
+            },
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ playDate: '20260310', movieId: '23816' });
+    await handleLotteCinemaGetRemainingSeats(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          seats: [
+            expect.objectContaining({ theaterName: '강남' }),
+            expect.objectContaining({ theaterName: '코엑스' }),
+          ],
+        }),
+      }),
+    );
+  });
+
+  it('알 수 없는 좌석 조회 에러를 처리한다', async () => {
+    mockFetch.mockRejectedValue(null);
+
+    const ctx = createMockContext({});
+    await handleLotteCinemaGetRemainingSeats(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'LOTTECINEMA_SEAT_LIST_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
+      }),
+      500,
+    );
+  });
 });

@@ -402,4 +402,111 @@ describe('runInteractiveCli', () => {
       'https://mcp.aka.page/api/lottecinema/movies?playDate=20260310&theaterId=3012',
     );
   });
+
+  it('롯데시네마 서비스에서 same-store와 change-store 동작을 처리한다', async () => {
+    const output: string[] = [];
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            theaters: [
+              {
+                theaterId: '3012',
+                theaterName: '센트럴락',
+                address: '고잔로 108 (조이월드)',
+                distanceKm: 0.36,
+              },
+            ],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            movies: Array.from({ length: 11 }, (_, index) => ({
+              movieId: `M${index + 1}`,
+              movieName: `영화${index + 1}`,
+            })),
+            showtimes: Array.from({ length: 16 }, (_, index) => ({
+              movieName: `영화${index + 1}`,
+              screenName: '',
+              startTime: `1${String(index).padStart(2, '0')}:00`,
+              remainingSeats: index,
+              totalSeats: 100,
+            })),
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            movies: [],
+            showtimes: [],
+          },
+        }),
+      );
+
+    const exitCode = await runInteractiveCli({
+      fetchImpl,
+      writeOut: (message: string) => {
+        output.push(message);
+      },
+      writeErr: () => {},
+      createPrompt: createPrompt(['4', '센트럴', '1', '20260310', '1', '20260311', '2', '0']),
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.join('\n')).toContain('- 영화: ...외 1편');
+    expect(output.join('\n')).toContain('...외 1건');
+    expect(output.join('\n')).toContain('- 상영 중인 영화가 없습니다.');
+    expect(output.join('\n')).toContain('- 회차/좌석 정보가 없습니다.');
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it('롯데시네마 서비스에서 검색 결과가 없으면 재시도할 수 있다', async () => {
+    const output: string[] = [];
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(createJsonResponse({ success: true, data: { theaters: [] } }))
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            theaters: [
+              {
+                theaterId: '3012',
+                theaterName: '센트럴락',
+                address: '고잔로 108 (조이월드)',
+                distanceKm: 0.36,
+              },
+            ],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            movies: [{ movieId: '23816', movieName: '왕과 사는 남자' }],
+            showtimes: [],
+          },
+        }),
+      );
+
+    const exitCode = await runInteractiveCli({
+      fetchImpl,
+      writeOut: (message: string) => {
+        output.push(message);
+      },
+      writeErr: () => {},
+      createPrompt: createPrompt(['4', '없는극장', 'y', '4', '센트럴', '1', '20260310', '3']),
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.join('\n')).toContain('검색된 극장이 없습니다.');
+  });
 });
