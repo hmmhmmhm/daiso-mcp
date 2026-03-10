@@ -78,6 +78,15 @@ describe('GET /', () => {
     expect(cgvService.name).toBe('CGV');
   });
 
+  it('롯데시네마 서비스가 등록되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    const lotteCinemaService = data.services.find((s: { id: string }) => s.id === 'lottecinema');
+    expect(lotteCinemaService).toBeDefined();
+    expect(lotteCinemaService.name).toBe('롯데시네마');
+  });
+
   it('다이소 도구들이 포함되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -129,6 +138,15 @@ describe('GET /', () => {
     expect(data.tools).toContain('cgv_find_theaters');
     expect(data.tools).toContain('cgv_search_movies');
     expect(data.tools).toContain('cgv_get_timetable');
+  });
+
+  it('롯데시네마 도구들이 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('lottecinema_find_nearby_theaters');
+    expect(data.tools).toContain('lottecinema_list_now_showing');
+    expect(data.tools).toContain('lottecinema_get_remaining_seats');
   });
 
   it('엔드포인트 정보를 포함한다', async () => {

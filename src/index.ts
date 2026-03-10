@@ -15,6 +15,7 @@ import { createDaisoService } from './services/daiso/index.js';
 import { createOliveyoungService } from './services/oliveyoung/index.js';
 import { createMegaboxService } from './services/megabox/index.js';
 import { createCgvService } from './services/cgv/index.js';
+import { createLotteCinemaService } from './services/lottecinema/index.js';
 import { createCuService } from './services/cu/index.js';
 import { createEmart24Service } from './services/emart24/index.js';
 import { createPromptResponse } from './pages/prompt.js';
@@ -25,6 +26,7 @@ import { registerDaisoRoutes } from './api/routes/daisoRoutes.js';
 import { registerOliveyoungRoutes } from './api/routes/oliveyoungRoutes.js';
 import { registerMegaboxRoutes } from './api/routes/megaboxRoutes.js';
 import { registerCgvRoutes } from './api/routes/cgvRoutes.js';
+import { registerLotteCinemaRoutes } from './api/routes/lottecinemaRoutes.js';
 import { registerCuRoutes } from './api/routes/cuRoutes.js';
 import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 
@@ -53,6 +55,7 @@ const createRegistry = (bindings?: AppBindings) => {
     createCuService,
     createEmart24Service,
     createMegaboxService,
+    createLotteCinemaService,
     () =>
       createCgvService({
         zyteApiKey: bindings?.ZYTE_API_KEY,
@@ -238,6 +241,7 @@ registerCuRoutes(app);
 registerEmart24Routes(app);
 registerOliveyoungRoutes(app);
 registerMegaboxRoutes(app);
+registerLotteCinemaRoutes(app);
 registerCgvRoutes(app);
 
 // MCP 엔드포인트

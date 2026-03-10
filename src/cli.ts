@@ -557,6 +557,63 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     );
   }
 
+  if (command === 'lottecinema-theaters') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('lottecinema-theaters', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const targetUrl = toUrl('/api/lottecinema/theaters');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'lottecinema-movies') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('lottecinema-movies', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const targetUrl = toUrl('/api/lottecinema/movies');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'lottecinema-seats') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('lottecinema-seats', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const targetUrl = toUrl('/api/lottecinema/seats');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
   if (command === 'emart24-stores') {
     const parsed = parseCliArgs(options);
     if (parsed.options.help === 'true') {

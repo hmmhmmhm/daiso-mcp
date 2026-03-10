@@ -36,6 +36,13 @@ interface InteractiveStore {
   phone: string;
 }
 
+interface InteractiveTheater {
+  theaterId: string;
+  name: string;
+  address: string;
+  distanceKm: string;
+}
+
 interface OliveyoungProductPreview {
   goodsNumber: string;
   goodsName: string;
@@ -50,6 +57,19 @@ interface CuInventoryPreview {
   pickupYn: boolean;
   deliveryYn: boolean;
   reserveYn: boolean;
+}
+
+interface LotteCinemaMoviePreview {
+  movieId: string;
+  movieName: string;
+}
+
+interface LotteCinemaSeatPreview {
+  movieName: string;
+  screenName: string;
+  startTime: string;
+  remainingSeats: string;
+  totalSeats: string;
 }
 
 const BASE_URL = 'https://mcp.aka.page';
@@ -161,6 +181,110 @@ function printStoreDetail(writeOut: WriteFn, store: InteractiveStore): void {
   writeOut(`- 주소: ${store.address || '정보 없음'}`);
   writeOut(`- 전화: ${store.phone || '정보 없음'}`);
   writeOut('');
+}
+
+function parseLotteCinemaTheaters(payload: unknown): InteractiveTheater[] {
+  if (!isRecord(payload) || payload.success !== true || !isRecord(payload.data)) {
+    return [];
+  }
+
+  const theaters = payload.data.theaters;
+  if (!Array.isArray(theaters)) {
+    return [];
+  }
+
+  return theaters
+    .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    .map((entry) => ({
+      theaterId: toText(entry.theaterId),
+      name: toText(entry.theaterName),
+      address: toText(entry.address),
+      distanceKm: toText(entry.distanceKm),
+    }))
+    .filter((entry) => entry.theaterId.length > 0 && entry.name.length > 0);
+}
+
+function printTheaterDetail(writeOut: WriteFn, theater: InteractiveTheater): void {
+  writeOut('');
+  writeOut('[선택한 극장 정보]');
+  writeOut(`- 극장명: ${theater.name}`);
+  writeOut(`- 극장 ID: ${theater.theaterId}`);
+  writeOut(`- 주소: ${theater.address || '정보 없음'}`);
+  writeOut(`- 거리: ${theater.distanceKm ? `${theater.distanceKm}km` : '정보 없음'}`);
+  writeOut('');
+}
+
+async function runLotteCinemaSearch(
+  deps: InteractiveCliDeps,
+  prompt: InteractivePrompt,
+  theater: InteractiveTheater,
+): Promise<void> {
+  const playDate = await askNonEmpty(prompt, '조회 날짜를 입력하세요 (YYYYMMDD): ');
+  const payload = await fetchEnvelope(deps.fetchImpl, '/api/lottecinema/movies', {
+    playDate,
+    theaterId: theater.theaterId,
+  });
+
+  if (!isRecord(payload) || payload.success !== true || !isRecord(payload.data)) {
+    deps.writeOut('롯데시네마 응답을 해석하지 못했습니다.');
+    return;
+  }
+
+  const moviesRaw = payload.data.movies;
+  const showtimesRaw = payload.data.showtimes;
+  const movies: LotteCinemaMoviePreview[] = Array.isArray(moviesRaw)
+    ? moviesRaw
+        .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+        .map((entry) => ({
+          movieId: toText(entry.movieId),
+          movieName: toText(entry.movieName),
+        }))
+        .filter((entry) => entry.movieId.length > 0 && entry.movieName.length > 0)
+    : [];
+  const seats: LotteCinemaSeatPreview[] = Array.isArray(showtimesRaw)
+    ? showtimesRaw
+        .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+        .map((entry) => ({
+          movieName: toText(entry.movieName),
+          screenName: toText(entry.screenName),
+          startTime: toText(entry.startTime),
+          remainingSeats: toText(entry.remainingSeats),
+          totalSeats: toText(entry.totalSeats),
+        }))
+        .filter((entry) => entry.movieName.length > 0)
+    : [];
+
+  deps.writeOut('');
+  deps.writeOut('[롯데시네마 상영 결과]');
+  deps.writeOut(`- 극장: ${theater.name}`);
+  deps.writeOut(`- 날짜: ${playDate}`);
+  deps.writeOut(`- 상영 영화 수: ${movies.length}`);
+
+  if (movies.length === 0) {
+    deps.writeOut('- 상영 중인 영화가 없습니다.');
+  } else {
+    for (const movie of movies.slice(0, 10)) {
+      deps.writeOut(`- 영화: ${movie.movieName} (${movie.movieId})`);
+    }
+    if (movies.length > 10) {
+      deps.writeOut(`- 영화: ...외 ${movies.length - 10}편`);
+    }
+  }
+
+  if (seats.length === 0) {
+    deps.writeOut('- 회차/좌석 정보가 없습니다.');
+    return;
+  }
+
+  deps.writeOut('- 회차/좌석:');
+  for (const seat of seats.slice(0, 15)) {
+    deps.writeOut(
+      `  ${seat.startTime} | ${seat.movieName} | ${seat.screenName || '상영관 정보 없음'} | ${seat.remainingSeats}/${seat.totalSeats}`,
+    );
+  }
+  if (seats.length > 15) {
+    deps.writeOut(`  ...외 ${seats.length - 15}건`);
+  }
 }
 
 async function runDaisoItemSearch(
@@ -387,6 +511,7 @@ export const cliInteractiveTestables = {
   runDaisoItemSearch,
   runOliveyoungItemSearch,
   runCuItemSearch,
+  runLotteCinemaSearch,
 };
 
 export async function runInteractiveCli(deps: InteractiveCliDeps): Promise<number> {
@@ -402,15 +527,71 @@ export async function runInteractiveCli(deps: InteractiveCliDeps): Promise<numbe
       deps.writeOut('1. 다이소');
       deps.writeOut('2. 올리브영');
       deps.writeOut('3. CU');
+      deps.writeOut('4. 롯데시네마');
 
       const serviceChoice = await askMenu(prompt, '서비스 번호를 선택하세요 (0: 종료):', [
         '다이소',
         '올리브영',
         'CU',
+        '롯데시네마',
       ]);
 
       if (serviceChoice === 0) {
         break;
+      }
+
+      if (serviceChoice === 4) {
+        const theaterKeyword = await askNonEmpty(prompt, '극장 검색 키워드를 입력하세요: ');
+        const payload = await fetchEnvelope(deps.fetchImpl, '/api/lottecinema/theaters', {
+          keyword: theaterKeyword,
+          limit: '10',
+        });
+        const theaters = parseLotteCinemaTheaters(payload).filter((entry) =>
+          `${entry.name} ${entry.address}`.includes(theaterKeyword),
+        );
+
+        if (theaters.length === 0) {
+          deps.writeOut('검색된 극장이 없습니다.');
+          keepRunning = await askYesNo(prompt, '다시 시도할까요? (y/n): ');
+          continue;
+        }
+
+        const selectedTheater = await pickFromList({
+          prompt,
+          writeOut: deps.writeOut,
+          title: '[극장 선택]',
+          emptyText: '검색된 극장이 없습니다.',
+          cancelText: '극장 검색으로 돌아갑니다.',
+          items: theaters,
+          renderItem: (theater, index) =>
+            `${index + 1}. ${theater.name} | ${theater.address || '주소 정보 없음'} | ${theater.distanceKm}km`,
+          filterText: (theater) => `${theater.name} ${theater.address} ${theater.theaterId}`,
+          indexText: '입력: 번호 선택 | /키워드 필터 | all 전체보기 | 0 다시 검색',
+        });
+        if (!selectedTheater) {
+          continue;
+        }
+
+        printTheaterDetail(deps.writeOut, selectedTheater);
+
+        let keepTheaterSearch = true;
+        while (keepTheaterSearch) {
+          await runLotteCinemaSearch(deps, prompt, selectedTheater);
+
+          const nextAction = await askNextAction(prompt, deps.writeOut);
+          if (nextAction === 'same-store') {
+            continue;
+          }
+
+          if (nextAction === 'change-store') {
+            keepTheaterSearch = false;
+            continue;
+          }
+
+          keepRunning = false;
+          keepTheaterSearch = false;
+        }
+        continue;
       }
 
       const service = serviceChoice === 1 ? 'daiso' : serviceChoice === 2 ? 'oliveyoung' : 'cu';

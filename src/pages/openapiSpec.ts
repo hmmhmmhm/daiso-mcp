@@ -7,6 +7,7 @@ import { OPENAPI_PATHS_CU } from './openapiSpecPathsCu.js';
 import { OPENAPI_PATHS_EMART24 } from './openapiSpecPathsEmart24.js';
 import { OPENAPI_PATHS_MEGABOX } from './openapiSpecPathsMegabox.js';
 import { OPENAPI_PATHS_CGV } from './openapiSpecPathsCgv.js';
+import { OPENAPI_PATHS_LOTTECINEMA } from './openapiSpecPathsLottecinema.js';
 import { OPENAPI_COMPONENTS } from './openapiSpecComponents.js';
 
 /**
@@ -26,6 +27,7 @@ export function generateOpenApiSpec(baseUrl: string): object {
 - 🧭 **진열 위치 조회**: 매장 내 상품 구역/층 정보 조회
 - 🏪 **CU 매장/재고 조회**: CU 매장 탐색 및 상품 재고 검색
 - 🎬 **메가박스 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
+- 🎞️ **롯데시네마 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
 - 🎥 **CGV 지점/영화 조회**: 극장 목록, 영화 목록, 시간표 조회
 
 ## 사용 팁
@@ -44,6 +46,7 @@ export function generateOpenApiSpec(baseUrl: string): object {
       ...OPENAPI_PATHS_CU,
       ...OPENAPI_PATHS_EMART24,
       ...OPENAPI_PATHS_MEGABOX,
+      ...OPENAPI_PATHS_LOTTECINEMA,
       ...OPENAPI_PATHS_CGV,
     },
     components: OPENAPI_COMPONENTS,

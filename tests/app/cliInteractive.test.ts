@@ -342,4 +342,64 @@ describe('runInteractiveCli', () => {
     expect(exitCode).toBe(1);
     expect(errors.join('\n')).toContain('network down');
   });
+
+  it('롯데시네마 서비스에서 극장/영화/좌석 정보를 확인한다', async () => {
+    const output: string[] = [];
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            theaters: [
+              {
+                theaterId: '3012',
+                theaterName: '센트럴락',
+                address: '고잔로 108 (조이월드)',
+                distanceKm: 0.36,
+              },
+            ],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            movies: [{ movieId: '23816', movieName: '왕과 사는 남자' }],
+            showtimes: [
+              {
+                movieName: '왕과 사는 남자',
+                screenName: '3관',
+                startTime: '10:20',
+                remainingSeats: 92,
+                totalSeats: 92,
+              },
+            ],
+          },
+        }),
+      );
+
+    const exitCode = await runInteractiveCli({
+      fetchImpl,
+      writeOut: (message: string) => {
+        output.push(message);
+      },
+      writeErr: () => {},
+      createPrompt: createPrompt(['4', '센트럴', '1', '20260310', '3']),
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.join('\n')).toContain('[선택한 극장 정보]');
+    expect(output.join('\n')).toContain('상영 영화 수: 1');
+    expect(output.join('\n')).toContain('10:20 | 왕과 사는 남자 | 3관 | 92/92');
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      'https://mcp.aka.page/api/lottecinema/theaters?keyword=%EC%84%BC%ED%8A%B8%EB%9F%B4&limit=10',
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      'https://mcp.aka.page/api/lottecinema/movies?playDate=20260310&theaterId=3012',
+    );
+  });
 });

@@ -316,6 +316,60 @@ describe('CLI', () => {
     expect(errors[0]).toContain('검색어가 필요합니다');
   });
 
+  it('lottecinema-theaters 명령은 롯데시네마 주변 지점 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['lottecinema-theaters', '--lat', '37.3154', '--lng', '126.8388', '--limit', '5'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottecinema/theaters?lat=37.3154&lng=126.8388&limit=5',
+    );
+  });
+
+  it('lottecinema-movies 명령은 롯데시네마 영화/회차 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { movies: [], showtimes: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['lottecinema-movies', '--playDate', '20260310', '--theaterId', '3012'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottecinema/movies?playDate=20260310&theaterId=3012',
+    );
+  });
+
+  it('lottecinema-seats 명령은 롯데시네마 잔여 좌석 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { seats: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['lottecinema-seats', '--playDate', '20260310', '--theaterId', '3012', '--movieId', '23816', '--limit', '10'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottecinema/seats?playDate=20260310&theaterId=3012&movieId=23816&limit=10',
+    );
+  });
+
   it('emart24-stores 명령은 이마트24 매장 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
