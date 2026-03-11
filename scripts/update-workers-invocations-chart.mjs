@@ -5,7 +5,6 @@ import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { registerFont } from 'canvas';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
-  aggregateByKstDateRange,
   buildPointStyleArray,
   buildReadmeSection,
   calculateMovingAverage,
@@ -18,6 +17,7 @@ import {
   formatNumber,
   parseKstDateText,
 } from './workers-chart-helpers.mjs';
+import { fetchDailyWorkerInvocations } from './workers-chart-data.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,70 +51,6 @@ if (!ACCOUNT_ID || !API_TOKEN) {
 
 if (!/^\d{4}-\d{2}-\d{2}$/.test(CHART_START_DATE)) {
   throw new Error('WORKERS_CHART_START_DATE 형식은 YYYY-MM-DD 이어야 합니다.');
-}
-
-async function fetchWorkerInvocations({
-  accountId,
-  apiToken,
-  scriptName,
-  startDateText,
-  endDateExclusive,
-}) {
-  const start = parseKstDateText(startDateText);
-
-  const query = `
-    query WorkerInvocations($accountTag: string, $scriptName: string, $start: Time!, $end: Time!) {
-      viewer {
-        accounts(filter: { accountTag: $accountTag }) {
-          workersInvocationsAdaptive(
-            limit: 10000
-            filter: { scriptName: $scriptName, datetime_geq: $start, datetime_lt: $end }
-          ) {
-            dimensions {
-              datetime
-            }
-            sum {
-              requests
-            }
-          }
-        }
-      }
-    }
-  `;
-
-  const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query,
-      variables: {
-        accountTag: accountId,
-        scriptName,
-        start: start.toISOString(),
-        end: endDateExclusive.toISOString(),
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Cloudflare GraphQL 호출 실패: ${response.status} ${body}`);
-  }
-
-  const payload = await response.json();
-  if (payload.errors?.length) {
-    throw new Error(`Cloudflare GraphQL 오류: ${JSON.stringify(payload.errors)}`);
-  }
-
-  const rows = payload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive;
-  if (!Array.isArray(rows)) {
-    throw new Error('Cloudflare 응답에서 workersInvocationsAdaptive 데이터를 찾지 못했습니다.');
-  }
-
-  return rows;
 }
 
 function formatDelta(diff) {
@@ -354,15 +290,13 @@ async function main() {
   const endDateExclusive = parseKstDateText(todayKstDate);
   const endDateInclusive = formatKstDate(new Date(endDateExclusive.getTime() - 86400000));
 
-  const rows = await fetchWorkerInvocations({
+  const points = await fetchDailyWorkerInvocations({
     accountId: ACCOUNT_ID,
     apiToken: API_TOKEN,
     scriptName: SCRIPT_NAME,
     startDateText: CHART_START_DATE,
-    endDateExclusive,
+    endDateText: endDateInclusive,
   });
-
-  const points = aggregateByKstDateRange(rows, CHART_START_DATE, endDateInclusive);
   const summary = calculateSummary(points);
   const chartBuffer = await renderChart(points, summary);
   await fs.writeFile(CHART_PATH, chartBuffer);
