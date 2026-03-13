@@ -152,20 +152,57 @@ https://b2c-bff.woodongs.com
 
 ## 5. 리플레이 예시
 
-### 매장 재고 조회 (인증 불필요)
+### 상품 검색 → itemCode 획득 (필수 선행 단계)
 
 ```bash
-# 인증 없이 바로 호출 가능!
-curl -s "https://b2c-bff.woodongs.com/api/bff/v2/store/stock?serviceCode=01&storeCode=VE463&pageNumber=0&pageCount=100"
+# 1단계: totalSearch API로 키워드 → itemCode 변환
+curl -s -X POST "https://b2c-apigw.woodongs.com/search/v3/totalSearch" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"핫식스"}'
 ```
 
+**응답에서 itemCode 추출:**
+
+```json
+{
+  "SearchQueryResult": {
+    "Collection": [
+      {
+        "Documentset": {
+          "Document": [
+            {
+              "field": {
+                "itemCode": "8801056249212",
+                "itemName": "롯데)핫식스더킹애플홀릭355ML"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+### 매장 재고 조회 (itemCode + 좌표 필수!)
+
+```bash
+# 2단계: itemCode + 좌표로 재고 조회
+curl -s "https://b2c-bff.woodongs.com/api/bff/v2/store/stock?serviceCode=01&itemCode=8801056249212&XCoordination=127.0276&YCoordination=37.4979&pageNumber=0&pageCount=100&realTimeStockYn=Y"
+```
+
+**중요: keyword 파라미터가 아닌 itemCode + 좌표가 필요합니다!**
+
 **파라미터:**
-| 파라미터 | 설명 | 예시 |
-|---------|------|------|
-| serviceCode | 서비스 코드 (01=GS25) | `01` |
-| storeCode | 매장 코드 | `VE463` |
-| pageNumber | 페이지 번호 | `0` |
-| pageCount | 페이지당 항목 수 | `100` |
+| 파라미터 | 설명 | 필수 | 예시 |
+|---------|------|------|------|
+| serviceCode | 서비스 코드 (01=GS25) | O | `01` |
+| itemCode | 상품 코드 (totalSearch에서 획득) | O | `8801056249212` |
+| XCoordination | 경도 | O | `127.0276` |
+| YCoordination | 위도 | O | `37.4979` |
+| realTimeStockYn | 실시간 재고 여부 | O | `Y` |
+| pageNumber | 페이지 번호 | - | `0` |
+| pageCount | 페이지당 항목 수 | - | `100` |
 
 **응답:**
 
@@ -209,6 +246,14 @@ curl -s "https://b2c-bff.woodongs.com/api/bff/v2/store/detail?storeCode=VE463&se
 
 앱 내부에서 요청/응답을 암호화하지만, 실제 서버는 인증 없이 호출 가능합니다.
 이는 앱 레이어 암호화가 난독화/리버스 엔지니어링 방지 목적임을 의미합니다.
+
+**재고 조회는 2단계 프로세스**
+
+1. `totalSearch` API: 키워드 → itemCode 변환
+2. `store/stock` API: itemCode + 좌표 → 재고 정보
+
+단순히 `keyword` 파라미터만 사용하면 결과가 0개로 나옵니다.
+반드시 `itemCode` + `XCoordination` + `YCoordination` 조합이 필요합니다.
 
 ### 실패 원인 분석
 

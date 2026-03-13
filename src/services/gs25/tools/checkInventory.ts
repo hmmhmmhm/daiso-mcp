@@ -7,6 +7,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import {
   attachDistanceToGs25Stores,
+  fetchGs25SearchProducts,
   fetchGs25Stores,
   filterGs25StoresByKeyword,
   geocodeGs25Address,
@@ -41,7 +42,10 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   let resolvedLatitude = latitude;
   let resolvedLongitude = longitude;
   let geocodeUsed = false;
+  let itemCodeUsed = false;
+  let resolvedItemCode: string | null = null;
 
+  // 좌표가 없고 storeKeyword가 있으면 지오코딩 시도
   if (
     (typeof resolvedLatitude !== 'number' || typeof resolvedLongitude !== 'number') &&
     storeKeyword.trim().length > 0
@@ -71,16 +75,53 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     }
   }
 
-  const stockResult = await fetchGs25Stores(
-    {
-      serviceCode,
-      keyword,
-      useCache: false,
-    },
-    {
-      timeout: timeoutMs,
-    },
-  );
+  // 좌표가 없으면 기본 좌표 (서울 강남) 사용
+  // itemCode 기반 재고 조회는 좌표가 필수
+  if (typeof resolvedLatitude !== 'number' || typeof resolvedLongitude !== 'number') {
+    resolvedLatitude = 37.4979;
+    resolvedLongitude = 127.0276;
+  }
+
+  // 1단계: totalSearch API로 키워드 → itemCode 변환
+  const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: timeoutMs });
+  const firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
+
+  let stockResult: { totalCount: number; stores: Awaited<ReturnType<typeof fetchGs25Stores>>['stores'] };
+
+  if (firstProduct) {
+    // itemCode가 있으면 itemCode + 좌표로 재고 조회 (정확한 방식)
+    resolvedItemCode = firstProduct.itemCode;
+    itemCodeUsed = true;
+
+    stockResult = await fetchGs25Stores(
+      {
+        serviceCode,
+        itemCode: resolvedItemCode,
+        realTimeStockYn: 'Y',
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude,
+        useCache: false,
+      },
+      {
+        timeout: timeoutMs,
+      },
+    );
+  } else {
+    // itemCode가 없으면 기존 keyword 방식 fallback
+    stockResult = await fetchGs25Stores(
+      {
+        serviceCode,
+        keyword,
+        realTimeStockYn: 'Y',
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude,
+        useCache: false,
+      },
+      {
+        timeout: timeoutMs,
+      },
+    );
+  }
 
   const filteredByStoreKeyword = filterGs25StoresByKeyword(stockResult.stores, storeKeyword);
   const withDistance = attachDistanceToGs25Stores(filteredByStoreKeyword, resolvedLatitude, resolvedLongitude);
@@ -89,7 +130,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   const totalInStockCount = filteredByStoreKeyword.filter((item) => item.realStockQuantity > 0).length;
   const totalStockQuantity = filteredByStoreKeyword.reduce((sum, item) => sum + Math.max(item.realStockQuantity, 0), 0);
 
-  const firstProductName = filteredByStoreKeyword.find((item) => item.searchItemName.length > 0)?.searchItemName || null;
+  // searchProducts에서 상품 정보 사용
+  const firstProductName = firstProduct?.itemName || firstProduct?.shortItemName || null;
   const firstProductPrice =
     filteredByStoreKeyword.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ?? null;
 
@@ -101,18 +143,19 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
           {
             serviceCode,
             keyword,
+            itemCodeUsed,
+            itemCode: resolvedItemCode,
             storeKeyword,
             geocodeUsed,
-            location:
-              typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number'
-                ? {
-                    latitude: resolvedLatitude,
-                    longitude: resolvedLongitude,
-                  }
-                : null,
+            location: {
+              latitude: resolvedLatitude,
+              longitude: resolvedLongitude,
+            },
             product: {
               name: firstProductName,
               sellPrice: firstProductPrice,
+              imageUrl: firstProduct?.imageUrl || null,
+              rating: firstProduct?.rating || null,
             },
             inventory: {
               totalStoreCount: stockResult.totalCount,
@@ -122,10 +165,6 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
               count: stores.length,
               stores,
             },
-            note:
-              firstProductName === null
-                ? '응답에 상품명이 없어 재고가 기본값으로 내려온 것일 수 있습니다. 키워드/시점에 따라 결과를 재확인하세요.'
-                : null,
           },
           null,
           2,

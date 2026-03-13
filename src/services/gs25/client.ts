@@ -20,10 +20,50 @@ interface RequestOptions {
 interface FetchGs25StoresParams {
   serviceCode?: string;
   keyword?: string;
+  itemCode?: string;
   storeCode?: string;
+  realTimeStockYn?: 'Y' | 'N';
+  latitude?: number;
+  longitude?: number;
   pageNumber?: number;
   pageCount?: number;
   useCache?: boolean;
+}
+
+interface Gs25TotalSearchDocument {
+  field?: {
+    itemCode?: string;
+    itemName?: string;
+    shortItemName?: string;
+    itemImageUrl?: string;
+    starPoint?: string;
+    stockCheckYn?: string;
+  };
+}
+
+interface Gs25TotalSearchResponse {
+  SearchQueryResult?: {
+    keywordInfo?: {
+      keyword?: string;
+      searchKeyword?: string;
+    };
+    Collection?: Array<{
+      CollectionId?: string;
+      Documentset?: {
+        totalCount?: number;
+        Document?: Gs25TotalSearchDocument[];
+      };
+    }>;
+  };
+}
+
+export interface Gs25SearchProduct {
+  itemCode: string;
+  itemName: string;
+  shortItemName: string;
+  imageUrl: string;
+  rating: number;
+  stockCheckEnabled: boolean;
 }
 
 interface GoogleGeocodeResponse {
@@ -292,7 +332,11 @@ export async function fetchGs25Stores(
   const {
     serviceCode = '01',
     keyword = '',
+    itemCode = '',
     storeCode = '',
+    realTimeStockYn = 'Y',
+    latitude,
+    longitude,
     pageNumber = 0,
     pageCount = 20000,
     useCache = true,
@@ -301,7 +345,7 @@ export async function fetchGs25Stores(
 
   const cacheKey = buildCacheKey({
     serviceCode,
-    keyword: keyword.trim(),
+    keyword: itemCode.trim() || keyword.trim(),
     storeCode: storeCode.trim(),
   });
 
@@ -320,12 +364,23 @@ export async function fetchGs25Stores(
   endpoint.searchParams.set('serviceCode', serviceCode);
   endpoint.searchParams.set('pageNumber', String(pageNumber));
   endpoint.searchParams.set('pageCount', String(pageCount));
+  endpoint.searchParams.set('realTimeStockYn', realTimeStockYn);
 
-  if (keyword.trim().length > 0) {
+  // itemCode가 있으면 itemCode 사용, 없으면 keyword 사용
+  // 주의: itemCode 사용 시 좌표도 필수
+  if (itemCode.trim().length > 0) {
+    endpoint.searchParams.set('itemCode', itemCode.trim());
+  } else if (keyword.trim().length > 0) {
     endpoint.searchParams.set('keyword', keyword.trim());
   }
   if (storeCode.trim().length > 0) {
     endpoint.searchParams.set('storeCode', storeCode.trim());
+  }
+  if (typeof latitude === 'number' && Number.isFinite(latitude)) {
+    endpoint.searchParams.set('YCoordination', String(latitude));
+  }
+  if (typeof longitude === 'number' && Number.isFinite(longitude)) {
+    endpoint.searchParams.set('XCoordination', String(longitude));
   }
 
   const body = await fetchJson<Gs25StoreStockResponse>(endpoint.toString(), {
@@ -348,6 +403,89 @@ export async function fetchGs25Stores(
     stores,
     cacheHit: false,
   };
+}
+
+export async function fetchGs25NormalizedKeyword(
+  keyword: string,
+  options: RequestOptions = {},
+): Promise<{ keyword: string; searchKeyword: string } | null> {
+  const query = keyword.trim();
+  if (query.length === 0) {
+    return null;
+  }
+
+  const { timeout = 20000 } = options;
+  const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
+
+  const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
+    method: 'POST',
+    timeout,
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query }),
+  });
+
+  const normalizedKeyword = body.SearchQueryResult?.keywordInfo?.keyword?.trim() || '';
+  const normalizedSearchKeyword = body.SearchQueryResult?.keywordInfo?.searchKeyword?.trim() || '';
+  if (normalizedKeyword.length === 0 && normalizedSearchKeyword.length === 0) {
+    return null;
+  }
+
+  return {
+    keyword: normalizedKeyword,
+    searchKeyword: normalizedSearchKeyword,
+  };
+}
+
+/**
+ * 키워드로 상품을 검색하여 itemCode 목록을 반환합니다.
+ * 재고 조회 API는 itemCode가 필요하므로 이 함수로 먼저 변환해야 합니다.
+ */
+export async function fetchGs25SearchProducts(
+  keyword: string,
+  options: RequestOptions = {},
+): Promise<Gs25SearchProduct[]> {
+  const query = keyword.trim();
+  if (query.length === 0) {
+    return [];
+  }
+
+  const { timeout = 20000 } = options;
+  const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
+
+  const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
+    method: 'POST',
+    timeout,
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query }),
+  });
+
+  const products: Gs25SearchProduct[] = [];
+  const collections = body.SearchQueryResult?.Collection || [];
+
+  for (const collection of collections) {
+    const documents = collection.Documentset?.Document || [];
+    for (const doc of documents) {
+      const field = doc.field;
+      if (!field?.itemCode) continue;
+
+      products.push({
+        itemCode: field.itemCode,
+        itemName: field.itemName || '',
+        shortItemName: field.shortItemName || '',
+        imageUrl: field.itemImageUrl || '',
+        rating: toNumber(field.starPoint),
+        stockCheckEnabled: field.stockCheckYn === 'Y',
+      });
+    }
+  }
+
+  return products;
 }
 
 export function clearGs25StoresCache(): void {
