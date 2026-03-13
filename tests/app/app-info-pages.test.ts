@@ -51,6 +51,15 @@ describe('GET /', () => {
     expect(cuService.name).toBe('CU 편의점');
   });
 
+  it('GS25 서비스가 등록되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    const gs25Service = data.services.find((s: { id: string }) => s.id === 'gs25');
+    expect(gs25Service).toBeDefined();
+    expect(gs25Service.name).toBe('GS25');
+  });
+
   it('이마트24 서비스가 등록되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -111,6 +120,15 @@ describe('GET /', () => {
 
     expect(data.tools).toContain('cu_find_nearby_stores');
     expect(data.tools).toContain('cu_check_inventory');
+  });
+
+  it('GS25 도구들이 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('gs25_find_nearby_stores');
+    expect(data.tools).toContain('gs25_search_products');
+    expect(data.tools).toContain('gs25_check_inventory');
   });
 
   it('이마트24 도구들이 포함되어 있다', async () => {

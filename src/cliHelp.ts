@@ -21,7 +21,10 @@ export type CommandName =
   | 'lottecinema-seats'
   | 'emart24-stores'
   | 'emart24-products'
-  | 'emart24-inventory';
+  | 'emart24-inventory'
+  | 'gs25-stores'
+  | 'gs25-products'
+  | 'gs25-inventory';
 
 export const COMMAND_LIST: CommandName[] = [
   'help',
@@ -43,6 +46,9 @@ export const COMMAND_LIST: CommandName[] = [
   'emart24-stores',
   'emart24-products',
   'emart24-inventory',
+  'gs25-stores',
+  'gs25-products',
+  'gs25-inventory',
 ];
 
 const COMMAND_SUMMARY: Record<CommandName, string> = {
@@ -65,6 +71,9 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   'emart24-stores': '이마트24 매장 검색',
   'emart24-products': '이마트24 상품 검색',
   'emart24-inventory': '이마트24 재고 조회',
+  'gs25-stores': 'GS25 매장 검색',
+  'gs25-products': 'GS25 상품 검색',
+  'gs25-inventory': 'GS25 재고 조회',
 };
 
 const COMMAND_DETAIL: Record<CommandName, string[]> = {
@@ -210,6 +219,30 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '옵션: --bizNoArr, --json',
     '예시: daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015,23233',
   ],
+  'gs25-stores': [
+    '명령: gs25-stores',
+    '설명: GS25 매장 검색 API를 호출합니다.',
+    '사용법: daiso gs25-stores [keyword] [--lat 값] [--lng 값] [--limit N] [--json]',
+    '옵션: --keyword, --lat, --lng, --serviceCode, --limit, --json',
+    '예시: daiso gs25-stores 강남',
+    '예시: daiso gs25-stores --lat 37.4982 --lng 127.0276 --limit 10',
+  ],
+  'gs25-products': [
+    '명령: gs25-products',
+    '설명: GS25 상품 키워드 검색 API를 호출합니다.',
+    '사용법: daiso gs25-products <keyword> [--limit N] [--json]',
+    '필수: <keyword>',
+    '옵션: --serviceCode, --limit, --json',
+    '예시: daiso gs25-products 오감자',
+  ],
+  'gs25-inventory': [
+    '명령: gs25-inventory',
+    '설명: GS25 재고 검색 API를 호출합니다.',
+    '사용법: daiso gs25-inventory <keyword> [--storeKeyword 값] [--lat 값] [--lng 값] [--storeLimit N] [--json]',
+    '필수: <keyword>',
+    '옵션: --storeKeyword, --lat, --lng, --serviceCode, --storeLimit, --json',
+    '예시: daiso gs25-inventory 오감자 --storeKeyword 강남',
+  ],
 };
 
 export function printHelp(writeOut: (message: string) => void): void {
@@ -245,6 +278,9 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso emart24-stores 강남 --limit 10');
   writeOut('  npx daiso emart24-products 두바이 --pageSize 20');
   writeOut('  npx daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015');
+  writeOut('  npx daiso gs25-stores 강남 --limit 10');
+  writeOut('  npx daiso gs25-products 오감자');
+  writeOut('  npx daiso gs25-inventory 오감자 --storeKeyword 강남');
   writeOut('  npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056');
   writeOut('');
   writeOut('상세 도움말:');

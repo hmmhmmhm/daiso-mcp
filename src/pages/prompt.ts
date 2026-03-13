@@ -243,6 +243,28 @@ Base URL: ${baseUrl}
 
 ---
 
+### 6-1. GS25 매장/상품/재고 조회
+
+**설명**: GS25 매장 탐색, 상품 키워드 검색, 재고 조회를 제공합니다.
+
+**URL**:
+- ${baseUrl}/api/gs25/stores?keyword={키워드}
+- ${baseUrl}/api/gs25/products?keyword={검색어}
+- ${baseUrl}/api/gs25/inventory?keyword={검색어}
+
+**선택 파라미터(공통)**:
+- lat: 위도 (선택)
+- lng: 경도 (선택)
+- limit / storeLimit: 최대 결과 수
+- serviceCode: 서비스 코드 (기본값: 01)
+
+**예시**:
+- ${baseUrl}/api/gs25/stores?keyword=강남&limit=10
+- ${baseUrl}/api/gs25/products?keyword=오감자&limit=20
+- ${baseUrl}/api/gs25/inventory?keyword=오감자&storeKeyword=강남&storeLimit=10
+
+---
+
 ### 7. 메가박스 주변 지점 찾기
 
 **설명**: 사용자 좌표 기준으로 메가박스 지점을 거리순으로 조회합니다.
@@ -448,6 +470,9 @@ Base URL: ${baseUrl}
 | CGV_THEATER_SEARCH_FAILED | CGV 극장 조회 실패 |
 | CGV_MOVIE_SEARCH_FAILED | CGV 영화 목록 조회 실패 |
 | CGV_TIMETABLE_FETCH_FAILED | CGV 시간표 조회 실패 |
+| GS25_STORE_SEARCH_FAILED | GS25 매장 조회 실패 |
+| GS25_PRODUCT_SEARCH_FAILED | GS25 상품 조회 실패 |
+| GS25_INVENTORY_CHECK_FAILED | GS25 재고 조회 실패 |
 
 ---
 
@@ -475,6 +500,9 @@ MCP 연결 정보: ${baseUrl}/mcp
 - daiso_check_inventory: 재고 확인
 - daiso_get_price_info: 가격 정보 조회
 - daiso_get_display_location: 진열 위치 조회
+- gs25_find_nearby_stores: GS25 주변 매장 탐색
+- gs25_search_products: GS25 상품 검색
+- gs25_check_inventory: GS25 재고 조회
 - oliveyoung_find_nearby_stores: 올리브영 주변 매장 탐색
 - oliveyoung_check_inventory: 올리브영 재고 파악
 - megabox_find_nearby_theaters: 메가박스 주변 지점 탐색
