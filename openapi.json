@@ -1001,6 +1001,204 @@
         }
       }
     },
+    "/api/gs25/stores": {
+      "get": {
+        "operationId": "gs25FindStores",
+        "summary": "GS25 매장 검색",
+        "description": "키워드/좌표 기준으로 GS25 매장을 조회합니다.",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "description": "매장명 또는 주소 키워드 (예: 강남)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "description": "위도",
+            "schema": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "description": "경도",
+            "schema": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "최대 결과 수",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "검색 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gs25StoreSearchResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gs25/products": {
+      "get": {
+        "operationId": "gs25SearchProducts",
+        "summary": "GS25 상품 키워드 검색",
+        "description": "키워드로 GS25 상품 후보를 조회합니다.",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": true,
+            "description": "상품 검색어",
+            "schema": {
+              "type": "string"
+            },
+            "example": "오감자"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "최대 결과 수",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "검색 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gs25ProductSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청 (검색어 누락)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gs25/inventory": {
+      "get": {
+        "operationId": "gs25CheckInventory",
+        "summary": "GS25 재고 조회",
+        "description": "상품 키워드 기준으로 GS25 매장별 재고를 조회합니다.",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": true,
+            "description": "상품 검색어",
+            "schema": {
+              "type": "string"
+            },
+            "example": "오감자"
+          },
+          {
+            "name": "storeKeyword",
+            "in": "query",
+            "required": false,
+            "description": "매장명/주소 필터 키워드",
+            "schema": {
+              "type": "string"
+            },
+            "example": "강남"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "required": false,
+            "description": "위도",
+            "schema": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": false,
+            "description": "경도",
+            "schema": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          {
+            "name": "storeLimit",
+            "in": "query",
+            "required": false,
+            "description": "반환할 최대 매장 수",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gs25InventoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청 (필수 파라미터 누락)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/megabox/theaters": {
       "get": {
         "operationId": "megaboxFindNearbyTheaters",
@@ -2781,6 +2979,204 @@
                     },
                     "phone": {
                       "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Gs25Store": {
+        "type": "object",
+        "properties": {
+          "storeCode": {
+            "type": "string",
+            "example": "VE463"
+          },
+          "storeName": {
+            "type": "string",
+            "example": "강남역점"
+          },
+          "address": {
+            "type": "string",
+            "example": "서울특별시 강남구 강남대로 396"
+          },
+          "phone": {
+            "type": "string",
+            "example": "02-1234-5678"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "float",
+            "example": 37.4982
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float",
+            "example": 127.0276
+          },
+          "realStockQuantity": {
+            "type": "integer",
+            "example": 3
+          },
+          "distanceM": {
+            "type": "number",
+            "nullable": true,
+            "example": 120
+          },
+          "propertyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "반값택배픽업",
+              "와인25플러스"
+            ]
+          }
+        }
+      },
+      "Gs25ProductCandidate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "오리온)오감자50G"
+          },
+          "sellPrice": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1700
+          },
+          "matchedStoreCount": {
+            "type": "integer",
+            "example": 120
+          },
+          "inStockStoreCount": {
+            "type": "integer",
+            "example": 42
+          },
+          "totalStockQuantity": {
+            "type": "integer",
+            "example": 110
+          }
+        }
+      },
+      "Gs25StoreSearchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "stores": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Gs25Store"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "pageSize": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "Gs25ProductSearchResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "products": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Gs25ProductCandidate"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "pageSize": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "Gs25InventoryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "keyword": {
+                "type": "string",
+                "example": "오감자"
+              },
+              "product": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "nullable": true,
+                    "example": "오리온)오감자50G"
+                  },
+                  "sellPrice": {
+                    "type": "integer",
+                    "nullable": true,
+                    "example": 1700
+                  }
+                }
+              },
+              "inventory": {
+                "type": "object",
+                "properties": {
+                  "totalStoreCount": {
+                    "type": "integer",
+                    "example": 17684
+                  },
+                  "matchedStoreCount": {
+                    "type": "integer",
+                    "example": 100
+                  },
+                  "inStockStoreCount": {
+                    "type": "integer",
+                    "example": 35
+                  },
+                  "totalStockQuantity": {
+                    "type": "integer",
+                    "example": 90
+                  },
+                  "stores": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Gs25Store"
                     }
                   }
                 }
