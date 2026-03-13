@@ -113,6 +113,21 @@ describe('유틸 함수', () => {
     expect(filtered[0].storeCode).toBe('1');
   });
 
+  it('filterGs25StoresByKeyword는 공백이 다른 매장명도 매칭한다', () => {
+    const stores = [
+      {
+        storeCode: '1',
+        storeName: '안산주은점',
+        address: '경기 안산시 단원구 고잔1길 69',
+        propertyNames: [],
+      },
+    ] as never;
+
+    const filtered = filterGs25StoresByKeyword(stores, '안산 주은점');
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].storeCode).toBe('1');
+  });
+
   it('attachDistanceToGs25Stores는 거리 값을 추가한다', () => {
     const stores = [
       {

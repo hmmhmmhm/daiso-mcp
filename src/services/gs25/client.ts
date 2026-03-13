@@ -143,9 +143,24 @@ export function filterGs25StoresByKeyword(stores: Gs25Store[], keyword: string):
   }
 
   const normalized = trimmed.toLowerCase();
+  const noSpaceKeyword = normalized.replace(/\s+/g, '');
+  const keywordTokens = normalized.split(/\s+/).filter((token) => token.length > 0);
+
   return stores.filter((store) => {
     const target = `${store.storeName} ${store.address} ${store.propertyNames.join(' ')}`.toLowerCase();
-    return target.includes(normalized);
+    if (target.includes(normalized)) {
+      return true;
+    }
+
+    if (noSpaceKeyword.length > 0 && target.replace(/\s+/g, '').includes(noSpaceKeyword)) {
+      return true;
+    }
+
+    if (keywordTokens.length > 1) {
+      return keywordTokens.every((token) => target.includes(token));
+    }
+
+    return false;
   });
 }
 
