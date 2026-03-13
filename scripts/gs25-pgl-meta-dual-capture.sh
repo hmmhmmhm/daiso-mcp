@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOST="${FRIDA_HOST:-127.0.0.1:27042}"
+OUT_DIR=""
+SPAWN=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host)
+      HOST="$2"
+      shift 2
+      ;;
+    --out)
+      OUT_DIR="$2"
+      shift 2
+      ;;
+    --spawn)
+      SPAWN=1
+      shift
+      ;;
+    *)
+      echo "사용법: $0 [--host HOST:PORT] [--out DIR] [--spawn]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$OUT_DIR" ]]; then
+  TS="$(date +%Y%m%d-%H%M%S)"
+  OUT_DIR="captures/gs25-pgl-meta-dual-${TS}"
+fi
+
+mkdir -p "$OUT_DIR"
+RAW_LOG="${OUT_DIR}/frida-pgl-meta-dual-raw.log"
+JAVA_JSONL="${OUT_DIR}/gs25-pgl-meta-events.jsonl"
+NATIVE_JSONL="${OUT_DIR}/gs25-pgl-meta-native-trace-events.jsonl"
+
+echo "출력 디렉토리: $OUT_DIR"
+echo "Raw 로그: $RAW_LOG"
+echo "Java 이벤트 JSONL: $JAVA_JSONL"
+echo "Native 이벤트 JSONL: $NATIVE_JSONL"
+
+FRIDA_CMD=(
+  frida
+  -H "$HOST"
+  -l scripts/frida/gs25-pgl-meta-hook.js
+  -l scripts/frida/gs25-pgl-meta-native-trace.js
+)
+if [[ "$SPAWN" -eq 1 ]]; then
+  FRIDA_CMD+=(-f com.gsr.gs25)
+else
+  FRIDA_CMD+=(-n com.gsr.gs25)
+fi
+
+"${FRIDA_CMD[@]}" \
+  | tee "$RAW_LOG" \
+  | awk -v java_out="$JAVA_JSONL" -v native_out="$NATIVE_JSONL" '
+      /\[GS25_PGL_META\]/ {
+        idx = index($0, "{");
+        if (idx > 0) {
+          print substr($0, idx) >> java_out;
+          fflush(java_out);
+        }
+      }
+      /\[GS25_PGL_META_NATIVE\]/ {
+        idx = index($0, "{");
+        if (idx > 0) {
+          print substr($0, idx) >> native_out;
+          fflush(native_out);
+        }
+      }
+    '
+

@@ -323,11 +323,12 @@ daiso 인터랙티브 모드
 
 ### GS25
 
-- [GS25 네트워크 분석 결과](./docs/gs25-network-analysis-result.md)
-- [GS25 안드로이드 우회 캡처 가이드](./docs/gs25-android-bypass-capture-guide.md)
-- [GS25 앱 캡처 시도 로그 (2026-03-08)](./docs/gs25-app-capture-attempt-log-20260308.md)
-- [GS25 앱 스크래핑 준비 가이드](./docs/gs25-app-scraping-preparation-guide.md)
-- [GS25 세션 인계 문서 (2026-03-09)](./docs/gs25-session-handoff-20260309.md)
+- [GS25 API 리플레이 방법론 (최종)](./docs/gs25-final-replay-methodology.md)
+- [GS25 네트워크 분석 결과 (아카이브)](./docs/archive/gs25-network-analysis-result.md)
+- [GS25 안드로이드 우회 캡처 가이드 (아카이브)](./docs/archive/gs25-android-bypass-capture-guide.md)
+- [GS25 앱 캡처 시도 로그 (2026-03-08, 아카이브)](./docs/archive/gs25-app-capture-attempt-log-20260308.md)
+- [GS25 앱 스크래핑 준비 가이드 (아카이브)](./docs/archive/gs25-app-scraping-preparation-guide.md)
+- [GS25 세션 인계 문서 (2026-03-09, 아카이브)](./docs/archive/gs25-session-handoff-20260309.md)
 
 <br>
 

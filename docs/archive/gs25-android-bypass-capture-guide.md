@@ -74,6 +74,52 @@ frida -U -f com.gsr.gs25 -l scripts/frida/android-ssl-bypass.js
   - `okhttp3.CertificatePinner`
   - `TrustManagerImpl` 계열
 
+부트스트랩/헤더 경계 관찰용 보조 스크립트:
+
+```bash
+frida -U -f com.gsr.gs25 -l scripts/frida/gs25-b2c-bootstrap-probe.js
+```
+
+- 목적:
+  - `appKey`, `xTenantId`, `Authorization`, `deviceId`가
+    Java/Flutter 경계에서 언제 준비되는지 관찰
+  - `MethodChannel`, `SharedPreferences`, `Cronet/OkHttp` 헤더만 선별 로깅
+- 메모:
+  - Dart 내부 `ApiResponseEncrypter`를 직접 후킹하는 스크립트는 아님
+  - anti-Frida 환경에서 상대적으로 가벼운 보조 관찰용으로 사용
+
+WebView 리플레이 JSON 추출 스크립트:
+
+```bash
+frida -U -f com.gsr.gs25 -l scripts/frida/gs25-webview-replay-extract.js
+```
+
+- 출력 포맷:
+  - `[GS25_REPLAY] {"t":"markers|marker_click|center|level|touchable","ts":...,"payload":{...}}`
+- 용도:
+  - `setAllStoreMarker`, `onMarkerClick`, `setCenter`, `setLevel`, `setTouchable`를
+    구조화 JSON으로 추출해 리플레이 파라미터 생성에 바로 사용
+
+JSONL 자동 저장 러너:
+
+```bash
+scripts/gs25-webview-replay-capture.sh
+```
+
+- 산출물:
+  - `captures/gs25-replay-<timestamp>/frida-replay-raw.log`
+  - `captures/gs25-replay-<timestamp>/gs25-replay-events.jsonl`
+
+리플레이 파라미터 변환:
+
+```bash
+node scripts/gs25-replay-events-to-params.mjs \
+  captures/gs25-replay-<timestamp>/gs25-replay-events.jsonl
+```
+
+- 출력:
+  - `captures/gs25-replay-<timestamp>/gs25-replay-events.params.json`
+
 ### Step 3. 앱 시나리오 재현
 
 - 앱 실행

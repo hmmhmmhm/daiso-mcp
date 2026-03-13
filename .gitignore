@@ -153,3 +153,6 @@ vite.config.ts.timestamp-*
 .DS_Store
 Thumbs.db
 captures/
+tmp/
+**/__pycache__/
+*.pyc

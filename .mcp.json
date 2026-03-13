@@ -2,7 +2,19 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@executeautomation/playwright-mcp-server"]
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ]
+    },
+    "ghidra": {
+      "command": "python3",
+      "args": [
+        "/Users/hm/Documents/GitHub/daiso-mcp/scripts/ghidra/cli_mcp_ghidra.py"
+      ]
+    },
+    "frida": {
+      "command": "/Users/hm/Library/Python/3.14/bin/frida-mcp"
     }
   }
 }
