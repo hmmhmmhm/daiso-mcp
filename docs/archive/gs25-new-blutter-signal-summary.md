@@ -4,6 +4,7 @@
 - 생성 시각(로컬): `2026-03-13T11:21:15.810Z`
 
 ## 1) 핵심 신호
+
 - `ApiResponseEncryptionUtility::createEncrypter`: yes
 - `Encrypter::decrypt64`: yes
 - `Encrypter::encryptBytes`: yes
@@ -11,6 +12,7 @@
 - `getWoodongsUserInfo` 흔적: yes
 
 ## 2) 환경/상수 후보
+
 - `B2C_API_URL`
 - `B2C_REFRIGERATOR_API_URL`
 - `B2C_SUPERMARKET_API_URL`
@@ -18,6 +20,7 @@
 - `M_WOODONGS_WEB_URL`
 
 ## 3) 키 후보(길이>=32)
+
 - `gs25ReserveSpecialSellItemDetail`
 - `NUE97O2A2KxIANauwqJ6m8MXiz7KY7FN`
 - `TNldfnGlVWAsvE4VmZnw0jSK8+m/0eCT`
@@ -25,7 +28,9 @@
 - 총 3개 (문서에는 최대 20개만 표시)
 
 ## 4) 엔드포인트 후보
+
 ### refrigerator
+
 - `/api/bff/v1/ads/banners/refrigerator`
 - `/api/bff/v1/myRefrigerator`
 - `/api/bff/v1/myRefrigerator/service`
@@ -78,7 +83,7 @@
 - `/refrigerator/v1/shopping/special/sell/items/detail`
 
 ### woodongs/bff
+
 - `/api/bff/v4/auth/getWoodongsUserInfo`
 
 - 전체 URL 후보: 197개
-

@@ -39,16 +39,20 @@
 ## 3) 실패의 핵심 원인(우선순위)
 
 1. **타깃 트래픽 미유도(UI 상태 문제)**
+
 - 자동 탭이 검색/재고찾기 플로우를 시도하지만, 실제 `b2c` 호출 조건(주소/권한/상태 모달/세션 상태)까지 안정적으로 충족하지 못함.
 
 2. **관측 축이 PGL 쪽으로 치우침**
+
 - PGL 301/303 경로는 잘 잡히지만, 이것이 곧 재고 B2C API 평문 확보를 의미하지 않음.
 
 3. **네트워크 가시성 분산**
+
 - 일부 트래픽은 MITM 거부, 일부는 네이티브 hook에서만 보임.
 - 결과적으로 단일 수집면(프록시만/Java만)으로는 완전한 재현이 어려움.
 
 4. **실행 파이프라인 내 블로킹 리스크**
+
 - `replay-check` 단계 무기한 대기 가능성이 있어 전체 캠페인 처리량이 떨어졌음.
 - 2026-03-13에 `scripts/gs25-new-autonomous-run.sh`에 replay-check 120초 상한을 반영해 완화.
 
@@ -128,6 +132,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
   - 여전히 `msg-api/setConfig` 중심
 
 결론:
+
 - 현재 기준으로는 `keyword` 단독보다 `hybrid`가 계측 신호(튜플/PGL) 품질이 더 높음.
 - 그러나 두 케이스 모두 `b2c` 트리거에는 실패했으므로, 다음 라운드는 UI 상태분기(주소/권한/모달) 강화가 최우선임.
 
@@ -158,6 +163,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
   - 링크: https://github.com/nccgroup/ConscryptTrustUserCerts
 
 의미:
+
 - 현재 관측된 `certificate unknown`은 사용자 CA 신뢰 경로 자체 문제일 수 있으므로,
   Frida hook 이전에 시스템 신뢰경로를 먼저 안정화하는 것이 처리량 측면에서 유리함.
 
@@ -173,6 +179,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
   - 링크: https://gist.github.com/akabe1/ac6029bf2315c6d95ff2ad00fb7be1fc
 
 의미:
+
 - 현재 단일 스크립트(`android-ssl-bypass.js`)로 `woodongs`가 안 풀리므로,
   Flutter/Conscrypt/obfuscated fallback 포함 다중 스크립트 조합으로 교체 필요.
 
@@ -190,6 +197,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
     - `msg-api`/광고 트래픽 위주로만 수집
 
 해석:
+
 - 모듈 적용만으로 `woodongs` 평문 요청 전환은 확인되지 않음.
 - 최근 라운드는 아예 `woodongs` 트래픽 유도 자체가 약해져, 우회 효과 판정보다 **타깃 트리거 안정화(UI 상태/세션 조건)**가 다시 1순위가 됨.
 
@@ -212,6 +220,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
   - 결과: `isRoundSuccess=false`, `tupleCount=0`, `woodongs 신호 없음`, `nextAction=rotate_visibility_profile`
 
 의미:
+
 - 실행 인프라 안정성(무한 대기)은 개선됨.
 - 그러나 본질 병목은 그대로 `woodongs/b2c 트리거 재현성`이며, 우회 품질 이전에 UI 상태 분기 강화를 더 밀어야 함.
 

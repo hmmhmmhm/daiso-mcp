@@ -19,6 +19,7 @@
   - 다수의 `/refrigerator/v1/...` 경로
 
 자동 요약 파일:
+
 - `docs/gs25-new-blutter-signal-summary.md`
 
 ## 2) 대체 도구 웹 리서치 + 로컬 검증

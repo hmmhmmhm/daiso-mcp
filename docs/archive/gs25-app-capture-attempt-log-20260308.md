@@ -172,7 +172,7 @@ Frida 결과:
   - 원격 adb 재현 가능성
   - `msg-api` 평문 반복성
   - `b2c-*` / `external.wdg.data.woodongs.com` pcap 문자열 증거
-  를 재확인함
+    를 재확인함
 
 Datadog/정적 분석 후속:
 
@@ -271,7 +271,7 @@ adb 복구 후 추가 실기기 캡처 (2026-03-10):
     - 선택 매장 `안산중앙점`
     - 추천/인접 매장 `안산타워점`
     - `픽업주문` / `배달주문`
-    이 표시됨
+      이 표시됨
   - 이번 재호출은 이전 호출과 `request_e` 길이는 같고,
     `response_e` 길이만 더 큼 (`19820 -> 30400`)
 
@@ -1386,7 +1386,6 @@ Round 60: payload 안정성 집계(301/302/303, 2026-03-12):
   - `301`은 비교적 안정적 payload
   - `302/303`은 회전성(short token) 특성이 강함
 
-
 Round 61: 302/303 토큰의 301 본문 포함 여부 점검(2026-03-12):
 
 - 실행:
@@ -1399,7 +1398,6 @@ Round 61: 302/303 토큰의 301 본문 포함 여부 점검(2026-03-12):
 - 결론:
   - `302/303`은 `301` 본문 직접 파생 문자열이라기보다
     별도 경로에서 생성되는 토큰일 가능성이 높음
-
 
 Round 62: helper->meta 포인터 동일성 검증(2026-03-12):
 
@@ -1416,7 +1414,6 @@ Round 62: helper->meta 포인터 동일성 검증(2026-03-12):
 
 - 결론:
   - `227`은 helper 반환 후 추가 변환 단계가 존재할 가능성이 높음
-
 
 Round 63: code301 full payload 재수집 + protobuf 판정(2026-03-12):
 
@@ -1447,7 +1444,6 @@ Round 63: code301 full payload 재수집 + protobuf 판정(2026-03-12):
   - `301` 경로는 protobuf wrapper가 맞음
   - 핵심 본문은 field#4 bytes 내부로 이동해 추가 해제가 필요
 
-
 Round 64: blackboxprotobuf 무스키마 디코드 + mitmproxy 프로브(2026-03-12):
 
 - 추가:
@@ -1468,7 +1464,6 @@ Round 64: blackboxprotobuf 무스키마 디코드 + mitmproxy 프로브(2026-03-
 - 결론:
   - `blackboxprotobuf`로도 `301` wrapper 필드는 일관되게 복원됨
   - `302/303`은 protobuf가 아닌 short binary token 계열로 유지 판단
-
 
 Round 65: field#4(bytes) 재귀 분석 + Ghidra 교차확인(2026-03-12):
 
@@ -1497,7 +1492,6 @@ Round 65: field#4(bytes) 재귀 분석 + Ghidra 교차확인(2026-03-12):
 - 결론:
   - `301`은 protobuf wrapper 맞음
   - 핵심 본문은 field#4 내부에서 별도 변환된 blob으로 판단
-
 
 Round 66: 301 간접 분기 타깃 런타임 고정(2026-03-12):
 

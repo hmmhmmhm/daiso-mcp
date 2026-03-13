@@ -21,17 +21,20 @@
 ## 먼저 할 일 (필수)
 
 1. `frida-mcp` 실행 가능 여부 확인
+
 - `command -v frida-mcp || python3 -m pip show frida-mcp`
 - 없으면 설치:
   - `python3 -m pip install frida-mcp`
 
 2. 디바이스/Frida 연결 확인
+
 - `adb devices -l`
 - `adb shell ps -A | rg com.gsr.gs25`
 - `adb forward tcp:27042 tcp:27042`
 - `frida-ps -H 127.0.0.1:27042 -ai | rg -i 'com\\.gsr\\.gs25|우리동네GS'`
 
 3. 자동 캡처 1회 실행
+
 - `scripts/gs25-webview-replay-capture.sh --host 127.0.0.1:27042`
 - 실행 중 앱에서:
   - 재고찾기 진입
@@ -39,6 +42,7 @@
   - 목록보기 -> 매장 선택 -> 지도보기
 
 4. 변환 실행
+
 - `node scripts/gs25-replay-events-to-params.mjs <events.jsonl 경로>`
 
 ## 이번 턴의 산출물 목표

@@ -46,6 +46,7 @@ GET /api/bff/v2/store/stock
 ```
 
 **요청 헤더:**
+
 ```
 Authorization: Bearer {JWT}
 x-device-id: {device-id}
@@ -61,6 +62,7 @@ Content-Type: application/json
 | pageCount | 페이지당 항목 수 | 100 |
 
 **응답 예시:**
+
 ```json
 {
   "stores": [{
@@ -108,11 +110,11 @@ Content-Type: application/json
 
 ### 후킹 지점 (libapp.so 오프셋)
 
-| 함수 | 오프셋 | 용도 |
-|-----|--------|------|
-| `_encrypt` | 0xa98420 | 요청 암호화 |
-| `_decrypt` | 0xb07064 | 응답 복호화 |
-| `Encrypter::encrypt` | 0xa984c4 | 실제 암호화 |
+| 함수                   | 오프셋   | 용도          |
+| ---------------------- | -------- | ------------- |
+| `_encrypt`             | 0xa98420 | 요청 암호화   |
+| `_decrypt`             | 0xb07064 | 응답 복호화   |
+| `Encrypter::encrypt`   | 0xa984c4 | 실제 암호화   |
 | `Encrypter::decrypt64` | 0xa9b50c | Base64 복호화 |
 
 ### 캡처된 요청 구조
@@ -161,11 +163,11 @@ GET /api/bff/v1/store?storeCode={storeCode}&serviceCode=01
 
 ## 확인된 API 요약
 
-| API | 경로 | 상태 |
-|-----|------|------|
-| 재고 조회 | `/api/bff/v2/store/stock` | ✅ |
-| 내 냉장고 | `/api/bff/v1/myRefrigerator` | ✅ |
-| 매장 검색 | `/api/bff/v1/store` | ✅ |
+| API       | 경로                         | 상태 |
+| --------- | ---------------------------- | ---- |
+| 재고 조회 | `/api/bff/v2/store/stock`    | ✅   |
+| 내 냉장고 | `/api/bff/v1/myRefrigerator` | ✅   |
+| 매장 검색 | `/api/bff/v1/store`          | ✅   |
 
 ## 다음 단계
 

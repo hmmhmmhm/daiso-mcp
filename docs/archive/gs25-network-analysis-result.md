@@ -1788,7 +1788,7 @@ Datadog/정적 분석 추가 단서:
     - 선택 매장 `GS25 안산중앙점`
     - 인접 매장 `GS25 안산타워점`
     - `픽업주문` / `배달주문` 버튼
-    가 노출됨
+      가 노출됨
   - 해석:
     - 매장 선택 후 상세 표시도 전용 상세 API보다는
       `store/stock` 재호출 결과를 바탕으로 갱신되는 구조일 가능성이 높음
@@ -2428,7 +2428,7 @@ Ghidra 병행 분석:
   - `tmp/gs25-apk/split_config.arm64_v8a.apk`에서
     - `tmp/gs25-apk/lib/libapp.so`
     - `tmp/gs25-apk/lib/libnms.so`
-    를 추출
+      를 추출
 
 - `libapp.so` 문자열 기반 단서
   - 모델/요청:
@@ -2585,7 +2585,7 @@ Ghidra 병행 분석:
 - 다음 단계는
   - Cronet 네이티브 계층(`libcronet`/`libflutter`) 전송 버퍼 후킹 또는
   - Dart runtime 함수 경계(직렬화/암복호화) 포인트 식별
-  로 이동하는 것이 타당
+    로 이동하는 것이 타당
 
 ## 41) 2026-03-12 네이티브 SSL 버퍼 후킹(spawn) 적용
 
@@ -3253,7 +3253,6 @@ Ghidra 병행 분석:
 - `301`은 상대적으로 안정적인 본문(payload) 성향
 - `302/303`은 세션/시점에 따라 자주 바뀌는 토큰 계열 가능성이 높음
 
-
 ## 60) 2026-03-12 `302/303` 18바이트 토큰의 `301` 본문 포함 여부 확인
 
 실행:
@@ -3269,7 +3268,6 @@ Ghidra 병행 분석:
 
 - `302/303` 토큰은 `301` 본문에 단순 포함되는 파생값보다는
   별도 경로에서 생성/참조되는 식별자일 가능성이 높음
-
 
 ## 61) 2026-03-12 helper 반환 포인터와 meta 반환 포인터 동일성 검증
 
@@ -3295,7 +3293,6 @@ Ghidra 병행 분석:
 
 - `301/302/303/224`는 타깃 helper 반환 객체가 최종 반환 객체와 동일
 - `227`은 helper 반환 이후 `meta_dispatch` 내부에서 추가 변환(문자열화/재포장) 경로가 존재할 가능성이 높음
-
 
 ## 62) 2026-03-12 `code=301` full payload 재수집 + protobuf 여부 확인
 
@@ -3335,7 +3332,6 @@ Ghidra 병행 분석:
 - `GS25 meta code=301` 반환은 평문 protobuf wire-format wrapper로 볼 수 있음
 - 단, 핵심 본문은 field #4(bytes)에 실려 있으며 내부는 여전히 고엔트로피(암호화/난독화) 구간일 가능성이 높음
 
-
 ## 63) 2026-03-12 `blackboxprotobuf` 무스키마 디코드 검증 + mitmproxy 프로브 추가
 
 추가:
@@ -3365,7 +3361,6 @@ Ghidra 병행 분석:
 - 질문했던 "protobuf인가?"에 대해:
   - `code=301` 경로는 protobuf wrapper 사용이 맞음
   - 단, payload 본체는 protobuf 내부 bytes로 포장된 별도 포맷(암호문/압축문/서브프레임)일 가능성이 큼
-
 
 ## 64) 2026-03-12 `code=301 field#4(bytes)` 재귀 분석 + Ghidra 교차확인
 
@@ -3406,7 +3401,7 @@ Ghidra 교차확인:
   - `FUN_0011c31c(...)` (상수/버퍼 준비)
   - `FUN_00115f54(...)` (숫자 파싱 루틴)
   - `FUN_0013d5b4(indirect jump)` 호출
-  로 이어지는 난독화 dispatcher 형태
+    로 이어지는 난독화 dispatcher 형태
 
 해석:
 
@@ -3414,7 +3409,6 @@ Ghidra 교차확인:
 - 실제 핵심 payload는 field `4` 내부에서 별도 변환(암호화/난독화)된 blob으로 보임
 - 다음 우선순위는 `FUN_00128654` 하위 간접 분기 대상(점프 테이블) 런타임 해석과,
   `227` AES 유사 경로와의 키/입력 연계를 맞추는 것
-
 
 ## 65) 2026-03-12 `FUN_00128654` 간접 분기 타깃 런타임 고정
 
@@ -3454,7 +3448,6 @@ Ghidra 교차확인:
 - 기존의 `FUN_00128654`는 "최종 생성자"가 아니라 간접 디스패처 역할이 강함
 - 실제 payload 조립 핵심은 `FUN_001287a0` 계열로 좁혀졌고,
   다음 분석 타깃은 `FUN_0012811c`의 입력/출력 버퍼 계측으로 확정 가능
-
 
 ## 66) 2026-03-12 `301` 바이트 경로 완전 연결 + 변동성 분석
 
@@ -3505,7 +3498,6 @@ Ghidra 교차확인:
 - 런 간에는 입력 토큰(`in field#2`) 변화에 따라 `field#4` tail이 크게 변함
 - 완전 재생성(replay) 가능성은 입력 토큰 생명주기/유효성 검증 규칙 확인이 필요
 
-
 ## 67) 2026-03-12 token(field#2) ↔ out(field#4) 상관 집계
 
 추가:
@@ -3515,7 +3507,7 @@ Ghidra 교차확인:
     - `in.field#2`(토큰)
     - `out(field#4)` 해시
     - wrapper 해시 / `f5`(epoch sec)
-    를 추출/그룹화
+      를 추출/그룹화
 
 실행:
 
@@ -3539,7 +3531,6 @@ Ghidra 교차확인:
 - 즉, 301 재현성의 핵심 입력은 `field#2` 토큰이며,
   실제 replay 가능 여부는 이 토큰의 서버 측 유효시간/1회성 정책에 좌우됨
 
-
 ## 68) 2026-03-12 `field#2` 토큰 발급 소스(302 vs 303) 매핑
 
 추가:
@@ -3548,7 +3539,7 @@ Ghidra 교차확인:
   - 각 캡처 디렉터리의
     - `gs25-pgl-meta-events.jsonl` (`code=302/303` 반환 토큰)
     - `gs25-pgl-meta-301-pipeline-events.jsonl` (`fn2ae64 in.field#2` 소비 토큰)
-    를 매핑
+      를 매핑
 
 실행:
 
@@ -3574,7 +3565,6 @@ Ghidra 교차확인:
 - `301 field#2`의 직접 공급원은 현재 관측상 `code=303` 반환 토큰
 - `code=302` 토큰은 별도 흐름(다른 요청 경로)으로 보이며, 301 입력 토큰과 분리됨
 - 따라서 replay 실험의 1차 제어변수는 `303` 토큰 재사용 정책(유효시간/1회성)임
-
 
 ## 69) 2026-03-12 강제 token override 실험(능동 검증)
 
@@ -3619,7 +3609,6 @@ Ghidra 교차확인:
   - `seq2 f5=1773292942`, `wrapperSha12=7fa4a9aff9dc`
 - 즉, wrapper 재사용 시에는 `f5` 갱신 여부를 함께 고려해야 함
 
-
 ## 70) 2026-03-12 replay tuple exporter 추가
 
 추가:
@@ -3642,7 +3631,6 @@ Ghidra 교차확인:
 
 - mitmproxy/재전송 실험에서 바로 사용할 수 있는
   `token + field#4 + wrapper` 정합 데이터셋 제공
-
 
 ## 71) 2026-03-12 mitmproxy replay injector 추가
 
@@ -3675,7 +3663,6 @@ mitmdump -s scripts/mitm/gs25_301_replay_injector.py \
 
 - 주입 성공 시 `GS25_REPLAY_APPLIED` JSON 로그 출력
   - `before_len`, `after_len`, `mode`, `token` 포함
-
 
 ## 72) 2026-03-12 replay 캠페인 실행/요약 자동화
 
@@ -3710,7 +3697,6 @@ node scripts/gs25-301-replay-result-summary.mjs \
 - token별 결과 건수
 - 첫/마지막 `GS25_REPLAY_RESULT` 샘플
 
-
 ## 73) 2026-03-12 batch campaign 자동화
 
 추가:
@@ -3743,7 +3729,6 @@ node scripts/gs25-301-replay-batch-summary.mjs \
 - tuple별 합계(`byTuple`)
 - 전체 HTTP status 분포(`statusCounts`)
 
-
 ## 74) 2026-03-12 no-flow 원인 확정 + 러너 자동화 보강
 
 실측:
@@ -3763,7 +3748,6 @@ node scripts/gs25-301-replay-batch-summary.mjs \
   - Frida PID attach 자동화(우회 스크립트 병행 주입)
 - `scripts/gs25-301-replay-batch-run.sh`
   - `--auto-flow`, `--device`, `--proxy-*`, `--flow-script` 옵션 연동
-
 
 ## 75) 2026-03-12 pangle host 갭 확인 + 기본 host 확장
 
@@ -3790,7 +3774,6 @@ node scripts/gs25-301-replay-batch-summary.mjs \
   `tms31.gsshop.com/msg-api/*`만 관측
 - 동일 시점 Frida에는 `code=224/301` 이벤트가 관측된 런이 있어
   pangle 경로는 MITM 프록시 경유가 아닌 별도 경로(직접 TLS) 가능성이 높음
-
 
 ## 76) 2026-03-12 Conscrypt direct-write 경로 식별
 
@@ -3829,7 +3812,6 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 - 그러나 현재 후커 레벨에서는 HTTP 요청 라인(`GET/POST ...`) 형태로 복원되지 않음
   - 즉, `get_ads` 요청은 기존 HTTP 텍스트 파서 기준으로는 식별 불가
   - 다음 단계는 direct buffer 원문(hex) 추출 안정화 후 프레임 구조 분석 필요
-
 
 ## 77) 2026-03-12 direct buffer 읽기 복구 + 교체 이벤트 검증
 
@@ -3872,7 +3854,6 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 - 아직 `get_ads` 경로 직접 교체/응답상태 판정까지는 미완료
   - 다음 단계는 `get_ads` 경로가 뜨는 구간에서 동일 방식으로 교체/결과 비교
 
-
 ## 78) 2026-03-12 direct replay 결과 비교(손상 vs 동일 hex)
 
 추가:
@@ -3884,17 +3865,20 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 
 시나리오:
 
-1) baseline
+1. baseline
+
 - 로그: `captures/gs25-pangle-conscrypt-r19-baseline.log`
 - 결과: HTTP `200`만 관측
 
-2) 손상 교체(replay corrupt)
+2. 손상 교체(replay corrupt)
+
 - 설정: `match_len=1690`, `hex=00`
 - 로그: `captures/gs25-pangle-conscrypt-r18-replay.log`
 - 결과: `direct_replay_applied` 후 HTTP `400` 포함
   - `HTTP/1.0 400 Bad Request` 관측
 
-3) 동일 full hex 재주입(replay samehex)
+3. 동일 full hex 재주입(replay samehex)
+
 - source:
   - `captures/gs25-pangle-conscrypt-r20-full1690.log`의 `len=1690` `hexFull`
 - 로그: `captures/gs25-pangle-conscrypt-r21-replay-samehex.log`
@@ -3909,7 +3893,6 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 - 즉, 현재 단계에서 `ssdk/sd/token` direct 프레임은
   길이 매칭 기반 재주입 실험에 대해 **부분 재현성**을 보임
 - 다만 `get_ads` 경로의 동일한 수준 재현성은 아직 별도 검증이 필요함
-
 
 ## 79) 2026-03-12 protobuf 여부 점검(로그 휴리스틱 + Ghidra 교차확인)
 
@@ -3953,7 +3936,6 @@ Ghidra 교차확인:
 - `JNI_OnLoad` 및 인접 등록 루틴은 난독화/점프테이블 중심으로 즉시 의미있는 메서드명 복원이 어려움
 - 정적 단서 + 동적 wire 패턴을 합치면, pangle `ssdk` 경로는 protobuf(또는 protobuf 유사 TLV) 컨테이너를 사용할 가능성이 높음
 
-
 ## 80) 2026-03-12 UI 자동 플로우 재실행(r22) + get_ads 재확인
 
 실행:
@@ -3989,7 +3971,6 @@ protobuf 점검(r22):
 - 결론은 79와 동일:
   - `ssdk` 초기 프레임 protobuf 가능성 높음
   - 전체 본문은 암호화/압축 등으로 단일 평문 protobuf로 즉시 확정 불가
-
 
 ## 81) 2026-03-12 `/ssdk/v2/r` 직후 선택 변조 실험(after-path arm)
 
@@ -4048,7 +4029,6 @@ scripts/gs25-pangle-conscrypt-replay-probe.sh \
   프레임별로 서버 검증 민감도가 다르거나 재시도/복구 경로가 있는 것으로 보임
 - `get_ads` 미관측 문제는 여전히 남아 있으며, 광고 노출 타이밍 전용 UI 시나리오가 다음 우선순위
 
-
 ## 82) 2026-03-12 tiktokpangle 경로 추가 식별 + path 필터 확장 검증
 
 재탐색 결과:
@@ -4079,7 +4059,6 @@ scripts/gs25-pangle-conscrypt-replay-probe.sh \
 - 기존 분석 축(`wf-sg`) 외에 `tiktokpangle.us` 경로가 실제 광고 설정/전략 fetch에 관여함이 확인됨
 - `get_ads` 재현 전에 선행 설정 경로를 안정적으로 캡처/리플레이할 기반이 생김
 
-
 ## 83) 2026-03-12 settings/strategies body-replace 시도(r27/r28) 결과
 
 목적:
@@ -4102,7 +4081,6 @@ scripts/gs25-pangle-conscrypt-replay-probe.sh \
 
 - settings/strategies 요청이 UI 재현 플로우에서 비결정적으로 발생함
 - 변조 검증을 위해서는 “요청 발생이 보일 때만 arm/replay 적용”하는 트리거형 러너(이벤트 기반)가 필요
-
 
 ## 84) 2026-03-12 get_ads 헌트 자동화 스크립트 추가 + 오탐 수정
 
@@ -4137,7 +4115,6 @@ scripts/gs25-pangle-path-hunt.sh \
 - `get_ads` 실요청은 아직 미관측
 - 반면 `settings/strategies/stats/v2r` 경로는 반복 관측 가능
 
-
 ## 85) 2026-03-12 idle-flow get_ads 헌트(3회) 결과
 
 추가:
@@ -4165,7 +4142,6 @@ scripts/gs25-pangle-path-hunt.sh \
 - `get_ads`는 단순 앱 실행/대기만으로는 재현되지 않음
 - 특정 광고 슬롯 노출 또는 WebView/화면 조건이 있어야 호출될 가능성이 큼
 
-
 ## 86) 2026-03-12 settings 헌트(3회) 비재현 구간 확인
 
 실행:
@@ -4188,7 +4164,6 @@ scripts/gs25-pangle-path-hunt.sh \
 
 - `settings/strategies`도 세션/타이밍에 따라 비결정적으로 발생
 - 현재 가장 안정적인 리플레이 실험 타깃은 여전히 `/ssdk/v2/r` 및 `ssdk/sd/token`
-
 
 ## 87) 2026-03-12 get_ads 하이브리드 헌트(6회) 결과
 
@@ -4224,7 +4199,6 @@ scripts/gs25-pangle-path-hunt.sh \
 - 현재 단기 실험에서 안정적으로 잡히는 pangle 경로는 `v2r`/`stats`로 수렴
 - 따라서 당장 리플레이 검증은 `ssdk` 경로 중심으로 진행하고, `get_ads`는 장시간/이벤트기반 헌트가 필요
 
-
 ## 88) 2026-03-12 path-len 집계 + `/ssdk/v2/r` 611 프레임 변조 검증
 
 추가:
@@ -4243,11 +4217,13 @@ scripts/gs25-pangle-path-hunt.sh \
 
 실험:
 
-1) baseline
+1. baseline
+
 - 로그: `captures/gs25-pangle-conscrypt-r31-baseline-hybrid.log`
 - 상태: `200`만 관측
 
-2) replay (`match_len=611`, `hex=00`)
+2. replay (`match_len=611`, `hex=00`)
+
 - 로그: `captures/gs25-pangle-conscrypt-r32-replay-v2r-611to00.log`
 - 이벤트:
   - `direct_replay_applied` 1건 (`oldLen=611 -> newLen=1`)
@@ -4262,7 +4238,6 @@ scripts/gs25-pangle-path-hunt.sh \
 - 이전 `ssdk/sd/token(1690)` 손상 시 400 관측 결과와 일관됨
 - 즉, `ssdk` 경로는 현재 재현 가능한 “손상 시 실패” 증거가 충분함
 
-
 ## 89) 2026-03-13 `/ssdk/v2/r` 611 프레임 동일재주입(samehex) 검증
 
 목적:
@@ -4272,18 +4247,21 @@ scripts/gs25-pangle-path-hunt.sh \
 
 절차:
 
-1) baseline에서 `len=611` full hex 확보
+1. baseline에서 `len=611` full hex 확보
+
 - 로그: `captures/gs25-pangle-conscrypt-r33-baseline-full611.log`
 - `PANGLE_FULL_DUMP_LEN=611` 설정으로 `hexFull` 추출
 - 저장: `captures/gs25-pangle-611-fullhex.txt`
 
-2) samehex replay 실행
+2. samehex replay 실행
+
 - 로그: `captures/gs25-pangle-conscrypt-r34-replay-v2r-611-samehex.log`
 - 이벤트:
   - `direct_replay_applied` 1건
   - `oldLen=611 -> newLen=611`
 
-3) 3-way 비교 산출
+3. 3-way 비교 산출
+
 - 파일: `captures/gs25-pangle-conscrypt-compare-r31-r32-r34.json`
   - baseline(r31): `200`만
   - corrupt611(r32): `400` 포함
@@ -4296,16 +4274,17 @@ scripts/gs25-pangle-path-hunt.sh \
   - 동일 원본 재주입 시 정상(200) 유지
 - 따라서 해당 프레임은 “변조 민감 + 동일재주입 재현 가능” 구간으로 확정
 
-
 ## 90) 2026-03-13 최종 마무리(전체 시도 요약)
 
 이번 세션 범위에서 수행한 핵심 시도군:
 
-1) direct 경로 식별/기반 구축
+1. direct 경로 식별/기반 구축
+
 - Conscrypt direct write/read 후킹
 - MITM 비가시 트래픽의 direct 경로 관측 가능화
 
-2) 재현 가능한 replay 검증
+2. 재현 가능한 replay 검증
+
 - `ssdk/sd/token` 1690:
   - 손상 `-> 400`
   - samehex `-> 200`
@@ -4313,11 +4292,13 @@ scripts/gs25-pangle-path-hunt.sh \
   - 손상 `-> 400`
   - samehex `-> 200`
 
-3) protobuf 가능성 점검
+3. protobuf 가능성 점검
+
 - `/ssdk/v2/r` 초기 청크에서 protobuf wire-key 패턴 반복 관측
 - 전체 평문 protobuf 단일 메시지 확정은 보류(암호화/압축 구간 혼재)
 
-4) get_ads / settings / strategies 재현 헌트
+4. get_ads / settings / strategies 재현 헌트
+
 - `get_ads`:
   - idle 3회 + hybrid 6회 모두 미관측
 - `settings/strategies`:
