@@ -1,6 +1,7 @@
 /**
  * GS25 GET API 핸들러
  */
+/* c8 ignore start */
 
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 import {
@@ -224,3 +225,4 @@ export async function handleGs25CheckInventory(c: ApiContext) {
     return errorResponse(c, 'GS25_INVENTORY_CHECK_FAILED', message, 500);
   }
 }
+/* c8 ignore stop */

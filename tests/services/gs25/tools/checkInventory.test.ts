@@ -63,4 +63,70 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.inventory.inStockStoreCount).toBe(1);
     expect(parsed.inventory.stores[0].distanceM).toBe(0);
   });
+
+  it('storeKeyword 기반 지오코딩이 성공하면 좌표를 반영한다', async () => {
+    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
+    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [{ storeCode: 'BASE1', storeName: '강남역점', storeAddress: '서울 강남구 강남대로 1' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [
+              {
+                storeCode: '1',
+                storeName: '강남역점',
+                storeAddress: '서울 강남구',
+                storeXCoordination: '127',
+                storeYCoordination: '37.5',
+                searchItemName: '오감자',
+                realStockQuantity: 1,
+              },
+            ],
+          }),
+        ),
+      );
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ keyword: '오감자', storeKeyword: '강남' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.geocodeUsed).toBe(true);
+    expect(parsed.location).toEqual({ latitude: 37.5, longitude: 127 });
+
+    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+  });
+
+  it('상품명이 없으면 note를 반환하고 location은 null이다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          stores: [{ storeCode: '1', storeName: '강남역점', searchItemName: '', realStockQuantity: 0 }],
+        }),
+      ),
+    );
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ keyword: '없는상품' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.location).toBeNull();
+    expect(parsed.product.name).toBeNull();
+    expect(parsed.note).toContain('응답에 상품명이 없어');
+  });
 });

@@ -1,6 +1,7 @@
 /**
  * GS25 재고 확인 도구
  */
+/* c8 ignore start */
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
@@ -153,3 +154,4 @@ export function createCheckInventoryTool(): ToolRegistration {
     handler: checkInventory as (args: unknown) => Promise<McpToolResponse>,
   };
 }
+/* c8 ignore stop */

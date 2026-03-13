@@ -76,6 +76,15 @@ describe('fetchGs25Stores', () => {
     expect(cached.cacheHit).toBe(true);
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
+
+  it('storeCode 파라미터를 포함해 요청할 수 있다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ stores: [{ storeCode: 'VE463', storeName: 'A' }] })));
+
+    await fetchGs25Stores({ storeCode: 'VE463', useCache: false });
+
+    const calledUrl = String(mockFetch.mock.calls[0][0]);
+    expect(calledUrl).toContain('storeCode=VE463');
+  });
 });
 
 describe('유틸 함수', () => {
@@ -149,6 +158,25 @@ describe('유틸 함수', () => {
     expect(sorted[0].storeCode).toBe('2');
   });
 
+  it('sortGs25Stores는 거리/재고가 같으면 이름순으로 정렬한다', () => {
+    const sorted = sortGs25Stores([
+      {
+        storeCode: '1',
+        storeName: '나',
+        distanceM: 100,
+        realStockQuantity: 1,
+      },
+      {
+        storeCode: '2',
+        storeName: '가',
+        distanceM: 100,
+        realStockQuantity: 1,
+      },
+    ] as never);
+
+    expect(sorted[0].storeCode).toBe('2');
+  });
+
   it('extractGs25ProductCandidates는 상품 후보를 집계한다', () => {
     const products = extractGs25ProductCandidates([
       { searchItemName: '오감자', searchItemSellPrice: 1700, realStockQuantity: 3 },
@@ -165,6 +193,15 @@ describe('유틸 함수', () => {
         totalStockQuantity: 3,
       }),
     );
+  });
+
+  it('extractGs25ProductCandidates는 동일 재고 조건에서 이름순 정렬한다', () => {
+    const products = extractGs25ProductCandidates([
+      { searchItemName: '나상품', searchItemSellPrice: 1000, realStockQuantity: 1 },
+      { searchItemName: '가상품', searchItemSellPrice: 1000, realStockQuantity: 1 },
+    ] as never);
+
+    expect(products[0].name).toBe('가상품');
   });
 });
 
@@ -188,6 +225,47 @@ describe('geocodeGs25Address', () => {
 
   it('api key가 없으면 null을 반환한다', async () => {
     const result = await geocodeGs25Address('서울 강남구');
+    expect(result).toBeNull();
+  });
+
+  it('주소가 비어 있으면 null을 반환한다', async () => {
+    const result = await geocodeGs25Address('   ', {
+      googleMapsApiKey: 'test-key',
+    });
+    expect(result).toBeNull();
+  });
+
+  it('status가 OK가 아니면 null을 반환한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'ZERO_RESULTS', results: [] })));
+
+    const result = await geocodeGs25Address('없는 주소', {
+      googleMapsApiKey: 'test-key',
+    });
+    expect(result).toBeNull();
+  });
+
+  it('결과 location이 없으면 null을 반환한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'OK', results: [{}] })));
+
+    const result = await geocodeGs25Address('서울 강남구', {
+      googleMapsApiKey: 'test-key',
+    });
+    expect(result).toBeNull();
+  });
+
+  it('좌표가 0이면 null을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 'OK',
+          results: [{ geometry: { location: { lat: 0, lng: 0 } } }],
+        }),
+      ),
+    );
+
+    const result = await geocodeGs25Address('서울 강남구', {
+      googleMapsApiKey: 'test-key',
+    });
     expect(result).toBeNull();
   });
 });

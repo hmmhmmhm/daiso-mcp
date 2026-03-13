@@ -50,4 +50,21 @@ describe('createSearchProductsTool', () => {
     expect(parsed.products[0].name).toBe('오감자');
     expect(parsed.products[0].matchedStoreCount).toBe(2);
   });
+
+  it('상품 후보가 없으면 안내 note를 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          stores: [{ storeCode: '1', searchItemName: '', realStockQuantity: 0 }],
+        }),
+      ),
+    );
+
+    const tool = createSearchProductsTool();
+    const result = await tool.handler({ keyword: '없는상품', limit: 5 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.count).toBe(0);
+    expect(parsed.note).toContain('응답 내 상품 메타데이터');
+  });
 });

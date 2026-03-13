@@ -8,11 +8,13 @@ import {
   handleGs25FindStores,
   handleGs25SearchProducts,
 } from '../../src/api/gs25Handlers.js';
+import { clearGs25StoresCache } from '../../src/services/gs25/client.js';
 
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   mockFetch.mockReset();
+  clearGs25StoresCache();
   vi.stubGlobal('fetch', mockFetch);
 });
 
@@ -54,6 +56,62 @@ describe('handleGs25FindStores', () => {
       }),
     );
   });
+
+  it('좌표가 없고 keyword가 있으면 지오코딩을 시도한다', async () => {
+    const ctx = createMockContext({ keyword: '강남' });
+    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
+      );
+
+    await handleGs25FindStores(ctx);
+
+    const payload = (ctx.json as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+      data: { geocodeUsed: boolean; location: { latitude: number; longitude: number } };
+    };
+    expect(payload.data.geocodeUsed).toBe(true);
+    expect(payload.data.location).toEqual({ latitude: 37.5, longitude: 127 });
+  });
+
+  it('매장 검색 중 예외 발생 시 에러를 반환한다', async () => {
+    mockFetch.mockRejectedValue(new Error('store fail'));
+
+    const ctx = createMockContext({ keyword: '강남' });
+    await handleGs25FindStores(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'GS25_STORE_SEARCH_FAILED', message: 'store fail' },
+      }),
+      500,
+    );
+  });
+
+  it('매장 검색 중 알 수 없는 예외도 처리한다', async () => {
+    mockFetch.mockRejectedValue(undefined);
+
+    const ctx = createMockContext({ keyword: '강남' });
+    await handleGs25FindStores(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'GS25_STORE_SEARCH_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
+      }),
+      500,
+    );
+  });
 });
 
 describe('handleGs25SearchProducts', () => {
@@ -82,6 +140,36 @@ describe('handleGs25SearchProducts', () => {
       expect.objectContaining({
         success: true,
       }),
+    );
+  });
+
+  it('상품 검색 중 예외 발생 시 에러를 반환한다', async () => {
+    mockFetch.mockRejectedValue(new Error('product fail'));
+
+    const ctx = createMockContext({ keyword: '오감자' });
+    await handleGs25SearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'GS25_PRODUCT_SEARCH_FAILED', message: 'product fail' },
+      }),
+      500,
+    );
+  });
+
+  it('상품 검색 중 알 수 없는 예외를 처리한다', async () => {
+    mockFetch.mockRejectedValue(undefined);
+
+    const ctx = createMockContext({ keyword: '오감자' });
+    await handleGs25SearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'GS25_PRODUCT_SEARCH_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
+      }),
+      500,
     );
   });
 });
@@ -126,6 +214,91 @@ describe('handleGs25CheckInventory', () => {
           inventory: expect.objectContaining({ inStockStoreCount: 1 }),
         }),
       }),
+    );
+  });
+
+  it('storeKeyword + 지오코딩 성공 분기를 처리한다', async () => {
+    const ctx = createMockContext({ keyword: '오감자', storeKeyword: '강남' });
+    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [{ storeCode: '1', storeName: '강남역점', searchItemName: '오감자', realStockQuantity: 1 }],
+          }),
+        ),
+      );
+
+    await handleGs25CheckInventory(ctx);
+
+    const payload = (ctx.json as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+      data: { geocodeUsed: boolean; location: { latitude: number; longitude: number } };
+    };
+    expect(payload.data.geocodeUsed).toBe(true);
+    expect(payload.data.location).toEqual({ latitude: 37.5, longitude: 127 });
+  });
+
+  it('storeKeyword가 있어도 지오코딩 실패 시 location은 null이다', async () => {
+    const ctx = createMockContext({ keyword: '오감자', storeKeyword: '강남' });
+    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ZERO_RESULTS', results: [] })))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: '강남역점', searchItemName: '', realStockQuantity: 0 }] })),
+      );
+
+    await handleGs25CheckInventory(ctx);
+
+    const payload = (ctx.json as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+      data: { geocodeUsed: boolean; location: null };
+    };
+    expect(payload.data.geocodeUsed).toBe(false);
+    expect(payload.data.location).toBeNull();
+  });
+
+  it('재고 검색 중 알 수 없는 예외를 처리한다', async () => {
+    mockFetch.mockRejectedValue(undefined);
+
+    const ctx = createMockContext({ keyword: '오감자' });
+    await handleGs25CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'GS25_INVENTORY_CHECK_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
+      }),
+      500,
+    );
+  });
+
+  it('재고 검색 중 Error 예외를 처리한다', async () => {
+    mockFetch.mockRejectedValue(new Error('inventory fail'));
+
+    const ctx = createMockContext({ keyword: '오감자' });
+    await handleGs25CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'GS25_INVENTORY_CHECK_FAILED', message: 'inventory fail' },
+      }),
+      500,
     );
   });
 });

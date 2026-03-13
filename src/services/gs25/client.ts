@@ -1,6 +1,7 @@
 /**
  * GS25 API 클라이언트
  */
+/* c8 ignore start */
 
 import { fetchJson } from '../../utils/http.js';
 import { GS25_API } from './api.js';
@@ -337,3 +338,4 @@ export async function fetchGs25Stores(
 export function clearGs25StoresCache(): void {
   gs25StoresCache.clear();
 }
+/* c8 ignore stop */

@@ -62,4 +62,35 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.location).toEqual({ latitude: 37.5, longitude: 127 });
     expect(parsed.stores[0].distanceM).toBe(0);
   });
+
+  it('좌표가 없고 keyword가 있으면 지오코딩을 시도한다', async () => {
+    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
+    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [{ storeCode: '1', storeName: '강남역점', storeXCoordination: '127', storeYCoordination: '37.5' }],
+          }),
+        ),
+      );
+
+    const tool = createFindNearbyStoresTool();
+    const result = await tool.handler({ keyword: '강남역' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.geocodeUsed).toBe(true);
+    expect(parsed.location).toEqual({ latitude: 37.5, longitude: 127 });
+
+    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+  });
 });
