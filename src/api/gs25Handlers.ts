@@ -7,6 +7,7 @@ import { type ApiContext, errorResponse, successResponse } from './response.js';
 import {
   attachDistanceToGs25Stores,
   extractGs25ProductCandidates,
+  fetchGs25NormalizedKeyword,
   fetchGs25Stores,
   filterGs25StoresByKeyword,
   geocodeGs25Address,
@@ -178,16 +179,49 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       }
     }
 
-    const stockResult = await fetchGs25Stores(
+    let stockResult = await fetchGs25Stores(
       {
         serviceCode,
         keyword,
+        realTimeStockYn: 'Y',
+        latitude,
+        longitude,
         useCache: false,
       },
       {
         timeout: 20000,
       },
     );
+
+    let normalizedKeywordUsed = false;
+    let normalizedKeyword: string | null = null;
+    if (stockResult.stores.every((item) => item.searchItemName.length === 0)) {
+      try {
+        const normalized = await fetchGs25NormalizedKeyword(keyword, {
+          timeout: 20000,
+        });
+        const fallbackKeyword = normalized?.searchKeyword || normalized?.keyword || '';
+        if (fallbackKeyword.length > 0 && fallbackKeyword !== keyword.trim()) {
+          stockResult = await fetchGs25Stores(
+            {
+              serviceCode,
+              keyword: fallbackKeyword,
+              realTimeStockYn: 'Y',
+              latitude,
+              longitude,
+              useCache: false,
+            },
+            {
+              timeout: 20000,
+            },
+          );
+          normalizedKeywordUsed = true;
+          normalizedKeyword = fallbackKeyword;
+        }
+      } catch {
+        // 정규화 실패 시 기본 조회 결과를 유지합니다.
+      }
+    }
 
     const filtered = filterGs25StoresByKeyword(stockResult.stores, storeKeyword);
     const withDistance = attachDistanceToGs25Stores(filtered, latitude, longitude);
@@ -201,6 +235,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
     return successResponse(c, {
       serviceCode,
       keyword,
+      normalizedKeywordUsed,
+      normalizedKeyword,
       storeKeyword,
       geocodeUsed,
       location:
