@@ -107,15 +107,24 @@ function sortStoresByDistance(
         store.latitude === 0 ||
         store.longitude === 0
       ) {
-        return store;
+        return {
+          store,
+          sortDistance: Number.MAX_SAFE_INTEGER,
+        };
       }
 
+      const distanceM = calculateDistanceM(latitude, longitude, store.latitude, store.longitude);
+
       return {
-        ...store,
-        distanceM: calculateDistanceM(latitude, longitude, store.latitude, store.longitude),
+        store: {
+          ...store,
+          distanceM,
+        },
+        sortDistance: distanceM,
       };
     })
-    .sort((a, b) => (a.distanceM ?? Number.MAX_SAFE_INTEGER) - (b.distanceM ?? Number.MAX_SAFE_INTEGER));
+    .sort((a, b) => a.sortDistance - b.sortDistance)
+    .map((entry) => entry.store);
 }
 
 export async function lookupEmart24Inventory(
