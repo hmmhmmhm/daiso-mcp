@@ -769,6 +769,72 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     );
   }
 
+  if (command === 'seveneleven-products') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('seveneleven-products', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const query = parsed.positionals[0];
+    if (!query) {
+      resolvedDeps.writeErr(
+        'seveneleven-products 명령은 검색어가 필요합니다. 예: daiso seveneleven-products 삼각김밥',
+      );
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/seveneleven/products');
+    targetUrl.searchParams.set('query', query);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'seveneleven-popwords') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('seveneleven-popwords', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const targetUrl = toUrl('/api/seveneleven/popwords');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'seveneleven-catalog') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('seveneleven-catalog', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const targetUrl = toUrl('/api/seveneleven/catalog');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
   resolvedDeps.writeErr(`알 수 없는 명령어: ${command}`);
   resolvedDeps.writeErr('도움말: daiso help');
   return 1;

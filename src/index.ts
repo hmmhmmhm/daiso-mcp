@@ -19,6 +19,7 @@ import { createLotteCinemaService } from './services/lottecinema/index.js';
 import { createCuService } from './services/cu/index.js';
 import { createEmart24Service } from './services/emart24/index.js';
 import { createGs25Service } from './services/gs25/index.js';
+import { createSevenElevenService } from './services/seveneleven/index.js';
 import { createPromptResponse } from './pages/prompt.js';
 import { createOpenApiJsonResponse, createOpenApiYamlResponse } from './pages/openapi.js';
 import { createPrivacyResponse } from './pages/privacy.js';
@@ -31,6 +32,7 @@ import { registerLotteCinemaRoutes } from './api/routes/lottecinemaRoutes.js';
 import { registerCuRoutes } from './api/routes/cuRoutes.js';
 import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 import { registerGs25Routes } from './api/routes/gs25Routes.js';
+import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
 
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
@@ -55,6 +57,7 @@ const createRegistry = (bindings?: AppBindings) => {
   registry.registerAll([
     createDaisoService,
     createGs25Service,
+    createSevenElevenService,
     createCuService,
     createEmart24Service,
     createMegaboxService,
@@ -241,6 +244,7 @@ app.get('/privacy', (c) => {
 // GET API 엔드포인트 (MCP 미지원 에이전트용)
 registerDaisoRoutes(app);
 registerGs25Routes(app);
+registerSevenElevenRoutes(app);
 registerCuRoutes(app);
 registerEmart24Routes(app);
 registerOliveyoungRoutes(app);

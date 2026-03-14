@@ -265,6 +265,28 @@ Base URL: ${baseUrl}
 
 ---
 
+### 6-2. 세븐일레븐 상품/인기검색어/카탈로그 조회
+
+**설명**: 세븐일레븐 공개 상품 검색, 인기 검색어, 카탈로그 스냅샷을 조회합니다.
+
+**URL**:
+- ${baseUrl}/api/seveneleven/products?query={검색어}
+- ${baseUrl}/api/seveneleven/popwords?label={라벨}
+- ${baseUrl}/api/seveneleven/catalog?includeIssues={true|false}&includeExhibition={true|false}&limit={개수}
+
+**선택 파라미터**:
+- page: 페이지 번호 (기본값: 1)
+- size: 페이지당 결과 수 (기본값: 20)
+- sort: 정렬 기준 (기본값: recommend)
+- label: 인기 검색어 라벨 (기본값: home)
+
+**예시**:
+- ${baseUrl}/api/seveneleven/products?query=삼각김밥&size=20
+- ${baseUrl}/api/seveneleven/popwords?label=home
+- ${baseUrl}/api/seveneleven/catalog?includeIssues=true&includeExhibition=true&limit=10
+
+---
+
 ### 7. 메가박스 주변 지점 찾기
 
 **설명**: 사용자 좌표 기준으로 메가박스 지점을 거리순으로 조회합니다.

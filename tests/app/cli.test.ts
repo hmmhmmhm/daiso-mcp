@@ -485,6 +485,55 @@ describe('CLI', () => {
     );
   });
 
+  it('seveneleven-products 명령은 세븐일레븐 상품 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['seveneleven-products', '삼각김밥', '--size', '20'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/seveneleven/products?query=%EC%82%BC%EA%B0%81%EA%B9%80%EB%B0%A5&size=20',
+    );
+  });
+
+  it('seveneleven-popwords 명령은 세븐일레븐 인기 검색어 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['seveneleven-popwords', '--label', 'home'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith('https://mcp.aka.page/api/seveneleven/popwords?label=home');
+  });
+
+  it('seveneleven-catalog 명령은 세븐일레븐 카탈로그 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['seveneleven-catalog', '--includeIssues', 'true', '--includeExhibition', 'true', '--limit', '10'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/seveneleven/catalog?includeIssues=true&includeExhibition=true&limit=10',
+    );
+  });
+
   it('health 명령은 서버 상태를 출력한다', async () => {
     const { output, deps } = createDeps();
 

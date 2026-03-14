@@ -825,6 +825,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/seveneleven/products:
+    get:
+      operationId: sevenelevenSearchProducts
+      summary: 세븐일레븐 상품 검색
+      description: 키워드로 세븐일레븐 상품을 검색합니다.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: 상품 검색어
+          schema:
+            type: string
+          example: 삼각김밥
+        - name: page
+          in: query
+          required: false
+          description: 페이지 번호
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: size
+          in: query
+          required: false
+          description: 페이지당 결과 수
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: sort
+          in: query
+          required: false
+          description: 정렬 기준
+          schema:
+            type: string
+            default: recommend
+      responses:
+        200:
+          description: 검색 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductSearchResponse"
+        400:
+          description: 잘못된 요청 (검색어 누락)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/seveneleven/popwords:
+    get:
+      operationId: sevenelevenGetSearchPopwords
+      summary: 세븐일레븐 인기 검색어 조회
+      description: 세븐일레븐 인기 검색어 목록을 조회합니다.
+      parameters:
+        - name: label
+          in: query
+          required: false
+          description: "조회 라벨 (기본값: home)"
+          schema:
+            type: string
+            default: home
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductSearchResponse"
+  /api/seveneleven/catalog:
+    get:
+      operationId: sevenelevenGetCatalogSnapshot
+      summary: 세븐일레븐 카탈로그 스냅샷
+      description: 공개 카탈로그(페이지/이슈/기획전) 데이터를 조회합니다.
+      parameters:
+        - name: includeIssues
+          in: query
+          required: false
+          description: 이슈 상품 포함 여부
+          schema:
+            type: boolean
+            default: true
+        - name: includeExhibition
+          in: query
+          required: false
+          description: 기획전 포함 여부
+          schema:
+            type: boolean
+            default: true
+        - name: limit
+          in: query
+          required: false
+          description: 각 목록 최대 반환 수
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductSearchResponse"
   /api/megabox/theaters:
     get:
       operationId: megaboxFindNearbyTheaters
