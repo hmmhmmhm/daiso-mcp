@@ -130,7 +130,19 @@ describe('handleGs25SearchProducts', () => {
 
   it('상품 검색 결과를 반환한다', async () => {
     mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ stores: [{ storeCode: '1', searchItemName: '오감자', realStockQuantity: 2 }] })),
+      new Response(
+        JSON.stringify({
+          SearchQueryResult: {
+            Collection: [
+              {
+                Documentset: {
+                  Document: [{ field: { itemCode: '123', itemName: '오감자', stockCheckYn: 'Y' } }],
+                },
+              },
+            ],
+          },
+        }),
+      ),
     );
 
     const ctx = createMockContext({ keyword: '오감자' });
@@ -139,6 +151,10 @@ describe('handleGs25SearchProducts', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
+        data: expect.objectContaining({
+          count: 1,
+          products: expect.arrayContaining([expect.objectContaining({ itemCode: '123' })]),
+        }),
       }),
     );
   });

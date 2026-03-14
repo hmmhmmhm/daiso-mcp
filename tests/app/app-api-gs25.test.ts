@@ -33,7 +33,15 @@ describe('GET /api/gs25/products', () => {
     mockFetch.mockResolvedValue(
       new Response(
         JSON.stringify({
-          stores: [{ storeCode: '1', searchItemName: '오감자', realStockQuantity: 2 }],
+          SearchQueryResult: {
+            Collection: [
+              {
+                Documentset: {
+                  Document: [{ field: { itemCode: '123', itemName: '오감자', stockCheckYn: 'Y' } }],
+                },
+              },
+            ],
+          },
         }),
       ),
     );
@@ -44,6 +52,7 @@ describe('GET /api/gs25/products', () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.data.count).toBe(1);
+    expect(data.data.products[0].itemCode).toBe('123');
   });
 });
 

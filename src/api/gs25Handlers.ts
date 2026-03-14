@@ -6,7 +6,6 @@
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 import {
   attachDistanceToGs25Stores,
-  extractGs25ProductCandidates,
   fetchGs25SearchProducts,
   fetchGs25Stores,
   filterGs25StoresByKeyword,
@@ -88,7 +87,6 @@ export async function handleGs25FindStores(c: ApiContext) {
  */
 export async function handleGs25SearchProducts(c: ApiContext) {
   const keyword = c.req.query('keyword') || '';
-  const serviceCode = c.req.query('serviceCode') || '01';
   const limit = parseInt(c.req.query('limit') || '20', 10);
 
   if (keyword.trim().length === 0) {
@@ -96,29 +94,25 @@ export async function handleGs25SearchProducts(c: ApiContext) {
   }
 
   try {
-    const result = await fetchGs25Stores(
-      {
-        serviceCode,
-        keyword,
-        useCache: false,
-      },
-      {
-        timeout: 20000,
-      },
-    );
-
-    const products = extractGs25ProductCandidates(result.stores).slice(0, limit);
+    const products = await fetchGs25SearchProducts(keyword, { timeout: 20000 });
+    const limitedProducts = products.slice(0, limit);
 
     return successResponse(
       c,
       {
-        serviceCode,
         keyword,
-        count: products.length,
-        products,
+        count: limitedProducts.length,
+        products: limitedProducts.map((p) => ({
+          itemCode: p.itemCode,
+          itemName: p.itemName,
+          shortItemName: p.shortItemName,
+          imageUrl: p.imageUrl,
+          rating: p.rating,
+          stockCheckEnabled: p.stockCheckEnabled,
+        })),
       },
       {
-        total: products.length,
+        total: limitedProducts.length,
         pageSize: limit,
       },
     );
