@@ -352,7 +352,7 @@ export async function searchLotteMartProducts(
   }
 
   const initialBody = new URLSearchParams();
-  initialBody.set('p_area', normalizeArea(resolvedStore.area) || '서울');
+  initialBody.set('p_area', normalizeArea(resolvedStore.area) as LotteMartAreaCode);
   initialBody.set('p_market', resolvedStore.storeCode);
   initialBody.set('p_schWord', normalizedKeyword);
 

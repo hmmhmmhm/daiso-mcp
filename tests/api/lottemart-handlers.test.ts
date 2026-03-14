@@ -3,6 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as lotteMartClient from '../../src/services/lottemart/client.js';
 import { __testOnlyClearLotteMartCaches } from '../../src/services/lottemart/client.js';
 import { handleLotteMartFindStores, handleLotteMartSearchProducts } from '../../src/api/lottemartHandlers.js';
 
@@ -35,6 +36,42 @@ function createMockContext(query: Record<string, string> = {}) {
 }
 
 describe('handleLotteMartFindStores', () => {
+  it('area와 brandVariant가 없으면 null로 응답한다', async () => {
+    mockFetch.mockImplementation(() =>
+      Promise.resolve(
+        new Response(`
+          <section class="sub-wrap result-shop-list">
+            <ul class="list-result">
+              <li>
+                <div class="shop-tit">공통점</div>
+                <div class="shop-desc">
+                  <ul>
+                    <li><span>주소 : </span> 서울 중구 한강대로 405</li>
+                    <li><span>상담전화 : </span><a onclick="goClick('2301');">02-3424-2502</a></li>
+                  </ul>
+                </div>
+                <a class="link" href="./detail_shop.asp?werks=2301"></a>
+              </li>
+            </ul>
+          </section>
+        `),
+      ),
+    );
+
+    const ctx = createMockContext({ limit: '1' });
+    await handleLotteMartFindStores(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          area: null,
+          brandVariant: null,
+        }),
+      }),
+    );
+  });
+
   it('매장 검색 결과를 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
@@ -87,6 +124,24 @@ describe('handleLotteMartFindStores', () => {
       expect.objectContaining({
         success: false,
         error: { code: 'LOTTEMART_STORE_SEARCH_FAILED', message: '지원하지 않는 지역입니다: 잘못된지역' },
+      }),
+      500,
+    );
+  });
+
+  it('알 수 없는 예외는 기본 메시지로 감싼다', async () => {
+    vi.spyOn(lotteMartClient, 'fetchLotteMartStores').mockRejectedValueOnce(undefined);
+
+    const ctx = createMockContext({ area: '서울' });
+    await handleLotteMartFindStores(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'LOTTEMART_STORE_SEARCH_FAILED',
+          message: '알 수 없는 오류가 발생했습니다.',
+        },
       }),
       500,
     );
@@ -161,6 +216,44 @@ describe('handleLotteMartSearchProducts', () => {
           products: expect.any(Array),
         }),
       }),
+    );
+  });
+
+  it('알 수 없는 예외는 기본 메시지로 감싼다', async () => {
+    vi.spyOn(lotteMartClient, 'searchLotteMartProducts').mockRejectedValueOnce(undefined);
+
+    const ctx = createMockContext({ area: '서울', storeCode: '2301', keyword: '콜라' });
+    await handleLotteMartSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'LOTTEMART_PRODUCT_SEARCH_FAILED',
+          message: '알 수 없는 오류가 발생했습니다.',
+        },
+      }),
+      500,
+    );
+  });
+
+  it('Error 예외는 메시지를 그대로 반환한다', async () => {
+    vi.spyOn(lotteMartClient, 'searchLotteMartProducts').mockRejectedValueOnce(
+      new Error('product fail'),
+    );
+
+    const ctx = createMockContext({ area: '서울', storeCode: '2301', keyword: '콜라' });
+    await handleLotteMartSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'LOTTEMART_PRODUCT_SEARCH_FAILED',
+          message: 'product fail',
+        },
+      }),
+      500,
     );
   });
 });
