@@ -6,6 +6,22 @@ export interface FetchOptions extends RequestInit {
   timeout?: number;
 }
 
+export class HttpError extends Error {
+  readonly status: number;
+  readonly statusText: string;
+  readonly bodyText: string;
+
+  constructor(status: number, statusText: string, bodyText: string) {
+    const normalizedBody = bodyText.trim().replace(/\s+/g, ' ').slice(0, 300);
+    const detail = normalizedBody.length > 0 ? ` - ${normalizedBody}` : '';
+    super(`API 요청 실패: ${status} ${statusText}${detail}`);
+    this.name = 'HttpError';
+    this.status = status;
+    this.statusText = statusText;
+    this.bodyText = bodyText;
+  }
+}
+
 export function createTimeoutController(
   timeout: number,
 ): { controller: AbortController; timeoutId: ReturnType<typeof setTimeout> } {
@@ -32,7 +48,7 @@ export async function fetchJson<T>(url: string, options: FetchOptions = {}): Pro
   const response = await fetchWithTimeout(url, options);
 
   if (!response.ok) {
-    throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+    throw new HttpError(response.status, response.statusText, await response.text());
   }
 
   return response.json() as Promise<T>;
@@ -42,7 +58,7 @@ export async function fetchText(url: string, options: FetchOptions = {}): Promis
   const response = await fetchWithTimeout(url, options);
 
   if (!response.ok) {
-    throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+    throw new HttpError(response.status, response.statusText, await response.text());
   }
 
   return response.text();

@@ -11,6 +11,7 @@ import type {
   SevenElevenProduct,
   SevenElevenRawProduct,
   SevenElevenSearchResult,
+  SevenElevenStockProductMeta,
   SevenElevenStore,
   SevenElevenStoreSearchResult,
 } from './types.js';
@@ -47,6 +48,16 @@ interface SearchGoodsData {
   content?: unknown[];
 }
 
+interface StockProductData {
+  prdNo?: string;
+  itemCd?: string;
+  itemOnm?: string;
+  smCd?: string;
+  stokMngCd?: string;
+  stokMngQty?: number | string;
+  stockApplicationRate?: string | number;
+}
+
 const SEVENELEVEN_DEFAULT_HEADERS = {
   Accept: 'application/json, text/plain, */*',
   'Content-Type': 'application/json',
@@ -68,6 +79,13 @@ function toNumber(value: unknown): number {
 
 function toStringValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function normalizeStoreKeyword(keyword: string): string {
+  return keyword
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/(역|지점|점)$/g, '');
 }
 
 function toBooleanYn(value: unknown): boolean {
@@ -128,6 +146,18 @@ function normalizeStore(raw: Record<string, unknown>): SevenElevenStore {
   };
 }
 
+function normalizeStockProductMeta(raw: StockProductData): SevenElevenStockProductMeta {
+  return {
+    productNo: toStringValue(raw.prdNo),
+    itemCode: toStringValue(raw.itemCd),
+    itemName: toStringValue(raw.itemOnm),
+    smCode: toStringValue(raw.smCd),
+    stockManagementCode: toStringValue(raw.stokMngCd),
+    stockManagementQuantity: toNumber(raw.stokMngQty),
+    stockApplicationRate: toStringValue(raw.stockApplicationRate),
+  };
+}
+
 function normalizeStores(items: unknown[]): SevenElevenStore[] {
   return items
     .map((item) => {
@@ -165,16 +195,19 @@ export async function searchSevenElevenProducts(
   params: SearchProductsParams,
   options: RequestOptions = {},
 ): Promise<SevenElevenSearchResult> {
-  const { query, page = 1, size = 20, sort = 'recommend' } = params;
+  const { query, page = 1, size = 20 } = params;
+  const pageNo = Math.max(Math.trunc(page) - 1, 0);
+  const pageSize = Math.max(Math.trunc(size), 1);
 
   const response = await requestSevenElevenJson<SearchGoodsData>(
     SEVENELEVEN_API.SEARCH_GOODS_PATH,
     'POST',
     {
+      // 공개 검색 엔드포인트는 pageNo/pageSize만 안정적으로 동작한다.
+      // sort를 함께 보내면 빈 결과가 내려오는 케이스가 확인되어 제외한다.
       query,
-      page,
-      size,
-      sort,
+      pageNo,
+      pageSize,
     },
     options,
   );
@@ -208,7 +241,7 @@ export async function fetchSevenElevenStoresByKeyword(
   options: RequestOptions = {},
 ): Promise<SevenElevenStoreSearchResult> {
   const { keyword, limit = 20 } = params;
-  const query = keyword.trim();
+  const query = normalizeStoreKeyword(keyword) || keyword.trim();
   const safeLimit = Number.isFinite(limit) ? Math.trunc(limit) : 20;
   const listCount = Math.max(1, Math.min(safeLimit, 9999));
 
@@ -294,6 +327,31 @@ export async function fetchSevenElevenSearchPopwords(
   }
 
   return [];
+}
+
+export async function fetchSevenElevenStockProductMeta(
+  itemCode: string,
+  options: RequestOptions = {},
+): Promise<SevenElevenStockProductMeta | null> {
+  const { timeout = 15000 } = options;
+  const encodedItemCode = encodeURIComponent(itemCode.trim());
+  const url = `${SEVENELEVEN_API.BASE_URL}${SEVENELEVEN_API.PRODUCT_SEARCH_STOCK_PATH}?itemCd=${encodedItemCode}`;
+
+  const response = await fetchJson<StockProductData>(url, {
+    method: 'GET',
+    timeout,
+    headers: {
+      Accept: SEVENELEVEN_DEFAULT_HEADERS.Accept,
+      'User-Agent': SEVENELEVEN_DEFAULT_HEADERS['User-Agent'],
+    },
+  });
+
+  const productMeta = normalizeStockProductMeta(response);
+  if (productMeta.itemCode.length === 0 || productMeta.smCode.length === 0) {
+    return null;
+  }
+
+  return productMeta;
 }
 
 function normalizeExhibitions(items: unknown[]): SevenElevenCatalogSnapshot['exhibitions'] {

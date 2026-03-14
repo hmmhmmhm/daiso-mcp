@@ -96,13 +96,17 @@ describe('fetchJson', () => {
   it('응답이 성공하지 않으면 에러를 던진다', async () => {
     mockFetch.mockResolvedValue(new Response('Not Found', { status: 404, statusText: 'Not Found' }));
 
-    await expect(fetchJson('https://example.com/api')).rejects.toThrow('API 요청 실패: 404 Not Found');
+    await expect(fetchJson('https://example.com/api')).rejects.toThrow(
+      'API 요청 실패: 404 Not Found - Not Found',
+    );
   });
 
   it('500 에러도 처리한다', async () => {
     mockFetch.mockResolvedValue(new Response('Server Error', { status: 500, statusText: 'Internal Server Error' }));
 
-    await expect(fetchJson('https://example.com/api')).rejects.toThrow('API 요청 실패: 500 Internal Server Error');
+    await expect(fetchJson('https://example.com/api')).rejects.toThrow(
+      'API 요청 실패: 500 Internal Server Error - Server Error',
+    );
   });
 });
 
@@ -119,6 +123,8 @@ describe('fetchHtml', () => {
   it('응답이 성공하지 않으면 에러를 던진다', async () => {
     mockFetch.mockResolvedValue(new Response('Forbidden', { status: 403, statusText: 'Forbidden' }));
 
-    await expect(fetchHtml('https://example.com/page')).rejects.toThrow('API 요청 실패: 403 Forbidden');
+    await expect(fetchHtml('https://example.com/page')).rejects.toThrow(
+      'API 요청 실패: 403 Forbidden - Forbidden',
+    );
   });
 });

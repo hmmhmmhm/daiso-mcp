@@ -79,5 +79,16 @@ describe('createSearchProductsTool', () => {
     expect(parsed.products[0].itemCode).toBe('880000000001');
     expect(parsed.products[1].itemCode).toBe('880000000002');
     expect(parsed.collectionIds).toEqual(['offline']);
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://new.7-elevenapp.co.kr/api/v1/open/search/goods',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          query: '삼각김밥',
+          pageNo: 0,
+          pageSize: 20,
+        }),
+      }),
+    );
   });
 });

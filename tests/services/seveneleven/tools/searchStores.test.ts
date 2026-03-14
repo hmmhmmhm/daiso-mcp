@@ -78,5 +78,17 @@ describe('createSearchStoresTool', () => {
     expect(parsed.stores[0].pickupEnabled).toBe(true);
     expect(parsed.stores[0].deliveryEnabled).toBe(false);
     expect(parsed.stores[0].closeYn).toBe('N');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://new.7-elevenapp.co.kr/api/v1/open/search/store',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          collection: 'store',
+          query: '안산중앙',
+          sort: 'Date/desc',
+          listCount: 10,
+        }),
+      }),
+    );
   });
 });

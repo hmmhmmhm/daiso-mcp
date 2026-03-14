@@ -73,3 +73,47 @@ export interface SevenElevenStoreSearchResult {
   totalCount: number;
   stores: SevenElevenStore[];
 }
+
+export interface SevenElevenStockStore {
+  storeCode: string;
+  storeName: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  stockQuantity: number;
+  isSoldOut: boolean;
+  distanceM: number | null;
+}
+
+export interface SevenElevenStockError {
+  cause: 'api' | 'network' | 'unknown';
+  httpStatus: number | null;
+  code: number | null;
+  message: string;
+  raw: string | null;
+}
+
+export interface SevenElevenStockProductMeta {
+  productNo: string;
+  itemCode: string;
+  itemName: string;
+  smCode: string;
+  stockManagementCode: string;
+  stockManagementQuantity: number;
+  stockApplicationRate: string;
+}
+
+export interface SevenElevenStockResult {
+  productKeyword: string;
+  product: {
+    itemCode: string;
+    itemName: string;
+    salePrice: number;
+    imageUrl: string;
+  } | null;
+  stockAvailable: boolean;
+  stockError: SevenElevenStockError | null;
+  totalStoreCount: number;
+  inStockStoreCount: number;
+  stores: SevenElevenStockStore[];
+}
