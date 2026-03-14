@@ -170,4 +170,34 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.inventory.goodsInfo).toBeNull();
     expect(parsed.inventory.count).toBe(0);
   });
+
+  it('재고 응답의 BIZNO/BIZQTY 일부 누락도 안전하게 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 0,
+            count: 1,
+            data: [{ CODE: 'A', TITLE: '테스트점', LATITUDE: 37.5, LONGITUDE: 127.0 }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storeGoodsInfo: { pluCd: '8800244010504', goodsNm: '고양이 츄르' },
+            storeGoodsQty: [{ BIZQTY: '' }, { BIZNO: 'A' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ storeInfo: { storeNm: '테스트점' } })));
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ pluCd: '8800244010504', storeKeyword: '테스트' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.inventory.count).toBe(1);
+    expect(parsed.inventory.stores[0].bizNo).toBe('A');
+    expect(parsed.inventory.stores[0].bizQty).toBe(0);
+  });
 });

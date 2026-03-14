@@ -199,23 +199,13 @@ export async function lookupEmart24Inventory(
     const detailInfo = detail.status === 'fulfilled' ? detail.value.storeInfo : undefined;
     const nearby = nearbyStoreByCode.get(bizNo);
 
-    const distanceM =
-      nearby?.distanceM ??
-      (typeof latitude === 'number' &&
-      typeof longitude === 'number' &&
-      nearby &&
-      nearby.latitude !== 0 &&
-      nearby.longitude !== 0
-        ? calculateDistanceM(latitude, longitude, nearby.latitude, nearby.longitude)
-        : null);
-
     return {
       bizNo,
       bizQty: qtyByBizNo.get(bizNo) ?? 0,
       storeName: detailInfo?.storeNm || nearby?.storeName || '',
       address: detailInfo?.storeAddr || nearby?.address || '',
       phone: detailInfo?.tel || nearby?.phone || '',
-      distanceM,
+      distanceM: nearby?.distanceM ?? null,
     };
   });
 
