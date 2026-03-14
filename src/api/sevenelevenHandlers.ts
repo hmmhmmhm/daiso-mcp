@@ -5,6 +5,7 @@
 
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 import {
+  fetchSevenElevenStoresByKeyword,
   fetchSevenElevenCatalogSnapshot,
   fetchSevenElevenSearchPopwords,
   searchSevenElevenProducts,
@@ -66,6 +67,45 @@ export async function handleSevenElevenSearchProducts(c: ApiContext) {
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEVENELEVEN_PRODUCT_SEARCH_FAILED', message, 500);
+  }
+}
+
+/**
+ * 세븐일레븐 매장 검색 API 핸들러
+ * GET /api/seveneleven/stores?keyword={검색어}&limit={개수}
+ */
+export async function handleSevenElevenSearchStores(c: ApiContext) {
+  const keyword = c.req.query('keyword') || '';
+  const limit = parseInt(c.req.query('limit') || '20', 10);
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 20;
+
+  if (keyword.trim().length === 0) {
+    return errorResponse(c, 'MISSING_KEYWORD', '매장 검색어(keyword)를 입력해주세요.');
+  }
+
+  try {
+    const result = await fetchSevenElevenStoresByKeyword({
+      keyword,
+      limit: safeLimit,
+    });
+
+    return successResponse(
+      c,
+      {
+        keyword: result.query,
+        count: result.stores.length,
+        totalCount: result.totalCount,
+        stores: result.stores,
+      },
+      {
+        total: result.totalCount,
+        page: 1,
+        pageSize: safeLimit,
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return errorResponse(c, 'SEVENELEVEN_STORE_SEARCH_FAILED', message, 500);
   }
 }
 

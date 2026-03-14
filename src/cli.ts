@@ -797,6 +797,34 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     );
   }
 
+  if (command === 'seveneleven-stores') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('seveneleven-stores', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const keyword = parsed.positionals[0];
+    if (!keyword) {
+      resolvedDeps.writeErr(
+        'seveneleven-stores 명령은 검색어가 필요합니다. 예: daiso seveneleven-stores 안산 중앙역',
+      );
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/seveneleven/stores');
+    targetUrl.searchParams.set('keyword', keyword);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
   if (command === 'seveneleven-popwords') {
     const parsed = parseCliArgs(options);
     if (parsed.options.help === 'true') {

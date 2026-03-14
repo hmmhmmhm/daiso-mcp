@@ -181,6 +181,7 @@ describe('GET /', () => {
     const data = await res.json();
 
     expect(data.tools).toContain('seveneleven_search_products');
+    expect(data.tools).toContain('seveneleven_search_stores');
     expect(data.tools).toContain('seveneleven_get_search_popwords');
     expect(data.tools).toContain('seveneleven_get_catalog_snapshot');
   });

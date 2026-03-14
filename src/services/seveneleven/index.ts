@@ -5,6 +5,7 @@
 import type { ServiceProvider } from '../../core/interfaces.js';
 import type { ServiceMetadata, ToolRegistration } from '../../core/types.js';
 import { createSearchProductsTool } from './tools/searchProducts.js';
+import { createSearchStoresTool } from './tools/searchStores.js';
 import { createGetSearchPopwordsTool } from './tools/getSearchPopwords.js';
 import { createGetCatalogSnapshotTool } from './tools/getCatalogSnapshot.js';
 
@@ -19,7 +20,12 @@ class SevenElevenService implements ServiceProvider {
   readonly metadata = SEVENELEVEN_METADATA;
 
   getTools(): ToolRegistration[] {
-    return [createSearchProductsTool(), createGetSearchPopwordsTool(), createGetCatalogSnapshotTool()];
+    return [
+      createSearchProductsTool(),
+      createSearchStoresTool(),
+      createGetSearchPopwordsTool(),
+      createGetCatalogSnapshotTool(),
+    ];
   }
 }
 

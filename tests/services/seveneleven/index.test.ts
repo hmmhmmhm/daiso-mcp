@@ -21,12 +21,13 @@ describe('createSevenElevenService', () => {
     expect(service.metadata.version).toBe('1.0.0');
   });
 
-  it('3개의 도구를 반환한다', () => {
+  it('4개의 도구를 반환한다', () => {
     const service = createSevenElevenService();
     const tools = service.getTools();
 
     expect(tools.map((tool) => tool.name)).toEqual([
       'seveneleven_search_products',
+      'seveneleven_search_stores',
       'seveneleven_get_search_popwords',
       'seveneleven_get_catalog_snapshot',
     ]);

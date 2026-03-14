@@ -74,6 +74,49 @@ describe('GET /api/seveneleven/popwords', () => {
   });
 });
 
+describe('GET /api/seveneleven/stores', () => {
+  it('세븐일레븐 매장 검색 결과를 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            SearchQueryResult: {
+              query: '안산 중앙역',
+              Collection: [
+                {
+                  CollectionId: 'store',
+                  Documentset: {
+                    totalCount: 1,
+                    Document: [{ field: { storCd: '54928', storNm: '안산중앙일번가점', addr: '경기 안산시' } }],
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+
+    const res = await app.request('/api/seveneleven/stores?keyword=안산 중앙역');
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.count).toBe(1);
+    expect(data.data.stores[0].storeCode).toBe('54928');
+  });
+
+  it('keyword가 없으면 에러를 반환한다', async () => {
+    const res = await app.request('/api/seveneleven/stores');
+    expect(res.status).toBe(400);
+
+    const data = await res.json();
+    expect(data.success).toBe(false);
+    expect(data.error.code).toBe('MISSING_KEYWORD');
+  });
+});
+
 describe('GET /api/seveneleven/catalog', () => {
   it('카탈로그 스냅샷 결과를 반환한다', async () => {
     mockFetch

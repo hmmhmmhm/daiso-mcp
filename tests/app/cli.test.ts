@@ -501,6 +501,22 @@ describe('CLI', () => {
     );
   });
 
+  it('seveneleven-stores 명령은 세븐일레븐 매장 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['seveneleven-stores', '안산 중앙역', '--limit', '10'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/seveneleven/stores?keyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD&limit=10',
+    );
+  });
+
   it('seveneleven-popwords 명령은 세븐일레븐 인기 검색어 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({

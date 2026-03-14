@@ -26,6 +26,7 @@ export type CommandName =
   | 'gs25-products'
   | 'gs25-inventory'
   | 'seveneleven-products'
+  | 'seveneleven-stores'
   | 'seveneleven-popwords'
   | 'seveneleven-catalog';
 
@@ -53,6 +54,7 @@ export const COMMAND_LIST: CommandName[] = [
   'gs25-products',
   'gs25-inventory',
   'seveneleven-products',
+  'seveneleven-stores',
   'seveneleven-popwords',
   'seveneleven-catalog',
 ];
@@ -81,6 +83,7 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   'gs25-products': 'GS25 상품 검색',
   'gs25-inventory': 'GS25 재고 조회',
   'seveneleven-products': '세븐일레븐 상품 검색',
+  'seveneleven-stores': '세븐일레븐 매장 검색',
   'seveneleven-popwords': '세븐일레븐 인기 검색어 조회',
   'seveneleven-catalog': '세븐일레븐 카탈로그 스냅샷 조회',
 };
@@ -260,6 +263,14 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '옵션: --page, --size, --sort, --json',
     '예시: daiso seveneleven-products 삼각김밥 --size 20',
   ],
+  'seveneleven-stores': [
+    '명령: seveneleven-stores',
+    '설명: 세븐일레븐 매장 검색 API를 호출합니다.',
+    '사용법: daiso seveneleven-stores <keyword> [--limit N] [--json]',
+    '필수: <keyword>',
+    '옵션: --limit, --json',
+    '예시: daiso seveneleven-stores 안산 중앙역 --limit 10',
+  ],
   'seveneleven-popwords': [
     '명령: seveneleven-popwords',
     '설명: 세븐일레븐 인기 검색어 API를 호출합니다.',
@@ -313,6 +324,7 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso gs25-products 오감자');
   writeOut('  npx daiso gs25-inventory 오감자 --storeKeyword 강남');
   writeOut('  npx daiso seveneleven-products 삼각김밥 --size 20');
+  writeOut('  npx daiso seveneleven-stores 안산 중앙역 --limit 10');
   writeOut('  npx daiso seveneleven-popwords --label home');
   writeOut('  npx daiso seveneleven-catalog --limit 10');
   writeOut('  npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056');
@@ -329,7 +341,7 @@ export function printCommandHelp(
   if (!Object.hasOwn(COMMAND_DETAIL, command)) {
     writeErr(`도움말을 찾을 수 없는 명령어: ${command}`);
     writeErr(
-      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, cu-stores, cu-inventory, lottecinema-theaters, lottecinema-movies, lottecinema-seats, emart24-stores, emart24-products, emart24-inventory, gs25-stores, gs25-products, gs25-inventory, seveneleven-products, seveneleven-popwords, seveneleven-catalog',
+      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, cu-stores, cu-inventory, lottecinema-theaters, lottecinema-movies, lottecinema-seats, emart24-stores, emart24-products, emart24-inventory, gs25-stores, gs25-products, gs25-inventory, seveneleven-products, seveneleven-stores, seveneleven-popwords, seveneleven-catalog',
     );
     return 1;
   }

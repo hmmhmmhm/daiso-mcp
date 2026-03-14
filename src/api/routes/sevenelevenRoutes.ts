@@ -8,6 +8,7 @@ import type { AppBindings } from '../response.js';
 import {
   handleSevenElevenGetCatalogSnapshot,
   handleSevenElevenGetSearchPopwords,
+  handleSevenElevenSearchStores,
   handleSevenElevenSearchProducts,
 } from '../sevenelevenHandlers.js';
 
@@ -21,6 +22,18 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
         keyPrefix: 'seveneleven-products-v1',
       },
       () => handleSevenElevenSearchProducts(c),
+    ),
+  );
+
+  app.get('/api/seveneleven/stores', async (c) =>
+    withEdgeCache(
+      c.req.url,
+      {
+        ttlSeconds: 60 * 3,
+        staleWhileRevalidateSeconds: 60,
+        keyPrefix: 'seveneleven-stores-v1',
+      },
+      () => handleSevenElevenSearchStores(c),
     ),
   );
 

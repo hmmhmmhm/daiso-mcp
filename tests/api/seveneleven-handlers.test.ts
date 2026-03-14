@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   handleSevenElevenGetCatalogSnapshot,
   handleSevenElevenGetSearchPopwords,
+  handleSevenElevenSearchStores,
   handleSevenElevenSearchProducts,
 } from '../../src/api/sevenelevenHandlers.js';
 
@@ -73,6 +74,55 @@ describe('handleSevenElevenSearchProducts', () => {
 
     const ctx = createMockContext({ query: '삼각김밥' });
     await handleSevenElevenSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({ count: 1 }),
+      }),
+    );
+  });
+});
+
+describe('handleSevenElevenSearchStores', () => {
+  it('keyword가 없으면 에러를 반환한다', async () => {
+    const ctx = createMockContext({});
+    await handleSevenElevenSearchStores(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'MISSING_KEYWORD', message: '매장 검색어(keyword)를 입력해주세요.' },
+      }),
+      400,
+    );
+  });
+
+  it('매장 검색 결과를 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            SearchQueryResult: {
+              query: '안산 중앙역',
+              Collection: [
+                {
+                  CollectionId: 'store',
+                  Documentset: {
+                    totalCount: 1,
+                    Document: [{ field: { storCd: '54928', storNm: '안산중앙일번가점', addr: '경기 안산시' } }],
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+
+    const ctx = createMockContext({ keyword: '안산 중앙역' });
+    await handleSevenElevenSearchStores(ctx);
 
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -56,3 +56,20 @@ export interface SevenElevenCatalogSnapshot {
     productCount: number;
   }>;
 }
+
+export interface SevenElevenStore {
+  storeCode: string;
+  storeName: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  pickupEnabled: boolean;
+  deliveryEnabled: boolean;
+  closeYn: string;
+}
+
+export interface SevenElevenStoreSearchResult {
+  query: string;
+  totalCount: number;
+  stores: SevenElevenStore[];
+}

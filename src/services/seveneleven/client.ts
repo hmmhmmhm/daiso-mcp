@@ -11,6 +11,8 @@ import type {
   SevenElevenProduct,
   SevenElevenRawProduct,
   SevenElevenSearchResult,
+  SevenElevenStore,
+  SevenElevenStoreSearchResult,
 } from './types.js';
 
 interface RequestOptions {
@@ -22,6 +24,11 @@ interface SearchProductsParams {
   page?: number;
   size?: number;
   sort?: string;
+}
+
+interface SearchStoresParams {
+  keyword: string;
+  limit?: number;
 }
 
 interface SearchQueryCollection {
@@ -63,6 +70,11 @@ function toStringValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
+function toBooleanYn(value: unknown): boolean {
+  const normalized = toStringValue(value).trim().toUpperCase();
+  return normalized === 'Y' || normalized === 'TRUE' || normalized === '1';
+}
+
 function toRawProduct(input: unknown): SevenElevenRawProduct {
   if (!input || typeof input !== 'object') {
     return {};
@@ -97,6 +109,35 @@ function normalizeProducts(items: unknown[]): SevenElevenProduct[] {
     .map(toRawProduct)
     .map(normalizeProduct)
     .filter((item) => item.itemCode.length > 0 || item.itemName.length > 0);
+}
+
+function normalizeStore(raw: Record<string, unknown>): SevenElevenStore {
+  return {
+    storeCode: toStringValue(raw.storeCode || raw.strCd || raw.storCd || raw.shopCd),
+    storeName: toStringValue(raw.storeName || raw.strNm || raw.storNm || raw.shopNm),
+    address: toStringValue(raw.address || raw.addr || raw.roadAddr || raw.shopAddr),
+    latitude: toNumber(raw.latitude || raw.lat || raw.yPos || raw.y || raw.yCoord),
+    longitude: toNumber(raw.longitude || raw.lng || raw.xPos || raw.x || raw.xCoord),
+    pickupEnabled: toBooleanYn(raw.pickupEnabled || raw.pickupYn),
+    deliveryEnabled: toBooleanYn(raw.deliveryEnabled || raw.deliveryYn || raw.dlvyYn),
+    closeYn: toStringValue(raw.closeYn || raw.closeYN || raw.clsYn),
+  };
+}
+
+function normalizeStores(items: unknown[]): SevenElevenStore[] {
+  return items
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return {} as Record<string, unknown>;
+      }
+      const record = item as Record<string, unknown>;
+      if (record.field && typeof record.field === 'object') {
+        return record.field as Record<string, unknown>;
+      }
+      return record;
+    })
+    .map(normalizeStore)
+    .filter((store) => store.storeCode.length > 0 || store.storeName.length > 0);
 }
 
 async function requestSevenElevenJson<T>(
@@ -155,6 +196,47 @@ export async function searchSevenElevenProducts(
     totalCount,
     products,
     collectionIds,
+  };
+}
+
+export async function fetchSevenElevenStoresByKeyword(
+  params: SearchStoresParams,
+  options: RequestOptions = {},
+): Promise<SevenElevenStoreSearchResult> {
+  const { keyword, limit = 20 } = params;
+  const query = keyword.trim();
+  const safeLimit = Number.isFinite(limit) ? Math.trunc(limit) : 20;
+  const listCount = Math.max(1, Math.min(safeLimit, 9999));
+
+  const response = await requestSevenElevenJson<SearchGoodsData>(
+    SEVENELEVEN_API.SEARCH_STORE_PATH,
+    'POST',
+    {
+      collection: 'store',
+      query,
+      sort: 'Date/desc',
+      listCount,
+    },
+    options,
+  );
+
+  const data = response.data || {};
+  const queryResult = data.SearchQueryResult;
+  const collections = queryResult?.Collection || [];
+
+  let totalCount = 0;
+  const allDocuments: unknown[] = [];
+  for (const collection of collections) {
+    totalCount += toNumber(collection.Documentset?.totalCount);
+    allDocuments.push(...(collection.Documentset?.Document || []));
+  }
+
+  const stores = normalizeStores(allDocuments);
+
+  return {
+    query: queryResult?.query || query,
+    totalCount,
+    stores,
   };
 }
 

@@ -32,6 +32,7 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/gs25/products']).toBeDefined();
     expect(spec.paths['/api/gs25/inventory']).toBeDefined();
     expect(spec.paths['/api/seveneleven/products']).toBeDefined();
+    expect(spec.paths['/api/seveneleven/stores']).toBeDefined();
     expect(spec.paths['/api/seveneleven/popwords']).toBeDefined();
     expect(spec.paths['/api/seveneleven/catalog']).toBeDefined();
     expect(spec.paths['/api/megabox/theaters']).toBeDefined();
