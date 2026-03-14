@@ -49,7 +49,25 @@ describe('GET /api/gs25/products', () => {
 
 describe('GET /api/gs25/inventory', () => {
   it('GS25 재고 검색 결과를 반환한다', async () => {
-    mockFetch.mockResolvedValue(
+    // 1단계: totalSearch API 응답 (keyword → itemCode)
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          SearchQueryResult: {
+            Collection: [
+              {
+                Documentset: {
+                  Document: [{ field: { itemCode: '8801234567890', itemName: '오감자' } }],
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    // 2단계: store/stock API 응답 (itemCode + 좌표 → 재고)
+    mockFetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           stores: [

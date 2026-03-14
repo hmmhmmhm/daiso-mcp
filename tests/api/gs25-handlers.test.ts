@@ -189,7 +189,19 @@ describe('handleGs25CheckInventory', () => {
   });
 
   it('재고 검색 결과를 반환한다', async () => {
-    mockFetch.mockResolvedValue(
+    // 1단계: totalSearch API (keyword → itemCode)
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          SearchQueryResult: {
+            Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+          },
+        }),
+      ),
+    );
+
+    // 2단계: store/stock API (itemCode + 좌표 → 재고)
+    mockFetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           stores: [
@@ -222,9 +234,11 @@ describe('handleGs25CheckInventory', () => {
     (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
 
     mockFetch
+      // 1. storeKeyword 기준 매장 조회 (지오코딩 주소 획득용)
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
       )
+      // 2. 지오코딩
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -233,6 +247,17 @@ describe('handleGs25CheckInventory', () => {
           }),
         ),
       )
+      // 3. totalSearch API (keyword → itemCode)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            SearchQueryResult: {
+              Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+            },
+          }),
+        ),
+      )
+      // 4. store/stock API (itemCode + 좌표 → 재고)
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -255,10 +280,23 @@ describe('handleGs25CheckInventory', () => {
     (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
 
     mockFetch
+      // 1. storeKeyword 기준 매장 조회 (지오코딩 주소 획득용)
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
       )
+      // 2. 지오코딩 실패
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ZERO_RESULTS', results: [] })))
+      // 3. totalSearch API (keyword → itemCode)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            SearchQueryResult: {
+              Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+            },
+          }),
+        ),
+      )
+      // 4. store/stock API (기본 좌표 사용)
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: '강남역점', searchItemName: '', realStockQuantity: 0 }] })),
       );

@@ -7,7 +7,7 @@ import { type ApiContext, errorResponse, successResponse } from './response.js';
 import {
   attachDistanceToGs25Stores,
   extractGs25ProductCandidates,
-  fetchGs25NormalizedKeyword,
+  fetchGs25SearchProducts,
   fetchGs25Stores,
   filterGs25StoresByKeyword,
   geocodeGs25Address,
@@ -179,55 +179,56 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       }
     }
 
-    let stockResult = await fetchGs25Stores(
-      {
-        serviceCode,
-        keyword,
-        realTimeStockYn: 'Y',
-        latitude,
-        longitude,
-        useCache: false,
-      },
-      {
-        timeout: 20000,
-      },
-    );
+    // 1단계: totalSearch API로 키워드 → itemCode 변환
+    const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: 20000 });
+    const firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
 
-    let normalizedKeywordUsed = false;
-    let normalizedKeyword: string | null = null;
-    if (stockResult.stores.every((item) => item.searchItemName.length === 0)) {
-      try {
-        const normalized = await fetchGs25NormalizedKeyword(keyword, {
+    let stockResult: Awaited<ReturnType<typeof fetchGs25Stores>>;
+    let itemCodeUsed = false;
+    let resolvedItemCode: string | null = null;
+
+    if (firstProduct) {
+      // itemCode가 있으면 itemCode + 좌표로 재고 조회 (정확한 방식)
+      resolvedItemCode = firstProduct.itemCode;
+      itemCodeUsed = true;
+
+      stockResult = await fetchGs25Stores(
+        {
+          serviceCode,
+          itemCode: resolvedItemCode,
+          realTimeStockYn: 'Y',
+          latitude,
+          longitude,
+          useCache: false,
+        },
+        {
           timeout: 20000,
-        });
-        const fallbackKeyword = normalized?.searchKeyword || normalized?.keyword || '';
-        if (fallbackKeyword.length > 0 && fallbackKeyword !== keyword.trim()) {
-          stockResult = await fetchGs25Stores(
-            {
-              serviceCode,
-              keyword: fallbackKeyword,
-              realTimeStockYn: 'Y',
-              latitude,
-              longitude,
-              useCache: false,
-            },
-            {
-              timeout: 20000,
-            },
-          );
-          normalizedKeywordUsed = true;
-          normalizedKeyword = fallbackKeyword;
-        }
-      } catch {
-        // 정규화 실패 시 기본 조회 결과를 유지합니다.
-      }
+        },
+      );
+    } else {
+      // itemCode가 없으면 기존 keyword 방식 fallback
+      stockResult = await fetchGs25Stores(
+        {
+          serviceCode,
+          keyword,
+          realTimeStockYn: 'Y',
+          latitude,
+          longitude,
+          useCache: false,
+        },
+        {
+          timeout: 20000,
+        },
+      );
     }
 
     const filtered = filterGs25StoresByKeyword(stockResult.stores, storeKeyword);
     const withDistance = attachDistanceToGs25Stores(filtered, latitude, longitude);
     const stores = sortGs25Stores(withDistance).slice(0, storeLimit);
 
-    const productName = filtered.find((item) => item.searchItemName.length > 0)?.searchItemName || null;
+    // 상품 정보: searchProducts에서 먼저 가져오고, 없으면 stores에서
+    const productName = firstProduct?.itemName || firstProduct?.shortItemName ||
+      filtered.find((item) => item.searchItemName.length > 0)?.searchItemName || null;
     const productPrice = filtered.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ?? null;
     const inStockStoreCount = filtered.filter((item) => item.realStockQuantity > 0).length;
     const totalStockQuantity = filtered.reduce((sum, item) => sum + Math.max(item.realStockQuantity, 0), 0);
@@ -235,8 +236,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
     return successResponse(c, {
       serviceCode,
       keyword,
-      normalizedKeywordUsed,
-      normalizedKeyword,
+      itemCodeUsed,
+      itemCode: resolvedItemCode,
       storeKeyword,
       geocodeUsed,
       location:
@@ -246,6 +247,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       product: {
         name: productName,
         sellPrice: productPrice,
+        imageUrl: firstProduct?.imageUrl || null,
+        rating: firstProduct?.rating || null,
       },
       inventory: {
         totalStoreCount: stockResult.totalCount,
