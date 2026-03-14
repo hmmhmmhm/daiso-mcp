@@ -385,9 +385,9 @@ export async function fetchGs25Stores(
     endpoint.searchParams.set('myPositionXCoordination', String(longitude));
     endpoint.searchParams.set('centerPositionXCoordination', String(longitude));
   }
-  // 반경 조건 (미터 단위, 기본값 500)
+  // 반경 조건 (미터 단위, 1km로 설정하여 인근 매장 포함)
   if (typeof latitude === 'number' && typeof longitude === 'number') {
-    endpoint.searchParams.set('radiusCondition', '500');
+    endpoint.searchParams.set('radiusCondition', '1000');
     // 앱에서 사용하는 추가 플래그
     endpoint.searchParams.set('pickupStoreYn', 'N');
     endpoint.searchParams.set('isSuperDlvyStoreSelected', 'N');
