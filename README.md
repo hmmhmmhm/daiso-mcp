@@ -208,6 +208,16 @@ npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056
 npx daiso products 수납박스 --json
 ```
 
+### OpenAPI 스펙
+
+- OpenAI 챗봇 등록용 축약 스펙: `https://mcp.aka.page/openapi.json`
+- OpenAI 챗봇 등록용 YAML: `https://mcp.aka.page/openapi.yaml`
+- 전체 개별 엔드포인트 스펙(JSON): `https://mcp.aka.page/openapi-full.json`
+- 전체 개별 엔드포인트 스펙(YAML): `https://mcp.aka.page/openapi-full.yaml`
+
+기본 `openapi.json`은 OpenAI Actions import 제한에 맞추기 위해 `GET /api/actions/query` 단일 facade만 노출합니다.
+기존 서비스별 GET API는 유지되며, 자세한 배경은 [OpenAPI Actions Facade 문서](./docs/openapi-actions-facade.md)에 정리했습니다.
+
 인터랙티브 예시:
 
 ```text
@@ -325,6 +335,10 @@ daiso 인터랙티브 모드
 
 - [롯데마트 모바일 도와센터 스크래핑 리플레이 계획](./docs/lottemart-mobile-scraping-replay-plan.md)
 
+### 공통
+
+- [OpenAPI Actions facade 리팩토링 배경](./docs/openapi-actions-facade.md)
+
 ### 올리브영
 
 - [올리브영 네트워크 분석 결과](./docs/oliveyoung-network-analysis-result.md)
@@ -375,7 +389,7 @@ MIT License
 - `CLI`: `src/cli.ts`, `src/cliHelp.ts`, CLI 테스트 반영
 - `AI instruction`: [ai-instruction.md](./docs/ai-instruction.md) 사용 규칙/워크플로우 반영
 - `README`: 지원 서비스 설명, 예시, 문서 링크 반영
-- `OpenAPI`: path/component 스키마와 OpenAPI 테스트 반영
+- `OpenAPI`: 기본 `/openapi.json` facade 스펙, `/openapi-full.json` 전체 스펙, 관련 테스트 반영
 
 기능 추가 후 최소 검증 기준:
 

@@ -3,5 +3,11 @@
  */
 
 export { generateOpenApiSpec } from './openapiSpec.js';
-export { createOpenApiJsonResponse, createOpenApiYamlResponse } from './openapiResponse.js';
+export { generateFullOpenApiSpec } from './openapiFullSpec.js';
+export {
+  createOpenApiJsonResponse,
+  createOpenApiYamlResponse,
+  createFullOpenApiJsonResponse,
+  createFullOpenApiYamlResponse,
+} from './openapiResponse.js';
 export { __testOnlyJsonToYaml } from './openapiYaml.js';

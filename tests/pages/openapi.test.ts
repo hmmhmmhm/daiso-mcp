@@ -5,14 +5,30 @@
 import { describe, it, expect } from 'vitest';
 import {
   generateOpenApiSpec,
+  generateFullOpenApiSpec,
+  createFullOpenApiJsonResponse,
+  createFullOpenApiYamlResponse,
   createOpenApiJsonResponse,
   createOpenApiYamlResponse,
   __testOnlyJsonToYaml,
 } from '../../src/pages/openapi.js';
 
 describe('OpenAPI 페이지', () => {
-  it('OpenAPI 스펙 객체를 생성한다', () => {
+  it('OpenAI Actions용 OpenAPI 스펙 객체를 생성한다', () => {
     const spec = generateOpenApiSpec('https://example.com') as {
+      openapi: string;
+      servers: Array<{ url: string }>;
+      paths: Record<string, unknown>;
+    };
+
+    expect(spec.openapi).toBe('3.1.0');
+    expect(spec.servers[0].url).toBe('https://example.com');
+    expect(spec.paths['/api/actions/query']).toBeDefined();
+    expect(spec.paths['/api/daiso/products']).toBeUndefined();
+  });
+
+  it('전체 OpenAPI 스펙 객체를 생성한다', () => {
+    const spec = generateFullOpenApiSpec('https://example.com') as {
       openapi: string;
       servers: Array<{ url: string }>;
       paths: Record<string, unknown>;
@@ -70,6 +86,17 @@ describe('OpenAPI 페이지', () => {
     expect(body).toContain('servers:');
     expect(body).toContain('paths:');
     expect(body).toContain('description: |');
+  });
+
+  it('전체 OpenAPI JSON/YAML 응답을 생성한다', async () => {
+    const jsonResponse = createFullOpenApiJsonResponse('https://example.com');
+    const yamlResponse = createFullOpenApiYamlResponse('https://example.com');
+
+    const jsonBody = await jsonResponse.json();
+    const yamlBody = await yamlResponse.text();
+
+    expect(jsonBody.paths['/api/daiso/products']).toBeDefined();
+    expect(yamlBody).toContain('/api/daiso/products');
   });
 
   it('jsonToYaml 보조 함수의 예외 분기를 처리한다', () => {

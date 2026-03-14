@@ -22,9 +22,15 @@ import { createEmart24Service } from './services/emart24/index.js';
 import { createGs25Service } from './services/gs25/index.js';
 import { createSevenElevenService } from './services/seveneleven/index.js';
 import { createPromptResponse } from './pages/prompt.js';
-import { createOpenApiJsonResponse, createOpenApiYamlResponse } from './pages/openapi.js';
+import {
+  createFullOpenApiJsonResponse,
+  createFullOpenApiYamlResponse,
+  createOpenApiJsonResponse,
+  createOpenApiYamlResponse,
+} from './pages/openapi.js';
 import { createPrivacyResponse } from './pages/privacy.js';
 import type { AppBindings } from './api/response.js';
+import { buildActionQueryTargetUrl } from './api/actionsProxy.js';
 import { registerDaisoRoutes } from './api/routes/daisoRoutes.js';
 import { registerOliveyoungRoutes } from './api/routes/oliveyoungRoutes.js';
 import { registerMegaboxRoutes } from './api/routes/megaboxRoutes.js';
@@ -205,6 +211,9 @@ app.get('/', (c) => {
     endpoints: {
       mcp: '/ 또는 /mcp (POST) - MCP 프로토콜 엔드포인트',
       health: '/health (GET) - 헬스 체크',
+      openapi: '/openapi.json (GET) - OpenAI Actions용 축약 OpenAPI',
+      openapiFull: '/openapi-full.json (GET) - 전체 OpenAPI',
+      actionsQuery: '/api/actions/query (GET) - 기존 GET API 통합 facade',
     },
     services,
     tools: allTools,
@@ -241,6 +250,16 @@ app.get('/openapi.yaml', (c) => {
   return createOpenApiYamlResponse(baseUrl);
 });
 
+app.get('/openapi-full.json', (c) => {
+  const baseUrl = new URL(c.req.url).origin;
+  return createFullOpenApiJsonResponse(baseUrl);
+});
+
+app.get('/openapi-full.yaml', (c) => {
+  const baseUrl = new URL(c.req.url).origin;
+  return createFullOpenApiYamlResponse(baseUrl);
+});
+
 // 개인정보 처리방침 페이지
 app.get('/privacy', (c) => {
   const baseUrl = new URL(c.req.url).origin;
@@ -258,6 +277,34 @@ registerOliveyoungRoutes(app);
 registerMegaboxRoutes(app);
 registerLotteCinemaRoutes(app);
 registerCgvRoutes(app);
+
+app.get('/api/actions/query', async (c) => {
+  try {
+    const targetUrl = buildActionQueryTargetUrl(c.req.url);
+    const headers = new Headers(c.req.raw.headers);
+    headers.delete('host');
+
+    return app.fetch(
+      new Request(targetUrl.toString(), {
+        method: 'GET',
+        headers,
+      }),
+      c.env,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVALID_ACTION_QUERY',
+          message,
+        },
+      },
+      400,
+    );
+  }
+});
 
 // MCP 엔드포인트
 app.all('/mcp', handleMcpRequest);

@@ -242,6 +242,7 @@ describe('문서 페이지', () => {
 
     const data = await res.json();
     expect(data.openapi).toBe('3.1.0');
+    expect(data.paths['/api/actions/query']).toBeDefined();
   });
 
   it('GET /openapi.yaml 응답을 반환한다', async () => {
@@ -251,6 +252,24 @@ describe('문서 페이지', () => {
 
     const text = await res.text();
     expect(text).toContain('openapi: 3.1.0');
+  });
+
+  it('GET /openapi-full.json 응답을 반환한다', async () => {
+    const res = await app.request('/openapi-full.json');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toContain('application/json');
+
+    const data = await res.json();
+    expect(data.paths['/api/daiso/products']).toBeDefined();
+  });
+
+  it('GET /openapi-full.yaml 응답을 반환한다', async () => {
+    const res = await app.request('/openapi-full.yaml');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toContain('text/yaml');
+
+    const text = await res.text();
+    expect(text).toContain('/api/daiso/products');
   });
 
   it('GET /privacy 응답을 반환한다', async () => {

@@ -429,5 +429,21 @@ export const OPENAPI_COMPONENTS = {
             },
           },
         },
+        ActionQueryResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              description: '대상 엔드포인트가 반환한 data 객체',
+            },
+            meta: {
+              type: 'object',
+              additionalProperties: true,
+              description: '대상 엔드포인트가 반환한 meta 객체',
+            },
+          },
+        },
       },
 };
