@@ -161,7 +161,29 @@ describe('handleOliveyoungCheckInventory', () => {
                 originalPrice: 12000,
                 discountRate: 16,
                 o2oStockFlag: true,
-                o2oRemainQuantity: 5,
+                o2oRemainQuantity: 0,
+              },
+            ],
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [
+              {
+                storeCode: 'B040',
+                storeName: '안산중앙역점',
+                salesStoreYn: true,
+                remainQuantity: 2,
               },
             ],
           },
@@ -176,7 +198,20 @@ describe('handleOliveyoungCheckInventory', () => {
         success: true,
         data: expect.objectContaining({
           keyword: '선크림',
-          inventory: expect.objectContaining({ totalCount: 1 }),
+          inventory: expect.objectContaining({
+            totalCount: 1,
+            inStockCount: 1,
+            outOfStockCount: 0,
+            stockCheckedCount: 1,
+            products: [
+              expect.objectContaining({
+                goodsName: '선크림 A',
+                inStock: true,
+                stockStatus: 'in_stock',
+                stockSource: 'nearby_store',
+              }),
+            ],
+          }),
         }),
       })
     );

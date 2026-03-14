@@ -227,7 +227,7 @@ Base URL: ${baseUrl}
 
 ### 6. 올리브영 재고 확인
 
-**설명**: 상품 키워드 기준 올리브영 재고를 조회하고 주변 매장 목록을 함께 반환합니다.
+**설명**: 상품 키워드 기준 올리브영 재고를 조회하고 주변 매장 목록을 함께 반환합니다. 상위 상품에는 storeInventory가 포함되며 매장별 재고 3개, 재고 9개 이상, 품절, 미판매 같은 상태를 제공합니다.
 
 **URL**: ${baseUrl}/api/oliveyoung/inventory?keyword={검색어}
 
@@ -557,6 +557,7 @@ Base URL: ${baseUrl}
 6. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
 7. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 8. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
+9. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
 
 ---
 

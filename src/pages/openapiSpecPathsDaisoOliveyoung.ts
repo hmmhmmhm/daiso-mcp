@@ -370,7 +370,8 @@ export const OPENAPI_PATHS_DAISO_OLIVEYOUNG = {
         get: {
           operationId: 'oliveyoungCheckInventory',
           summary: '올리브영 재고 확인',
-          description: '상품 키워드로 올리브영 재고를 검색하고 주변 매장 정보를 함께 조회합니다.',
+          description:
+            '상품 키워드로 올리브영 재고를 검색하고 주변 매장 정보를 함께 조회합니다. 상위 상품에는 storeInventory가 포함되며 매장별 재고 수량/품절/미판매 상태를 확인할 수 있습니다.',
           parameters: [
             {
               name: 'keyword',

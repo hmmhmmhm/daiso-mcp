@@ -4,7 +4,11 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import { fetchOliveyoungProducts, fetchOliveyoungStores } from '../client.js';
+import {
+  enrichOliveyoungProductsWithNearbyStoreInventory,
+  fetchOliveyoungProducts,
+  fetchOliveyoungStores,
+} from '../client.js';
 
 interface CheckInventoryArgs {
   keyword: string;
@@ -66,10 +70,21 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       }
     ),
   ]);
-
-  const inStockProducts = productResult.products.filter(
-    (product) => product.o2oStockFlag || product.o2oRemainQuantity > 0
+  const enrichedInventory = await enrichOliveyoungProductsWithNearbyStoreInventory(
+    productResult.products,
+    {
+      latitude,
+      longitude,
+      storeKeyword,
+      maxProducts: Math.min(productResult.products.length, 5),
+    },
+    {
+      timeout: timeoutMs,
+      apiKey: zyteApiKey,
+    }
   );
+
+  const inStockProducts = enrichedInventory.products.filter((product) => product.inStock);
 
   const result = {
     keyword,
@@ -92,9 +107,11 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     inventory: {
       totalCount: productResult.totalCount,
       nextPage: productResult.nextPage,
+      stockCheckedCount: enrichedInventory.checkedCount,
+      stockUncheckedCount: Math.max(0, productResult.products.length - enrichedInventory.checkedCount),
       inStockCount: inStockProducts.length,
-      outOfStockCount: productResult.products.length - inStockProducts.length,
-      products: productResult.products,
+      outOfStockCount: enrichedInventory.products.length - inStockProducts.length,
+      products: enrichedInventory.products,
     },
   };
 

@@ -8,7 +8,9 @@ import { OLIVEYOUNG_API } from './api.js';
 import type {
   OliveyoungApiResponse,
   OliveyoungProduct,
+  OliveyoungProductStoreInventory,
   OliveyoungStore,
+  OliveyoungStockStore,
 } from './types.js';
 import { decodeBase64, requestByZyte } from '../../utils/zyte.js';
 
@@ -30,6 +32,67 @@ interface SearchProductsParams {
   size: number;
   sort: string;
   includeSoldOut: boolean;
+}
+
+interface StockStoresParams {
+  productId: string;
+  latitude: number;
+  longitude: number;
+  pageIdx: number;
+  searchWords: string;
+}
+
+interface EnrichProductsParams {
+  latitude: number;
+  longitude: number;
+  storeKeyword: string;
+  maxProducts: number;
+}
+
+function resolveOliveyoungInStock(o2oStockFlag: boolean, o2oRemainQuantity: number): boolean {
+  return o2oStockFlag || o2oRemainQuantity > 0;
+}
+
+function resolveOliveyoungStoreQuantity(remainQuantity: number, o2oRemainQuantity: number): number {
+  return Math.max(remainQuantity, o2oRemainQuantity);
+}
+
+function resolveOliveyoungStoreStock(rawStore: OliveyoungApiResponse['data'] extends infer T
+  ? T extends { storeList?: Array<infer U> }
+    ? U
+    : never
+  : never): OliveyoungStockStore {
+  const remainQuantity = rawStore?.remainQuantity || 0;
+  const o2oRemainQuantity = rawStore?.o2oRemainQuantity || 0;
+  const quantity = resolveOliveyoungStoreQuantity(remainQuantity, o2oRemainQuantity);
+  const salesStoreYn = Boolean(rawStore?.salesStoreYn);
+
+  let stockStatus: OliveyoungStockStore['stockStatus'] = 'out_of_stock';
+  let stockLabel = '품절';
+
+  if (!salesStoreYn) {
+    stockStatus = 'not_sold';
+    stockLabel = '미판매';
+  } else if (quantity > 0) {
+    stockStatus = 'in_stock';
+    stockLabel = quantity >= 9 ? '재고 9개 이상' : `재고 ${quantity}개`;
+  }
+
+  return {
+    storeCode: rawStore?.storeCode || '',
+    storeName: rawStore?.storeName || '',
+    address: rawStore?.address || '',
+    latitude: rawStore?.latitude || 0,
+    longitude: rawStore?.longitude || 0,
+    distance: rawStore?.distance || 0,
+    pickupYn: Boolean(rawStore?.pickupYn),
+    salesStoreYn,
+    remainQuantity,
+    o2oRemainQuantity,
+    stockStatus,
+    stockLabel,
+    openYn: Boolean(rawStore?.openYn),
+  };
 }
 
 async function zyteExtract(
@@ -121,19 +184,144 @@ export async function fetchOliveyoungProducts(
   const body = await zyteExtract(OLIVEYOUNG_API.PRODUCT_SEARCH_PATH, payload, options);
   const list = body.data?.serachList || body.data?.searchList || [];
 
-  const products = list.map((product) => ({
-    goodsNumber: product.goodsNumber || '',
-    goodsName: product.goodsName || '',
-    priceToPay: product.priceToPay || 0,
-    originalPrice: product.originalPrice || 0,
-    discountRate: product.discountRate || 0,
-    o2oStockFlag: Boolean(product.o2oStockFlag),
-    o2oRemainQuantity: product.o2oRemainQuantity || 0,
-  }));
+  const products = list.map((product) => {
+    const o2oStockFlag = Boolean(product.o2oStockFlag);
+    const o2oRemainQuantity = product.o2oRemainQuantity || 0;
+    const inStock = resolveOliveyoungInStock(o2oStockFlag, o2oRemainQuantity);
+    const stockStatus: OliveyoungProduct['stockStatus'] = inStock ? 'in_stock' : 'out_of_stock';
+    const stockSource: OliveyoungProduct['stockSource'] = 'global_search';
+
+    return {
+      goodsNumber: product.goodsNumber || '',
+      goodsName: product.goodsName || '',
+      priceToPay: product.priceToPay || 0,
+      originalPrice: product.originalPrice || 0,
+      discountRate: product.discountRate || 0,
+      o2oStockFlag,
+      o2oRemainQuantity,
+      inStock,
+      stockStatus,
+      stockSource,
+    };
+  });
 
   return {
     totalCount: body.data?.totalCount || 0,
     nextPage: Boolean(body.data?.nextPage),
     products,
+  };
+}
+
+async function fetchOliveyoungProductId(
+  goodsNumber: string,
+  options: RequestOptions = {}
+): Promise<string> {
+  const body = await zyteExtract(
+    OLIVEYOUNG_API.STOCK_GOODS_INFO_PATH,
+    { goodsNo: goodsNumber },
+    options
+  );
+
+  return body.data?.goodsInfo?.masterGoodsNumber || '';
+}
+
+async function fetchOliveyoungStockStores(
+  params: StockStoresParams,
+  options: RequestOptions = {}
+): Promise<OliveyoungProductStoreInventory> {
+  const body = await zyteExtract(
+    OLIVEYOUNG_API.STOCK_STORES_PATH,
+    {
+      productId: params.productId,
+      lat: params.latitude,
+      lon: params.longitude,
+      pageIdx: params.pageIdx,
+      searchWords: params.searchWords,
+      mapLat: params.latitude,
+      mapLon: params.longitude,
+    },
+    options
+  );
+
+  const stores = (body.data?.storeList || []).map((store) => resolveOliveyoungStoreStock(store));
+  const inStockCount = stores.filter((store) => store.stockStatus === 'in_stock').length;
+  const notSoldCount = stores.filter((store) => store.stockStatus === 'not_sold').length;
+
+  return {
+    totalCount: body.data?.totalCount || 0,
+    inStockCount,
+    outOfStockCount: stores.length - inStockCount - notSoldCount,
+    notSoldCount,
+    stores,
+  };
+}
+
+function sortOliveyoungProducts(products: OliveyoungProduct[]): OliveyoungProduct[] {
+  const score = (product: OliveyoungProduct) => {
+    if (product.stockSource === 'nearby_store') {
+      return product.inStock ? 4 : 3;
+    }
+
+    return product.inStock ? 2 : 1;
+  };
+
+  return [...products].sort((left, right) => score(right) - score(left));
+}
+
+export async function enrichOliveyoungProductsWithNearbyStoreInventory(
+  products: OliveyoungProduct[],
+  params: EnrichProductsParams,
+  options: RequestOptions = {}
+): Promise<{ checkedCount: number; products: OliveyoungProduct[] }> {
+  const maxProducts = Math.max(0, Math.min(products.length, params.maxProducts));
+
+  if (maxProducts === 0) {
+    return { checkedCount: 0, products };
+  }
+
+  const enrichedProducts: OliveyoungProduct[] = [];
+  let checkedCount = 0;
+
+  for (const [index, product] of products.entries()) {
+    if (index >= maxProducts) {
+      enrichedProducts.push(product);
+      continue;
+    }
+
+    const productId = await fetchOliveyoungProductId(product.goodsNumber, options);
+
+    if (!productId) {
+      enrichedProducts.push(product);
+      continue;
+    }
+
+    const storeInventory = await fetchOliveyoungStockStores(
+      {
+        productId,
+        latitude: params.latitude,
+        longitude: params.longitude,
+        pageIdx: 1,
+        searchWords: params.storeKeyword,
+      },
+      options
+    );
+
+    checkedCount += 1;
+    const inStock = storeInventory.inStockCount > 0;
+    const stockStatus: OliveyoungProduct['stockStatus'] = inStock ? 'in_stock' : 'out_of_stock';
+    const stockSource: OliveyoungProduct['stockSource'] = 'nearby_store';
+
+    enrichedProducts.push({
+      ...product,
+      inStock,
+      stockStatus,
+      stockSource,
+      storeInventory,
+    });
+  }
+
+  return {
+    checkedCount,
+    products: sortOliveyoungProducts(enrichedProducts),
   };
 }

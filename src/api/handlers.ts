@@ -15,6 +15,7 @@ import { fetchProductById } from '../services/daiso/tools/getPriceInfo.js';
 import { fetchDisplayLocation } from '../services/daiso/tools/getDisplayLocation.js';
 import { getImageUrl } from '../services/daiso/api.js';
 import {
+  enrichOliveyoungProductsWithNearbyStoreInventory,
   fetchOliveyoungProducts,
   fetchOliveyoungStores,
 } from '../services/oliveyoung/client.js';
@@ -256,6 +257,19 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
         }
       ),
     ]);
+    const enrichedInventory = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      productResult.products,
+      {
+        latitude: lat,
+        longitude: lng,
+        storeKeyword,
+        maxProducts: Math.min(productResult.products.length, 5),
+      },
+      {
+        apiKey: c.env.ZYTE_API_KEY,
+      }
+    );
+    const inStockCount = enrichedInventory.products.filter((product) => product.inStock).length;
 
     return successResponse(
       c,
@@ -269,7 +283,11 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
         inventory: {
           totalCount: productResult.totalCount,
           nextPage: productResult.nextPage,
-          products: productResult.products,
+          stockCheckedCount: enrichedInventory.checkedCount,
+          stockUncheckedCount: Math.max(0, productResult.products.length - enrichedInventory.checkedCount),
+          inStockCount,
+          outOfStockCount: enrichedInventory.products.length - inStockCount,
+          products: enrichedInventory.products,
         },
       },
       { total: productResult.totalCount, page, pageSize: size }

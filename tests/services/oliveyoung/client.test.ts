@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  enrichOliveyoungProductsWithNearbyStoreInventory,
   fetchOliveyoungStores,
   fetchOliveyoungProducts,
 } from '../../../src/services/oliveyoung/client.js';
@@ -255,6 +256,37 @@ describe('fetchOliveyoungProducts', () => {
 
     expect(result.totalCount).toBe(1);
     expect(result.products[0].goodsName).toBe('립밤');
+    expect(result.products[0].inStock).toBe(true);
+    expect(result.products[0].stockStatus).toBe('in_stock');
+    expect(result.products[0].stockSource).toBe('global_search');
+  });
+
+  it('o2oRemainQuantity가 0이어도 o2oStockFlag가 true면 재고 있음으로 본다', async () => {
+    mockFetch.mockResolvedValue(
+      createZyteResponse({
+        status: 'SUCCESS',
+        data: {
+          totalCount: 1,
+          nextPage: false,
+          serachList: [
+            {
+              goodsNumber: 'A3',
+              goodsName: '마스크팩',
+              o2oStockFlag: true,
+              o2oRemainQuantity: 0,
+            },
+          ],
+        },
+      })
+    );
+
+    const result = await fetchOliveyoungProducts(
+      { keyword: '팩', page: 1, size: 20, sort: '01', includeSoldOut: false },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.products[0].inStock).toBe(true);
+    expect(result.products[0].stockStatus).toBe('in_stock');
   });
 
   it('searchList 대체 필드를 처리한다', async () => {
@@ -409,5 +441,283 @@ describe('fetchOliveyoungProducts', () => {
 
     globalThis.atob = originalAtob;
     globalThis.Buffer = originalBuffer;
+  });
+});
+
+describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
+  it('상품별 주변 매장 수량 정보를 붙이고 재고 있는 상품을 앞으로 정렬한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 2,
+            storeList: [
+              { storeCode: 'B040', storeName: '안산중앙역점', salesStoreYn: true, remainQuantity: 4 },
+              { storeCode: 'B041', storeName: '안산중앙점', salesStoreYn: false, remainQuantity: 0 },
+            ],
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8802' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [
+              { storeCode: 'B042', storeName: '안산고잔점', salesStoreYn: true, remainQuantity: 0 },
+            ],
+          },
+        })
+      );
+
+    const result = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      [
+        {
+          goodsNumber: 'A1',
+          goodsName: '팩 A',
+          priceToPay: 10000,
+          originalPrice: 12000,
+          discountRate: 16,
+          o2oStockFlag: true,
+          o2oRemainQuantity: 0,
+          inStock: true,
+          stockStatus: 'in_stock',
+          stockSource: 'global_search',
+        },
+        {
+          goodsNumber: 'A2',
+          goodsName: '팩 B',
+          priceToPay: 11000,
+          originalPrice: 13000,
+          discountRate: 15,
+          o2oStockFlag: true,
+          o2oRemainQuantity: 0,
+          inStock: true,
+          stockStatus: 'in_stock',
+          stockSource: 'global_search',
+        },
+      ],
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 5,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.checkedCount).toBe(2);
+    expect(result.products[0].goodsName).toBe('팩 A');
+    expect(result.products[0].stockSource).toBe('nearby_store');
+    expect(result.products[0].storeInventory?.stores[0].stockLabel).toBe('재고 4개');
+    expect(result.products[0].storeInventory?.stores[1].stockStatus).toBe('not_sold');
+    expect(result.products[1].stockStatus).toBe('out_of_stock');
+  });
+
+  it('maxProducts가 0이면 원본 상품을 그대로 반환한다', async () => {
+    const products = [
+      {
+        goodsNumber: 'A1',
+        goodsName: '팩 A',
+        priceToPay: 10000,
+        originalPrice: 12000,
+        discountRate: 16,
+        o2oStockFlag: true,
+        o2oRemainQuantity: 1,
+        inStock: true,
+        stockStatus: 'in_stock' as const,
+        stockSource: 'global_search' as const,
+      },
+    ];
+
+    const result = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      products,
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 0,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.checkedCount).toBe(0);
+    expect(result.products).toEqual(products);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('goods info에 masterGoodsNumber가 없으면 상품을 그대로 유지한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      createZyteResponse({
+        status: 'SUCCESS',
+        data: { goodsInfo: {} },
+      })
+    );
+
+    const products = [
+      {
+        goodsNumber: 'A1',
+        goodsName: '팩 A',
+        priceToPay: 10000,
+        originalPrice: 12000,
+        discountRate: 16,
+        o2oStockFlag: true,
+        o2oRemainQuantity: 1,
+        inStock: true,
+        stockStatus: 'in_stock' as const,
+        stockSource: 'global_search' as const,
+      },
+      {
+        goodsNumber: 'A2',
+        goodsName: '팩 B',
+        priceToPay: 12000,
+        originalPrice: 14000,
+        discountRate: 14,
+        o2oStockFlag: false,
+        o2oRemainQuantity: 0,
+        inStock: false,
+        stockStatus: 'out_of_stock' as const,
+        stockSource: 'global_search' as const,
+      },
+    ];
+
+    const result = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      products,
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 1,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.checkedCount).toBe(0);
+    expect(result.products).toEqual(products);
+  });
+
+  it('stock-stores 응답에 빈 데이터가 오면 주변 매장 재고를 품절로 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8803' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {},
+        })
+      );
+
+    const result = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      [
+        {
+          goodsNumber: 'A3',
+          goodsName: '팩 C',
+          priceToPay: 9000,
+          originalPrice: 10000,
+          discountRate: 10,
+          o2oStockFlag: true,
+          o2oRemainQuantity: 1,
+          inStock: true,
+          stockStatus: 'in_stock',
+          stockSource: 'global_search',
+        },
+      ],
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 1,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.checkedCount).toBe(1);
+    expect(result.products[0].stockSource).toBe('nearby_store');
+    expect(result.products[0].inStock).toBe(false);
+    expect(result.products[0].stockStatus).toBe('out_of_stock');
+    expect(result.products[0].storeInventory).toEqual({
+      totalCount: 0,
+      inStockCount: 0,
+      outOfStockCount: 0,
+      notSoldCount: 0,
+      stores: [],
+    });
+  });
+
+  it('stock-stores 항목이 비어 있어도 기본값과 재고 라벨을 계산한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8804' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [undefined],
+          },
+        })
+      );
+
+    const result = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      [
+        {
+          goodsNumber: 'A4',
+          goodsName: '팩 D',
+          priceToPay: 13000,
+          originalPrice: 15000,
+          discountRate: 13,
+          o2oStockFlag: false,
+          o2oRemainQuantity: 0,
+          inStock: false,
+          stockStatus: 'out_of_stock',
+          stockSource: 'global_search',
+        },
+      ],
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 1,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.checkedCount).toBe(1);
+    expect(result.products[0].storeInventory?.stores[0]).toEqual({
+      storeCode: '',
+      storeName: '',
+      address: '',
+      latitude: 0,
+      longitude: 0,
+      distance: 0,
+      pickupYn: false,
+      salesStoreYn: false,
+      remainQuantity: 0,
+      o2oRemainQuantity: 0,
+      stockStatus: 'not_sold',
+      stockLabel: '미판매',
+      openYn: false,
+    });
   });
 });

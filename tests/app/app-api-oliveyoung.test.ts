@@ -56,10 +56,29 @@ describe('GET /api/oliveyoung/inventory', () => {
       }),
       'utf8',
     ).toString('base64');
+    const goodsInfoEncoded = Buffer.from(
+      JSON.stringify({
+        status: 'SUCCESS',
+        data: { goodsInfo: { masterGoodsNumber: '8801' } },
+      }),
+      'utf8',
+    ).toString('base64');
+    const stockStoresEncoded = Buffer.from(
+      JSON.stringify({
+        status: 'SUCCESS',
+        data: {
+          totalCount: 1,
+          storeList: [{ storeCode: 'D176', storeName: '올리브영 명동 타운', salesStoreYn: true, remainQuantity: 3 }],
+        },
+      }),
+      'utf8',
+    ).toString('base64');
 
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 200, httpResponseBody: storeEncoded })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 200, httpResponseBody: productEncoded })));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 200, httpResponseBody: productEncoded })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 200, httpResponseBody: goodsInfoEncoded })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 200, httpResponseBody: stockStoresEncoded })));
 
     const res = await app.request('/api/oliveyoung/inventory?keyword=선크림', undefined, {
       ZYTE_API_KEY: 'test-key',
@@ -69,6 +88,10 @@ describe('GET /api/oliveyoung/inventory', () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.data.keyword).toBe('선크림');
+    expect(data.data.inventory.inStockCount).toBe(1);
+    expect(data.data.inventory.stockCheckedCount).toBe(1);
+    expect(data.data.inventory.products[0].stockStatus).toBe('in_stock');
+    expect(data.data.inventory.products[0].storeInventory.stores[0].stockLabel).toBe('재고 3개');
   });
 
   it('keyword 없이 요청하면 에러를 반환한다', async () => {

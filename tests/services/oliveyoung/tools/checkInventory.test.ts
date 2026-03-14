@@ -75,7 +75,7 @@ describe('createCheckInventoryTool', () => {
                 originalPrice: 15000,
                 discountRate: 33,
                 o2oStockFlag: true,
-                o2oRemainQuantity: 5,
+                o2oRemainQuantity: 0,
               },
               {
                 goodsNumber: 'A2',
@@ -89,6 +89,50 @@ describe('createCheckInventoryTool', () => {
             ],
           },
         })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [
+              {
+                storeCode: 'B040',
+                storeName: '안산중앙역점',
+                salesStoreYn: true,
+                remainQuantity: 3,
+              },
+            ],
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8802' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [
+              {
+                storeCode: 'B041',
+                storeName: '안산중앙점',
+                salesStoreYn: true,
+                remainQuantity: 0,
+              },
+            ],
+          },
+        })
       );
 
     const tool = createCheckInventoryTool('test-key');
@@ -97,8 +141,12 @@ describe('createCheckInventoryTool', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.nearbyStores.totalCount).toBe(1);
     expect(parsed.inventory.totalCount).toBe(2);
+    expect(parsed.inventory.stockCheckedCount).toBe(2);
     expect(parsed.inventory.inStockCount).toBe(1);
     expect(parsed.inventory.outOfStockCount).toBe(1);
+    expect(parsed.inventory.products[0].inStock).toBe(true);
+    expect(parsed.inventory.products[0].stockStatus).toBe('in_stock');
+    expect(parsed.inventory.products[0].storeInventory.stores[0].stockLabel).toBe('재고 3개');
   });
 
   it('상품 API의 searchList 오타 보정 필드를 처리한다', async () => {
@@ -131,6 +179,28 @@ describe('createCheckInventoryTool', () => {
             ],
           },
         })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8803' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [
+              {
+                storeCode: 'B040',
+                storeName: '안산중앙역점',
+                salesStoreYn: true,
+                remainQuantity: 9,
+              },
+            ],
+          },
+        })
       );
 
     const tool = createCheckInventoryTool('test-key');
@@ -139,5 +209,6 @@ describe('createCheckInventoryTool', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.inventory.products).toHaveLength(1);
     expect(parsed.inventory.products[0].goodsName).toBe('립밤 A');
+    expect(parsed.inventory.products[0].storeInventory.stores[0].stockLabel).toBe('재고 9개 이상');
   });
 });
