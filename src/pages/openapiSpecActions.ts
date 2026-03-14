@@ -2,10 +2,7 @@
  * OpenAI Actions용 축약 OpenAPI 스펙
  */
 
-import {
-  ACTION_QUERY_ACTIONS,
-  createActionQueryDescriptionList,
-} from '../api/actionsProxy.js';
+import { ACTION_QUERY_ACTIONS } from '../api/actionsProxy.js';
 import { OPENAPI_COMPONENTS } from './openapiSpecComponents.js';
 
 const ACTION_QUERY_PARAMETERS = [
@@ -13,7 +10,8 @@ const ACTION_QUERY_PARAMETERS = [
     name: 'action',
     in: 'query',
     required: true,
-    description: `실행할 액션 이름\n${createActionQueryDescriptionList()}`,
+    description:
+      '실행할 액션 이름입니다. 사용 가능한 값은 enum 목록을 참고하세요.',
     schema: {
       type: 'string',
       enum: ACTION_QUERY_ACTIONS,
@@ -85,7 +83,7 @@ export function generateOpenApiSpec(baseUrl: string): object {
           operationId: 'queryAction',
           summary: '공통 GET 액션 실행',
           description:
-            'action 값에 따라 기존 GET API 엔드포인트로 안전하게 프록시합니다. OpenAI Actions 등록 시 이 단일 엔드포인트만 사용하세요.',
+            'action 값에 따라 기존 GET API 엔드포인트로 프록시합니다. OpenAI Actions 등록 시 이 단일 엔드포인트를 사용하세요.',
           parameters: ACTION_QUERY_PARAMETERS,
           responses: {
             '200': {

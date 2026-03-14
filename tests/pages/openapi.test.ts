@@ -18,13 +18,25 @@ describe('OpenAPI 페이지', () => {
     const spec = generateOpenApiSpec('https://example.com') as {
       openapi: string;
       servers: Array<{ url: string }>;
-      paths: Record<string, unknown>;
+      paths: Record<
+        string,
+        {
+          get: {
+            parameters: Array<{ name: string; description?: string }>;
+          };
+        }
+      >;
     };
 
     expect(spec.openapi).toBe('3.1.0');
     expect(spec.servers[0].url).toBe('https://example.com');
     expect(spec.paths['/api/actions/query']).toBeDefined();
     expect(spec.paths['/api/daiso/products']).toBeUndefined();
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.find(
+        (parameter) => parameter.name === 'action',
+      )?.description?.length,
+    ).toBeLessThan(700);
   });
 
   it('전체 OpenAPI 스펙 객체를 생성한다', () => {
