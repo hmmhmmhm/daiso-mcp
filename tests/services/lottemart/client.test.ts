@@ -14,6 +14,7 @@ import {
 } from '../../../src/services/lottemart/client.js';
 
 const mockFetch = vi.fn();
+const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -27,9 +28,11 @@ afterEach(() => {
 
 describe('fetchLotteMartMarketOptions', () => {
   it('지역별 매장 옵션을 파싱한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response('<option value="">매장선택</option><option value="2301">강변점</option>'),
-    );
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(
+        new Response('<option value="">매장선택</option><option value="2301">강변점</option>'),
+      );
 
     const result = await fetchLotteMartMarketOptions('서울', '2');
 
@@ -44,18 +47,22 @@ describe('fetchLotteMartMarketOptions', () => {
   });
 
   it('제주 입력을 기타 지역 코드로 변환한다', async () => {
-    mockFetch.mockResolvedValue(new Response('<option value="2901">제주점</option>'));
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2901">제주점</option>'));
 
     await fetchLotteMartMarketOptions('제주', '2');
 
-    expect(String(mockFetch.mock.calls[0][0])).toContain('p_area=%EA%B8%B0%ED%83%80');
+    expect(String(mockFetch.mock.calls[1][0])).toContain('p_area=%EA%B8%B0%ED%83%80');
   });
 });
 
 describe('fetchLotteMartStoresByArea', () => {
   it('지역 전체 매장 상세를 파싱한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(`
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(
+        new Response(`
         <!doctype html>
         <section class="sub-wrap result-shop-list">
           <ul class="list-result">
@@ -75,7 +82,7 @@ describe('fetchLotteMartStoresByArea', () => {
           </ul>
         </section>
       `),
-    );
+      );
 
     const result = await fetchLotteMartStoresByArea('서울');
 
@@ -119,6 +126,7 @@ describe('geocodeLotteMartAddress', () => {
 describe('fetchLotteMartStores', () => {
   it('주소 지오코딩으로 거리순 매장을 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -192,6 +200,7 @@ describe('fetchLotteMartStores', () => {
           }),
         ),
       )
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -232,11 +241,59 @@ describe('fetchLotteMartStores', () => {
     expect(result.geocodeUsed).toBe(true);
     expect(result.stores[0].storeName).toBe('강변점');
   });
+
+  it('지역 없이 역명 키워드를 받으면 일치 매장을 찾을 때까지 순차 조회한다', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === 'https://company.lottemart.com/mobiledowa/') {
+        return Promise.resolve(createSessionResponse());
+      }
+
+      const body = String(init?.body || '');
+      if (body.includes('m_area=%EA%B2%BD%EA%B8%B0')) {
+        return Promise.resolve(
+          new Response(`
+            <section class="sub-wrap result-shop-list">
+              <ul class="list-result">
+                <li>
+                  <div class="shop-tit">안산점</div>
+                  <div class="shop-desc">
+                    <ul>
+                      <li><span>주소 : </span> 경기 안산시 상록구 항가울로 422</li>
+                      <li><span>상담전화 : </span><a onclick="goClick('2415');">031-000-0000</a></li>
+                    </ul>
+                  </div>
+                  <a class="link" href="./detail_shop.asp?werks=2415"></a>
+                </li>
+              </ul>
+            </section>
+          `),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(`
+          <section class="sub-wrap result-shop-list">
+            <ul class="list-result"></ul>
+          </section>
+        `),
+      );
+    });
+
+    const result = await fetchLotteMartStores({
+      keyword: '안산 중앙역',
+      limit: 1,
+    });
+
+    expect(result.stores.map((store) => store.storeCode)).toEqual(['2415']);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('resolveLotteMartStore', () => {
   it('storeCode로 매장을 찾는다', async () => {
-    mockFetch.mockResolvedValue(new Response('<option value="2301">강변점</option>'));
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'));
 
     const result = await resolveLotteMartStore('서울', '2301', undefined);
 
@@ -244,7 +301,9 @@ describe('resolveLotteMartStore', () => {
   });
 
   it('storeName 부분 일치로 매장을 찾는다', async () => {
-    mockFetch.mockResolvedValue(new Response('<option value="2301">강변점</option>'));
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'));
 
     const result = await resolveLotteMartStore('서울', undefined, '강변');
 
@@ -255,6 +314,7 @@ describe('resolveLotteMartStore', () => {
 describe('searchLotteMartProducts', () => {
   it('초기 페이지와 추가 페이지를 합쳐 상품을 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
       .mockResolvedValueOnce(
         new Response(`
@@ -317,5 +377,75 @@ describe('searchLotteMartProducts', () => {
     expect(result.totalPages).toBe(2);
     expect(result.products).toHaveLength(2);
     expect(result.products[0].barcode).toBe('8801094011307');
+  });
+
+  it('역명 키워드를 붙여쓴 변형으로도 매장을 찾는다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(
+        new Response(`
+          <section class="sub-wrap result-shop-list">
+            <ul class="list-result">
+              <li>
+                <div class="shop-tit">안산점</div>
+                <div class="shop-desc">
+                  <ul>
+                    <li><span>주소 : </span> 경기 안산시 단원구 고잔동 000</li>
+                    <li><span>상담전화 : </span><a onclick="goClick('2415');">031-000-0000</a></li>
+                  </ul>
+                </div>
+                <a class="link" href="./detail_shop.asp?werks=2415"></a>
+              </li>
+            </ul>
+          </section>
+        `),
+      );
+
+    const result = await fetchLotteMartStores({
+      area: '경기',
+      keyword: '안산 중앙역',
+    });
+
+    expect(result.stores[0].storeCode).toBe('2415');
+  });
+
+  it('다중 토큰 키워드에서 과하게 넓은 부분 일치를 줄인다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(
+        new Response(`
+          <section class="sub-wrap result-shop-list">
+            <ul class="list-result">
+              <li>
+                <div class="shop-tit">안산점</div>
+                <div class="shop-desc">
+                  <ul>
+                    <li><span>주소 : </span> 경기 안산시 상록구 항가울로 422</li>
+                    <li><span>상담전화 : </span><a onclick="goClick('2415');">031-000-0000</a></li>
+                  </ul>
+                </div>
+                <a class="link" href="./detail_shop.asp?werks=2415"></a>
+              </li>
+              <li>
+                <div class="shop-tit">주엽점</div>
+                <div class="shop-desc">
+                  <ul>
+                    <li><span>주소 : </span> 경기 고양시 일산서구 중앙로 1496</li>
+                    <li><span>상담전화 : </span><a onclick="goClick('2403');">031-111-1111</a></li>
+                  </ul>
+                </div>
+                <a class="link" href="./detail_shop.asp?werks=2403"></a>
+              </li>
+            </ul>
+          </section>
+        `),
+      );
+
+    const result = await fetchLotteMartStores({
+      area: '경기',
+      keyword: '안산 중앙역',
+    });
+
+    expect(result.stores.map((store) => store.storeCode)).toEqual(['2415']);
   });
 });

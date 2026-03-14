@@ -8,6 +8,7 @@ import { __testOnlyClearLotteMartCaches } from '../../src/services/lottemart/cli
 import { setupFetchMock } from './testHelpers.js';
 
 const mockFetch = vi.fn();
+const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
 setupFetchMock(mockFetch);
 
 beforeEach(() => {
@@ -17,6 +18,7 @@ beforeEach(() => {
 describe('GET /api/lottemart/stores', () => {
   it('롯데마트 매장 검색 결과를 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -58,6 +60,7 @@ describe('GET /api/lottemart/stores', () => {
 describe('GET /api/lottemart/products', () => {
   it('롯데마트 상품 검색 결과를 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
       .mockResolvedValueOnce(
         new Response(`

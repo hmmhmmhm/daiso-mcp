@@ -7,6 +7,7 @@ import { __testOnlyClearLotteMartCaches } from '../../../../src/services/lottema
 import { createFindNearbyStoresTool } from '../../../../src/services/lottemart/tools/findNearbyStores.js';
 
 const mockFetch = vi.fn();
+const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -28,6 +29,7 @@ describe('createFindNearbyStoresTool', () => {
 
   it('거리순 매장을 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -71,6 +73,10 @@ describe('createFindNearbyStoresTool', () => {
   it('지역이 없으면 전체 지역 기준 응답을 구성하고 전달된 API 키를 우선 사용한다', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
+
+      if (url === 'https://company.lottemart.com/mobiledowa/') {
+        return Promise.resolve(createSessionResponse());
+      }
 
       if (url.includes('maps.googleapis.com')) {
         expect(url).toContain('key=override-key');

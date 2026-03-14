@@ -8,6 +8,7 @@ import { __testOnlyClearLotteMartCaches } from '../../src/services/lottemart/cli
 import { handleLotteMartFindStores, handleLotteMartSearchProducts } from '../../src/api/lottemartHandlers.js';
 
 const mockFetch = vi.fn();
+const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -37,8 +38,12 @@ function createMockContext(query: Record<string, string> = {}) {
 
 describe('handleLotteMartFindStores', () => {
   it('area와 brandVariant가 없으면 null로 응답한다', async () => {
-    mockFetch.mockImplementation(() =>
-      Promise.resolve(
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === 'https://company.lottemart.com/mobiledowa/') {
+        return Promise.resolve(createSessionResponse());
+      }
+
+      return Promise.resolve(
         new Response(`
           <section class="sub-wrap result-shop-list">
             <ul class="list-result">
@@ -55,8 +60,8 @@ describe('handleLotteMartFindStores', () => {
             </ul>
           </section>
         `),
-      ),
-    );
+      );
+    });
 
     const ctx = createMockContext({ limit: '1' });
     await handleLotteMartFindStores(ctx);
@@ -74,6 +79,7 @@ describe('handleLotteMartFindStores', () => {
 
   it('매장 검색 결과를 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -177,6 +183,7 @@ describe('handleLotteMartSearchProducts', () => {
 
   it('상품 검색 결과를 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
       .mockResolvedValueOnce(
         new Response(`

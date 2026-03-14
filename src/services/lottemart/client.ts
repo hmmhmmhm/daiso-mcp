@@ -2,8 +2,23 @@
  * 롯데마트 모바일 도와센터 클라이언트
  */
 
-import { fetchJson, fetchText } from '../../utils/http.js';
-import { LOTTEMART_AREAS, LOTTEMART_API, type LotteMartAreaCode } from './api.js';
+import { fetchJson } from '../../utils/http.js';
+import { LOTTEMART_API, type LotteMartAreaCode } from './api.js';
+import {
+  __testOnlyClearLotteMartSessionCache,
+  fetchLotteMartHtml,
+  fetchLotteMartPageWithSession,
+  getCachedLotteMartSessionCookie,
+  getFreshLotteMartSessionCookie,
+} from './session.js';
+import {
+  attachDistance,
+  fetchAllStoresForAreaList,
+  fetchKeywordMatchedStores,
+  getTargetAreas,
+  normalizeArea,
+  toDisplayArea,
+} from './storeSearch.js';
 import {
   calculateDistanceM,
   dedupeProducts,
@@ -20,6 +35,7 @@ import type { LotteMartMarketOption, LotteMartProduct, LotteMartStore } from './
 interface RequestOptions {
   timeout?: number;
   googleMapsApiKey?: string;
+  sessionCookie?: string;
 }
 
 interface FetchLotteMartStoresParams {
@@ -56,32 +72,17 @@ const GEOCODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const storeCache = new Map<string, { expiresAt: number; stores: LotteMartStore[] }>();
 const geocodeCache = new Map<string, { expiresAt: number; value: { latitude: number; longitude: number } | null }>();
 
-function normalizeArea(area?: string): LotteMartAreaCode | undefined {
-  const trimmed = (area || '').trim();
-  if (trimmed.length === 0) {
-    return undefined;
+async function getLotteMartSessionCookie(options: RequestOptions): Promise<string> {
+  if (options.sessionCookie) {
+    return options.sessionCookie;
   }
 
-  if (trimmed === '제주') {
-    return '기타';
+  const timeout = options.timeout || 15000;
+  try {
+    return await getFreshLotteMartSessionCookie(timeout);
+  } catch {
+    return getCachedLotteMartSessionCookie(timeout);
   }
-
-  return LOTTEMART_AREAS.find((value) => value === trimmed);
-}
-
-function toDisplayArea(area: LotteMartAreaCode | string): string {
-  return area === '기타' ? '제주' : area;
-}
-
-function fetchLotteMartPage(path: string, init: RequestInit, timeout: number): Promise<string> {
-  return fetchText(`${LOTTEMART_API.BASE_URL}${path}`, {
-    ...init,
-    timeout,
-    headers: {
-      Accept: 'text/html, */*; q=0.01',
-      ...init.headers,
-    },
-  });
 }
 
 export async function fetchLotteMartMarketOptions(
@@ -98,14 +99,18 @@ export async function fetchLotteMartMarketOptions(
   endpoint.searchParams.set('p_area', normalizedArea);
   endpoint.searchParams.set('p_type', type);
 
-  const html = await fetchText(endpoint.toString(), {
-    method: 'GET',
-    timeout: options.timeout || 15000,
-    headers: {
-      Accept: 'text/html, */*; q=0.01',
-      'X-Requested-With': 'XMLHttpRequest',
+  const html = await fetchLotteMartHtml(
+    endpoint.toString(),
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'text/html, */*; q=0.01',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     },
-  });
+    options.timeout || 15000,
+    await getLotteMartSessionCookie(options),
+  );
 
   return parseMarketOptions(toDisplayArea(normalizedArea), html);
 }
@@ -128,7 +133,7 @@ export async function fetchLotteMartStoresByArea(
   const body = new URLSearchParams();
   body.set('m_area', normalizedArea);
 
-  const html = await fetchLotteMartPage(
+  const html = await fetchLotteMartPageWithSession(
     LOTTEMART_API.STORE_SEARCH_PATH,
     {
       method: 'POST',
@@ -138,6 +143,7 @@ export async function fetchLotteMartStoresByArea(
       body: body.toString(),
     },
     options.timeout || 15000,
+    await getLotteMartSessionCookie(options),
   );
 
   const stores = parseStores(toDisplayArea(normalizedArea), html);
@@ -198,31 +204,6 @@ export async function geocodeLotteMartAddress(address: string, options: RequestO
   return value;
 }
 
-function getTargetAreas(area?: string): string[] {
-  return area ? [area] : [...LOTTEMART_AREAS];
-}
-
-function attachDistance(
-  stores: LotteMartStore[],
-  latitude: number | undefined,
-  longitude: number | undefined,
-): LotteMartStore[] {
-  return stores.map((store) => {
-    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-      return store;
-    }
-
-    if (store.latitude === 0 || store.longitude === 0) {
-      return store;
-    }
-
-    return {
-      ...store,
-      distanceM: calculateDistanceM(latitude, longitude, store.latitude, store.longitude),
-    };
-  });
-}
-
 export async function fetchLotteMartStores(
   params: FetchLotteMartStoresParams = {},
   options: RequestOptions = {},
@@ -233,6 +214,9 @@ export async function fetchLotteMartStores(
 }> {
   const { area, keyword = '', brandVariant = '', latitude, longitude, limit = 20 } = params;
   const { timeout = 15000, googleMapsApiKey } = options;
+  if (area && !normalizeArea(area)) {
+    throw new Error(`지원하지 않는 지역입니다: ${area}`);
+  }
 
   let resolvedLatitude = latitude;
   let resolvedLongitude = longitude;
@@ -250,9 +234,28 @@ export async function fetchLotteMartStores(
     }
   }
 
-  const stores = (await Promise.all(getTargetAreas(area).map((value) => fetchLotteMartStoresByArea(value, { timeout })))).flat();
+  const sessionCookie = await getLotteMartSessionCookie({ timeout });
+
+  const targetAreas = getTargetAreas(area);
+  const requiresKeywordAreaScan =
+    !area &&
+    keyword.trim().length > 0 &&
+    (typeof resolvedLatitude !== 'number' || typeof resolvedLongitude !== 'number');
+
+  const stores = requiresKeywordAreaScan
+    ? await fetchKeywordMatchedStores(targetAreas, keyword, brandVariant, limit, (currentArea) =>
+        fetchLotteMartStoresByArea(currentArea, { timeout, sessionCookie }),
+      )
+    : await fetchAllStoresForAreaList(targetAreas, (currentArea) =>
+        fetchLotteMartStoresByArea(currentArea, { timeout, sessionCookie }),
+      );
+
   const filtered = attachDistance(
-    stores.filter((store) => matchesKeyword(store, keyword)).filter((store) => matchesBrandVariant(store, brandVariant)),
+    requiresKeywordAreaScan
+      ? stores
+      : stores
+          .filter((store) => matchesKeyword(store, keyword))
+          .filter((store) => matchesBrandVariant(store, brandVariant)),
     resolvedLatitude,
     resolvedLongitude,
   );
@@ -344,8 +347,12 @@ export async function searchLotteMartProducts(
     throw new Error('상품 검색어(keyword)를 입력해주세요.');
   }
 
+  const timeout = options.timeout || 15000;
+  const sessionCookie = await getLotteMartSessionCookie({ timeout });
+
   const resolvedStore = await resolveLotteMartStore(params.area, params.storeCode, params.storeName, {
-    timeout: options.timeout || 15000,
+    timeout,
+    sessionCookie,
   });
   if (!resolvedStore) {
     throw new Error('검색할 롯데마트 매장을 찾지 못했습니다. area와 storeCode/storeName을 확인해주세요.');
@@ -356,7 +363,7 @@ export async function searchLotteMartProducts(
   initialBody.set('p_market', resolvedStore.storeCode);
   initialBody.set('p_schWord', normalizedKeyword);
 
-  const initialHtml = await fetchLotteMartPage(
+  const initialHtml = await fetchLotteMartPageWithSession(
     LOTTEMART_API.PRODUCT_SEARCH_PATH,
     {
       method: 'POST',
@@ -365,7 +372,8 @@ export async function searchLotteMartProducts(
       },
       body: initialBody.toString(),
     },
-    options.timeout || 15000,
+    timeout,
+    sessionCookie,
   );
 
   const summary = parseProductSummary(initialHtml);
@@ -385,14 +393,18 @@ export async function searchLotteMartProducts(
       endpoint.searchParams.set('p_schWord', normalizedKeyword);
       endpoint.searchParams.set('page', String(page));
 
-      return fetchText(endpoint.toString(), {
-        method: 'GET',
-        timeout: options.timeout || 15000,
-        headers: {
-          Accept: 'text/html, */*; q=0.01',
-          'X-Requested-With': 'XMLHttpRequest',
+      return fetchLotteMartHtml(
+        endpoint.toString(),
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'text/html, */*; q=0.01',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
         },
-      });
+        timeout,
+        sessionCookie,
+      );
     }),
   );
 
@@ -415,4 +427,5 @@ export { calculateDistanceM };
 export function __testOnlyClearLotteMartCaches(): void {
   storeCache.clear();
   geocodeCache.clear();
+  __testOnlyClearLotteMartSessionCache();
 }

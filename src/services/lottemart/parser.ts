@@ -3,6 +3,7 @@
  */
 
 import type { LotteMartMarketOption, LotteMartProduct, LotteMartStore } from './types.js';
+import { buildLotteMartKeywordVariants } from './keyword.js';
 
 export function detectBrandVariant(storeName: string) {
   if (storeName.startsWith('토이저러스')) {
@@ -168,12 +169,19 @@ export function dedupeProducts(products: LotteMartProduct[]): LotteMartProduct[]
 }
 
 export function matchesKeyword(store: LotteMartStore, keyword: string): boolean {
-  const normalized = keyword.trim().toLowerCase();
-  if (normalized.length === 0) {
+  const variants = buildLotteMartKeywordVariants(keyword).map((value) => value.toLowerCase());
+  if (variants.length === 0) {
     return true;
   }
 
-  return [store.storeName, store.address, store.phone].some((value) => value.toLowerCase().includes(normalized));
+  const haystacks = [store.storeName, store.address, store.phone]
+    .map((value) => value.toLowerCase().replace(/\s+/g, ''))
+    .filter((value) => value.length > 0);
+
+  return variants.some((variant) => {
+    const normalizedVariant = variant.replace(/\s+/g, '');
+    return haystacks.some((value) => value.includes(normalizedVariant));
+  });
 }
 
 export function matchesBrandVariant(store: LotteMartStore, brandVariant?: string): boolean {

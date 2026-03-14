@@ -7,6 +7,7 @@ import { __testOnlyClearLotteMartCaches } from '../../../../src/services/lottema
 import { createSearchProductsTool } from '../../../../src/services/lottemart/tools/searchProducts.js';
 
 const mockFetch = vi.fn();
+const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -28,6 +29,7 @@ describe('createSearchProductsTool', () => {
 
   it('상품 검색 결과를 반환한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
       .mockResolvedValueOnce(
         new Response(`

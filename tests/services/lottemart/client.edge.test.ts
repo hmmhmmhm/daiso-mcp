@@ -15,6 +15,7 @@ import {
 import { LOTTEMART_AREAS } from '../../../src/services/lottemart/api.js';
 
 const mockFetch = vi.fn();
+const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -40,8 +41,10 @@ describe('fetchLotteMartStoresByArea 예외 처리', () => {
   });
 
   it('동일 지역 재조회 시 캐시된 매장을 반환한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(`
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(
+        new Response(`
         <section class="sub-wrap result-shop-list">
           <ul class="list-result">
             <li>
@@ -57,13 +60,28 @@ describe('fetchLotteMartStoresByArea 예외 처리', () => {
           </ul>
         </section>
       `),
-    );
+      );
 
     const first = await fetchLotteMartStoresByArea('서울');
     const second = await fetchLotteMartStoresByArea('서울');
 
     expect(first).toBe(second);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('새 세션 획득이 실패하면 캐시된 세션으로 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockRejectedValueOnce(new Error('session bootstrap failed'))
+      .mockResolvedValueOnce(new Response('<option value="2415">안산점</option>'));
+
+    const first = await fetchLotteMartMarketOptions('서울', '1');
+    const second = await fetchLotteMartMarketOptions('경기', '1');
+
+    expect(first[0]?.storeCode).toBe('2301');
+    expect(second[0]?.storeCode).toBe('2415');
+    expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -124,6 +142,7 @@ describe('fetchLotteMartStores 보조 분기', () => {
           }),
         ),
       )
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -159,8 +178,10 @@ describe('fetchLotteMartStores 보조 분기', () => {
   });
 
   it('매장 좌표가 이미 있으면 거리 계산만 수행한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(`
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(
+        new Response(`
         <section class="sub-wrap result-shop-list">
           <ul class="list-result">
             <li>
@@ -176,7 +197,7 @@ describe('fetchLotteMartStores 보조 분기', () => {
           </ul>
         </section>
       `),
-    );
+      );
 
     const cachedStores = await fetchLotteMartStoresByArea('서울');
     cachedStores[0].latitude = 37.5354;
@@ -190,12 +211,16 @@ describe('fetchLotteMartStores 보조 분기', () => {
     });
 
     expect(result.stores[0].distanceM).toBeTypeOf('number');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
   it('지역이 없으면 전체 지역을 조회하고 좌표 없이 결과를 반환한다', async () => {
-    mockFetch.mockImplementation(() =>
-      Promise.resolve(
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === 'https://company.lottemart.com/mobiledowa/') {
+        return Promise.resolve(createSessionResponse());
+      }
+
+      return Promise.resolve(
         new Response(`
           <section class="sub-wrap result-shop-list">
             <ul class="list-result">
@@ -212,12 +237,12 @@ describe('fetchLotteMartStores 보조 분기', () => {
             </ul>
           </section>
         `),
-      ),
-    );
+      );
+    });
 
     const result = await fetchLotteMartStores({ limit: 2 });
 
-    expect(mockFetch).toHaveBeenCalledTimes(LOTTEMART_AREAS.length);
+    expect(mockFetch).toHaveBeenCalledTimes(LOTTEMART_AREAS.length + 1);
     expect(result.location).toBeNull();
     expect(result.geocodeUsed).toBe(false);
     expect(result.stores).toHaveLength(2);
@@ -226,6 +251,7 @@ describe('fetchLotteMartStores 보조 분기', () => {
 
   it('매장 주소 지오코딩에 실패하면 원본 매장을 유지한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -271,7 +297,9 @@ describe('fetchLotteMartStores 보조 분기', () => {
 
 describe('resolveLotteMartStore 보조 분기', () => {
   it('storeName 완전 일치로 매장을 찾는다', async () => {
-    mockFetch.mockResolvedValue(new Response('<option value="2301">강변점</option>'));
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'));
 
     await expect(resolveLotteMartStore('서울', undefined, '강변점')).resolves.toEqual(
       expect.objectContaining({
@@ -281,7 +309,9 @@ describe('resolveLotteMartStore 보조 분기', () => {
   });
 
   it('storeName이 일치하지 않으면 null을 반환한다', async () => {
-    mockFetch.mockResolvedValue(new Response('<option value="2301">강변점</option>'));
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'));
 
     await expect(resolveLotteMartStore('서울', undefined, '없는점')).resolves.toBeNull();
   });
@@ -304,7 +334,9 @@ describe('searchLotteMartProducts 예외 처리', () => {
   });
 
   it('검색 대상 매장을 찾지 못하면 에러를 던진다', async () => {
-    mockFetch.mockResolvedValue(new Response('<option value="9999">잠실점</option>'));
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="9999">잠실점</option>'));
 
     await expect(
       searchLotteMartProducts({
@@ -319,6 +351,7 @@ describe('searchLotteMartProducts 예외 처리', () => {
 
   it('pageLimit이 0이면 기본 페이지 제한값을 사용한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
       .mockResolvedValueOnce(
         new Response(`
@@ -354,6 +387,6 @@ describe('searchLotteMartProducts 예외 처리', () => {
     });
 
     expect(result.products).toHaveLength(2);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 });
