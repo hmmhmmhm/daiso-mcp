@@ -80,11 +80,6 @@ function toStringValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function toBooleanYn(value: unknown): boolean {
-  const normalized = toStringValue(value).trim().toUpperCase();
-  return normalized === 'Y' || normalized === 'TRUE' || normalized === '1';
-}
-
 function normalizeStockStore(raw: StockApiStoreRaw): SevenElevenStockStore {
   return {
     storeCode: toStringValue(raw.storeCd),
