@@ -16,6 +16,7 @@ import {
 
 interface CheckInventoryArgs {
   keyword: string;
+  itemCode?: string;
   latitude?: number;
   longitude?: number;
   storeKeyword?: string;
@@ -27,6 +28,7 @@ interface CheckInventoryArgs {
 async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
   const {
     keyword,
+    itemCode: providedItemCode,
     latitude,
     longitude,
     storeKeyword = '',
@@ -82,15 +84,12 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     resolvedLongitude = 127.0276;
   }
 
-  // 1단계: totalSearch API로 키워드 → itemCode 변환
-  const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: timeoutMs });
-  const firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
-
   let stockResult: { totalCount: number; stores: Awaited<ReturnType<typeof fetchGs25Stores>>['stores'] };
+  let firstProduct: Awaited<ReturnType<typeof fetchGs25SearchProducts>>[number] | undefined;
 
-  if (firstProduct) {
-    // itemCode가 있으면 itemCode + 좌표로 재고 조회 (정확한 방식)
-    resolvedItemCode = firstProduct.itemCode;
+  // itemCode가 직접 제공된 경우 totalSearch 단계 건너뛰기
+  if (providedItemCode && providedItemCode.trim().length > 0) {
+    resolvedItemCode = providedItemCode.trim();
     itemCodeUsed = true;
 
     stockResult = await fetchGs25Stores(
@@ -107,20 +106,43 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       },
     );
   } else {
-    // itemCode가 없으면 기존 keyword 방식 fallback
-    stockResult = await fetchGs25Stores(
-      {
-        serviceCode,
-        keyword,
-        realTimeStockYn: 'Y',
-        latitude: resolvedLatitude,
-        longitude: resolvedLongitude,
-        useCache: false,
-      },
-      {
-        timeout: timeoutMs,
-      },
-    );
+    // itemCode가 없으면 totalSearch API로 키워드 → itemCode 변환
+    const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: timeoutMs });
+    firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
+
+    if (firstProduct) {
+      resolvedItemCode = firstProduct.itemCode;
+      itemCodeUsed = true;
+
+      stockResult = await fetchGs25Stores(
+        {
+          serviceCode,
+          itemCode: resolvedItemCode,
+          realTimeStockYn: 'Y',
+          latitude: resolvedLatitude,
+          longitude: resolvedLongitude,
+          useCache: false,
+        },
+        {
+          timeout: timeoutMs,
+        },
+      );
+    } else {
+      // itemCode가 없으면 기존 keyword 방식 fallback
+      stockResult = await fetchGs25Stores(
+        {
+          serviceCode,
+          keyword,
+          realTimeStockYn: 'Y',
+          latitude: resolvedLatitude,
+          longitude: resolvedLongitude,
+          useCache: false,
+        },
+        {
+          timeout: timeoutMs,
+        },
+      );
+    }
   }
 
   const filteredByStoreKeyword = filterGs25StoresByKeyword(stockResult.stores, storeKeyword);
@@ -182,6 +204,10 @@ export function createCheckInventoryTool(): ToolRegistration {
       description: '상품 키워드 기준으로 GS25 매장별 재고를 조회합니다.',
       inputSchema: {
         keyword: z.string().describe('상품 검색어 (예: 오감자, 삼각김밥, 커피)'),
+        itemCode: z
+          .string()
+          .optional()
+          .describe('상품 코드 (gs25_search_products로 조회한 정확한 코드, 제공 시 keyword 검색 건너뜀)'),
         latitude: z.number().optional().describe('위도 (선택, 미입력 시 storeKeyword 지오코딩 시도)'),
         longitude: z.number().optional().describe('경도 (선택, 미입력 시 storeKeyword 지오코딩 시도)'),
         storeKeyword: z.string().optional().describe('매장명/주소 키워드 필터 (예: 강남, 안산 중앙역)'),

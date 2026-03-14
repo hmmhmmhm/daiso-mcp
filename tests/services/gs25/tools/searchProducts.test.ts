@@ -30,32 +30,62 @@ describe('createSearchProductsTool', () => {
     await expect(tool.handler({ keyword: '' })).rejects.toThrow('상품 검색어(keyword)를 입력해주세요.');
   });
 
-  it('상품 후보를 반환한다', async () => {
+  it('상품 목록과 itemCode를 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
         JSON.stringify({
-          stores: [
-            { storeCode: '1', searchItemName: '오감자', searchItemSellPrice: 1700, realStockQuantity: 2 },
-            { storeCode: '2', searchItemName: '오감자', searchItemSellPrice: 1700, realStockQuantity: 0 },
-          ],
+          SearchQueryResult: {
+            Collection: [
+              {
+                Documentset: {
+                  Document: [
+                    {
+                      field: {
+                        itemCode: '8801056038861',
+                        itemName: '롯데)핫식스250ML',
+                        shortItemName: '핫식스250ML',
+                        itemImageUrl: 'https://example.com/image.jpg',
+                        starPoint: '4.5',
+                        stockCheckYn: 'Y',
+                      },
+                    },
+                    {
+                      field: {
+                        itemCode: '8801056249212',
+                        itemName: '롯데)핫식스더킹애플홀릭355ML',
+                        shortItemName: '핫식스더킹',
+                        itemImageUrl: 'https://example.com/image2.jpg',
+                        starPoint: '4.2',
+                        stockCheckYn: 'Y',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
         }),
       ),
     );
 
     const tool = createSearchProductsTool();
-    const result = await tool.handler({ keyword: '오감자', limit: 5 });
+    const result = await tool.handler({ keyword: '핫식스', limit: 5 });
 
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.count).toBe(1);
-    expect(parsed.products[0].name).toBe('오감자');
-    expect(parsed.products[0].matchedStoreCount).toBe(2);
+    expect(parsed.count).toBe(2);
+    expect(parsed.products[0].itemCode).toBe('8801056038861');
+    expect(parsed.products[0].itemName).toBe('롯데)핫식스250ML');
+    expect(parsed.products[1].itemCode).toBe('8801056249212');
+    expect(parsed.note).toContain('itemCode');
   });
 
-  it('상품 후보가 없으면 안내 note를 반환한다', async () => {
+  it('검색 결과가 없으면 안내 note를 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
         JSON.stringify({
-          stores: [{ storeCode: '1', searchItemName: '', realStockQuantity: 0 }],
+          SearchQueryResult: {
+            Collection: [],
+          },
         }),
       ),
     );
@@ -65,6 +95,6 @@ describe('createSearchProductsTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.count).toBe(0);
-    expect(parsed.note).toContain('응답 내 상품 메타데이터');
+    expect(parsed.note).toContain('검색 결과가 없습니다');
   });
 });
