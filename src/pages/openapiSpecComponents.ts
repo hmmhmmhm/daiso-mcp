@@ -7,6 +7,7 @@ import { OPENAPI_CU_COMPONENT_SCHEMAS } from './openapiSpecComponentsCu.js';
 import { OPENAPI_EMART24_COMPONENT_SCHEMAS } from './openapiSpecComponentsEmart24.js';
 import { OPENAPI_GS25_COMPONENT_SCHEMAS } from './openapiSpecComponentsGs25.js';
 import { OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS } from './openapiSpecComponentsLottecinema.js';
+import { OPENAPI_LOTTEMART_COMPONENT_SCHEMAS } from './openapiSpecComponentsLotteMart.js';
 import { OPENAPI_SEVENELEVEN_COMPONENT_SCHEMAS } from './openapiSpecComponentsSeveneleven.js';
 
 export const OPENAPI_COMPONENTS = {
@@ -405,8 +406,9 @@ export const OPENAPI_COMPONENTS = {
           },
         },
         ...OPENAPI_CU_COMPONENT_SCHEMAS,
-        ...OPENAPI_EMART24_COMPONENT_SCHEMAS,
-        ...OPENAPI_GS25_COMPONENT_SCHEMAS,
+    ...OPENAPI_EMART24_COMPONENT_SCHEMAS,
+    ...OPENAPI_LOTTEMART_COMPONENT_SCHEMAS,
+    ...OPENAPI_GS25_COMPONENT_SCHEMAS,
         ...OPENAPI_SEVENELEVEN_COMPONENT_SCHEMAS,
         ...OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS,
         ...OPENAPI_CGV_COMPONENT_SCHEMAS,

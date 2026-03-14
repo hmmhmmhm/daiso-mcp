@@ -28,6 +28,8 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/emart24/stores']).toBeDefined();
     expect(spec.paths['/api/emart24/products']).toBeDefined();
     expect(spec.paths['/api/emart24/inventory']).toBeDefined();
+    expect(spec.paths['/api/lottemart/stores']).toBeDefined();
+    expect(spec.paths['/api/lottemart/products']).toBeDefined();
     expect(spec.paths['/api/gs25/stores']).toBeDefined();
     expect(spec.paths['/api/gs25/products']).toBeDefined();
     expect(spec.paths['/api/gs25/inventory']).toBeDefined();

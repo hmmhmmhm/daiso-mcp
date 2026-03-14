@@ -5,6 +5,7 @@
 import { OPENAPI_PATHS_DAISO_OLIVEYOUNG } from './openapiSpecPathsDaisoOliveyoung.js';
 import { OPENAPI_PATHS_CU } from './openapiSpecPathsCu.js';
 import { OPENAPI_PATHS_EMART24 } from './openapiSpecPathsEmart24.js';
+import { OPENAPI_PATHS_LOTTEMART } from './openapiSpecPathsLotteMart.js';
 import { OPENAPI_PATHS_MEGABOX } from './openapiSpecPathsMegabox.js';
 import { OPENAPI_PATHS_CGV } from './openapiSpecPathsCgv.js';
 import { OPENAPI_PATHS_LOTTECINEMA } from './openapiSpecPathsLottecinema.js';
@@ -50,6 +51,7 @@ export function generateOpenApiSpec(baseUrl: string): object {
       ...OPENAPI_PATHS_DAISO_OLIVEYOUNG,
       ...OPENAPI_PATHS_CU,
       ...OPENAPI_PATHS_EMART24,
+      ...OPENAPI_PATHS_LOTTEMART,
       ...OPENAPI_PATHS_GS25,
       ...OPENAPI_PATHS_SEVENELEVEN,
       ...OPENAPI_PATHS_MEGABOX,

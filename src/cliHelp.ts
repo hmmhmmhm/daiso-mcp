@@ -19,6 +19,8 @@ export type CommandName =
   | 'lottecinema-theaters'
   | 'lottecinema-movies'
   | 'lottecinema-seats'
+  | 'lottemart-stores'
+  | 'lottemart-products'
   | 'emart24-stores'
   | 'emart24-products'
   | 'emart24-inventory'
@@ -47,6 +49,8 @@ export const COMMAND_LIST: CommandName[] = [
   'lottecinema-theaters',
   'lottecinema-movies',
   'lottecinema-seats',
+  'lottemart-stores',
+  'lottemart-products',
   'emart24-stores',
   'emart24-products',
   'emart24-inventory',
@@ -76,6 +80,8 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   'lottecinema-theaters': '롯데시네마 주변 지점 조회',
   'lottecinema-movies': '롯데시네마 영화/회차 조회',
   'lottecinema-seats': '롯데시네마 잔여 좌석 조회',
+  'lottemart-stores': '롯데마트 매장 검색',
+  'lottemart-products': '롯데마트 상품 검색',
   'emart24-stores': '이마트24 매장 검색',
   'emart24-products': '이마트24 상품 검색',
   'emart24-inventory': '이마트24 재고 조회',
@@ -206,6 +212,23 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '옵션: --playDate, --theaterId, --movieId, --limit, --json',
     '예시: daiso lottecinema-seats --playDate 20260310 --theaterId 3012 --movieId 23816',
   ],
+  'lottemart-stores': [
+    '명령: lottemart-stores',
+    '설명: 롯데마트 계열 매장 검색 API를 호출합니다.',
+    '사용법: daiso lottemart-stores [keyword] [--area 값] [--brandVariant 값] [--lat 값] [--lng 값] [--limit N] [--json]',
+    '옵션: --keyword, --area, --brandVariant, --lat, --lng, --limit, --json',
+    '예시: daiso lottemart-stores 잠실 --area 서울',
+    '예시: daiso lottemart-stores --area 경기 --brandVariant lottemart --limit 10',
+  ],
+  'lottemart-products': [
+    '명령: lottemart-products',
+    '설명: 롯데마트 매장 기준 상품 검색 API를 호출합니다.',
+    '사용법: daiso lottemart-products <keyword> [--storeCode 값 | --storeName 값] [--area 값] [--pageLimit N] [--json]',
+    '필수: <keyword>, --storeCode 또는 --storeName',
+    '옵션: --storeCode, --storeName, --area, --pageLimit, --json',
+    '예시: daiso lottemart-products 콜라 --storeName 강변점 --area 서울',
+    '예시: daiso lottemart-products 우유 --storeCode 2301 --pageLimit 2',
+  ],
   'emart24-stores': [
     '명령: emart24-stores',
     '설명: 이마트24 매장 검색 API를 호출합니다.',
@@ -317,6 +340,8 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso lottecinema-theaters --lat 37.3154 --lng 126.8388 --limit 5');
   writeOut('  npx daiso lottecinema-movies --playDate 20260310 --theaterId 3012');
   writeOut('  npx daiso lottecinema-seats --playDate 20260310 --theaterId 3012 --movieId 23816');
+  writeOut('  npx daiso lottemart-stores 잠실 --area 서울 --limit 10');
+  writeOut('  npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울');
   writeOut('  npx daiso emart24-stores 강남 --limit 10');
   writeOut('  npx daiso emart24-products 두바이 --pageSize 20');
   writeOut('  npx daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015');
@@ -341,7 +366,7 @@ export function printCommandHelp(
   if (!Object.hasOwn(COMMAND_DETAIL, command)) {
     writeErr(`도움말을 찾을 수 없는 명령어: ${command}`);
     writeErr(
-      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, cu-stores, cu-inventory, lottecinema-theaters, lottecinema-movies, lottecinema-seats, emart24-stores, emart24-products, emart24-inventory, gs25-stores, gs25-products, gs25-inventory, seveneleven-products, seveneleven-stores, seveneleven-popwords, seveneleven-catalog',
+      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, cu-stores, cu-inventory, lottecinema-theaters, lottecinema-movies, lottecinema-seats, lottemart-stores, lottemart-products, emart24-stores, emart24-products, emart24-inventory, gs25-stores, gs25-products, gs25-inventory, seveneleven-products, seveneleven-stores, seveneleven-popwords, seveneleven-catalog',
     );
     return 1;
   }

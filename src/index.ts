@@ -16,6 +16,7 @@ import { createOliveyoungService } from './services/oliveyoung/index.js';
 import { createMegaboxService } from './services/megabox/index.js';
 import { createCgvService } from './services/cgv/index.js';
 import { createLotteCinemaService } from './services/lottecinema/index.js';
+import { createLotteMartService } from './services/lottemart/index.js';
 import { createCuService } from './services/cu/index.js';
 import { createEmart24Service } from './services/emart24/index.js';
 import { createGs25Service } from './services/gs25/index.js';
@@ -29,6 +30,7 @@ import { registerOliveyoungRoutes } from './api/routes/oliveyoungRoutes.js';
 import { registerMegaboxRoutes } from './api/routes/megaboxRoutes.js';
 import { registerCgvRoutes } from './api/routes/cgvRoutes.js';
 import { registerLotteCinemaRoutes } from './api/routes/lottecinemaRoutes.js';
+import { registerLotteMartRoutes } from './api/routes/lottemartRoutes.js';
 import { registerCuRoutes } from './api/routes/cuRoutes.js';
 import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 import { registerGs25Routes } from './api/routes/gs25Routes.js';
@@ -60,6 +62,10 @@ const createRegistry = (bindings?: AppBindings) => {
     createSevenElevenService,
     createCuService,
     createEmart24Service,
+    () =>
+      createLotteMartService({
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+      }),
     createMegaboxService,
     createLotteCinemaService,
     () =>
@@ -247,6 +253,7 @@ registerGs25Routes(app);
 registerSevenElevenRoutes(app);
 registerCuRoutes(app);
 registerEmart24Routes(app);
+registerLotteMartRoutes(app);
 registerOliveyoungRoutes(app);
 registerMegaboxRoutes(app);
 registerLotteCinemaRoutes(app);

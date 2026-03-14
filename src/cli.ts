@@ -693,6 +693,61 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     );
   }
 
+  if (command === 'lottemart-stores') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('lottemart-stores', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const keyword = parsed.positionals[0];
+    if (keyword) {
+      parsed.options.keyword = keyword;
+    }
+
+    const targetUrl = toUrl('/api/lottemart/stores');
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
+  if (command === 'lottemart-products') {
+    const parsed = parseCliArgs(options);
+    if (parsed.options.help === 'true') {
+      return printCommandHelp('lottemart-products', resolvedDeps.writeOut, resolvedDeps.writeErr);
+    }
+
+    const keyword = parsed.positionals[0];
+    if (!keyword) {
+      resolvedDeps.writeErr('lottemart-products 명령은 검색어가 필요합니다. 예: daiso lottemart-products 콜라 --storeName 강변점');
+      return 1;
+    }
+
+    if (!parsed.options.storeCode && !parsed.options.storeName) {
+      resolvedDeps.writeErr('lottemart-products 명령은 --storeCode 또는 --storeName이 필요합니다. 예: daiso lottemart-products 콜라 --storeName 강변점');
+      return 1;
+    }
+
+    const targetUrl = toUrl('/api/lottemart/products');
+    targetUrl.searchParams.set('keyword', keyword);
+    applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+
+    return await requestAndPrintResponse(
+      resolvedDeps.fetchImpl,
+      resolvedDeps.writeOut,
+      resolvedDeps.writeErr,
+      targetUrl,
+      command,
+      parsed.options.json === 'true',
+    );
+  }
+
   if (command === 'gs25-stores') {
     const parsed = parseCliArgs(options);
     if (parsed.options.help === 'true') {

@@ -243,7 +243,32 @@ Base URL: ${baseUrl}
 
 ---
 
-### 6-1. GS25 매장/상품/재고 조회
+### 6-1. 롯데마트 매장/상품 조회
+
+**설명**: 롯데마트 계열 매장 검색과 특정 매장 기준 상품 가격/재고 조회를 제공합니다.
+
+**URL**:
+- ${baseUrl}/api/lottemart/stores?keyword={키워드}
+- ${baseUrl}/api/lottemart/products?keyword={검색어}&storeName={매장명}
+
+**선택 파라미터**:
+- area: 지역 (예: 서울, 경기, 제주)
+- brandVariant: lottemart, toysrus, max, bottlebunker, mealguru, grandgrocery
+- lat: 위도 (선택)
+- lng: 경도 (선택)
+- limit: 최대 결과 수 (기본값: 20)
+- storeCode 또는 storeName: 상품 검색 대상 매장
+- pageLimit: 추가 조회할 최대 페이지 수 (기본값: 3)
+
+**예시**:
+- ${baseUrl}/api/lottemart/stores?keyword=잠실&area=서울&limit=10
+- ${baseUrl}/api/lottemart/stores?area=경기&brandVariant=lottemart&limit=10
+- ${baseUrl}/api/lottemart/products?keyword=콜라&storeName=강변점&area=서울
+- ${baseUrl}/api/lottemart/products?keyword=우유&storeCode=2301&pageLimit=2
+
+---
+
+### 6-2. GS25 매장/상품/재고 조회
 
 **설명**: GS25 매장 탐색, 상품 키워드 검색, 재고 조회를 제공합니다.
 
@@ -265,7 +290,7 @@ Base URL: ${baseUrl}
 
 ---
 
-### 6-2. 세븐일레븐 상품/매장/재고/인기검색어/카탈로그 조회
+### 6-3. 세븐일레븐 상품/매장/재고/인기검색어/카탈로그 조회
 
 **설명**: 세븐일레븐 상품 검색, 매장 검색, 재고 수량 조회, 인기 검색어, 카탈로그 스냅샷을 제공합니다.
 
@@ -502,6 +527,8 @@ Base URL: ${baseUrl}
 | GS25_STORE_SEARCH_FAILED | GS25 매장 조회 실패 |
 | GS25_PRODUCT_SEARCH_FAILED | GS25 상품 조회 실패 |
 | GS25_INVENTORY_CHECK_FAILED | GS25 재고 조회 실패 |
+| LOTTEMART_STORE_SEARCH_FAILED | 롯데마트 매장 조회 실패 |
+| LOTTEMART_PRODUCT_SEARCH_FAILED | 롯데마트 상품 조회 실패 |
 | SEVENELEVEN_INVENTORY_CHECK_FAILED | 세븐일레븐 재고 조회 실패 |
 
 ---
@@ -516,7 +543,8 @@ Base URL: ${baseUrl}
    - /api/daiso/inventory에 해당 id로 재고 조회
    - 진열 위치가 필요하면 /api/daiso/display-location에 productId + storeCode로 조회
 4. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
-5. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
+5. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
+6. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 
 ---
 
@@ -531,6 +559,8 @@ MCP 연결 정보: ${baseUrl}/mcp
 - daiso_check_inventory: 재고 확인
 - daiso_get_price_info: 가격 정보 조회
 - daiso_get_display_location: 진열 위치 조회
+- lottemart_find_nearby_stores: 롯데마트 주변 매장 탐색
+- lottemart_search_products: 롯데마트 상품 검색
 - gs25_find_nearby_stores: GS25 주변 매장 탐색
 - gs25_search_products: GS25 상품 검색
 - gs25_check_inventory: GS25 재고 조회

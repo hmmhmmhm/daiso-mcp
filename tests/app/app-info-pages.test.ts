@@ -69,6 +69,15 @@ describe('GET /', () => {
     expect(emart24Service.name).toBe('이마트24');
   });
 
+  it('롯데마트 서비스가 등록되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    const lotteMartService = data.services.find((s: { id: string }) => s.id === 'lottemart');
+    expect(lotteMartService).toBeDefined();
+    expect(lotteMartService.name).toBe('롯데마트');
+  });
+
   it('메가박스 서비스가 등록되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -147,6 +156,14 @@ describe('GET /', () => {
     expect(data.tools).toContain('emart24_find_nearby_stores');
     expect(data.tools).toContain('emart24_search_products');
     expect(data.tools).toContain('emart24_check_inventory');
+  });
+
+  it('롯데마트 도구들이 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('lottemart_find_nearby_stores');
+    expect(data.tools).toContain('lottemart_search_products');
   });
 
   it('메가박스 도구들이 포함되어 있다', async () => {

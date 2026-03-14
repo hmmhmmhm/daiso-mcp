@@ -439,6 +439,47 @@ describe('CLI', () => {
     expect(errors[0]).toContain('pluCd와 --bizNoArr가 필요합니다');
   });
 
+  it('lottemart-stores 명령은 롯데마트 매장 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['lottemart-stores', '잠실', '--area', '서울', '--limit', '5'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottemart/stores?area=%EC%84%9C%EC%9A%B8&limit=5&keyword=%EC%9E%A0%EC%8B%A4',
+    );
+  });
+
+  it('lottemart-products 명령은 롯데마트 상품 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['lottemart-products', '콜라', '--storeName', '강변점', '--area', '서울'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeName=%EA%B0%95%EB%B3%80%EC%A0%90&area=%EC%84%9C%EC%9A%B8',
+    );
+  });
+
+  it('lottemart-products 명령은 store 정보가 없으면 실패한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['lottemart-products', '콜라'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors[0]).toContain('--storeCode 또는 --storeName이 필요합니다');
+  });
+
   it('gs25-stores 명령은 GS25 매장 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
