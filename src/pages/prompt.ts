@@ -544,14 +544,15 @@ Base URL: ${baseUrl}
 
 1. **한글 검색어**: URL 인코딩이 자동으로 처리됩니다
 2. **페이지네이션**: 결과가 많을 경우 page 파라미터 사용
-3. **재고 확인 워크플로우**:
+3. **브랜드 고정**: 사용자가 "다이소에서", "GS25에서"처럼 브랜드를 명시하면 먼저 그 브랜드 결과만 안내하고, 다른 브랜드 추천은 사용자가 원할 때만 제안합니다.
+4. **재고 확인 워크플로우**:
    - 먼저 /api/daiso/products로 제품 검색
    - 결과에서 원하는 제품의 id 확인
    - /api/daiso/inventory에 해당 id로 재고 조회
    - 진열 위치가 필요하면 재고 응답의 storeCode를 확인한 뒤 /api/daiso/display-location에 productId + storeCode로 조회
-4. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
-5. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
-6. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
+5. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
+6. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
+7. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 
 ---
 
