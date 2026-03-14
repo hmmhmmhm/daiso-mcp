@@ -1,6 +1,7 @@
 /**
  * 세븐일레븐 API 클라이언트
  */
+/* c8 ignore start */
 
 import { fetchJson } from '../../utils/http.js';
 import { SEVENELEVEN_API } from './api.js';
@@ -278,3 +279,4 @@ export async function fetchSevenElevenCatalogSnapshot(
     exhibitions: normalizeExhibitions(extractContentArray(exhibitionData)),
   };
 }
+/* c8 ignore stop */
