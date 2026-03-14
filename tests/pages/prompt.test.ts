@@ -36,6 +36,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('/api/gs25/stores');
     expect(text).toContain('/api/gs25/products');
     expect(text).toContain('/api/gs25/inventory');
+    expect(text).toContain('/api/seveneleven/inventory');
 
     // 메가박스 API
     expect(text).toContain('/api/megabox/theaters');
@@ -95,6 +96,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('GS25_STORE_SEARCH_FAILED');
     expect(text).toContain('GS25_PRODUCT_SEARCH_FAILED');
     expect(text).toContain('GS25_INVENTORY_CHECK_FAILED');
+    expect(text).toContain('SEVENELEVEN_INVENTORY_CHECK_FAILED');
   });
 
   it('MCP 연결 정보를 포함한다', () => {
@@ -109,6 +111,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('gs25_find_nearby_stores');
     expect(text).toContain('gs25_search_products');
     expect(text).toContain('gs25_check_inventory');
+    expect(text).toContain('seveneleven_check_inventory');
     expect(text).toContain('oliveyoung_find_nearby_stores');
     expect(text).toContain('oliveyoung_check_inventory');
     expect(text).toContain('megabox_find_nearby_theaters');

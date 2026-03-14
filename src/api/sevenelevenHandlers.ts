@@ -10,6 +10,7 @@ import {
   fetchSevenElevenSearchPopwords,
   searchSevenElevenProducts,
 } from '../services/seveneleven/client.js';
+import { checkSevenElevenInventory } from '../services/seveneleven/inventory.js';
 
 function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
   if (typeof value !== 'string') {
@@ -106,6 +107,67 @@ export async function handleSevenElevenSearchStores(c: ApiContext) {
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEVENELEVEN_STORE_SEARCH_FAILED', message, 500);
+  }
+}
+
+/**
+ * 세븐일레븐 재고 확인 API 핸들러
+ * GET /api/seveneleven/inventory?keyword={검색어}&storeKeyword={매장키워드}
+ */
+export async function handleSevenElevenCheckInventory(c: ApiContext) {
+  const keyword = c.req.query('keyword') || '';
+  const storeKeyword = c.req.query('storeKeyword') || '';
+  const storeLimit = parseInt(c.req.query('storeLimit') || '20', 10);
+  const timeoutMs = parseInt(c.req.query('timeoutMs') || '20000', 10);
+  const safeStoreLimit = Number.isFinite(storeLimit) && storeLimit > 0 ? storeLimit : 20;
+  const safeTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 20000;
+
+  if (keyword.trim().length === 0) {
+    return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
+  }
+
+  try {
+    const result = await checkSevenElevenInventory(
+      {
+        productKeyword: keyword,
+        storeKeyword,
+        storeLimit: safeStoreLimit,
+      },
+      {
+        timeout: safeTimeoutMs,
+      },
+    );
+
+    const note = result.stockAvailable
+      ? '실시간 재고 데이터가 포함되어 있습니다.'
+      : result.stockError
+        ? `실시간 재고 API 호출에 실패했습니다: ${result.stockError.message}`
+        : '실시간 재고 API가 현재 제한되어 있어 매장 목록만 제공됩니다.';
+
+    return successResponse(
+      c,
+      {
+        keyword,
+        storeKeyword,
+        product: result.product,
+        stockAvailable: result.stockAvailable,
+        stockError: result.stockError,
+        note,
+        inventory: {
+          totalStoreCount: result.totalStoreCount,
+          inStockStoreCount: result.inStockStoreCount,
+          count: result.stores.length,
+          stores: result.stores,
+        },
+      },
+      {
+        total: result.totalStoreCount,
+        pageSize: safeStoreLimit,
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return errorResponse(c, 'SEVENELEVEN_INVENTORY_CHECK_FAILED', message, 500);
   }
 }
 

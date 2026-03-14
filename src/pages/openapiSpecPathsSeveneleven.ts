@@ -101,6 +101,71 @@ export const OPENAPI_PATHS_SEVENELEVEN = {
       },
     },
   },
+  '/api/seveneleven/inventory': {
+    get: {
+      operationId: 'sevenelevenCheckInventory',
+      summary: '세븐일레븐 재고 확인',
+      description: '상품 키워드와 매장 키워드로 세븐일레븐 매장별 재고 수량을 조회합니다.',
+      parameters: [
+        {
+          name: 'keyword',
+          in: 'query',
+          required: true,
+          description: '재고를 확인할 상품 검색어',
+          schema: { type: 'string' },
+          example: '핫식스',
+        },
+        {
+          name: 'storeKeyword',
+          in: 'query',
+          required: false,
+          description: '매장명 또는 지역 키워드',
+          schema: { type: 'string' },
+          example: '안산 중앙역',
+        },
+        {
+          name: 'storeLimit',
+          in: 'query',
+          required: false,
+          description: '반환할 최대 매장 수',
+          schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+        },
+        {
+          name: 'timeoutMs',
+          in: 'query',
+          required: false,
+          description: '요청 제한 시간(ms)',
+          schema: { type: 'integer', default: 20000, minimum: 1000, maximum: 60000 },
+        },
+      ],
+      responses: {
+        '200': {
+          description: '조회 성공',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/SevenElevenInventoryResponse' },
+            },
+          },
+        },
+        '400': {
+          description: '잘못된 요청 (검색어 누락)',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+            },
+          },
+        },
+        '500': {
+          description: '세븐일레븐 재고 조회 실패',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+            },
+          },
+        },
+      },
+    },
+  },
   '/api/seveneleven/popwords': {
     get: {
       operationId: 'sevenelevenGetSearchPopwords',

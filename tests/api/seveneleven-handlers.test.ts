@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  handleSevenElevenCheckInventory,
   handleSevenElevenGetCatalogSnapshot,
   handleSevenElevenGetSearchPopwords,
   handleSevenElevenSearchStores,
@@ -128,6 +129,136 @@ describe('handleSevenElevenSearchStores', () => {
       expect.objectContaining({
         success: true,
         data: expect.objectContaining({ count: 1 }),
+      }),
+    );
+  });
+});
+
+describe('handleSevenElevenCheckInventory', () => {
+  it('keyword가 없으면 에러를 반환한다', async () => {
+    const ctx = createMockContext({});
+    await handleSevenElevenCheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'MISSING_QUERY', message: '검색어(keyword)를 입력해주세요.' },
+      }),
+      400,
+    );
+  });
+
+  it('세븐일레븐 재고 조회 결과를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '핫식스',
+                Collection: [
+                  {
+                    CollectionId: 'offline',
+                    Documentset: {
+                      totalCount: 1,
+                      Document: [
+                        {
+                          field: {
+                            prdNo: '1',
+                            itemCd: '8801056252243',
+                            itemOnm: '칠성)핫식스더킹퍼플500ml',
+                            onlinePrice: 3000,
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '안산중앙',
+                Collection: [
+                  {
+                    CollectionId: 'store',
+                    Documentset: {
+                      totalCount: 1,
+                      Document: [
+                        {
+                          field: {
+                            storeCd: '54928',
+                            storeNm: '안산중앙일번가점',
+                            addr1: '경기 안산시 단원구 중앙대로 907',
+                            addr2: '',
+                            storeLat: '37.3173',
+                            storeLon: '126.8370',
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            prdNo: '1',
+            itemCd: '8801056252243',
+            itemOnm: '칠성)핫식스더킹퍼플500ml',
+            smCd: '133975',
+            stokMngCd: '133975',
+            stokMngQty: 1,
+            stockApplicationRate: '100',
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              smCd: '133975',
+              storeList: [{ storeCd: '54928', stock: 14, stokMngQty: 0 }],
+            },
+            message: '성공',
+            code: 200,
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ keyword: '핫식스', storeKeyword: '안산 중앙역', storeLimit: '10' });
+    await handleSevenElevenCheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          keyword: '핫식스',
+          storeKeyword: '안산 중앙역',
+          stockAvailable: true,
+          inventory: expect.objectContaining({
+            totalStoreCount: 1,
+            inStockStoreCount: 1,
+            count: 1,
+          }),
+        }),
+        meta: expect.objectContaining({
+          total: 1,
+          pageSize: 10,
+        }),
       }),
     );
   });

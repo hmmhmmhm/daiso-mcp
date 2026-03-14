@@ -265,12 +265,14 @@ Base URL: ${baseUrl}
 
 ---
 
-### 6-2. 세븐일레븐 상품/인기검색어/카탈로그 조회
+### 6-2. 세븐일레븐 상품/매장/재고/인기검색어/카탈로그 조회
 
-**설명**: 세븐일레븐 공개 상품 검색, 인기 검색어, 카탈로그 스냅샷을 조회합니다.
+**설명**: 세븐일레븐 상품 검색, 매장 검색, 재고 수량 조회, 인기 검색어, 카탈로그 스냅샷을 제공합니다.
 
 **URL**:
 - ${baseUrl}/api/seveneleven/products?query={검색어}
+- ${baseUrl}/api/seveneleven/stores?keyword={매장키워드}
+- ${baseUrl}/api/seveneleven/inventory?keyword={검색어}
 - ${baseUrl}/api/seveneleven/popwords?label={라벨}
 - ${baseUrl}/api/seveneleven/catalog?includeIssues={true|false}&includeExhibition={true|false}&limit={개수}
 
@@ -278,10 +280,15 @@ Base URL: ${baseUrl}
 - page: 페이지 번호 (기본값: 1)
 - size: 페이지당 결과 수 (기본값: 20)
 - sort: 정렬 기준 (기본값: recommend)
+- storeKeyword: 매장명/지역 키워드
+- storeLimit: 최대 매장 수 (기본값: 20)
+- timeoutMs: 요청 제한 시간 (기본값: 20000)
 - label: 인기 검색어 라벨 (기본값: home)
 
 **예시**:
 - ${baseUrl}/api/seveneleven/products?query=삼각김밥&size=20
+- ${baseUrl}/api/seveneleven/stores?keyword=안산%20중앙역&limit=10
+- ${baseUrl}/api/seveneleven/inventory?keyword=핫식스&storeKeyword=안산%20중앙역&storeLimit=10
 - ${baseUrl}/api/seveneleven/popwords?label=home
 - ${baseUrl}/api/seveneleven/catalog?includeIssues=true&includeExhibition=true&limit=10
 
@@ -495,6 +502,7 @@ Base URL: ${baseUrl}
 | GS25_STORE_SEARCH_FAILED | GS25 매장 조회 실패 |
 | GS25_PRODUCT_SEARCH_FAILED | GS25 상품 조회 실패 |
 | GS25_INVENTORY_CHECK_FAILED | GS25 재고 조회 실패 |
+| SEVENELEVEN_INVENTORY_CHECK_FAILED | 세븐일레븐 재고 조회 실패 |
 
 ---
 
@@ -508,6 +516,7 @@ Base URL: ${baseUrl}
    - /api/daiso/inventory에 해당 id로 재고 조회
    - 진열 위치가 필요하면 /api/daiso/display-location에 productId + storeCode로 조회
 4. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
+5. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 
 ---
 
@@ -525,6 +534,11 @@ MCP 연결 정보: ${baseUrl}/mcp
 - gs25_find_nearby_stores: GS25 주변 매장 탐색
 - gs25_search_products: GS25 상품 검색
 - gs25_check_inventory: GS25 재고 조회
+- seveneleven_search_products: 세븐일레븐 상품 검색
+- seveneleven_search_stores: 세븐일레븐 매장 검색
+- seveneleven_check_inventory: 세븐일레븐 재고 조회
+- seveneleven_get_search_popwords: 세븐일레븐 인기 검색어 조회
+- seveneleven_get_catalog_snapshot: 세븐일레븐 카탈로그 조회
 - oliveyoung_find_nearby_stores: 올리브영 주변 매장 탐색
 - oliveyoung_check_inventory: 올리브영 재고 파악
 - megabox_find_nearby_theaters: 메가박스 주변 지점 탐색

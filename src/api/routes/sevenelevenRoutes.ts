@@ -6,6 +6,7 @@ import type { Hono } from 'hono';
 import { withEdgeCache } from '../../utils/cache.js';
 import type { AppBindings } from '../response.js';
 import {
+  handleSevenElevenCheckInventory,
   handleSevenElevenGetCatalogSnapshot,
   handleSevenElevenGetSearchPopwords,
   handleSevenElevenSearchStores,
@@ -34,6 +35,18 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
         keyPrefix: 'seveneleven-stores-v1',
       },
       () => handleSevenElevenSearchStores(c),
+    ),
+  );
+
+  app.get('/api/seveneleven/inventory', async (c) =>
+    withEdgeCache(
+      c.req.url,
+      {
+        ttlSeconds: 60 * 10,
+        staleWhileRevalidateSeconds: 60,
+        keyPrefix: 'seveneleven-inventory-v1',
+      },
+      () => handleSevenElevenCheckInventory(c),
     ),
   );
 

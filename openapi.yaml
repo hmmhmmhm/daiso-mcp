@@ -11,6 +11,7 @@ info:
       - 📦 **재고 확인**: 온라인 및 오프라인 매장 재고 조회
       - 🧭 **진열 위치 조회**: 매장 내 상품 구역/층 정보 조회
       - 🏪 **GS25 매장/상품/재고 조회**: GS25 매장 탐색, 상품 검색, 재고 조회
+      - 7️⃣ **세븐일레븐 상품/매장/재고 조회**: 상품 검색, 매장 검색, 실재고 조회
       - 🏪 **CU 매장/재고 조회**: CU 매장 탐색 및 상품 재고 검색
       - 🎬 **메가박스 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
       - 🎞️ **롯데시네마 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
@@ -20,6 +21,7 @@ info:
       1. 한글 검색어는 URL 인코딩이 자동 처리됩니다
       2. 재고 확인 시 먼저 제품 검색으로 제품 ID를 확인하세요
       3. 위치 기반 재고 조회 시 lat, lng 파라미터를 활용하세요
+      4. 세븐일레븐 재고 조회는 keyword와 storeKeyword를 함께 사용하면 정확도가 높아집니다
   version: 1.0.0
   contact:
     name: GitHub Repository
@@ -906,6 +908,63 @@ paths:
                 $ref: "#/components/schemas/StoreSearchResponse"
         400:
           description: 잘못된 요청 (검색어 누락)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/seveneleven/inventory:
+    get:
+      operationId: sevenelevenCheckInventory
+      summary: 세븐일레븐 재고 확인
+      description: 상품 키워드와 매장 키워드로 세븐일레븐 매장별 재고 수량을 조회합니다.
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          description: 재고를 확인할 상품 검색어
+          schema:
+            type: string
+          example: 핫식스
+        - name: storeKeyword
+          in: query
+          required: false
+          description: 매장명 또는 지역 키워드
+          schema:
+            type: string
+          example: 안산 중앙역
+        - name: storeLimit
+          in: query
+          required: false
+          description: 반환할 최대 매장 수
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: timeoutMs
+          in: query
+          required: false
+          description: 요청 제한 시간(ms)
+          schema:
+            type: integer
+            default: 20000
+            minimum: 1000
+            maximum: 60000
+      responses:
+        200:
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SevenElevenInventoryResponse"
+        400:
+          description: 잘못된 요청 (검색어 누락)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        500:
+          description: 세븐일레븐 재고 조회 실패
           content:
             application/json:
               schema:
@@ -2332,6 +2391,126 @@ components:
                   type: array
                   items:
                     $ref: "#/components/schemas/Gs25Store"
+    SevenElevenProduct:
+      type: object
+      properties:
+        itemCode:
+          type: string
+          example: 8801056252243
+        itemName:
+          type: string
+          example: 칠성)핫식스더킹퍼플500ml
+        salePrice:
+          type: integer
+          nullable: true
+          example: 3000
+        imageUrl:
+          type: string
+          nullable: true
+          example: 
+    SevenElevenStockError:
+      type: object
+      nullable: true
+      properties:
+        cause:
+          type: string
+          example: api
+        httpStatus:
+          type: integer
+          nullable: true
+          example: 400
+        code:
+          type: integer
+          nullable: true
+          example: 501
+        message:
+          type: string
+          example: RSA 복호화 실패
+        raw:
+          type: string
+          nullable: true
+    SevenElevenStoreInventory:
+      type: object
+      properties:
+        storeCode:
+          type: string
+          example: 54928
+        storeName:
+          type: string
+          example: 안산중앙일번가점
+        address:
+          type: string
+          example: 경기 안산시 단원구 중앙대로 907 2동 2121호
+        latitude:
+          type: number
+          format: float
+          example: 37.317371500357
+        longitude:
+          type: number
+          format: float
+          example: 126.837004318586
+        stockQuantity:
+          type: integer
+          example: 14
+        isSoldOut:
+          type: boolean
+          example: false
+        distanceM:
+          type: integer
+          nullable: true
+          example: 100
+    SevenElevenInventoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            keyword:
+              type: string
+              example: 핫식스
+            storeKeyword:
+              type: string
+              example: 안산 중앙역
+            product:
+              anyOf:
+                - $ref: "#/components/schemas/SevenElevenProduct"
+                - type: null
+            stockAvailable:
+              type: boolean
+              example: true
+            stockError:
+              $ref: "#/components/schemas/SevenElevenStockError"
+            note:
+              type: string
+              example: 실시간 재고 데이터가 포함되어 있습니다.
+            inventory:
+              type: object
+              properties:
+                totalStoreCount:
+                  type: integer
+                  example: 4
+                inStockStoreCount:
+                  type: integer
+                  example: 3
+                count:
+                  type: integer
+                  example: 4
+                stores:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/SevenElevenStoreInventory"
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 4
+            pageSize:
+              type: integer
+              example: 10
     LotteCinemaTheater:
       type: object
       properties:
