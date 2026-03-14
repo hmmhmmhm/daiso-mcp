@@ -46,14 +46,15 @@ describe('createSearchStoresTool', () => {
                     Document: [
                       {
                         field: {
-                          storCd: '54928',
-                          storNm: '안산중앙일번가점',
-                          addr: '경기 안산시 단원구 ...',
-                          yPos: '37.3156',
-                          xPos: '126.8384',
+                          storeCd: '54928',
+                          storeNm: '안산중앙일번가점',
+                          addr1: '경기 안산시 단원구 ...',
+                          addr2: '101호',
+                          storeLat: '37.3156',
+                          storeLon: '126.8384',
                           pickupYn: 'Y',
                           dlvyYn: 'N',
-                          closeYn: 'N',
+                          storeCloseYn: 'N',
                         },
                       },
                     ],
@@ -73,7 +74,9 @@ describe('createSearchStoresTool', () => {
     expect(parsed.totalCount).toBe(1);
     expect(parsed.count).toBe(1);
     expect(parsed.stores[0].storeCode).toBe('54928');
+    expect(parsed.stores[0].address).toContain('경기 안산시');
     expect(parsed.stores[0].pickupEnabled).toBe(true);
     expect(parsed.stores[0].deliveryEnabled).toBe(false);
+    expect(parsed.stores[0].closeYn).toBe('N');
   });
 });

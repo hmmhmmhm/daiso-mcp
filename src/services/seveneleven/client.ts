@@ -112,15 +112,19 @@ function normalizeProducts(items: unknown[]): SevenElevenProduct[] {
 }
 
 function normalizeStore(raw: Record<string, unknown>): SevenElevenStore {
+  const address1 = toStringValue(raw.addr1);
+  const address2 = toStringValue(raw.addr2);
+  const mergedAddress = `${address1} ${address2}`.trim();
+
   return {
-    storeCode: toStringValue(raw.storeCode || raw.strCd || raw.storCd || raw.shopCd),
-    storeName: toStringValue(raw.storeName || raw.strNm || raw.storNm || raw.shopNm),
-    address: toStringValue(raw.address || raw.addr || raw.roadAddr || raw.shopAddr),
-    latitude: toNumber(raw.latitude || raw.lat || raw.yPos || raw.y || raw.yCoord),
-    longitude: toNumber(raw.longitude || raw.lng || raw.xPos || raw.x || raw.xCoord),
+    storeCode: toStringValue(raw.storeCode || raw.storeCd || raw.strCd || raw.storCd || raw.shopCd),
+    storeName: toStringValue(raw.storeName || raw.storeNm || raw.strNm || raw.storNm || raw.shopNm),
+    address: toStringValue(raw.address || raw.addr || raw.roadAddr || raw.shopAddr) || mergedAddress,
+    latitude: toNumber(raw.latitude || raw.storeLat || raw.lat || raw.yPos || raw.y || raw.yCoord),
+    longitude: toNumber(raw.longitude || raw.storeLon || raw.lng || raw.xPos || raw.x || raw.xCoord),
     pickupEnabled: toBooleanYn(raw.pickupEnabled || raw.pickupYn),
     deliveryEnabled: toBooleanYn(raw.deliveryEnabled || raw.deliveryYn || raw.dlvyYn),
-    closeYn: toStringValue(raw.closeYn || raw.closeYN || raw.clsYn),
+    closeYn: toStringValue(raw.closeYn || raw.storeCloseYn || raw.closeYN || raw.clsYn),
   };
 }
 
