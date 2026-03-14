@@ -96,15 +96,23 @@ export const OPENAPI_PATHS_GS25 = {
     get: {
       operationId: 'gs25CheckInventory',
       summary: 'GS25 재고 조회',
-      description: '상품 키워드 기준으로 GS25 매장별 재고를 조회합니다.',
+      description: '상품 키워드 또는 itemCode 기준으로 GS25 매장별 재고를 조회합니다.',
       parameters: [
         {
           name: 'keyword',
           in: 'query',
-          required: true,
-          description: '상품 검색어',
+          required: false,
+          description: '상품 검색어 (itemCode가 없을 때 사용)',
           schema: { type: 'string' },
           example: '오감자',
+        },
+        {
+          name: 'itemCode',
+          in: 'query',
+          required: false,
+          description: '상품 코드 (상품 검색 결과에서 전달)',
+          schema: { type: 'string' },
+          example: '8801056038861',
         },
         {
           name: 'storeKeyword',

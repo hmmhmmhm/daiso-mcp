@@ -128,6 +128,7 @@ export async function handleGs25SearchProducts(c: ApiContext) {
  */
 export async function handleGs25CheckInventory(c: ApiContext) {
   const keyword = c.req.query('keyword') || '';
+  const itemCode = c.req.query('itemCode') || '';
   const storeKeyword = c.req.query('storeKeyword') || '';
   const serviceCode = c.req.query('serviceCode') || '01';
   const storeLimit = parseInt(c.req.query('storeLimit') || '20', 10);
@@ -141,8 +142,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
   let longitude = typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
   let geocodeUsed = false;
 
-  if (keyword.trim().length === 0) {
-    return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
+  if (keyword.trim().length === 0 && itemCode.trim().length === 0) {
+    return errorResponse(c, 'MISSING_QUERY', '검색어(keyword) 또는 상품 코드(itemCode)를 입력해주세요.');
   }
 
   try {
@@ -174,18 +175,13 @@ export async function handleGs25CheckInventory(c: ApiContext) {
     }
 
     // 1단계: totalSearch API로 키워드 → itemCode 변환
-    const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: 20000 });
-    const firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
+    let firstProduct: Awaited<ReturnType<typeof fetchGs25SearchProducts>>[number] | undefined;
 
     let stockResult: Awaited<ReturnType<typeof fetchGs25Stores>>;
-    let itemCodeUsed = false;
-    let resolvedItemCode: string | null = null;
+    let itemCodeUsed = itemCode.trim().length > 0;
+    let resolvedItemCode: string | null = itemCode.trim().length > 0 ? itemCode.trim() : null;
 
-    if (firstProduct) {
-      // itemCode가 있으면 itemCode + 좌표로 재고 조회 (정확한 방식)
-      resolvedItemCode = firstProduct.itemCode;
-      itemCodeUsed = true;
-
+    if (resolvedItemCode) {
       stockResult = await fetchGs25Stores(
         {
           serviceCode,
@@ -200,20 +196,41 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         },
       );
     } else {
-      // itemCode가 없으면 기존 keyword 방식 fallback
-      stockResult = await fetchGs25Stores(
-        {
-          serviceCode,
-          keyword,
-          realTimeStockYn: 'Y',
-          latitude,
-          longitude,
-          useCache: false,
-        },
-        {
-          timeout: 20000,
-        },
-      );
+      const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: 20000 });
+      firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
+
+      if (firstProduct) {
+        resolvedItemCode = firstProduct.itemCode;
+        itemCodeUsed = true;
+
+        stockResult = await fetchGs25Stores(
+          {
+            serviceCode,
+            itemCode: resolvedItemCode,
+            realTimeStockYn: 'Y',
+            latitude,
+            longitude,
+            useCache: false,
+          },
+          {
+            timeout: 20000,
+          },
+        );
+      } else {
+        stockResult = await fetchGs25Stores(
+          {
+            serviceCode,
+            keyword,
+            realTimeStockYn: 'Y',
+            latitude,
+            longitude,
+            useCache: false,
+          },
+          {
+            timeout: 20000,
+          },
+        );
+      }
     }
 
     const filtered = filterGs25StoresByKeyword(stockResult.stores, storeKeyword);

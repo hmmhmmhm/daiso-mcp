@@ -198,9 +198,71 @@ describe('handleGs25CheckInventory', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: { code: 'MISSING_QUERY', message: '검색어(keyword)를 입력해주세요.' },
+        error: {
+          code: 'MISSING_QUERY',
+          message: '검색어(keyword) 또는 상품 코드(itemCode)를 입력해주세요.',
+        },
       }),
       400,
+    );
+  });
+
+  it('itemCode만으로도 재고 검색 결과를 반환한다', async () => {
+    const ctx = createMockContext({ itemCode: '8801056038861', storeKeyword: '안산 중앙역' });
+    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [
+              {
+                storeCode: 'A1',
+                storeName: 'GS25 안산중앙점',
+                storeAddress: '경기 안산시 단원구 중앙대로 907',
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ geometry: { location: { lat: 37.3187, lng: 126.8389 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [
+              {
+                storeCode: 'A1',
+                storeName: 'GS25 안산중앙점',
+                storeAddress: '경기 안산시 단원구 중앙대로 907',
+                searchItemName: '핫식스250ML',
+                realStockQuantity: 6,
+              },
+            ],
+          }),
+        ),
+      );
+
+    await handleGs25CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          itemCodeUsed: true,
+          itemCode: '8801056038861',
+          inventory: expect.objectContaining({
+            inStockStoreCount: 1,
+            matchedStoreCount: 1,
+          }),
+        }),
+      }),
     );
   });
 

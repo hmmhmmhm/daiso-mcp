@@ -128,6 +128,21 @@ describe('유틸 함수', () => {
     expect(filtered[0].storeCode).toBe('1');
   });
 
+  it('filterGs25StoresByKeyword는 역명 키워드를 점포명 변형과 매칭한다', () => {
+    const stores = [
+      {
+        storeCode: '1',
+        storeName: 'GS25 안산중앙점',
+        address: '경기 안산시 단원구 중앙대로 907',
+        propertyNames: [],
+      },
+    ] as never;
+
+    const filtered = filterGs25StoresByKeyword(stores, '안산 중앙역');
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].storeCode).toBe('1');
+  });
+
   it('attachDistanceToGs25Stores는 거리 값을 추가한다', () => {
     const stores = [
       {

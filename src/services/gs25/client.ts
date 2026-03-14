@@ -185,15 +185,27 @@ export function filterGs25StoresByKeyword(stores: Gs25Store[], keyword: string):
   const normalized = trimmed.toLowerCase();
   const noSpaceKeyword = normalized.replace(/\s+/g, '');
   const keywordTokens = normalized.split(/\s+/).filter((token) => token.length > 0);
+  const normalizedVariants = new Set([normalized, noSpaceKeyword]);
+
+  for (const suffix of ['역', '점']) {
+    for (const variant of [...normalizedVariants]) {
+      if (variant.endsWith(suffix) && variant.length > suffix.length) {
+        normalizedVariants.add(variant.slice(0, -suffix.length));
+      }
+    }
+  }
 
   return stores.filter((store) => {
     const target = `${store.storeName} ${store.address} ${store.propertyNames.join(' ')}`.toLowerCase();
+    const targetNoSpace = target.replace(/\s+/g, '');
     if (target.includes(normalized)) {
       return true;
     }
 
-    if (noSpaceKeyword.length > 0 && target.replace(/\s+/g, '').includes(noSpaceKeyword)) {
-      return true;
+    for (const variant of normalizedVariants) {
+      if (variant.length > 0 && targetNoSpace.includes(variant.replace(/\s+/g, ''))) {
+        return true;
+      }
     }
 
     if (keywordTokens.length > 1) {

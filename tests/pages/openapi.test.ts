@@ -37,6 +37,11 @@ describe('OpenAPI 페이지', () => {
         (parameter) => parameter.name === 'action',
       )?.description?.length,
     ).toBeLessThan(700);
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.some(
+        (parameter) => parameter.name === 'itemCode',
+      ),
+    ).toBe(true);
   });
 
   it('전체 OpenAPI 스펙 객체를 생성한다', () => {
@@ -61,6 +66,11 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/gs25/stores']).toBeDefined();
     expect(spec.paths['/api/gs25/products']).toBeDefined();
     expect(spec.paths['/api/gs25/inventory']).toBeDefined();
+    expect(
+      ((spec.paths['/api/gs25/inventory'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
+        (parameter) => parameter.name === 'itemCode',
+      ),
+    ).toBe(true);
     expect(spec.paths['/api/seveneleven/products']).toBeDefined();
     expect(spec.paths['/api/seveneleven/stores']).toBeDefined();
     expect(spec.paths['/api/seveneleven/inventory']).toBeDefined();

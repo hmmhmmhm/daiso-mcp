@@ -276,6 +276,7 @@ Base URL: ${baseUrl}
 - ${baseUrl}/api/gs25/stores?keyword={키워드}
 - ${baseUrl}/api/gs25/products?keyword={검색어}
 - ${baseUrl}/api/gs25/inventory?keyword={검색어}
+- ${baseUrl}/api/gs25/inventory?itemCode={상품코드}
 
 **선택 파라미터(공통)**:
 - lat: 위도 (선택)
@@ -287,6 +288,7 @@ Base URL: ${baseUrl}
 - ${baseUrl}/api/gs25/stores?keyword=강남&limit=10
 - ${baseUrl}/api/gs25/products?keyword=오감자&limit=20
 - ${baseUrl}/api/gs25/inventory?keyword=오감자&storeKeyword=강남&storeLimit=10
+- ${baseUrl}/api/gs25/inventory?itemCode=8801056038861&storeKeyword=안산%20중앙역&storeLimit=10
 
 ---
 

@@ -54,6 +54,81 @@ describe('GET /api/actions/query', () => {
     expect(data.data.id).toBe('12345');
   });
 
+  it('GS25 2단계 재고 조회를 action facade로 위임한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            SearchQueryResult: {
+              Collection: [
+                {
+                  Documentset: {
+                    Document: [
+                      { field: { itemCode: '8801056038861', itemName: '핫식스250ML', stockCheckYn: 'Y' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [
+              {
+                storeCode: 'A1',
+                storeName: 'GS25 안산중앙점',
+                storeAddress: '경기 안산시 단원구 중앙대로 907',
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ geometry: { location: { lat: 37.3187, lng: 126.8389 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [
+              {
+                storeCode: 'A1',
+                storeName: 'GS25 안산중앙점',
+                searchItemName: '핫식스250ML',
+                realStockQuantity: 6,
+              },
+            ],
+          }),
+        ),
+      );
+
+    const searchRes = await app.request('/api/actions/query?action=gs25SearchProducts&keyword=%ED%95%AB%EC%8B%9D%EC%8A%A4');
+    expect(searchRes.status).toBe(200);
+
+    const searchData = await searchRes.json();
+    expect(searchData.data.products[0].itemCode).toBe('8801056038861');
+
+    const inventoryRes = await app.request(
+      '/api/actions/query?action=gs25CheckInventory&itemCode=8801056038861&storeKeyword=%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD&storeLimit=10',
+      undefined,
+      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+    );
+    expect(inventoryRes.status).toBe(200);
+
+    const inventoryData = await inventoryRes.json();
+    expect(inventoryData.success).toBe(true);
+    expect(inventoryData.data.itemCodeUsed).toBe(true);
+    expect(inventoryData.data.inventory.inStockStoreCount).toBe(1);
+    expect(inventoryData.data.inventory.stores[0].storeName).toBe('GS25 안산중앙점');
+  });
+
   it('잘못된 action이면 에러를 반환한다', async () => {
     const res = await app.request('/api/actions/query?action=unknownAction');
 

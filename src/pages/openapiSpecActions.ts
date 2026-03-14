@@ -19,6 +19,7 @@ const ACTION_QUERY_PARAMETERS = [
   },
   { name: 'q', in: 'query', required: false, description: '다이소 제품 검색어', schema: { type: 'string' } },
   { name: 'query', in: 'query', required: false, description: '세븐일레븐 상품 검색어', schema: { type: 'string' } },
+  { name: 'itemCode', in: 'query', required: false, description: 'GS25 상품 코드', schema: { type: 'string' } },
   { name: 'productId', in: 'query', required: false, description: '제품 ID 또는 상세 조회용 path 파라미터', schema: { type: 'string' } },
   { name: 'keyword', in: 'query', required: false, description: '공통 키워드 파라미터', schema: { type: 'string' } },
   { name: 'sido', in: 'query', required: false, description: '다이소 시/도', schema: { type: 'string' } },
