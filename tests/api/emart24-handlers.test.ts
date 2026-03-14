@@ -175,7 +175,7 @@ describe('handleEmart24CheckInventory', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: { code: 'MISSING_PLU_CD', message: '상품 PLU 코드(pluCd)를 입력해주세요.' },
+        error: { code: 'MISSING_PLU_CD', message: '상품 PLU 코드(pluCd) 또는 검색어(keyword)를 입력해주세요.' },
       }),
       400,
     );
@@ -217,6 +217,53 @@ describe('handleEmart24CheckInventory', () => {
     );
   });
 
+  it('pluCd와 storeKeyword로도 재고 조회를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 0,
+            count: 1,
+            data: [{ CODE: '28339', TITLE: '안산중앙점', LATITUDE: 37.3187, LONGITUDE: 126.8389 }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storeGoodsInfo: { pluCd: '8801', goodsNm: '고양이 츄르' },
+            storeGoodsQty: [{ BIZNO: '28339', BIZQTY: '2' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storeInfo: {
+              storeNm: '안산중앙점',
+              tel: '031-000-0000',
+              storeAddr: '경기도 안산시 단원구 중앙대로 123',
+            },
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ pluCd: '8801', storeKeyword: '안산 중앙역' });
+    await handleEmart24CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          storeFilters: expect.objectContaining({
+            storeKeyword: '안산 중앙역',
+          }),
+          count: 1,
+        }),
+      }),
+    );
+  });
+
   it('매장 상세/수량 일부 누락도 안전하게 처리한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
@@ -249,7 +296,10 @@ describe('handleEmart24CheckInventory', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: { code: 'MISSING_BIZ_NO_ARR', message: '매장 코드 목록(bizNoArr)을 입력해주세요.' },
+        error: {
+          code: 'MISSING_BIZ_NO_ARR',
+          message: '매장 코드 목록(bizNoArr) 또는 매장 검색 조건(storeKeyword/area1/area2/lat/lng)을 입력해주세요.',
+        },
       }),
       400,
     );

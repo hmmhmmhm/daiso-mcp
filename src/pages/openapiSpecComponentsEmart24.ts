@@ -80,8 +80,47 @@ export const OPENAPI_EMART24_COMPONENT_SCHEMAS = {
       data: {
         type: 'object',
         properties: {
+          keyword: { type: 'string', example: '고양이 츄르' },
           pluCd: { type: 'string', example: '8800244010504' },
-          goodsInfo: { type: 'object' },
+          productCandidates: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Emart24Product' },
+          },
+          location: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              latitude: { type: 'number', format: 'float' },
+              longitude: { type: 'number', format: 'float' },
+            },
+          },
+          storeFilters: {
+            type: 'object',
+            properties: {
+              storeKeyword: { type: 'string', example: '안산 중앙역' },
+              appliedStoreKeyword: { type: 'string', example: '안산중앙역' },
+              area1: { type: 'string', example: '경기도' },
+              area2: { type: 'string', example: '안산시' },
+              service24h: { type: 'boolean', example: false },
+              storeLimit: { type: 'integer', example: 10 },
+              directBizNos: {
+                type: 'array',
+                items: { type: 'string', example: '28339' },
+              },
+            },
+          },
+          nearbyStores: {
+            type: 'object',
+            properties: {
+              totalCount: { type: 'integer', example: 3 },
+              stores: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/Emart24Store' },
+              },
+            },
+          },
+          goodsInfo: { type: 'object', nullable: true },
+          count: { type: 'integer', example: 1 },
           stores: {
             type: 'array',
             items: {
@@ -92,6 +131,7 @@ export const OPENAPI_EMART24_COMPONENT_SCHEMAS = {
                 storeName: { type: 'string', example: '강남스퀘어점' },
                 address: { type: 'string' },
                 phone: { type: 'string' },
+                distanceM: { type: 'number', nullable: true, example: 120 },
               },
             },
           },

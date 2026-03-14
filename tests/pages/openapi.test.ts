@@ -84,6 +84,11 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/gs25/products']).toBeDefined();
     expect(spec.paths['/api/gs25/inventory']).toBeDefined();
     expect(
+      ((spec.paths['/api/emart24/inventory'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
+        (parameter) => parameter.name === 'storeKeyword',
+      ),
+    ).toBe(true);
+    expect(
       ((spec.paths['/api/gs25/inventory'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
         (parameter) => parameter.name === 'itemCode',
       ),

@@ -129,6 +129,77 @@ describe('GET /api/actions/query', () => {
     expect(inventoryData.data.inventory.stores[0].storeName).toBe('GS25 안산중앙점');
   });
 
+  it('이마트24 선택형 재고 조회를 action facade로 위임한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 0,
+            count: 1,
+            data: [{ CODE: '28339', TITLE: '안산중앙점', LATITUDE: 37.3187, LONGITUDE: 126.8389 }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            totalCnt: 2,
+            productList: [
+              { pluCd: '8801111111111', goodsNm: '고양이 츄르 연어맛' },
+              { pluCd: '8802222222222', goodsNm: '고양이 츄르 참치맛' },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 0,
+            count: 1,
+            data: [{ CODE: '28339', TITLE: '안산중앙점', LATITUDE: 37.3187, LONGITUDE: 126.8389 }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storeGoodsInfo: { pluCd: '8801111111111', goodsNm: '고양이 츄르 연어맛' },
+            storeGoodsQty: [{ BIZNO: '28339', BIZQTY: '5' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            storeInfo: {
+              storeNm: '안산중앙점',
+              tel: '031-000-0000',
+              storeAddr: '경기도 안산시 단원구 중앙대로 123',
+            },
+          }),
+        ),
+      );
+
+    const storeRes = await app.request('/api/actions/query?action=emart24FindStores&keyword=안산%20중앙역');
+    expect(storeRes.status).toBe(200);
+
+    const productRes = await app.request('/api/actions/query?action=emart24SearchProducts&keyword=고양이%20츄르');
+    expect(productRes.status).toBe(200);
+
+    const productData = await productRes.json();
+    expect(productData.data.products[0].pluCd).toBe('8801111111111');
+
+    const inventoryRes = await app.request(
+      '/api/actions/query?action=emart24CheckInventory&pluCd=8801111111111&storeKeyword=안산%20중앙역',
+    );
+    expect(inventoryRes.status).toBe(200);
+
+    const inventoryData = await inventoryRes.json();
+    expect(inventoryData.success).toBe(true);
+    expect(inventoryData.data.count).toBe(1);
+    expect(inventoryData.data.stores[0].storeName).toBe('안산중앙점');
+  });
+
   it('잘못된 action이면 에러를 반환한다', async () => {
     const res = await app.request('/api/actions/query?action=unknownAction');
 

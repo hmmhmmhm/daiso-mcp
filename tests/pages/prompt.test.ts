@@ -146,6 +146,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
     expect(text).toContain('재고 응답의 storeCode를 확인한 뒤');
+    expect(text).toContain('pluCd + storeKeyword 조합도 지원');
   });
 });
 
