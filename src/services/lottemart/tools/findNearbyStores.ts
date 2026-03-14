@@ -5,6 +5,7 @@
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { fetchLotteMartStores } from '../client.js';
+import { DEFAULT_LOTTEMART_TIMEOUT_MS } from '../config.js';
 
 interface FindNearbyStoresArgs {
   area?: string;
@@ -15,6 +16,7 @@ interface FindNearbyStoresArgs {
   limit?: number;
   timeoutMs?: number;
   googleMapsApiKey?: string;
+  zyteApiKey?: string;
 }
 
 async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResponse> {
@@ -25,8 +27,9 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     latitude,
     longitude,
     limit = 20,
-    timeoutMs = 15000,
+    timeoutMs = DEFAULT_LOTTEMART_TIMEOUT_MS,
     googleMapsApiKey,
+    zyteApiKey,
   } = args;
 
   const result = await fetchLotteMartStores(
@@ -41,6 +44,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     {
       timeout: timeoutMs,
       googleMapsApiKey,
+      zyteApiKey,
     },
   );
 
@@ -66,7 +70,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   };
 }
 
-export function createFindNearbyStoresTool(apiKey?: string): ToolRegistration {
+export function createFindNearbyStoresTool(googleMapsApiKey?: string): ToolRegistration {
   return {
     name: 'lottemart_find_nearby_stores',
     metadata: {
@@ -82,11 +86,18 @@ export function createFindNearbyStoresTool(apiKey?: string): ToolRegistration {
         latitude: z.number().optional().describe('위도 (미입력 시 keyword 지오코딩 시도)'),
         longitude: z.number().optional().describe('경도 (미입력 시 keyword 지오코딩 시도)'),
         limit: z.number().optional().default(20).describe('반환할 최대 매장 수 (기본값: 20)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(DEFAULT_LOTTEMART_TIMEOUT_MS)
+          .describe(`요청 제한 시간(ms, 기본값: ${DEFAULT_LOTTEMART_TIMEOUT_MS})`),
       },
     },
     handler: ((args: FindNearbyStoresArgs) =>
-      findNearbyStores({ ...args, googleMapsApiKey: args.googleMapsApiKey || apiKey })) as (
+      findNearbyStores({
+        ...args,
+        googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
+      })) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

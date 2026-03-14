@@ -4,12 +4,12 @@
 
 import { fetchJson } from '../../utils/http.js';
 import { LOTTEMART_API, type LotteMartAreaCode } from './api.js';
+import { DEFAULT_LOTTEMART_TIMEOUT_MS } from './config.js';
 import {
   __testOnlyClearLotteMartSessionCache,
   fetchLotteMartHtml,
   fetchLotteMartPageWithSession,
   getCachedLotteMartSessionCookie,
-  getFreshLotteMartSessionCookie,
 } from './session.js';
 import {
   attachDistance,
@@ -35,6 +35,7 @@ import type { LotteMartMarketOption, LotteMartProduct, LotteMartStore } from './
 interface RequestOptions {
   timeout?: number;
   googleMapsApiKey?: string;
+  zyteApiKey?: string;
   sessionCookie?: string;
 }
 
@@ -77,12 +78,7 @@ async function getLotteMartSessionCookie(options: RequestOptions): Promise<strin
     return options.sessionCookie;
   }
 
-  const timeout = options.timeout || 15000;
-  try {
-    return await getFreshLotteMartSessionCookie(timeout);
-  } catch {
-    return getCachedLotteMartSessionCookie(timeout);
-  }
+  return getCachedLotteMartSessionCookie(options.timeout || DEFAULT_LOTTEMART_TIMEOUT_MS);
 }
 
 export async function fetchLotteMartMarketOptions(
@@ -108,8 +104,9 @@ export async function fetchLotteMartMarketOptions(
         'X-Requested-With': 'XMLHttpRequest',
       },
     },
-    options.timeout || 15000,
+    options.timeout || DEFAULT_LOTTEMART_TIMEOUT_MS,
     await getLotteMartSessionCookie(options),
+    options.zyteApiKey,
   );
 
   return parseMarketOptions(toDisplayArea(normalizedArea), html);
@@ -142,8 +139,9 @@ export async function fetchLotteMartStoresByArea(
       },
       body: body.toString(),
     },
-    options.timeout || 15000,
+    options.timeout || DEFAULT_LOTTEMART_TIMEOUT_MS,
     await getLotteMartSessionCookie(options),
+    options.zyteApiKey,
   );
 
   const stores = parseStores(toDisplayArea(normalizedArea), html);
@@ -177,7 +175,7 @@ export async function geocodeLotteMartAddress(address: string, options: RequestO
 
   const body = await fetchJson<GoogleGeocodeResponse>(endpoint.toString(), {
     method: 'GET',
-    timeout: options.timeout || 15000,
+    timeout: options.timeout || DEFAULT_LOTTEMART_TIMEOUT_MS,
     headers: {
       Accept: 'application/json',
     },
@@ -213,7 +211,7 @@ export async function fetchLotteMartStores(
   geocodeUsed: boolean;
 }> {
   const { area, keyword = '', brandVariant = '', latitude, longitude, limit = 20 } = params;
-  const { timeout = 15000, googleMapsApiKey } = options;
+  const { timeout = DEFAULT_LOTTEMART_TIMEOUT_MS, googleMapsApiKey } = options;
   if (area && !normalizeArea(area)) {
     throw new Error(`지원하지 않는 지역입니다: ${area}`);
   }
@@ -237,21 +235,20 @@ export async function fetchLotteMartStores(
   const sessionCookie = await getLotteMartSessionCookie({ timeout });
 
   const targetAreas = getTargetAreas(area);
-  const requiresKeywordAreaScan =
-    !area &&
-    keyword.trim().length > 0 &&
-    (typeof resolvedLatitude !== 'number' || typeof resolvedLongitude !== 'number');
+  const hasKeyword = keyword.trim().length > 0;
+  const fetchAreaStores = (currentArea: string) =>
+    fetchLotteMartStoresByArea(currentArea, { timeout, sessionCookie, zyteApiKey: options.zyteApiKey });
 
-  const stores = requiresKeywordAreaScan
-    ? await fetchKeywordMatchedStores(targetAreas, keyword, brandVariant, limit, (currentArea) =>
-        fetchLotteMartStoresByArea(currentArea, { timeout, sessionCookie }),
-      )
-    : await fetchAllStoresForAreaList(targetAreas, (currentArea) =>
-        fetchLotteMartStoresByArea(currentArea, { timeout, sessionCookie }),
-      );
+  const keywordMatchedStores = hasKeyword
+    ? await fetchKeywordMatchedStores(targetAreas, keyword, brandVariant, limit, fetchAreaStores)
+    : [];
+  const useKeywordMatchedStores = keywordMatchedStores.length > 0 || hasKeyword;
+  const stores = useKeywordMatchedStores
+    ? keywordMatchedStores
+    : await fetchAllStoresForAreaList(targetAreas, fetchAreaStores);
 
   const filtered = attachDistance(
-    requiresKeywordAreaScan
+    useKeywordMatchedStores
       ? stores
       : stores
           .filter((store) => matchesKeyword(store, keyword))
@@ -347,12 +344,13 @@ export async function searchLotteMartProducts(
     throw new Error('상품 검색어(keyword)를 입력해주세요.');
   }
 
-  const timeout = options.timeout || 15000;
+  const timeout = options.timeout || DEFAULT_LOTTEMART_TIMEOUT_MS;
   const sessionCookie = await getLotteMartSessionCookie({ timeout });
 
   const resolvedStore = await resolveLotteMartStore(params.area, params.storeCode, params.storeName, {
     timeout,
     sessionCookie,
+    zyteApiKey: options.zyteApiKey,
   });
   if (!resolvedStore) {
     throw new Error('검색할 롯데마트 매장을 찾지 못했습니다. area와 storeCode/storeName을 확인해주세요.');
@@ -374,7 +372,9 @@ export async function searchLotteMartProducts(
     },
     timeout,
     sessionCookie,
+    options.zyteApiKey,
   );
+  const pagedSessionCookie = await getCachedLotteMartSessionCookie(timeout);
 
   const summary = parseProductSummary(initialHtml);
   const firstPageProducts = parseProducts(
@@ -403,7 +403,8 @@ export async function searchLotteMartProducts(
           },
         },
         timeout,
-        sessionCookie,
+        pagedSessionCookie,
+        options.zyteApiKey,
       );
     }),
   );

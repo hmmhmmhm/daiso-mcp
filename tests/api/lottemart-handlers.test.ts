@@ -5,7 +5,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as lotteMartClient from '../../src/services/lottemart/client.js';
 import { __testOnlyClearLotteMartCaches } from '../../src/services/lottemart/client.js';
-import { handleLotteMartFindStores, handleLotteMartSearchProducts } from '../../src/api/lottemartHandlers.js';
+import * as lotteMartDebug from '../../src/services/lottemart/debug.js';
+import {
+  handleLotteMartDebug,
+  handleLotteMartFindStores,
+  handleLotteMartSearchProducts,
+} from '../../src/api/lottemartHandlers.js';
 
 const mockFetch = vi.fn();
 const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
@@ -38,11 +43,7 @@ function createMockContext(query: Record<string, string> = {}) {
 
 describe('handleLotteMartFindStores', () => {
   it('area와 brandVariant가 없으면 null로 응답한다', async () => {
-    mockFetch.mockImplementation((input: RequestInfo | URL) => {
-      if (String(input) === 'https://company.lottemart.com/mobiledowa/') {
-        return Promise.resolve(createSessionResponse());
-      }
-
+    mockFetch.mockImplementation(() => {
       return Promise.resolve(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -258,6 +259,138 @@ describe('handleLotteMartSearchProducts', () => {
         error: {
           code: 'LOTTEMART_PRODUCT_SEARCH_FAILED',
           message: 'product fail',
+        },
+      }),
+      500,
+    );
+  });
+});
+
+describe('handleLotteMartDebug', () => {
+  it('target이 잘못되면 에러를 반환한다', async () => {
+    const ctx = createMockContext({ target: 'invalid' });
+    await handleLotteMartDebug(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'INVALID_TARGET',
+          message: 'target은 market-options, stores, products, product-page 중 하나여야 합니다.',
+        },
+      }),
+      400,
+    );
+  });
+
+  it('target이 없으면 에러를 반환한다', async () => {
+    const ctx = createMockContext({});
+    await handleLotteMartDebug(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'INVALID_TARGET',
+          message: 'target은 market-options, stores, products, product-page 중 하나여야 합니다.',
+        },
+      }),
+      400,
+    );
+  });
+
+  it('진단 결과를 반환한다', async () => {
+    vi.spyOn(lotteMartDebug, 'probeLotteMartUpstream').mockResolvedValueOnce({
+      request: {
+        target: 'stores',
+        method: 'POST',
+        url: 'https://company.lottemart.com/mobiledowa/market/search_shop.asp',
+        bodyText: 'm_area=4401',
+        timeout: 45000,
+        hasZyteApiKey: false,
+      },
+      attempts: [
+        {
+          used: 'direct',
+          success: false,
+          status: null,
+          statusText: null,
+          error: 'The operation was aborted',
+          bodyPreview: null,
+          sessionCookie: null,
+        },
+      ],
+    });
+
+    const ctx = createMockContext({ target: 'stores', area: '경기' });
+    await handleLotteMartDebug(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          request: expect.objectContaining({ target: 'stores' }),
+          attempts: expect.any(Array),
+        }),
+      }),
+    );
+  });
+
+  it('page와 timeoutMs를 숫자로 변환해 전달한다', async () => {
+    const probeSpy = vi.spyOn(lotteMartDebug, 'probeLotteMartUpstream').mockResolvedValueOnce({
+      request: {
+        target: 'product-page',
+        method: 'GET',
+        url: 'https://company.lottemart.com/mobiledowa/inc/asp/search_product_list.asp',
+        bodyText: null,
+        timeout: 1234,
+        hasZyteApiKey: false,
+      },
+      attempts: [],
+    });
+
+    const ctx = createMockContext({ target: 'product-page', page: '7', timeoutMs: '1234' });
+    await handleLotteMartDebug(ctx);
+
+    expect(probeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: 'product-page',
+        page: 7,
+        timeout: 1234,
+      }),
+    );
+  });
+
+  it('예외 발생 시 debug 에러를 반환한다', async () => {
+    vi.spyOn(lotteMartDebug, 'probeLotteMartUpstream').mockRejectedValueOnce(new Error('debug fail'));
+
+    const ctx = createMockContext({ target: 'stores' });
+    await handleLotteMartDebug(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'LOTTEMART_DEBUG_FAILED',
+          message: 'debug fail',
+        },
+      }),
+      500,
+    );
+  });
+
+  it('알 수 없는 debug 예외는 기본 메시지로 감싼다', async () => {
+    vi.spyOn(lotteMartDebug, 'probeLotteMartUpstream').mockRejectedValueOnce(undefined);
+
+    const ctx = createMockContext({ target: 'stores' });
+    await handleLotteMartDebug(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'LOTTEMART_DEBUG_FAILED',
+          message: '알 수 없는 오류가 발생했습니다.',
         },
       }),
       500,

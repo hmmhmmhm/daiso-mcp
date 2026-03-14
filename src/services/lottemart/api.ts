@@ -4,6 +4,9 @@
 
 export const LOTTEMART_API = {
   BASE_URL: 'https://company.lottemart.com',
+  ORIGIN_HOST: 'company.lottemart.com',
+  SOCKET_HOST: '210.93.146.57',
+  ORIGIN_REFERER: 'https://company.lottemart.com/mobiledowa/',
   MARKET_OPTIONS_PATH: '/mobiledowa/inc/asp/search_market_list.asp',
   STORE_SEARCH_PATH: '/mobiledowa/market/search_shop.asp',
   PRODUCT_SEARCH_PATH: '/mobiledowa/product/search_product.asp',

@@ -69,19 +69,27 @@ describe('fetchLotteMartStoresByArea 예외 처리', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('새 세션 획득이 실패하면 캐시된 세션으로 재시도한다', async () => {
+  it('명시된 세션 쿠키가 있으면 그대로 사용한다', async () => {
+    mockFetch.mockResolvedValue(new Response('<option value="2301">강변점</option>'));
+
+    const result = await fetchLotteMartMarketOptions('서울', '1', {
+      sessionCookie: 'ASPSESSIONID=MANUAL',
+    });
+
+    expect(result[0]?.storeCode).toBe('2301');
+    const headers = mockFetch.mock.calls[0]?.[1]?.headers as Headers;
+    expect(headers.get('Cookie')).toBe('ASPSESSIONID=MANUAL');
+  });
+
+  it('빈 바디와 세션 쿠키를 받으면 같은 요청을 재시도한다', async () => {
     mockFetch
       .mockResolvedValueOnce(createSessionResponse())
-      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
-      .mockRejectedValueOnce(new Error('session bootstrap failed'))
-      .mockResolvedValueOnce(new Response('<option value="2415">안산점</option>'));
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'));
 
-    const first = await fetchLotteMartMarketOptions('서울', '1');
-    const second = await fetchLotteMartMarketOptions('경기', '1');
+    const result = await fetchLotteMartMarketOptions('서울', '1');
 
-    expect(first[0]?.storeCode).toBe('2301');
-    expect(second[0]?.storeCode).toBe('2415');
-    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(result[0]?.storeCode).toBe('2301');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -211,15 +219,11 @@ describe('fetchLotteMartStores 보조 분기', () => {
     });
 
     expect(result.stores[0].distanceM).toBeTypeOf('number');
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('지역이 없으면 전체 지역을 조회하고 좌표 없이 결과를 반환한다', async () => {
-    mockFetch.mockImplementation((input: RequestInfo | URL) => {
-      if (String(input) === 'https://company.lottemart.com/mobiledowa/') {
-        return Promise.resolve(createSessionResponse());
-      }
-
+    mockFetch.mockImplementation(() => {
       return Promise.resolve(
         new Response(`
           <section class="sub-wrap result-shop-list">
@@ -242,7 +246,7 @@ describe('fetchLotteMartStores 보조 분기', () => {
 
     const result = await fetchLotteMartStores({ limit: 2 });
 
-    expect(mockFetch).toHaveBeenCalledTimes(LOTTEMART_AREAS.length + 1);
+    expect(mockFetch).toHaveBeenCalledTimes(LOTTEMART_AREAS.length);
     expect(result.location).toBeNull();
     expect(result.geocodeUsed).toBe(false);
     expect(result.stores).toHaveLength(2);

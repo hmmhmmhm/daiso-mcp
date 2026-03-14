@@ -243,11 +243,7 @@ describe('fetchLotteMartStores', () => {
   });
 
   it('지역 없이 역명 키워드를 받으면 일치 매장을 찾을 때까지 순차 조회한다', async () => {
-    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input) === 'https://company.lottemart.com/mobiledowa/') {
-        return Promise.resolve(createSessionResponse());
-      }
-
+    mockFetch.mockImplementation((_: RequestInfo | URL, init?: RequestInit) => {
       const body = String(init?.body || '');
       if (body.includes('m_area=%EA%B2%BD%EA%B8%B0')) {
         return Promise.resolve(
@@ -285,7 +281,69 @@ describe('fetchLotteMartStores', () => {
     });
 
     expect(result.stores.map((store) => store.storeCode)).toEqual(['2415']);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('키워드가 있으면 지오코딩 성공 후에도 전체 지역 병렬 조회 대신 순차 조회한다', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('https://maps.googleapis.com/')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              status: 'OK',
+              results: [{ geometry: { location: { lat: 37.3169, lng: 126.8381 } } }],
+            }),
+          ),
+        );
+      }
+
+      const body = String(init?.body || '');
+      if (body.includes('m_area=%EA%B2%BD%EA%B8%B0')) {
+        return Promise.resolve(
+          new Response(`
+            <section class="sub-wrap result-shop-list">
+              <ul class="list-result">
+                <li>
+                  <div class="shop-tit">안산점</div>
+                  <div class="shop-desc">
+                    <ul>
+                      <li><span>주소 : </span> 경기 안산시 상록구 항가울로 422</li>
+                      <li><span>상담전화 : </span><a onclick="goClick('2415');">031-000-0000</a></li>
+                    </ul>
+                  </div>
+                  <a class="link" href="./detail_shop.asp?werks=2415"></a>
+                </li>
+              </ul>
+            </section>
+          `),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(`
+          <section class="sub-wrap result-shop-list">
+            <ul class="list-result"></ul>
+          </section>
+        `),
+      );
+    });
+
+    const result = await fetchLotteMartStores(
+      {
+        keyword: '안산 중앙역',
+        limit: 1,
+      },
+      {
+        googleMapsApiKey: 'test-key',
+      },
+    );
+
+    expect(result.geocodeUsed).toBe(true);
+    expect(result.stores.map((store) => store.storeCode)).toEqual(['2415']);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(String(mockFetch.mock.calls[1]?.[1]?.body || '')).toContain('m_area=%EC%84%9C%EC%9A%B8');
+    expect(String(mockFetch.mock.calls[2]?.[1]?.body || '')).toContain('m_area=%EA%B2%BD%EA%B8%B0');
   });
 });
 

@@ -18,6 +18,12 @@
 
 즉, 이 프로젝트 기준 판정은 **구현 가능(A)** 입니다.
 
+운영 메모:
+
+- Cloudflare Workers에서 `https://company.lottemart.com` origin은 간헐적으로 `522`가 발생해,
+  현재 서비스 구현은 Worker 런타임에서만 `210.93.146.57:80` 소켓에 직접 접속하고
+  `Host: company.lottemart.com` 헤더를 수동으로 붙이는 우회 경로를 사용합니다.
+
 ## 2. 플레이북 기준 실측 요약
 
 `docs/scraping-playbook.md` 원칙대로 먼저 모바일 페이지를 열어 실제 UI 흐름을 확인했습니다.

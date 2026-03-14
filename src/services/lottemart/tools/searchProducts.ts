@@ -5,6 +5,7 @@
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { searchLotteMartProducts } from '../client.js';
+import { DEFAULT_LOTTEMART_TIMEOUT_MS } from '../config.js';
 
 interface SearchProductsArgs {
   area?: string;
@@ -13,6 +14,7 @@ interface SearchProductsArgs {
   keyword: string;
   pageLimit?: number;
   timeoutMs?: number;
+  zyteApiKey?: string;
 }
 
 async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse> {
@@ -22,7 +24,8 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     storeName,
     keyword,
     pageLimit = 3,
-    timeoutMs = 15000,
+    timeoutMs = DEFAULT_LOTTEMART_TIMEOUT_MS,
+    zyteApiKey,
   } = args;
 
   const result = await searchLotteMartProducts(
@@ -35,6 +38,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     },
     {
       timeout: timeoutMs,
+      zyteApiKey,
     },
   );
 
@@ -74,7 +78,11 @@ export function createSearchProductsTool(): ToolRegistration {
         storeName: z.string().optional().describe('매장명 (예: 강변점)'),
         keyword: z.string().describe('상품 검색어 (예: 콜라, 우유, 과자)'),
         pageLimit: z.number().optional().default(3).describe('추가 조회할 최대 페이지 수 (기본값: 3)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(DEFAULT_LOTTEMART_TIMEOUT_MS)
+          .describe(`요청 제한 시간(ms, 기본값: ${DEFAULT_LOTTEMART_TIMEOUT_MS})`),
       },
     },
     handler: searchProducts as (args: unknown) => Promise<McpToolResponse>,

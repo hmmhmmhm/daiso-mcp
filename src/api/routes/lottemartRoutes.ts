@@ -4,7 +4,7 @@
 
 import type { Hono } from 'hono';
 import { withEdgeCache } from '../../utils/cache.js';
-import { handleLotteMartFindStores, handleLotteMartSearchProducts } from '../lottemartHandlers.js';
+import { handleLotteMartDebug, handleLotteMartFindStores, handleLotteMartSearchProducts } from '../lottemartHandlers.js';
 import type { AppBindings } from '../response.js';
 
 export function registerLotteMartRoutes(app: Hono<{ Bindings: AppBindings }>): void {
@@ -31,4 +31,6 @@ export function registerLotteMartRoutes(app: Hono<{ Bindings: AppBindings }>): v
       () => handleLotteMartSearchProducts(c),
     ),
   );
+
+  app.get('/api/lottemart/debug', (c) => handleLotteMartDebug(c));
 }

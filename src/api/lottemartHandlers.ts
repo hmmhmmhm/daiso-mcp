@@ -4,6 +4,8 @@
 
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 import { fetchLotteMartStores, searchLotteMartProducts } from '../services/lottemart/client.js';
+import { DEFAULT_LOTTEMART_TIMEOUT_MS } from '../services/lottemart/config.js';
+import { probeLotteMartUpstream, type LotteMartDebugTarget } from '../services/lottemart/debug.js';
 
 /**
  * 롯데마트 매장 검색 API 핸들러
@@ -32,8 +34,8 @@ export async function handleLotteMartFindStores(c: ApiContext) {
         limit,
       },
       {
-        timeout: 15000,
-        googleMapsApiKey: c.env.GOOGLE_MAPS_API_KEY,
+        timeout: DEFAULT_LOTTEMART_TIMEOUT_MS,
+        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
       },
     );
 
@@ -89,7 +91,7 @@ export async function handleLotteMartSearchProducts(c: ApiContext) {
         pageLimit,
       },
       {
-        timeout: 15000,
+        timeout: DEFAULT_LOTTEMART_TIMEOUT_MS,
       },
     );
 
@@ -113,5 +115,39 @@ export async function handleLotteMartSearchProducts(c: ApiContext) {
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'LOTTEMART_PRODUCT_SEARCH_FAILED', message, 500);
+  }
+}
+
+/**
+ * 롯데마트 업스트림 단독 진단 API 핸들러
+ * GET /api/lottemart/debug?target=market-options|stores|products|product-page
+ */
+export async function handleLotteMartDebug(c: ApiContext) {
+  const target = (c.req.query('target') || '') as LotteMartDebugTarget;
+  const allowedTargets: LotteMartDebugTarget[] = ['market-options', 'stores', 'products', 'product-page'];
+  if (!allowedTargets.includes(target)) {
+    return errorResponse(
+      c,
+      'INVALID_TARGET',
+      'target은 market-options, stores, products, product-page 중 하나여야 합니다.',
+    );
+  }
+
+  try {
+    const result = await probeLotteMartUpstream({
+      target,
+      area: c.req.query('area') || undefined,
+      type: (c.req.query('type') || undefined) as '1' | '2' | undefined,
+      storeCode: c.req.query('storeCode') || undefined,
+      keyword: c.req.query('keyword') || undefined,
+      page: c.req.query('page') ? parseInt(c.req.query('page')!, 10) : undefined,
+      timeout: c.req.query('timeoutMs') ? parseInt(c.req.query('timeoutMs')!, 10) : DEFAULT_LOTTEMART_TIMEOUT_MS,
+      zyteApiKey: c.env?.ZYTE_API_KEY,
+    });
+
+    return successResponse(c, result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return errorResponse(c, 'LOTTEMART_DEBUG_FAILED', message, 500);
   }
 }

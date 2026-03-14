@@ -60,7 +60,6 @@ describe('GET /api/lottemart/stores', () => {
 describe('GET /api/lottemart/products', () => {
   it('롯데마트 상품 검색 결과를 반환한다', async () => {
     mockFetch
-      .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
       .mockResolvedValueOnce(
         new Response(`
@@ -104,5 +103,19 @@ describe('GET /api/lottemart/products', () => {
     const data = await res.json();
     expect(data.success).toBe(false);
     expect(data.error.code).toBe('MISSING_STORE');
+  });
+});
+
+describe('GET /api/lottemart/debug', () => {
+  it('롯데마트 단독 진단 결과를 반환한다', async () => {
+    mockFetch.mockResolvedValue(new Response('<option value="2415">안산점</option>'));
+
+    const res = await app.request('/api/lottemart/debug?target=market-options&area=%EA%B2%BD%EA%B8%B0&type=1');
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.request.target).toBe('market-options');
+    expect(data.data.attempts[0].used).toBe('direct');
   });
 });
