@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTION_QUERY_ACTIONS,
   buildActionQueryTargetUrl,
+  createActionQueryDescriptionList,
   getActionQueryDefinition,
 } from '../../src/api/actionsProxy.js';
 
@@ -61,5 +62,12 @@ describe('actionsProxy', () => {
     expect(() =>
       buildActionQueryTargetUrl('https://example.com/api/actions/query?action=daisoGetProduct'),
     ).toThrow('productId 파라미터를 입력해주세요.');
+  });
+
+  it('액션 설명 목록 문자열을 생성한다', () => {
+    const descriptionList = createActionQueryDescriptionList();
+
+    expect(descriptionList).toContain('- `lottemartFindStores`:');
+    expect(descriptionList).toContain('- `daisoGetProduct`:');
   });
 });
