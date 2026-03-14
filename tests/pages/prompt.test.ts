@@ -138,6 +138,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('한글 검색어');
     expect(text).toContain('페이지네이션');
     expect(text).toContain('브랜드 고정');
+    expect(text).toContain('품목상 어색해 보여도 먼저 그 브랜드에서 실제 검색/조회');
     expect(text).toContain('결과가 없을 때만 다른 브랜드 대안을 짧게 제안');
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
