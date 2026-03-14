@@ -152,6 +152,11 @@ Base URL: ${baseUrl}
 - page: 페이지 번호 (기본값: 1)
 - pageSize: 페이지당 결과 수 (기본값: 30)
 
+**주의**:
+- 다이소 재고 조회는 storeCode가 필요하지 않습니다.
+- storeCode는 재고 응답의 storeInventory.stores[].storeCode에서 확인한 뒤 진열 위치 조회에 사용합니다.
+- 안산 중앙역 같은 역명 키워드가 비면 안산중앙역, 안산중앙, 고잔처럼 붙여쓴 변형으로 재시도하세요.
+
 **예시**:
 - ${baseUrl}/api/daiso/inventory?productId=1234567890
 - ${baseUrl}/api/daiso/inventory?productId=1234567890&lat=37.3219&lng=126.8309
@@ -543,7 +548,7 @@ Base URL: ${baseUrl}
    - 먼저 /api/daiso/products로 제품 검색
    - 결과에서 원하는 제품의 id 확인
    - /api/daiso/inventory에 해당 id로 재고 조회
-   - 진열 위치가 필요하면 /api/daiso/display-location에 productId + storeCode로 조회
+   - 진열 위치가 필요하면 재고 응답의 storeCode를 확인한 뒤 /api/daiso/display-location에 productId + storeCode로 조회
 4. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
 5. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
 6. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.

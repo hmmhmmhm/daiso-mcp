@@ -55,6 +55,20 @@ describe('OpenAPI 페이지', () => {
     expect(spec.servers[0].url).toBe('https://example.com');
     expect(spec.paths['/api/daiso/products']).toBeDefined();
     expect(spec.paths['/api/daiso/display-location']).toBeDefined();
+    expect(
+      (
+        spec.paths['/api/daiso/stores'] as {
+          get: { description: string };
+        }
+      ).get.description,
+    ).toContain('storeCode는 /api/daiso/inventory 응답에서 확인');
+    expect(
+      (
+        spec.paths['/api/daiso/inventory'] as {
+          get: { description: string };
+        }
+      ).get.description,
+    ).toContain('storeCode 없이 productId만으로 호출할 수');
     expect(spec.paths['/api/oliveyoung/stores']).toBeDefined();
     expect(spec.paths['/api/cu/stores']).toBeDefined();
     expect(spec.paths['/api/cu/inventory']).toBeDefined();

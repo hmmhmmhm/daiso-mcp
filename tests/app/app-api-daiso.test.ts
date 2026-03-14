@@ -88,6 +88,24 @@ describe('GET /api/daiso/stores', () => {
     const data = await res.json();
     expect(data.error.code).toBe('MISSING_PARAMS');
   });
+
+  it('역명 키워드가 비면 붙여쓴 변형으로 재시도한다', async () => {
+    const emptyHtml = '<div></div>';
+    const matchedHtml = `
+      <div class="bx-store" data-start="0900" data-end="2200" data-lat="37.5" data-lng="127.0" data-info='{}'>
+        <h4 class="place">안산중앙점</h4>
+        <p class="addr">경기 안산시</p>
+      </div>
+    `;
+    mockFetch.mockResolvedValueOnce(new Response(emptyHtml)).mockResolvedValueOnce(new Response(matchedHtml));
+
+    const res = await app.request('/api/daiso/stores?keyword=%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD');
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.stores[0].name).toBe('안산중앙점');
+  });
 });
 
 describe('GET /api/daiso/inventory', () => {
@@ -111,6 +129,60 @@ describe('GET /api/daiso/inventory', () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error.code).toBe('MISSING_PRODUCT_ID');
+  });
+
+  it('역명 키워드가 비면 붙여쓴 변형으로 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: false })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              msStrVOList: [],
+              intStrCont: 0,
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              msStrVOList: [
+                {
+                  strCd: '11199',
+                  strNm: '안산중앙점',
+                  strAddr: '경기 안산시',
+                  strTno: '1522-4400',
+                  opngTime: '1000',
+                  clsngTime: '2200',
+                  strLttd: 37.3,
+                  strLitd: 126.8,
+                  km: '0.1',
+                  qty: '3',
+                  parkYn: 'N',
+                  usimYn: 'N',
+                  pkupYn: 'N',
+                  taxfYn: 'N',
+                  elvtYn: 'N',
+                  entrRampYn: 'N',
+                  nocashYn: 'N',
+                },
+              ],
+              intStrCont: 1,
+            },
+          }),
+        ),
+      );
+
+    const res = await app.request('/api/daiso/inventory?productId=12345&keyword=%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD');
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.storeInventory.stores[0].storeCode).toBe('11199');
   });
 });
 

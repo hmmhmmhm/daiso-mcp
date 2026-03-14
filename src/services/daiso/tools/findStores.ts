@@ -9,6 +9,7 @@ import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { Store, StoreOptions } from '../types.js';
 import { DAISO_WEB_API, formatTime } from '../api.js';
 import { fetchDaisoHtml, fetchDaisoJson } from '../client.js';
+import { buildDaisoStoreKeywordVariants } from '../../../utils/daisoKeyword.js';
 
 /** 도구 입력 인터페이스 */
 interface FindStoresArgs {
@@ -102,15 +103,27 @@ export async function fetchStores(
   gugun?: string,
   dong?: string
 ): Promise<Store[]> {
-  const url = new URL(DAISO_WEB_API.SHOP_SEARCH);
+  const searchKeywords =
+    keyword && !sido && !gugun && !dong
+      ? buildDaisoStoreKeywordVariants(keyword)
+      : [keyword || ''];
 
-  url.searchParams.set('name_address', keyword || '');
-  url.searchParams.set('sido', sido || '');
-  url.searchParams.set('gugun', gugun || '');
-  url.searchParams.set('dong', dong || '');
+  for (const searchKeyword of searchKeywords) {
+    const url = new URL(DAISO_WEB_API.SHOP_SEARCH);
 
-  const html = await fetchDaisoHtml(url.toString());
-  return parseStoresFromHtml(html);
+    url.searchParams.set('name_address', searchKeyword);
+    url.searchParams.set('sido', sido || '');
+    url.searchParams.set('gugun', gugun || '');
+    url.searchParams.set('dong', dong || '');
+
+    const html = await fetchDaisoHtml(url.toString());
+    const stores = parseStoresFromHtml(html);
+    if (stores.length > 0) {
+      return stores;
+    }
+  }
+
+  return [];
 }
 
 /**

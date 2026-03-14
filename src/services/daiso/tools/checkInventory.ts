@@ -9,6 +9,7 @@ import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { StoreInventory, StoreInventoryResponse, OnlineStockResponse } from '../types.js';
 import { DAISOMALL_API } from '../api.js';
 import { fetchDaisoJson } from '../client.js';
+import { buildDaisoStoreKeywordVariants } from '../../../utils/daisoKeyword.js';
 
 /** 도구 입력 인터페이스 */
 interface CheckInventoryArgs {
@@ -48,49 +49,57 @@ export async function fetchStoreInventory(
   pageSize: number = 30,
   keyword: string = ''
 ): Promise<{ stores: StoreInventory[]; totalCount: number }> {
-  const data = await fetchDaisoJson<StoreInventoryResponse>(DAISOMALL_API.STORE_INVENTORY, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      keyword,
-      pdNo: productNo,
-      curLttd: lat,
-      curLitd: lng,
-      geolocationAgrYn: 'Y',
-      pkupYn: '',
-      intCd: '',
-      pageSize,
-      currentPage: page,
-    }),
-  });
+  const searchKeywords = keyword ? buildDaisoStoreKeywordVariants(keyword) : [''];
 
-  if (!data.success || !data.data?.msStrVOList) {
-    return { stores: [], totalCount: 0 };
+  for (const searchKeyword of searchKeywords) {
+    const data = await fetchDaisoJson<StoreInventoryResponse>(DAISOMALL_API.STORE_INVENTORY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        keyword: searchKeyword,
+        pdNo: productNo,
+        curLttd: lat,
+        curLitd: lng,
+        geolocationAgrYn: 'Y',
+        pkupYn: '',
+        intCd: '',
+        pageSize,
+        currentPage: page,
+      }),
+    });
+
+    if (!data.success || !data.data?.msStrVOList) {
+      continue;
+    }
+
+    const stores: StoreInventory[] = data.data.msStrVOList.map((store) => ({
+      storeCode: store.strCd,
+      storeName: store.strNm,
+      address: store.strAddr,
+      phone: store.strTno,
+      openTime: store.opngTime,
+      closeTime: store.clsngTime,
+      lat: store.strLttd,
+      lng: store.strLitd,
+      distance: store.km,
+      quantity: parseInt(store.qty) || 0,
+      options: {
+        parking: store.parkYn === 'Y',
+        simCard: store.usimYn === 'Y',
+        pickup: store.pkupYn === 'Y',
+        taxFree: store.taxfYn === 'Y',
+        elevator: store.elvtYn === 'Y',
+        ramp: store.entrRampYn === 'Y',
+        cashless: store.nocashYn === 'Y',
+      },
+    }));
+
+    if (stores.length > 0 || searchKeyword === searchKeywords[searchKeywords.length - 1]) {
+      return { stores, totalCount: data.data.intStrCont || stores.length };
+    }
   }
 
-  const stores: StoreInventory[] = data.data.msStrVOList.map((store) => ({
-    storeCode: store.strCd,
-    storeName: store.strNm,
-    address: store.strAddr,
-    phone: store.strTno,
-    openTime: store.opngTime,
-    closeTime: store.clsngTime,
-    lat: store.strLttd,
-    lng: store.strLitd,
-    distance: store.km,
-    quantity: parseInt(store.qty) || 0,
-    options: {
-      parking: store.parkYn === 'Y',
-      simCard: store.usimYn === 'Y',
-      pickup: store.pkupYn === 'Y',
-      taxFree: store.taxfYn === 'Y',
-      elevator: store.elvtYn === 'Y',
-      ramp: store.entrRampYn === 'Y',
-      cashless: store.nocashYn === 'Y',
-    },
-  }));
-
-  return { stores, totalCount: data.data.intStrCont || stores.length };
+  return { stores: [], totalCount: 0 };
 }
 
 /**

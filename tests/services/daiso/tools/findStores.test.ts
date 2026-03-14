@@ -250,6 +250,19 @@ describe('fetchStores', () => {
     expect(calledUrl).toContain('gugun=');
     expect(calledUrl).toContain('dong=');
   });
+
+  it('역명 키워드가 비면 붙여쓴 변형으로 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(''))
+      .mockResolvedValueOnce(new Response(createMockStoreHtml([{ name: '안산중앙점' }])));
+
+    const stores = await fetchStores('안산 중앙역');
+
+    expect(stores).toHaveLength(1);
+    expect(stores[0].name).toBe('안산중앙점');
+    expect(mockFetch.mock.calls[0][0]).toContain('name_address=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD');
+    expect(mockFetch.mock.calls[1][0]).toContain('name_address=%EC%95%88%EC%82%B0%EC%A4%91%EC%95%99%EC%97%AD');
+  });
 });
 
 describe('getDistricts', () => {

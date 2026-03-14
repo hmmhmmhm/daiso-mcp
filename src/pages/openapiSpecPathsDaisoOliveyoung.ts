@@ -93,7 +93,7 @@ export const OPENAPI_PATHS_DAISO_OLIVEYOUNG = {
           operationId: 'findStores',
           summary: '매장 찾기',
           description:
-            '키워드 또는 지역으로 다이소 매장을 검색합니다. keyword 또는 sido 중 하나는 필수입니다.',
+            '키워드 또는 지역으로 다이소 매장을 검색합니다. keyword 또는 sido 중 하나는 필수입니다. 이 응답에는 storeCode가 포함되지 않을 수 있으므로, 진열 위치 조회에 필요한 storeCode는 /api/daiso/inventory 응답에서 확인하세요.',
           parameters: [
             {
               name: 'keyword',
@@ -159,7 +159,7 @@ export const OPENAPI_PATHS_DAISO_OLIVEYOUNG = {
           operationId: 'checkInventory',
           summary: '재고 확인',
           description:
-            '특정 제품의 온라인 재고와 매장별 재고를 확인합니다. 위치 정보를 제공하면 가까운 매장 순으로 정렬됩니다.',
+            '특정 제품의 온라인 재고와 매장별 재고를 확인합니다. storeCode 없이 productId만으로 호출할 수 있으며, 진열 위치 조회에 필요한 storeCode도 이 응답의 각 매장에서 확인할 수 있습니다. 위치 정보를 제공하면 가까운 매장 순으로 정렬됩니다.',
           parameters: [
             {
               name: 'productId',

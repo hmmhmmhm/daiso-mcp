@@ -201,6 +201,62 @@ describe('fetchStoreInventory', () => {
 
     expect(result.totalCount).toBe(2);
   });
+
+  it('역명 키워드가 비면 붙여쓴 변형으로 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              msStrVOList: [],
+              intStrCont: 0,
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              msStrVOList: [
+                {
+                  strCd: '11199',
+                  strNm: '안산중앙점',
+                  strAddr: '경기 안산시',
+                  strTno: '1522-4400',
+                  opngTime: '1000',
+                  clsngTime: '2200',
+                  strLttd: 37.3,
+                  strLitd: 126.8,
+                  km: '0.1',
+                  qty: '3',
+                  parkYn: 'N',
+                  usimYn: 'N',
+                  pkupYn: 'N',
+                  taxfYn: 'N',
+                  elvtYn: 'N',
+                  entrRampYn: 'N',
+                  nocashYn: 'N',
+                },
+              ],
+              intStrCont: 1,
+            },
+          }),
+        ),
+      );
+
+    const result = await fetchStoreInventory('12345', 37.5, 127.0, 1, 30, '안산 중앙역');
+
+    expect(result.totalCount).toBe(1);
+    expect(result.stores[0].storeCode).toBe('11199');
+
+    const firstRequestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const secondRequestBody = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(firstRequestBody.keyword).toBe('안산 중앙역');
+    expect(secondRequestBody.keyword).toBe('안산중앙역');
+  });
 });
 
 describe('createCheckInventoryTool', () => {
