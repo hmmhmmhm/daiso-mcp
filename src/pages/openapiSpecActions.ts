@@ -70,6 +70,8 @@ export function generateOpenApiSpec(baseUrl: string): object {
 
 실제 런타임은 기존 /api/{service}/... 엔드포인트로 위임하며, 이 스펙은 OpenAI Actions 등록 전용으로 사용합니다.
 
+브랜드명이 요청 앞부분에 나오면 뒤의 상품/재고 요청까지 같은 브랜드로 해석해야 합니다. 예: "안산 중앙역 주변 다이소 찾아주시고 핫식스 재고 찾아주세요"는 다이소 기준 조회를 먼저 수행하고, 결과가 없을 때만 다른 브랜드를 제안합니다.
+
 전체 개별 엔드포인트 스펙이 필요하면 /openapi-full.json 또는 /openapi-full.yaml 을 사용하세요.`,
       version: '1.0.0',
       contact: {

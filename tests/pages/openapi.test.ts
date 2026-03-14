@@ -33,6 +33,9 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/actions/query']).toBeDefined();
     expect(spec.paths['/api/daiso/products']).toBeUndefined();
     expect(
+      (spec as { info: { description: string } }).info.description,
+    ).toContain('브랜드명이 요청 앞부분에 나오면 뒤의 상품/재고 요청까지 같은 브랜드로 해석');
+    expect(
       spec.paths['/api/actions/query'].get.parameters.find(
         (parameter) => parameter.name === 'action',
       )?.description?.length,
