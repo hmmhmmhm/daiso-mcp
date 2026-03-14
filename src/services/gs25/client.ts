@@ -376,11 +376,22 @@ export async function fetchGs25Stores(
   if (storeCode.trim().length > 0) {
     endpoint.searchParams.set('storeCode', storeCode.trim());
   }
+  // 좌표 파라미터: 앱은 myPosition + centerPosition 모두 필요
   if (typeof latitude === 'number' && Number.isFinite(latitude)) {
-    endpoint.searchParams.set('YCoordination', String(latitude));
+    endpoint.searchParams.set('myPositionYCoordination', String(latitude));
+    endpoint.searchParams.set('centerPositionYCoordination', String(latitude));
   }
   if (typeof longitude === 'number' && Number.isFinite(longitude)) {
-    endpoint.searchParams.set('XCoordination', String(longitude));
+    endpoint.searchParams.set('myPositionXCoordination', String(longitude));
+    endpoint.searchParams.set('centerPositionXCoordination', String(longitude));
+  }
+  // 반경 조건 (미터 단위, 기본값 500)
+  if (typeof latitude === 'number' && typeof longitude === 'number') {
+    endpoint.searchParams.set('radiusCondition', '500');
+    // 앱에서 사용하는 추가 플래그
+    endpoint.searchParams.set('pickupStoreYn', 'N');
+    endpoint.searchParams.set('isSuperDlvyStoreSelected', 'N');
+    endpoint.searchParams.set('isGs25DlvyStoreSelected', 'N');
   }
 
   const body = await fetchJson<Gs25StoreStockResponse>(endpoint.toString(), {

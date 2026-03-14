@@ -1,9 +1,10 @@
 /**
- * GS25 Blutter 기반 암복호화 + API 후킹 스크립트 v3
+ * GS25 Blutter 기반 암복호화 + API 후킹 스크립트 v4
  *
  * 캡처 대상:
- * 1. 암복호화 평문 (encrypt/decrypt)
- * 2. HTTP 요청 URL 및 바디
+ * 1. 암호화 전 평문 입력 (onEnter)
+ * 2. 복호화 후 평문 출력 (onLeave)
+ * 3. HTTP 요청 URL 및 바디
  */
 
 'use strict';
@@ -27,7 +28,7 @@ function log(msg) {
     jsonLog({ t: 'log', msg: msg });
 }
 
-// 메모리에서 문자열 스캔
+// 메모리에서 문자열 스캔 (UTF-8 지원)
 function scanForReadableString(ptr, maxLen) {
     try {
         const bytes = ptr.readByteArray(maxLen);
@@ -35,13 +36,24 @@ function scanForReadableString(ptr, maxLen) {
 
         const arr = new Uint8Array(bytes);
         let result = '';
+        let nullCount = 0;
 
         for (let i = 0; i < arr.length; i++) {
             const b = arr[i];
-            if (b >= 32 && b < 127) {
+            // ASCII 출력 가능 문자 + 한글/UTF-8 상위 바이트
+            if ((b >= 32 && b < 127) || (b >= 0xC0 && b <= 0xFD)) {
                 result += String.fromCharCode(b);
-            } else if (b === 0 && result.length > 5) {
-                break;
+                nullCount = 0;
+            } else if (b === 0) {
+                nullCount++;
+                // 연속 null 3개 이상이면 문자열 끝
+                if (nullCount >= 3 && result.length > 5) {
+                    break;
+                }
+            } else if (b === 10 || b === 13) {
+                // 줄바꿈 허용
+                result += ' ';
+                nullCount = 0;
             }
         }
 
@@ -70,17 +82,28 @@ function hookLibapp() {
 
     log('libapp.so found at ' + libapp.base);
 
-    // _decrypt 후킹
+    // _decrypt 후킹 (응답 평문 캡처)
     try {
         const _decrypt_addr = libapp.base.add(OFFSETS._decrypt);
         Interceptor.attach(_decrypt_addr, {
             onLeave: function(retval) {
-                const plaintext = readLargeData(retval, 4096);
+                const plaintext = readLargeData(retval, 16384);
                 if (plaintext && plaintext.length > 10) {
-                    jsonLog({
-                        t: 'DECRYPT',
-                        data: plaintext.substring(0, 2000)
-                    });
+                    // JSON 응답 또는 중요 데이터 필터링
+                    if (plaintext.includes('{') ||
+                        plaintext.includes('store') ||
+                        plaintext.includes('Stock') ||
+                        plaintext.includes('quantity')) {
+                        jsonLog({
+                            t: 'DECRYPT_RESPONSE',
+                            data: plaintext.substring(0, 8000)
+                        });
+                    } else {
+                        jsonLog({
+                            t: 'DECRYPT',
+                            data: plaintext.substring(0, 2000)
+                        });
+                    }
                 }
             }
         });
@@ -108,23 +131,82 @@ function hookLibapp() {
         log('decrypt64 hook failed: ' + e);
     }
 
-    // _encrypt 후킹
+    // _encrypt 후킹 (onEnter로 평문 입력 캡처)
     try {
         const _encrypt_addr = libapp.base.add(OFFSETS._encrypt);
         Interceptor.attach(_encrypt_addr, {
+            onEnter: function(args) {
+                // Dart 함수 인자 탐색 - 여러 위치 시도
+                for (let i = 0; i < 6; i++) {
+                    try {
+                        const argPtr = args[i];
+                        if (!argPtr || argPtr.isNull()) continue;
+
+                        const plaintext = readLargeData(argPtr, 8192);
+                        if (plaintext && plaintext.length > 20) {
+                            // JSON, URL, HTTP 관련 문자열 필터링
+                            if (plaintext.includes('{') ||
+                                plaintext.includes('http') ||
+                                plaintext.includes('store') ||
+                                plaintext.includes('item') ||
+                                plaintext.includes('stock') ||
+                                plaintext.includes('keyword') ||
+                                plaintext.includes('Coordination')) {
+                                jsonLog({
+                                    t: 'ENCRYPT_INPUT',
+                                    argIndex: i,
+                                    plaintext: plaintext.substring(0, 4000)
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        // 인자 읽기 실패 무시
+                    }
+                }
+            },
             onLeave: function(retval) {
                 const encrypted = readLargeData(retval, 2048);
                 if (encrypted && encrypted.length > 10) {
                     jsonLog({
-                        t: 'ENCRYPT',
+                        t: 'ENCRYPT_OUTPUT',
                         data: encrypted.substring(0, 1000)
                     });
                 }
             }
         });
-        log('Hooked _encrypt');
+        log('Hooked _encrypt (onEnter + onLeave)');
     } catch (e) {
         log('_encrypt hook failed: ' + e);
+    }
+
+    // encrypter_encrypt 후킹 (실제 암호화 함수)
+    try {
+        const encrypter_encrypt_addr = libapp.base.add(OFFSETS.encrypter_encrypt);
+        Interceptor.attach(encrypter_encrypt_addr, {
+            onEnter: function(args) {
+                // 실제 Encrypter.encrypt 함수의 인자 탐색
+                for (let i = 0; i < 6; i++) {
+                    try {
+                        const argPtr = args[i];
+                        if (!argPtr || argPtr.isNull()) continue;
+
+                        const plaintext = readLargeData(argPtr, 8192);
+                        if (plaintext && plaintext.length > 10) {
+                            jsonLog({
+                                t: 'ENCRYPTER_INPUT',
+                                argIndex: i,
+                                plaintext: plaintext.substring(0, 4000)
+                            });
+                        }
+                    } catch (e) {
+                        // 인자 읽기 실패 무시
+                    }
+                }
+            }
+        });
+        log('Hooked encrypter_encrypt');
+    } catch (e) {
+        log('encrypter_encrypt hook failed: ' + e);
     }
 
     log('Dart hooks installed');
@@ -298,7 +380,7 @@ function hookNativeSSL() {
 }
 
 // 시작
-log(SCRIPT_NAME + ' v3 loaded');
+log(SCRIPT_NAME + ' v4 loaded - capturing plaintext before encryption');
 setTimeout(hookLibapp, 500);
 setTimeout(hookJavaHttp, 1000);
 setTimeout(hookNativeSSL, 1500);

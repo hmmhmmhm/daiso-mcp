@@ -286,9 +286,34 @@ tmp/gs25-static/
 
 ---
 
-## 8. 다음 단계
+## 8. 추가 발견 (2026-03-14)
+
+### 재고 API 좌표 파라미터 수정
+
+**문제**: 문서화된 파라미터로 API 호출 시 수도권 매장 재고가 모두 0으로 반환
+
+**원인**: 앱이 사용하는 실제 파라미터명이 다름
+
+| 잘못된 파라미터 | 올바른 파라미터                                           |
+| --------------- | --------------------------------------------------------- |
+| `XCoordination` | `myPositionXCoordination` + `centerPositionXCoordination` |
+| `YCoordination` | `myPositionYCoordination` + `centerPositionYCoordination` |
+| (없음)          | `radiusCondition=500`                                     |
+
+**수정된 API 호출 예시**:
+
+```bash
+curl -s "https://b2c-bff.woodongs.com/api/bff/v2/store/stock?serviceCode=01&itemCode=8801056038861&myPositionXCoordination=126.841342&myPositionYCoordination=37.317730&centerPositionXCoordination=126.841342&centerPositionYCoordination=37.317730&radiusCondition=500&pickupStoreYn=N&realTimeStockYn=Y"
+```
+
+**발견 방법**: Frida v4 스크립트로 앱의 실제 요청 파라미터 평문 캡처
+
+- 상세 가이드: `docs/gs25-frida-plaintext-capture-guide.md`
+
+---
+
+## 9. 완료된 항목
 
 1. ~~**토큰 갱신**~~: 재고 조회 API는 인증 불필요로 확인됨 ✅
-2. **MCP 도구 구현**: `gs25_check_inventory`, `gs25_store_detail` 구현
-3. **상품 검색 API**: 상품명으로 재고 검색하는 API 추가 조사
-4. **storeCode 획득**: 매장코드 조회 방법 파악 (좌표 기반 검색 등)
+2. ~~**MCP 도구 구현**~~: `gs25_check_inventory` 구현 완료 ✅
+3. ~~**좌표 파라미터 수정**~~: 올바른 파라미터명으로 수정 ✅
