@@ -138,7 +138,7 @@
   - `storeCd`
   - `storeNm`
   - 영업 시간 관련 필드
-  를 꺼내 `real-stock`과 후속 검증 로직에 사용
+    를 꺼내 `real-stock`과 후속 검증 로직에 사용
 
 근거:
 
