@@ -267,6 +267,65 @@ describe('createGetTimetableTool', () => {
     expect(parsed.timetable[0].theaterCode).toBe('0211');
   });
 
+  it('site 시간표에 movieCode가 비어도 영화코드 fallback으로 회차를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                siteNo: '0211',
+                siteNm: 'CGV안산',
+                scnYmd: '20260315',
+                scnSseq: '1',
+                movNm: '영화A',
+                scnsrtTm: '0930',
+                scnendTm: '1130',
+                stcnt: 100,
+                frSeatCnt: 30,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                siteNo: '0211',
+                siteNm: 'CGV안산',
+                scnYmd: '20260315',
+                scnSseq: '2',
+                movNo: 'M1',
+                movNm: '영화A',
+                scnsrtTm: '1010',
+                scnendTm: '1210',
+                stcnt: 100,
+                frSeatCnt: 25,
+              },
+            ],
+          }),
+        ),
+      );
+
+    const tool = createGetTimetableTool();
+    const result = await tool.handler({ playDate: '20260315', theaterCode: '0211', movieCode: 'M1' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.count).toBe(1);
+    expect(parsed.timetable[0]).toMatchObject({
+      theaterCode: '0211',
+      movieCode: 'M1',
+      startTime: '10:10',
+      remainingSeats: 25,
+    });
+  });
+
   it('keyword 기준 극장을 못 찾으면 빈 시간표를 반환한다', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(

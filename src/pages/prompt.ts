@@ -434,7 +434,7 @@ Base URL: ${baseUrl}
 
 ### 12. CGV 시간표 조회
 
-**설명**: 날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다. theaterCode가 없으면 keyword 또는 lat,lng 기준으로 가장 가까운 극장을 먼저 선택합니다.
+**설명**: 날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다. theaterCode가 없으면 keyword 또는 lat,lng 기준으로 가장 가까운 극장을 먼저 선택합니다. 잔여 좌석은 각 회차의 \`remainingSeats\` 필드로 함께 내려옵니다.
 
 **URL**: ${baseUrl}/api/cgv/timetable?playDate={YYYYMMDD}
 

@@ -625,6 +625,7 @@ describe('fetchCgvTimetable', () => {
             {
               siteNo: '0056',
               scnYmd: '20260307',
+              movNo: '30000985',
             },
           ],
         }),
@@ -699,6 +700,66 @@ describe('fetchCgvTimetable', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].remainingSeats).toBe(77);
+    expect(String(mockFetch.mock.calls[1][0])).toContain('/cnm/atkt/searchSchByMov');
+  });
+
+  it('site 시간표에 movieCode가 비면 영화코드 조회로 다시 fallback한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            data: [
+              {
+                siteNo: '0211',
+                siteNm: 'CGV안산',
+                scnYmd: '20260315',
+                scnSseq: '1',
+                movNm: '영화A',
+                scnsrtTm: '0930',
+                scnendTm: '1130',
+                stcnt: 100,
+                frSeatCnt: 30,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            data: [
+              {
+                siteNo: '0211',
+                siteNm: 'CGV안산',
+                scnYmd: '20260315',
+                scnSseq: '2',
+                movNo: 'M1',
+                movNm: '영화A',
+                scnsrtTm: '1010',
+                scnendTm: '1210',
+                stcnt: 100,
+                frSeatCnt: 25,
+              },
+            ],
+          }),
+        ),
+      );
+
+    const result = await fetchCgvTimetable({
+      playDate: '20260315',
+      theaterCode: '0211',
+      movieCode: 'M1',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      theaterCode: '0211',
+      movieCode: 'M1',
+      startTime: '10:10',
+      remainingSeats: 25,
+    });
     expect(String(mockFetch.mock.calls[1][0])).toContain('/cnm/atkt/searchSchByMov');
   });
 
