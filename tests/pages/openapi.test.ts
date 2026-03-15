@@ -126,6 +126,18 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/cgv/theaters']).toBeDefined();
     expect(spec.paths['/api/cgv/movies']).toBeDefined();
     expect(spec.paths['/api/cgv/timetable']).toBeDefined();
+    expect(
+      ((spec.paths['/api/cgv/theaters'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
+        (parameter) => parameter.name === 'keyword',
+      ),
+    ).toBe(true);
+    expect(
+      (
+        spec.paths['/api/cgv/movies'] as {
+          get: { description: string };
+        }
+      ).get.description,
+    ).toContain('최근접 극장');
   });
 
   it('OpenAPI JSON 응답을 생성한다', async () => {

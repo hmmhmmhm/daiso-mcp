@@ -6,6 +6,10 @@ export interface CgvTheater {
   theaterCode: string;
   theaterName: string;
   regionCode?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceKm?: number | null;
+  address?: string | null;
 }
 
 export interface CgvMovie {

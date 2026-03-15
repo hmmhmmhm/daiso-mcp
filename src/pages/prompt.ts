@@ -394,39 +394,47 @@ Base URL: ${baseUrl}
 
 ### 10. CGV 극장 검색
 
-**설명**: 지역 코드 기준으로 CGV 극장 목록을 조회합니다.
+**설명**: 지역 코드 또는 위치 키워드 기준으로 CGV 극장 목록을 조회합니다.
 
 **URL**: ${baseUrl}/api/cgv/theaters?playDate={YYYYMMDD}
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - regionCode: 지역 코드 (예: 01)
+- keyword: 위치 키워드 (예: 안산 중앙역, 강남역)
+- lat: 위도
+- lng: 경도
 - limit: 최대 결과 수 (기본값: 30)
 
 **예시**:
 - ${baseUrl}/api/cgv/theaters?playDate=20260304&regionCode=01
+- ${baseUrl}/api/cgv/theaters?playDate=20260315&keyword=안산%20중앙역
 - ${baseUrl}/api/cgv/theaters?playDate=20260304&limit=10
 
 ---
 
 ### 11. CGV 영화 검색
 
-**설명**: 날짜/극장 조건으로 CGV 영화 목록을 조회합니다.
+**설명**: 날짜/극장 조건으로 CGV 영화 목록을 조회합니다. theaterCode가 없으면 keyword 또는 lat,lng 기준으로 가장 가까운 극장을 먼저 선택합니다.
 
 **URL**: ${baseUrl}/api/cgv/movies?playDate={YYYYMMDD}
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - theaterCode: 극장 코드 (예: 0056)
+- keyword: 위치 키워드 (예: 안산 중앙역, 강남역)
+- lat: 위도
+- lng: 경도
 
 **예시**:
 - ${baseUrl}/api/cgv/movies?playDate=20260304&theaterCode=0056
+- ${baseUrl}/api/cgv/movies?playDate=20260315&keyword=안산%20중앙역
 
 ---
 
 ### 12. CGV 시간표 조회
 
-**설명**: 날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다.
+**설명**: 날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다. theaterCode가 없으면 keyword 또는 lat,lng 기준으로 가장 가까운 극장을 먼저 선택합니다.
 
 **URL**: ${baseUrl}/api/cgv/timetable?playDate={YYYYMMDD}
 
@@ -434,10 +442,14 @@ Base URL: ${baseUrl}
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - theaterCode: 극장 코드 (예: 0056)
 - movieCode: 영화 코드
+- keyword: 위치 키워드 (예: 안산 중앙역, 강남역)
+- lat: 위도
+- lng: 경도
 - limit: 최대 결과 수 (기본값: 50)
 
 **예시**:
 - ${baseUrl}/api/cgv/timetable?playDate=20260304&theaterCode=0056
+- ${baseUrl}/api/cgv/timetable?playDate=20260315&keyword=안산%20중앙역
 - ${baseUrl}/api/cgv/timetable?playDate=20260304&movieCode=200001
 
 ---

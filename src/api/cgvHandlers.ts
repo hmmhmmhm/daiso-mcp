@@ -3,8 +3,18 @@
  */
 
 import { fetchCgvMovies, fetchCgvTheaters, fetchCgvTimetable, toYyyymmdd } from '../services/cgv/client.js';
+import { fetchCgvNearbyTheaters, resolveCgvNearestTheater } from '../services/cgv/location.js';
 import { filterAndSortTimetable } from '../services/cgv/timetable.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
+
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 
 /**
  * CGV 극장 목록 조회 API 핸들러
@@ -13,10 +23,34 @@ import { type ApiContext, errorResponse, successResponse } from './response.js';
 export async function handleCgvFindTheaters(c: ApiContext) {
   const playDate = c.req.query('playDate') || toYyyymmdd();
   const regionCode = c.req.query('regionCode') || undefined;
+  const keyword = c.req.query('keyword') || undefined;
+  const latitude = parseOptionalNumber(c.req.query('lat'));
+  const longitude = parseOptionalNumber(c.req.query('lng'));
   const limit = parseInt(c.req.query('limit') || '30');
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000');
 
   try {
+    if (keyword || typeof latitude === 'number' || typeof longitude === 'number') {
+      const result = await fetchCgvNearbyTheaters(
+        {
+          playDate,
+          regionCode,
+          keyword,
+          latitude,
+          longitude,
+          limit,
+          timeout: timeoutMs,
+        },
+        {
+          timeout: timeoutMs,
+          zyteApiKey: c.env?.ZYTE_API_KEY,
+          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        },
+      );
+
+      return successResponse(c, result, { total: result.count, pageSize: limit });
+    }
+
     const theaters = await fetchCgvTheaters({
       playDate,
       regionCode,
@@ -32,6 +66,9 @@ export async function handleCgvFindTheaters(c: ApiContext) {
         playDate,
         filters: {
           regionCode: regionCode || null,
+          keyword: keyword || null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
         },
         theaters: sliced,
       },
@@ -49,16 +86,44 @@ export async function handleCgvFindTheaters(c: ApiContext) {
  */
 export async function handleCgvSearchMovies(c: ApiContext) {
   const playDate = c.req.query('playDate') || toYyyymmdd();
-  const theaterCode = c.req.query('theaterCode') || undefined;
+  let theaterCode = c.req.query('theaterCode') || undefined;
+  const keyword = c.req.query('keyword') || undefined;
+  const latitude = parseOptionalNumber(c.req.query('lat'));
+  const longitude = parseOptionalNumber(c.req.query('lng'));
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000');
 
   try {
-    const movies = await fetchCgvMovies({
-      playDate,
-      theaterCode,
-      timeout: timeoutMs,
-      zyteApiKey: c.env?.ZYTE_API_KEY,
-    });
+    let resolvedTheater = null;
+
+    if (!theaterCode && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+      const resolved = await resolveCgvNearestTheater(
+        {
+          playDate,
+          keyword,
+          latitude,
+          longitude,
+          timeout: timeoutMs,
+        },
+        {
+          timeout: timeoutMs,
+          zyteApiKey: c.env?.ZYTE_API_KEY,
+          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        },
+      );
+      resolvedTheater = resolved.theater;
+      theaterCode = resolved.theater?.theaterCode;
+    }
+
+    const shouldReturnEmpty =
+      !theaterCode && (keyword || typeof latitude === 'number' || typeof longitude === 'number');
+    const movies = shouldReturnEmpty
+      ? []
+      : await fetchCgvMovies({
+          playDate,
+          theaterCode,
+          timeout: timeoutMs,
+          zyteApiKey: c.env?.ZYTE_API_KEY,
+        });
 
     return successResponse(
       c,
@@ -66,7 +131,11 @@ export async function handleCgvSearchMovies(c: ApiContext) {
         playDate,
         filters: {
           theaterCode: theaterCode || null,
+          keyword: keyword || null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
         },
+        resolvedTheater,
         movies,
       },
       { total: movies.length },
@@ -83,19 +152,47 @@ export async function handleCgvSearchMovies(c: ApiContext) {
  */
 export async function handleCgvGetTimetable(c: ApiContext) {
   const playDate = c.req.query('playDate') || toYyyymmdd();
-  const theaterCode = c.req.query('theaterCode') || undefined;
+  let theaterCode = c.req.query('theaterCode') || undefined;
   const movieCode = c.req.query('movieCode') || undefined;
+  const keyword = c.req.query('keyword') || undefined;
+  const latitude = parseOptionalNumber(c.req.query('lat'));
+  const longitude = parseOptionalNumber(c.req.query('lng'));
   const limit = parseInt(c.req.query('limit') || '50');
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000');
 
   try {
-    const timetable = await fetchCgvTimetable({
-      playDate,
-      theaterCode,
-      movieCode,
-      timeout: timeoutMs,
-      zyteApiKey: c.env?.ZYTE_API_KEY,
-    });
+    let resolvedTheater = null;
+
+    if (!theaterCode && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+      const resolved = await resolveCgvNearestTheater(
+        {
+          playDate,
+          keyword,
+          latitude,
+          longitude,
+          timeout: timeoutMs,
+        },
+        {
+          timeout: timeoutMs,
+          zyteApiKey: c.env?.ZYTE_API_KEY,
+          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        },
+      );
+      resolvedTheater = resolved.theater;
+      theaterCode = resolved.theater?.theaterCode;
+    }
+
+    const shouldReturnEmpty =
+      !theaterCode && (keyword || typeof latitude === 'number' || typeof longitude === 'number');
+    const timetable = shouldReturnEmpty
+      ? []
+      : await fetchCgvTimetable({
+          playDate,
+          theaterCode,
+          movieCode,
+          timeout: timeoutMs,
+          zyteApiKey: c.env?.ZYTE_API_KEY,
+        });
 
     const filtered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
 
@@ -106,7 +203,11 @@ export async function handleCgvGetTimetable(c: ApiContext) {
         filters: {
           theaterCode: theaterCode || null,
           movieCode: movieCode || null,
+          keyword: keyword || null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
         },
+        resolvedTheater,
         timetable: filtered,
       },
       { total: filtered.length, pageSize: limit },

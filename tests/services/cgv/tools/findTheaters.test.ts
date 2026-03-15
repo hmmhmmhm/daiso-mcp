@@ -13,6 +13,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  delete process.env.GOOGLE_MAPS_API_KEY;
   vi.restoreAllMocks();
 });
 
@@ -79,5 +80,117 @@ describe('createFindTheatersTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.filters.regionCode).toBeNull();
+  });
+
+  it('keyword가 있으면 가까운 극장 후보를 우선 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                regnGrpCd: '02',
+                regnGrpNm: '경기',
+                siteList: [{ siteNo: '0211', siteNm: '안산' }],
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [
+              {
+                formatted_address: '대한민국 경기도 안산시 단원구',
+                geometry: {
+                  location: { lat: 37.3171, lng: 126.8389 },
+                },
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [
+              {
+                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
+                geometry: {
+                  location: { lat: 37.3172, lng: 126.839 },
+                },
+              },
+            ],
+          }),
+        ),
+      );
+
+    const tool = createFindTheatersTool(undefined, 'test-google-key');
+    const result = await tool.handler({ playDate: '20260315', keyword: '안산 중앙역' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.theaters[0].theaterCode).toBe('0211');
+    expect(parsed.keyword).toBe('안산 중앙역');
+  });
+
+  it('환경 변수 구글 키도 사용한다', async () => {
+    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                regnGrpCd: '02',
+                regnGrpNm: '경기',
+                siteList: [{ siteNo: '0211', siteNm: '안산' }],
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [
+              {
+                formatted_address: '대한민국 경기도 안산시 단원구',
+                geometry: {
+                  location: { lat: 37.3171, lng: 126.8389 },
+                },
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [
+              {
+                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
+                geometry: {
+                  location: { lat: 37.3172, lng: 126.839 },
+                },
+              },
+            ],
+          }),
+        ),
+      );
+
+    const tool = createFindTheatersTool();
+    const result = await tool.handler({ playDate: '20260315', keyword: '안산 중앙역' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.theaters[0].theaterCode).toBe('0211');
   });
 });

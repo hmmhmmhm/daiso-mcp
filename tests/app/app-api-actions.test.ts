@@ -200,6 +200,73 @@ describe('GET /api/actions/query', () => {
     expect(inventoryData.data.stores[0].storeName).toBe('안산중앙점');
   });
 
+  it('CGV keyword 조회를 action facade로 위임한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                regnGrpCd: '02',
+                regnGrpNm: '경기',
+                siteList: [{ siteNo: '0211', siteNm: '안산' }],
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [
+              {
+                formatted_address: '대한민국 경기도 안산시 단원구',
+                geometry: {
+                  location: { lat: 37.3171, lng: 126.8389 },
+                },
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [
+              {
+                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
+                geometry: {
+                  location: { lat: 37.3172, lng: 126.839 },
+                },
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [{ movNo: '30000985', movNm: '영화A', cratgClsNm: '12세' }],
+          }),
+        ),
+      );
+
+    const res = await app.request('/api/actions/query?action=cgvSearchMovies&playDate=20260315&keyword=안산%20중앙역', undefined, {
+      GOOGLE_MAPS_API_KEY: 'test-google-key',
+    });
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.filters.theaterCode).toBe('0211');
+  });
+
   it('잘못된 action이면 에러를 반환한다', async () => {
     const res = await app.request('/api/actions/query?action=unknownAction');
 

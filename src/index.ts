@@ -77,6 +77,7 @@ const createRegistry = (bindings?: AppBindings) => {
     () =>
       createCgvService({
         zyteApiKey: bindings?.ZYTE_API_KEY,
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
       }),
     () =>
       createOliveyoungService({

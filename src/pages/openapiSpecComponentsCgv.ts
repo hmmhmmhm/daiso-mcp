@@ -9,6 +9,10 @@ export const OPENAPI_CGV_COMPONENT_SCHEMAS = {
       theaterCode: { type: 'string', example: '0056' },
       theaterName: { type: 'string', example: 'CGV강남' },
       regionCode: { type: 'string', example: '01' },
+      latitude: { type: 'number', nullable: true, example: 37.5016 },
+      longitude: { type: 'number', nullable: true, example: 127.0264 },
+      distanceKm: { type: 'number', nullable: true, example: 0.8 },
+      address: { type: 'string', nullable: true, example: '서울특별시 강남구 강남대로 438' },
     },
   },
   CgvMovie: {
@@ -46,8 +50,16 @@ export const OPENAPI_CGV_COMPONENT_SCHEMAS = {
             type: 'object',
             properties: {
               regionCode: { type: 'string', nullable: true },
+              keyword: { type: 'string', nullable: true },
+              latitude: { type: 'number', nullable: true },
+              longitude: { type: 'number', nullable: true },
             },
           },
+          keyword: { type: 'string', nullable: true },
+          latitude: { type: 'number', nullable: true },
+          longitude: { type: 'number', nullable: true },
+          geocodeUsed: { type: 'boolean' },
+          formattedAddress: { type: 'string', nullable: true },
           theaters: {
             type: 'array',
             items: { $ref: '#/components/schemas/CgvTheater' },
@@ -75,7 +87,13 @@ export const OPENAPI_CGV_COMPONENT_SCHEMAS = {
             type: 'object',
             properties: {
               theaterCode: { type: 'string', nullable: true },
+              keyword: { type: 'string', nullable: true },
+              latitude: { type: 'number', nullable: true },
+              longitude: { type: 'number', nullable: true },
             },
+          },
+          resolvedTheater: {
+            anyOf: [{ $ref: '#/components/schemas/CgvTheater' }, { type: 'null' }],
           },
           movies: {
             type: 'array',
@@ -104,7 +122,13 @@ export const OPENAPI_CGV_COMPONENT_SCHEMAS = {
             properties: {
               theaterCode: { type: 'string', nullable: true },
               movieCode: { type: 'string', nullable: true },
+              keyword: { type: 'string', nullable: true },
+              latitude: { type: 'number', nullable: true },
+              longitude: { type: 'number', nullable: true },
             },
+          },
+          resolvedTheater: {
+            anyOf: [{ $ref: '#/components/schemas/CgvTheater' }, { type: 'null' }],
           },
           timetable: {
             type: 'array',
