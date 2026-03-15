@@ -144,10 +144,16 @@ describe('generatePromptText', () => {
     expect(text).toContain('브랜드가 앞부분에만 나와도 뒤 요청 전체를 다이소 기준으로 처리');
     expect(text).toContain('결과가 없을 때만 다른 브랜드 대안을 짧게 제안');
     expect(text).toContain('이미지 적극 표시');
-    expect(text).toContain('응답에 `imageUrl`이 있으면');
+    expect(text).toContain('규칙 1');
     expect(text).toContain('반드시 마크다운 이미지로 렌더링');
+    expect(text).toContain('규칙 2');
+    expect(text).toContain('이미지를 임의로 생략하지 마세요');
+    expect(text).toContain('규칙 3');
     expect(text).toContain('각 항목의 이미지를 전부 표시');
-    expect(text).toContain('임의로 생략하지 마세요');
+    expect(text).toContain('규칙 4');
+    expect(text).toContain('길어서 일부만 표시');
+    expect(text).toContain('규칙 5');
+    expect(text).toContain('답변 길이 때문에라도 빼지 마세요');
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
     expect(text).toContain('재고 응답의 storeCode를 확인한 뒤');
