@@ -4,9 +4,11 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import { fetchLotteCinemaTicketingPage, toYyyymmdd } from '../client.js';
+import { toYyyymmdd } from '../client.js';
+import { fetchLotteCinemaNearbyTheaters } from '../location.js';
 
 interface FindNearbyTheatersArgs {
+  keyword?: string;
   latitude?: number;
   longitude?: number;
   playDate?: string;
@@ -14,64 +16,45 @@ interface FindNearbyTheatersArgs {
   timeoutMs?: number;
 }
 
-function calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return 6371 * c;
-}
-
-async function findNearbyTheaters(args: FindNearbyTheatersArgs): Promise<McpToolResponse> {
-  const {
-    latitude = 37.5665,
-    longitude = 126.978,
-    playDate = toYyyymmdd(),
-    limit = 10,
-    timeoutMs = 15000,
-  } = args;
-  const { theaters } = await fetchLotteCinemaTicketingPage(timeoutMs);
-
-  const nearby = theaters
-    .filter((theater) => theater.latitude !== null && theater.longitude !== null)
-    .map((theater) => ({
-      ...theater,
-      distanceKm: Number(
-        calculateDistanceKm(latitude, longitude, theater.latitude as number, theater.longitude as number).toFixed(2),
-      ),
-    }))
-    .sort((a, b) => a.distanceKm - b.distanceKm)
-    .slice(0, limit);
+async function findNearbyTheaters(
+  args: FindNearbyTheatersArgs,
+  googleMapsApiKey?: string,
+): Promise<McpToolResponse> {
+  const { keyword, latitude, longitude, playDate = toYyyymmdd(), limit = 10, timeoutMs = 15000 } = args;
+  const hasCoordinates = typeof latitude === 'number' && typeof longitude === 'number';
+  const nearby = await fetchLotteCinemaNearbyTheaters(
+    {
+      keyword,
+      latitude: hasCoordinates ? latitude : keyword ? undefined : 37.5665,
+      longitude: hasCoordinates ? longitude : keyword ? undefined : 126.978,
+      playDate,
+      limit,
+      timeout: timeoutMs,
+    },
+    {
+      timeout: timeoutMs,
+      googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
+    },
+  );
 
   return {
     content: [
       {
         type: 'text',
-        text: JSON.stringify(
-          {
-            location: { latitude, longitude },
-            playDate,
-            count: nearby.length,
-            theaters: nearby,
-          },
-          null,
-          2,
-        ),
+        text: JSON.stringify(nearby, null, 2),
       },
     ],
   };
 }
 
-export function createFindNearbyTheatersTool(): ToolRegistration {
+export function createFindNearbyTheatersTool(googleMapsApiKey?: string): ToolRegistration {
   return {
     name: 'lottecinema_find_nearby_theaters',
     metadata: {
       title: '롯데시네마 주변 지점 탐색',
-      description: '사용자 좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.',
+      description: '위치 키워드 또는 좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.',
       inputSchema: {
+        keyword: z.string().optional().describe('위치 키워드 (예: 안산 중앙역, 잠실역)'),
         latitude: z.number().optional().default(37.5665).describe('위도 (기본값: 서울 시청 37.5665)'),
         longitude: z.number().optional().default(126.978).describe('경도 (기본값: 서울 시청 126.978)'),
         playDate: z.string().optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
@@ -79,6 +62,8 @@ export function createFindNearbyTheatersTool(): ToolRegistration {
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: findNearbyTheaters as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args) => findNearbyTheaters(args as FindNearbyTheatersArgs, googleMapsApiKey)) as (
+      args: unknown,
+    ) => Promise<McpToolResponse>,
   };
 }

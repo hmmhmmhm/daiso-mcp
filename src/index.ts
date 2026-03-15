@@ -68,12 +68,15 @@ const createRegistry = (bindings?: AppBindings) => {
     createSevenElevenService,
     createCuService,
     createEmart24Service,
-      () =>
-        createLotteMartService({
-          googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
-        }),
+    () =>
+      createLotteMartService({
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+      }),
     createMegaboxService,
-    createLotteCinemaService,
+    () =>
+      createLotteCinemaService({
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+      }),
     () =>
       createCgvService({
         zyteApiKey: bindings?.ZYTE_API_KEY,

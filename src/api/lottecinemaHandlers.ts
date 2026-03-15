@@ -4,51 +4,49 @@
 
 import {
   fetchLotteCinemaNowShowing,
-  fetchLotteCinemaTicketingPage,
   toYyyymmdd,
 } from '../services/lottecinema/client.js';
+import {
+  fetchLotteCinemaNearbyTheaters,
+  resolveLotteCinemaNearestTheater,
+} from '../services/lottecinema/location.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 
-function calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return 6371 * c;
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 export async function handleLotteCinemaFindNearbyTheaters(c: ApiContext) {
-  const lat = parseFloat(c.req.query('lat') || '37.5665');
-  const lng = parseFloat(c.req.query('lng') || '126.978');
+  const keyword = c.req.query('keyword') || undefined;
+  const latitude = parseOptionalNumber(c.req.query('lat'));
+  const longitude = parseOptionalNumber(c.req.query('lng'));
   const playDate = c.req.query('playDate') || toYyyymmdd();
   const limit = parseInt(c.req.query('limit') || '10', 10);
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
 
   try {
-    const { theaters } = await fetchLotteCinemaTicketingPage(timeoutMs);
-    const nearby = theaters
-      .filter((theater) => theater.latitude !== null && theater.longitude !== null)
-      .map((theater) => ({
-        ...theater,
-        distanceKm: Number(
-          calculateDistanceKm(lat, lng, theater.latitude as number, theater.longitude as number).toFixed(2),
-        ),
-      }))
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, limit);
-
-    return successResponse(
-      c,
+    const hasCoordinates = typeof latitude === 'number' && typeof longitude === 'number';
+    const result = await fetchLotteCinemaNearbyTheaters(
       {
-        location: { latitude: lat, longitude: lng },
+        keyword,
+        latitude: hasCoordinates ? latitude : keyword ? undefined : 37.5665,
+        longitude: hasCoordinates ? longitude : keyword ? undefined : 126.978,
         playDate,
-        theaters: nearby,
+        limit,
+        timeout: timeoutMs,
       },
-      { total: nearby.length, pageSize: limit },
+      {
+        timeout: timeoutMs,
+        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+      },
     );
+
+    return successResponse(c, result, { total: result.count, pageSize: limit });
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'LOTTECINEMA_THEATER_SEARCH_FAILED', message, 500);
@@ -57,17 +55,44 @@ export async function handleLotteCinemaFindNearbyTheaters(c: ApiContext) {
 
 export async function handleLotteCinemaListNowShowing(c: ApiContext) {
   const playDate = c.req.query('playDate') || toYyyymmdd();
-  const theaterId = c.req.query('theaterId') || undefined;
+  let theaterId = c.req.query('theaterId') || undefined;
   const movieId = c.req.query('movieId') || undefined;
+  const keyword = c.req.query('keyword') || undefined;
+  const latitude = parseOptionalNumber(c.req.query('lat'));
+  const longitude = parseOptionalNumber(c.req.query('lng'));
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
 
   try {
-    const { theaters, movies, showtimes } = await fetchLotteCinemaNowShowing({
-      playDate,
-      theaterId,
-      movieId,
-      timeout: timeoutMs,
-    });
+    let resolvedTheater = null;
+
+    if (!theaterId && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+      const resolved = await resolveLotteCinemaNearestTheater(
+        {
+          playDate,
+          keyword,
+          latitude,
+          longitude,
+          timeout: timeoutMs,
+        },
+        {
+          timeout: timeoutMs,
+          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        },
+      );
+      resolvedTheater = resolved.theater;
+      theaterId = resolved.theater?.theaterId;
+    }
+
+    const shouldReturnEmpty =
+      !theaterId && (keyword || typeof latitude === 'number' || typeof longitude === 'number');
+    const { theaters, movies, showtimes } = shouldReturnEmpty
+      ? { theaters: [], movies: [], showtimes: [] }
+      : await fetchLotteCinemaNowShowing({
+          playDate,
+          theaterId,
+          movieId,
+          timeout: timeoutMs,
+        });
 
     return successResponse(
       c,
@@ -76,7 +101,11 @@ export async function handleLotteCinemaListNowShowing(c: ApiContext) {
         filters: {
           theaterId: theaterId || null,
           movieId: movieId || null,
+          keyword: keyword || null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
         },
+        resolvedTheater,
         theaters,
         movies,
         showtimes,
@@ -91,18 +120,45 @@ export async function handleLotteCinemaListNowShowing(c: ApiContext) {
 
 export async function handleLotteCinemaGetRemainingSeats(c: ApiContext) {
   const playDate = c.req.query('playDate') || toYyyymmdd();
-  const theaterId = c.req.query('theaterId') || undefined;
+  let theaterId = c.req.query('theaterId') || undefined;
   const movieId = c.req.query('movieId') || undefined;
+  const keyword = c.req.query('keyword') || undefined;
+  const latitude = parseOptionalNumber(c.req.query('lat'));
+  const longitude = parseOptionalNumber(c.req.query('lng'));
   const limit = parseInt(c.req.query('limit') || '50', 10);
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
 
   try {
-    const { showtimes } = await fetchLotteCinemaNowShowing({
-      playDate,
-      theaterId,
-      movieId,
-      timeout: timeoutMs,
-    });
+    let resolvedTheater = null;
+
+    if (!theaterId && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+      const resolved = await resolveLotteCinemaNearestTheater(
+        {
+          playDate,
+          keyword,
+          latitude,
+          longitude,
+          timeout: timeoutMs,
+        },
+        {
+          timeout: timeoutMs,
+          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        },
+      );
+      resolvedTheater = resolved.theater;
+      theaterId = resolved.theater?.theaterId;
+    }
+
+    const shouldReturnEmpty =
+      !theaterId && (keyword || typeof latitude === 'number' || typeof longitude === 'number');
+    const { showtimes } = shouldReturnEmpty
+      ? { showtimes: [] }
+      : await fetchLotteCinemaNowShowing({
+          playDate,
+          theaterId,
+          movieId,
+          timeout: timeoutMs,
+        });
 
     const seats = showtimes
       .filter((item) => (theaterId ? item.theaterId === theaterId : true))
@@ -122,7 +178,11 @@ export async function handleLotteCinemaGetRemainingSeats(c: ApiContext) {
         filters: {
           theaterId: theaterId || null,
           movieId: movieId || null,
+          keyword: keyword || null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
         },
+        resolvedTheater,
         seats,
       },
       { total: seats.length, pageSize: limit },

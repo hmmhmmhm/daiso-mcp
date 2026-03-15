@@ -123,6 +123,20 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/lottecinema/theaters']).toBeDefined();
     expect(spec.paths['/api/lottecinema/movies']).toBeDefined();
     expect(spec.paths['/api/lottecinema/seats']).toBeDefined();
+    expect(
+      (
+        spec.paths['/api/lottecinema/theaters'] as {
+          get: { parameters: Array<{ name: string }> };
+        }
+      ).get.parameters.some((parameter) => parameter.name === 'keyword'),
+    ).toBe(true);
+    expect(
+      (
+        spec.paths['/api/lottecinema/movies'] as {
+          get: { description: string };
+        }
+      ).get.description,
+    ).toContain('최근접 지점');
     expect(spec.paths['/api/cgv/theaters']).toBeDefined();
     expect(spec.paths['/api/cgv/movies']).toBeDefined();
     expect(spec.paths['/api/cgv/timetable']).toBeDefined();

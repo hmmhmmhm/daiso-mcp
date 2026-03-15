@@ -16,6 +16,16 @@ export const OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS = {
       distanceKm: { type: 'number', format: 'float', example: 0.5 },
     },
   },
+  LotteCinemaResolvedLocation: {
+    type: 'object',
+    properties: {
+      keyword: { type: 'string', nullable: true, example: '안산 중앙역' },
+      latitude: { type: 'number', format: 'float', nullable: true, example: 37.3172 },
+      longitude: { type: 'number', format: 'float', nullable: true, example: 126.839 },
+      geocodeUsed: { type: 'boolean', example: true },
+      formattedAddress: { type: 'string', nullable: true, example: '대한민국 경기도 안산시 단원구 고잔동 535' },
+    },
+  },
   LotteCinemaMovie: {
     type: 'object',
     properties: {
@@ -51,13 +61,11 @@ export const OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS = {
       data: {
         type: 'object',
         properties: {
-          location: {
-            type: 'object',
-            properties: {
-              latitude: { type: 'number', format: 'float' },
-              longitude: { type: 'number', format: 'float' },
-            },
-          },
+          keyword: { type: 'string', nullable: true },
+          latitude: { type: 'number', format: 'float', nullable: true },
+          longitude: { type: 'number', format: 'float', nullable: true },
+          geocodeUsed: { type: 'boolean' },
+          formattedAddress: { type: 'string', nullable: true },
           playDate: { type: 'string' },
           theaters: {
             type: 'array',
@@ -87,7 +95,13 @@ export const OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS = {
             properties: {
               theaterId: { type: 'string', nullable: true },
               movieId: { type: 'string', nullable: true },
+              keyword: { type: 'string', nullable: true },
+              latitude: { type: 'number', format: 'float', nullable: true },
+              longitude: { type: 'number', format: 'float', nullable: true },
             },
+          },
+          resolvedTheater: {
+            anyOf: [{ $ref: '#/components/schemas/LotteCinemaTheater' }, { type: 'null' }],
           },
           theaters: {
             type: 'array',
@@ -124,7 +138,13 @@ export const OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS = {
             properties: {
               theaterId: { type: 'string', nullable: true },
               movieId: { type: 'string', nullable: true },
+              keyword: { type: 'string', nullable: true },
+              latitude: { type: 'number', format: 'float', nullable: true },
+              longitude: { type: 'number', format: 'float', nullable: true },
             },
+          },
+          resolvedTheater: {
+            anyOf: [{ $ref: '#/components/schemas/LotteCinemaTheater' }, { type: 'null' }],
           },
           seats: {
             type: 'array',

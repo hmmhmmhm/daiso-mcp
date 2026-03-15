@@ -456,24 +456,26 @@ Base URL: ${baseUrl}
 
 ### 13. 롯데시네마 주변 지점 찾기
 
-**설명**: 사용자 좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.
+**설명**: 위치 키워드 또는 사용자 좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.
 
-**URL**: ${baseUrl}/api/lottecinema/theaters?lat={위도}&lng={경도}
+**URL**: ${baseUrl}/api/lottecinema/theaters?keyword={위치키워드}
 
 **선택 파라미터**:
-- lat: 위도 (기본값: 37.5665)
-- lng: 경도 (기본값: 126.978)
+- keyword: 위치 키워드 (예: 안산 중앙역, 잠실역)
+- lat: 위도 (keyword가 없을 때 기본값: 37.5665)
+- lng: 경도 (keyword가 없을 때 기본값: 126.978)
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - limit: 최대 결과 수 (기본값: 10)
 
 **예시**:
+- ${baseUrl}/api/lottecinema/theaters?keyword=안산%20중앙역
 - ${baseUrl}/api/lottecinema/theaters?lat=37.5133&lng=127.1042
 
 ---
 
 ### 14. 롯데시네마 영화/회차 목록
 
-**설명**: 날짜/지점/영화 조건으로 롯데시네마 영화와 상영 회차를 조회합니다.
+**설명**: 날짜/지점/영화 조건으로 롯데시네마 영화와 상영 회차를 조회합니다. theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택할 수 있습니다.
 
 **URL**: ${baseUrl}/api/lottecinema/movies?playDate={YYYYMMDD}
 
@@ -481,8 +483,12 @@ Base URL: ${baseUrl}
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - theaterId: 지점 ID (예: 1016)
 - movieId: 대표 영화 코드 (예: 23816)
+- keyword: 위치 키워드 (예: 안산 중앙역)
+- lat: 위도 (theaterId가 없을 때 사용)
+- lng: 경도 (theaterId가 없을 때 사용)
 
 **예시**:
+- ${baseUrl}/api/lottecinema/movies?playDate=20260315&keyword=안산%20중앙역
 - ${baseUrl}/api/lottecinema/movies?playDate=20260310&theaterId=1016
 - ${baseUrl}/api/lottecinema/movies?playDate=20260310&theaterId=1016&movieId=23816
 
@@ -490,7 +496,7 @@ Base URL: ${baseUrl}
 
 ### 15. 롯데시네마 잔여 좌석 조회
 
-**설명**: 영화/지점/날짜 기준으로 회차별 잔여 좌석 수를 조회합니다.
+**설명**: 영화/지점/날짜 기준으로 회차별 잔여 좌석 수를 조회합니다. theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택할 수 있습니다.
 
 **URL**: ${baseUrl}/api/lottecinema/seats?playDate={YYYYMMDD}
 
@@ -498,9 +504,13 @@ Base URL: ${baseUrl}
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - theaterId: 지점 ID
 - movieId: 대표 영화 코드
+- keyword: 위치 키워드 (예: 안산 중앙역)
+- lat: 위도 (theaterId가 없을 때 사용)
+- lng: 경도 (theaterId가 없을 때 사용)
 - limit: 최대 결과 수 (기본값: 50)
 
 **예시**:
+- ${baseUrl}/api/lottecinema/seats?playDate=20260315&keyword=안산%20중앙역
 - ${baseUrl}/api/lottecinema/seats?playDate=20260310&theaterId=1016&movieId=23816
 
 ---

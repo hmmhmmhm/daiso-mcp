@@ -7,20 +7,27 @@ export const OPENAPI_PATHS_LOTTECINEMA = {
     get: {
       operationId: 'lottecinemaFindNearbyTheaters',
       summary: '롯데시네마 주변 지점 조회',
-      description: '좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.',
+      description: '위치 키워드 또는 좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.',
       parameters: [
+        {
+          name: 'keyword',
+          in: 'query',
+          required: false,
+          description: '위치 키워드 (예: 안산 중앙역, 잠실역)',
+          schema: { type: 'string', example: '안산 중앙역' },
+        },
         {
           name: 'lat',
           in: 'query',
           required: false,
-          description: '위도 (기본값: 서울 시청 37.5665)',
+          description: '위도 (keyword가 없을 때 기본값: 서울 시청 37.5665)',
           schema: { type: 'number', format: 'float', default: 37.5665 },
         },
         {
           name: 'lng',
           in: 'query',
           required: false,
-          description: '경도 (기본값: 서울 시청 126.978)',
+          description: '경도 (keyword가 없을 때 기본값: 서울 시청 126.978)',
           schema: { type: 'number', format: 'float', default: 126.978 },
         },
         {
@@ -62,7 +69,7 @@ export const OPENAPI_PATHS_LOTTECINEMA = {
     get: {
       operationId: 'lottecinemaListNowShowing',
       summary: '롯데시네마 영화/회차 목록 조회',
-      description: '날짜, 지점, 영화 조건으로 롯데시네마 영화 및 상영 회차를 조회합니다.',
+      description: '날짜, 지점, 영화 조건으로 롯데시네마 영화 및 상영 회차를 조회합니다. theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택할 수 있습니다.',
       parameters: [
         {
           name: 'playDate',
@@ -84,6 +91,27 @@ export const OPENAPI_PATHS_LOTTECINEMA = {
           required: false,
           description: '대표 영화 코드 (예: 23816)',
           schema: { type: 'string', example: '23816' },
+        },
+        {
+          name: 'keyword',
+          in: 'query',
+          required: false,
+          description: '위치 키워드 (theaterId가 없을 때 사용, 예: 안산 중앙역)',
+          schema: { type: 'string', example: '안산 중앙역' },
+        },
+        {
+          name: 'lat',
+          in: 'query',
+          required: false,
+          description: '위도 (theaterId가 없을 때 사용)',
+          schema: { type: 'number', format: 'float', example: 37.3172 },
+        },
+        {
+          name: 'lng',
+          in: 'query',
+          required: false,
+          description: '경도 (theaterId가 없을 때 사용)',
+          schema: { type: 'number', format: 'float', example: 126.839 },
         },
       ],
       responses: {
@@ -110,7 +138,7 @@ export const OPENAPI_PATHS_LOTTECINEMA = {
     get: {
       operationId: 'lottecinemaGetRemainingSeats',
       summary: '롯데시네마 잔여 좌석 조회',
-      description: '영화/지점/날짜 조건으로 회차별 잔여 좌석 수를 조회합니다.',
+      description: '영화/지점/날짜 조건으로 회차별 잔여 좌석 수를 조회합니다. theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택할 수 있습니다.',
       parameters: [
         {
           name: 'playDate',
@@ -132,6 +160,27 @@ export const OPENAPI_PATHS_LOTTECINEMA = {
           required: false,
           description: '대표 영화 코드',
           schema: { type: 'string', example: '23816' },
+        },
+        {
+          name: 'keyword',
+          in: 'query',
+          required: false,
+          description: '위치 키워드 (theaterId가 없을 때 사용, 예: 안산 중앙역)',
+          schema: { type: 'string', example: '안산 중앙역' },
+        },
+        {
+          name: 'lat',
+          in: 'query',
+          required: false,
+          description: '위도 (theaterId가 없을 때 사용)',
+          schema: { type: 'number', format: 'float', example: 37.3172 },
+        },
+        {
+          name: 'lng',
+          in: 'query',
+          required: false,
+          description: '경도 (theaterId가 없을 때 사용)',
+          schema: { type: 'number', format: 'float', example: 126.839 },
         },
         {
           name: 'limit',

@@ -151,6 +151,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('stockLabel');
     expect(text).toContain('/api/megabox/theaters?keyword=');
     expect(text).toContain('가장 가까운 지점을 먼저 선택');
+    expect(text).toContain('/api/lottecinema/theaters?keyword=');
+    expect(text).toContain('theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택');
     expect(text).toContain('/api/cgv/theaters?playDate=20260315&keyword=안산%20중앙역');
     expect(text).toContain('CGV 상영 시간표를 조회합니다. theaterCode가 없으면');
   });

@@ -16,19 +16,21 @@ const LOTTECINEMA_METADATA: ServiceMetadata = {
 };
 
 class LotteCinemaService implements ServiceProvider {
+  constructor(private readonly options: { googleMapsApiKey?: string } = {}) {}
+
   readonly metadata = LOTTECINEMA_METADATA;
 
   getTools(): ToolRegistration[] {
     return [
-      createFindNearbyTheatersTool(),
-      createListNowShowingTool(),
-      createGetRemainingSeatsTool(),
+      createFindNearbyTheatersTool(this.options.googleMapsApiKey),
+      createListNowShowingTool(this.options.googleMapsApiKey),
+      createGetRemainingSeatsTool(this.options.googleMapsApiKey),
     ];
   }
 }
 
-export function createLotteCinemaService(): ServiceProvider {
-  return new LotteCinemaService();
+export function createLotteCinemaService(options: { googleMapsApiKey?: string } = {}): ServiceProvider {
+  return new LotteCinemaService(options);
 }
 
 export * from './types.js';

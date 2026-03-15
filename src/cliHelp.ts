@@ -194,23 +194,23 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
   'lottecinema-theaters': [
     '명령: lottecinema-theaters',
     '설명: 롯데시네마 주변 지점 API를 호출합니다.',
-    '사용법: daiso lottecinema-theaters [--lat 값] [--lng 값] [--playDate YYYYMMDD] [--limit N] [--json]',
-    '옵션: --lat, --lng, --playDate, --limit, --json',
-    '예시: daiso lottecinema-theaters --lat 37.3154 --lng 126.8388 --limit 5',
+    '사용법: daiso lottecinema-theaters [--keyword 값] [--lat 값] [--lng 값] [--playDate YYYYMMDD] [--limit N] [--json]',
+    '옵션: --keyword, --lat, --lng, --playDate, --limit, --json',
+    '예시: daiso lottecinema-theaters --keyword "안산 중앙역" --limit 5',
   ],
   'lottecinema-movies': [
     '명령: lottecinema-movies',
     '설명: 롯데시네마 영화/회차 API를 호출합니다.',
-    '사용법: daiso lottecinema-movies [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--json]',
-    '옵션: --playDate, --theaterId, --movieId, --json',
-    '예시: daiso lottecinema-movies --playDate 20260310 --theaterId 3012',
+    '사용법: daiso lottecinema-movies [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--keyword 값] [--lat 값] [--lng 값] [--json]',
+    '옵션: --playDate, --theaterId, --movieId, --keyword, --lat, --lng, --json',
+    '예시: daiso lottecinema-movies --playDate 20260310 --keyword "안산 중앙역"',
   ],
   'lottecinema-seats': [
     '명령: lottecinema-seats',
     '설명: 롯데시네마 잔여 좌석 API를 호출합니다.',
-    '사용법: daiso lottecinema-seats [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--limit N] [--json]',
-    '옵션: --playDate, --theaterId, --movieId, --limit, --json',
-    '예시: daiso lottecinema-seats --playDate 20260310 --theaterId 3012 --movieId 23816',
+    '사용법: daiso lottecinema-seats [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--keyword 값] [--lat 값] [--lng 값] [--limit N] [--json]',
+    '옵션: --playDate, --theaterId, --movieId, --keyword, --lat, --lng, --limit, --json',
+    '예시: daiso lottecinema-seats --playDate 20260310 --keyword "안산 중앙역" --movieId 23816',
   ],
   'lottemart-stores': [
     '명령: lottemart-stores',
@@ -337,9 +337,9 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso display-location 1034604 04515');
   writeOut('  npx daiso cu-stores 강남');
   writeOut('  npx daiso cu-inventory 과자 --storeKeyword 강남');
-  writeOut('  npx daiso lottecinema-theaters --lat 37.3154 --lng 126.8388 --limit 5');
-  writeOut('  npx daiso lottecinema-movies --playDate 20260310 --theaterId 3012');
-  writeOut('  npx daiso lottecinema-seats --playDate 20260310 --theaterId 3012 --movieId 23816');
+  writeOut('  npx daiso lottecinema-theaters --keyword "안산 중앙역" --limit 5');
+  writeOut('  npx daiso lottecinema-movies --playDate 20260310 --keyword "안산 중앙역"');
+  writeOut('  npx daiso lottecinema-seats --playDate 20260310 --keyword "안산 중앙역" --movieId 23816');
   writeOut('  npx daiso lottemart-stores 잠실 --area 서울 --limit 10');
   writeOut('  npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울');
   writeOut('  npx daiso emart24-stores 강남 --limit 10');
