@@ -271,6 +271,32 @@ export const OPENAPI_COMPONENTS = {
             },
           },
         },
+        OliveyoungProductSearchResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            data: {
+              type: 'object',
+              properties: {
+                keyword: { type: 'string', example: '마스크팩' },
+                count: { type: 'integer', example: 2 },
+                products: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/OliveyoungProduct' },
+                },
+              },
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                total: { type: 'integer' },
+                page: { type: 'integer' },
+                pageSize: { type: 'integer' },
+                nextPage: { type: 'boolean' },
+              },
+            },
+          },
+        },
         OliveyoungInventoryResponse: {
           type: 'object',
           properties: {

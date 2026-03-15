@@ -180,6 +180,52 @@ export async function handleGetDisplayLocation(c: ApiContext) {
 }
 
 /**
+ * 올리브영 상품 검색 API 핸들러
+ * GET /api/oliveyoung/products?keyword={검색어}
+ */
+export async function handleOliveyoungSearchProducts(c: ApiContext) {
+  const keyword = c.req.query('keyword') || '';
+  const page = parseInt(c.req.query('page') || '1');
+  const size = parseInt(c.req.query('size') || '20');
+  const sort = c.req.query('sort') || '01';
+  const includeSoldOut = c.req.query('includeSoldOut') === 'true';
+
+  if (keyword.trim().length === 0) {
+    return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
+  }
+
+  try {
+    const result = await fetchOliveyoungProducts(
+      {
+        keyword,
+        page,
+        size,
+        sort,
+        includeSoldOut,
+      },
+      {
+        apiKey: c.env?.ZYTE_API_KEY,
+      },
+    );
+
+    return successResponse(
+      c,
+      {
+        keyword,
+        totalCount: result.totalCount,
+        nextPage: result.nextPage,
+        count: result.products.length,
+        products: result.products,
+      },
+      { total: result.totalCount, page, pageSize: size },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+    return errorResponse(c, 'OLIVEYOUNG_PRODUCT_SEARCH_FAILED', message, 500);
+  }
+}
+
+/**
  * 올리브영 매장 검색 API 핸들러
  * GET /api/oliveyoung/stores?keyword={키워드}&lat={위도}&lng={경도}
  */

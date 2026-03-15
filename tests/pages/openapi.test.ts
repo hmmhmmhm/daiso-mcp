@@ -73,6 +73,7 @@ describe('OpenAPI 페이지', () => {
       ).get.description,
     ).toContain('storeCode 없이 productId만으로 호출할 수');
     expect(spec.paths['/api/oliveyoung/stores']).toBeDefined();
+    expect(spec.paths['/api/oliveyoung/products']).toBeDefined();
     expect(
       (
         spec.paths['/api/oliveyoung/inventory'] as {

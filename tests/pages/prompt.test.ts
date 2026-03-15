@@ -32,6 +32,7 @@ describe('generatePromptText', () => {
 
     // 올리브영 API
     expect(text).toContain('/api/oliveyoung/stores');
+    expect(text).toContain('/api/oliveyoung/products');
     expect(text).toContain('/api/oliveyoung/inventory');
     expect(text).toContain('/api/lottemart/stores');
     expect(text).toContain('/api/lottemart/products');
@@ -85,6 +86,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('SEARCH_FAILED');
     expect(text).toContain('DISPLAY_LOCATION_FAILED');
     expect(text).toContain('OLIVEYOUNG_STORE_SEARCH_FAILED');
+    expect(text).toContain('OLIVEYOUNG_PRODUCT_SEARCH_FAILED');
     expect(text).toContain('OLIVEYOUNG_INVENTORY_CHECK_FAILED');
     expect(text).toContain('MEGABOX_THEATER_SEARCH_FAILED');
     expect(text).toContain('MEGABOX_MOVIE_LIST_FAILED');
@@ -118,6 +120,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('gs25_search_products');
     expect(text).toContain('gs25_check_inventory');
     expect(text).toContain('seveneleven_check_inventory');
+    expect(text).toContain('oliveyoung_search_products');
     expect(text).toContain('oliveyoung_find_nearby_stores');
     expect(text).toContain('oliveyoung_check_inventory');
     expect(text).toContain('megabox_find_nearby_theaters');

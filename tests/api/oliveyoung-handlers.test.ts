@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  handleOliveyoungSearchProducts,
   handleOliveyoungFindStores,
   handleOliveyoungCheckInventory,
 } from '../../src/api/handlers.js';
@@ -121,6 +122,79 @@ describe('handleOliveyoungFindStores', () => {
       expect.objectContaining({
         success: false,
         error: { code: 'OLIVEYOUNG_STORE_SEARCH_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
+      }),
+      500
+    );
+  });
+});
+
+describe('handleOliveyoungSearchProducts', () => {
+  it('올리브영 상품 검색 결과를 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      createMockZyteResponse({
+        status: 'SUCCESS',
+        data: {
+          totalCount: 1,
+          nextPage: false,
+          serachList: [
+            {
+              goodsNumber: 'A1',
+              goodsName: '마스크팩 A',
+              imagePath: '/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
+              priceToPay: 3000,
+              originalPrice: 5000,
+              discountRate: 40,
+              o2oStockFlag: true,
+              o2oRemainQuantity: 1,
+            },
+          ],
+        },
+      })
+    );
+
+    const ctx = createMockContext({ keyword: '마스크팩' });
+    await handleOliveyoungSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          keyword: '마스크팩',
+          count: 1,
+          products: [
+            expect.objectContaining({
+              goodsName: '마스크팩 A',
+              imageUrl: 'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
+            }),
+          ],
+        }),
+      })
+    );
+  });
+
+  it('keyword가 없으면 에러를 반환한다', async () => {
+    const ctx = createMockContext({});
+    await handleOliveyoungSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'MISSING_QUERY', message: '검색어(keyword)를 입력해주세요.' },
+      }),
+      400
+    );
+  });
+
+  it('올리브영 상품 검색 에러를 처리한다', async () => {
+    mockFetch.mockRejectedValue(new Error('search fail'));
+
+    const ctx = createMockContext({ keyword: '마스크팩' });
+    await handleOliveyoungSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'OLIVEYOUNG_PRODUCT_SEARCH_FAILED', message: 'search fail' },
       }),
       500
     );

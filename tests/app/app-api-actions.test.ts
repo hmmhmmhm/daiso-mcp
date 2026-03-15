@@ -209,6 +209,46 @@ describe('GET /api/actions/query', () => {
     expect(inventoryData.data.stores[0].storeName).toBe('안산중앙점');
   });
 
+  it('올리브영 상품 검색을 action facade로 위임한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 200,
+          httpResponseBody: Buffer.from(
+            JSON.stringify({
+              status: 'SUCCESS',
+              data: {
+                totalCount: 1,
+                nextPage: false,
+                serachList: [
+                  {
+                    goodsNumber: 'A1',
+                    goodsName: '마스크팩 A',
+                    imagePath: '/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
+                    priceToPay: 3000,
+                  },
+                ],
+              },
+            }),
+            'utf8',
+          ).toString('base64'),
+        }),
+      ),
+    );
+
+    const res = await app.request(
+      '/api/actions/query?action=oliveyoungSearchProducts&keyword=%EB%A7%88%EC%8A%A4%ED%81%AC%ED%8C%A9',
+      undefined,
+      { ZYTE_API_KEY: 'test-key' },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.keyword).toBe('마스크팩');
+    expect(data.data.products[0].goodsName).toBe('마스크팩 A');
+  });
+
   it('CGV keyword 조회를 action facade로 위임한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

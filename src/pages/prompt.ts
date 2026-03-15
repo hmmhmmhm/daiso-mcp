@@ -233,7 +233,28 @@ Base URL: ${baseUrl}
 
 ---
 
-### 6. 올리브영 재고 확인
+### 6. 올리브영 상품 검색
+
+**설명**: 키워드로 올리브영 상품 목록을 조회합니다. 사용자가 "올리브영 마스크팩 어떤 거 있나요", "립밤 종류 보여줘"처럼 상품 후보나 종류를 묻는 경우에는 이 API를 먼저 사용하세요.
+
+**URL**: ${baseUrl}/api/oliveyoung/products?keyword={검색어}
+
+**필수 파라미터**:
+- keyword: 상품 검색어 (예: 마스크팩, 선크림, 립밤)
+
+**선택 파라미터**:
+- page: 상품 검색 페이지 (기본값: 1)
+- size: 페이지당 상품 수 (기본값: 20)
+- sort: 정렬 코드 (기본값: 01)
+- includeSoldOut: 품절 포함 여부 (기본값: false)
+
+**예시**:
+- ${baseUrl}/api/oliveyoung/products?keyword=마스크팩
+- ${baseUrl}/api/oliveyoung/products?keyword=립밤&size=10
+
+---
+
+### 7. 올리브영 재고 확인
 
 **설명**: 상품 키워드 기준 올리브영 재고를 조회하고 주변 매장 목록을 함께 반환합니다. 상위 상품에는 storeInventory가 포함되며 매장별 재고 3개, 재고 9개 이상, 품절, 미판매 같은 상태를 제공합니다.
 
@@ -561,6 +582,7 @@ Base URL: ${baseUrl}
 | FETCH_FAILED | 데이터 조회 실패 |
 | DISPLAY_LOCATION_FAILED | 진열 위치 조회 실패 |
 | OLIVEYOUNG_STORE_SEARCH_FAILED | 올리브영 매장 조회 실패 |
+| OLIVEYOUNG_PRODUCT_SEARCH_FAILED | 올리브영 상품 조회 실패 |
 | OLIVEYOUNG_INVENTORY_CHECK_FAILED | 올리브영 재고 조회 실패 |
 | MEGABOX_THEATER_SEARCH_FAILED | 메가박스 지점 조회 실패 |
 | MEGABOX_MOVIE_LIST_FAILED | 메가박스 영화 목록 조회 실패 |
@@ -628,6 +650,7 @@ MCP 연결 정보: ${baseUrl}/mcp
 - seveneleven_check_inventory: 세븐일레븐 재고 조회
 - seveneleven_get_search_popwords: 세븐일레븐 인기 검색어 조회
 - seveneleven_get_catalog_snapshot: 세븐일레븐 카탈로그 조회
+- oliveyoung_search_products: 올리브영 상품 검색
 - oliveyoung_find_nearby_stores: 올리브영 주변 매장 탐색
 - oliveyoung_check_inventory: 올리브영 재고 파악
 - megabox_find_nearby_theaters: 메가박스 주변 지점 탐색

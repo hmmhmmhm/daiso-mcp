@@ -303,6 +303,78 @@ export const OPENAPI_PATHS_DAISO_OLIVEYOUNG = {
           },
         },
       },
+      '/api/oliveyoung/products': {
+        get: {
+          operationId: 'oliveyoungSearchProducts',
+          summary: '올리브영 상품 검색',
+          description:
+            '키워드로 올리브영 상품 목록을 조회합니다. "어떤 거 있나요", "종류 보여줘" 같은 요청은 이 엔드포인트를 먼저 사용하세요.',
+          parameters: [
+            {
+              name: 'keyword',
+              in: 'query',
+              required: true,
+              description: '상품 검색어',
+              schema: { type: 'string' },
+              example: '마스크팩',
+            },
+            {
+              name: 'page',
+              in: 'query',
+              required: false,
+              description: '상품 검색 페이지 번호',
+              schema: { type: 'integer', default: 1, minimum: 1 },
+            },
+            {
+              name: 'size',
+              in: 'query',
+              required: false,
+              description: '페이지당 결과 수',
+              schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+            },
+            {
+              name: 'sort',
+              in: 'query',
+              required: false,
+              description: '정렬 코드',
+              schema: { type: 'string', default: '01' },
+            },
+            {
+              name: 'includeSoldOut',
+              in: 'query',
+              required: false,
+              description: '품절 포함 여부 (true/false)',
+              schema: { type: 'boolean', default: false },
+            },
+          ],
+          responses: {
+            '200': {
+              description: '검색 성공',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/OliveyoungProductSearchResponse' },
+                },
+              },
+            },
+            '400': {
+              description: '잘못된 요청 (검색어 누락)',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            '500': {
+              description: '올리브영 API 호출 실패',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
       '/api/oliveyoung/stores': {
         get: {
           operationId: 'oliveyoungFindStores',

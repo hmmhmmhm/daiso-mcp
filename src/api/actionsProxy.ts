@@ -15,6 +15,7 @@ export const ACTION_QUERY_DEFINITIONS: ActionQueryDefinition[] = [
   { action: 'daisoFindStores', summary: '다이소 매장 검색', targetPath: '/api/daiso/stores' },
   { action: 'daisoCheckInventory', summary: '다이소 재고 조회', targetPath: '/api/daiso/inventory' },
   { action: 'daisoGetDisplayLocation', summary: '다이소 진열 위치 조회', targetPath: '/api/daiso/display-location' },
+  { action: 'oliveyoungSearchProducts', summary: '올리브영 상품 검색', targetPath: '/api/oliveyoung/products' },
   { action: 'oliveyoungFindStores', summary: '올리브영 매장 검색', targetPath: '/api/oliveyoung/stores' },
   { action: 'oliveyoungCheckInventory', summary: '올리브영 재고 조회', targetPath: '/api/oliveyoung/inventory' },
   { action: 'cuFindStores', summary: 'CU 매장 검색', targetPath: '/api/cu/stores' },

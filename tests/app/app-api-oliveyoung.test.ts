@@ -35,6 +35,45 @@ describe('GET /api/oliveyoung/stores', () => {
   });
 });
 
+describe('GET /api/oliveyoung/products', () => {
+  it('상품 검색 결과를 반환한다', async () => {
+    const productEncoded = Buffer.from(
+      JSON.stringify({
+        status: 'SUCCESS',
+        data: {
+          totalCount: 1,
+          nextPage: false,
+          serachList: [
+            {
+              goodsNumber: 'A1',
+              goodsName: '마스크팩 A',
+              imagePath: '/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
+              priceToPay: 3000,
+            },
+          ],
+        },
+      }),
+      'utf8',
+    ).toString('base64');
+
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ statusCode: 200, httpResponseBody: productEncoded })),
+    );
+
+    const res = await app.request('/api/oliveyoung/products?keyword=마스크팩', undefined, {
+      ZYTE_API_KEY: 'test-key',
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.keyword).toBe('마스크팩');
+    expect(data.data.products[0].imageUrl).toBe(
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
+    );
+  });
+});
+
 describe('GET /api/oliveyoung/inventory', () => {
   it('재고 정보를 반환한다', async () => {
     const storeEncoded = Buffer.from(

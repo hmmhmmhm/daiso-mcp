@@ -22,12 +22,13 @@ describe('createOliveyoungService', () => {
     expect(service.metadata.version).toBe('1.0.0');
   });
 
-  it('2개의 도구를 반환한다', () => {
+  it('3개의 도구를 반환한다', () => {
     const service = createOliveyoungService({ zyteApiKey: 'test-key' });
     const tools = service.getTools();
 
-    expect(tools).toHaveLength(2);
+    expect(tools).toHaveLength(3);
     expect(tools.map((t) => t.name)).toEqual([
+      'oliveyoung_search_products',
       'oliveyoung_find_nearby_stores',
       'oliveyoung_check_inventory',
     ]);

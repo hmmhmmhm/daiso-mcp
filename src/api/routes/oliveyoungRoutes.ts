@@ -4,10 +4,26 @@
 
 import type { Hono } from 'hono';
 import { withEdgeCache } from '../../utils/cache.js';
-import { handleOliveyoungFindStores, handleOliveyoungCheckInventory } from '../handlers.js';
+import {
+  handleOliveyoungFindStores,
+  handleOliveyoungCheckInventory,
+  handleOliveyoungSearchProducts,
+} from '../handlers.js';
 import type { AppBindings } from '../response.js';
 
 export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): void {
+  app.get('/api/oliveyoung/products', async (c) =>
+    withEdgeCache(
+      c.req.url,
+      {
+        ttlSeconds: 60 * 5,
+        staleWhileRevalidateSeconds: 60,
+        keyPrefix: 'oliveyoung-products-v1',
+      },
+      () => handleOliveyoungSearchProducts(c),
+    ),
+  );
+
   app.get('/api/oliveyoung/stores', async (c) =>
     withEdgeCache(
       c.req.url,
