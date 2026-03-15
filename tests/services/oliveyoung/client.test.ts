@@ -332,7 +332,7 @@ describe('fetchOliveyoungProducts', () => {
             {
               goodsNumber: 'A12',
               goodsName: '세럼',
-              imagePath: 'uploads/images/goods/10/0000/0012/A00000000001201ko.jpg',
+              imagePath: '10/0000/0012/A00000000001201ko.jpg?l=ko',
             },
           ],
         },
@@ -345,7 +345,7 @@ describe('fetchOliveyoungProducts', () => {
     );
 
     expect(result.products[0].imageUrl).toBe(
-      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0012/A00000000001201ko.jpg'
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0012/A00000000001201ko.jpg?l=ko'
     );
   });
 
