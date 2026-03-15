@@ -158,6 +158,11 @@ describe('generatePromptText', () => {
     expect(text).toContain('길어서 일부만 표시');
     expect(text).toContain('규칙 5');
     expect(text).toContain('답변 길이 때문에라도 빼지 마세요');
+    expect(text).toContain('규칙 6');
+    expect(text).toContain('?l=ko');
+    expect(text).toContain('전체 URL을 그대로 사용');
+    expect(text).toContain('규칙 7');
+    expect(text).toContain('query string까지 포함한 전체 URL');
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
     expect(text).toContain('재고 응답의 storeCode를 확인한 뒤');
@@ -172,6 +177,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('CGV 상영 시간표를 조회합니다. theaterCode가 없으면');
     expect(text).toContain('올리브영 상품 이미지 표시');
     expect(text).toContain('각 상품 이미지를 생략하지 말고 모두 렌더링');
+    expect(text).toContain('query string을 삭제하지 말고');
   });
 });
 

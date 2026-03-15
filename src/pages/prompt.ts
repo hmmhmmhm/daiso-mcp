@@ -620,6 +620,8 @@ Base URL: ${baseUrl}
    - **규칙 3**: 이미지가 여러 개이면 첫 번째만 대표로 보여주지 말고 각 항목의 이미지를 전부 표시하세요.
    - **규칙 4**: "길어서 일부만 표시", "대표 이미지만 표시", "나머지는 생략" 같은 동작을 하지 마세요.
    - **규칙 5**: 텍스트 요약보다 이미지 표시 의무가 우선이며, 이미지가 있으면 답변 길이 때문에라도 빼지 마세요.
+   - **규칙 6**: \`imageUrl\`에 query string이 있으면 \`?l=ko\` 같은 쿼리를 절대 삭제하거나 정규화하지 말고, 마크다운 이미지 src에 전체 URL을 그대로 사용하세요.
+   - **규칙 7**: 이미지 src를 비교하거나 캐시 키를 판단할 때도 hostname + pathname만 쓰지 말고 query string까지 포함한 전체 URL을 기준으로 취급하세요.
 5. **재고 확인 워크플로우**:
    - 먼저 /api/daiso/products로 제품 검색
    - 결과에서 원하는 제품의 id 확인
@@ -630,7 +632,7 @@ Base URL: ${baseUrl}
 8. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 9. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
 10. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
-11. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다.
+11. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
 
 ---
 
