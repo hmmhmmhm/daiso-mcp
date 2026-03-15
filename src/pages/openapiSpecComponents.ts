@@ -201,6 +201,10 @@ export const OPENAPI_COMPONENTS = {
           properties: {
             goodsNumber: { type: 'string', example: 'A000000200614' },
             goodsName: { type: 'string', example: '달바 퍼플 톤업 선크림 듀오 기획' },
+            imageUrl: {
+              type: 'string',
+              example: 'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0020/A00000020061401ko.jpg',
+            },
             priceToPay: { type: 'integer', example: 32130 },
             originalPrice: { type: 'integer', example: 51000 },
             discountRate: { type: 'integer', example: 37 },

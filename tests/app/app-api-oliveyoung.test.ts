@@ -51,7 +51,14 @@ describe('GET /api/oliveyoung/inventory', () => {
         data: {
           totalCount: 1,
           nextPage: false,
-          serachList: [{ goodsNumber: 'A1', goodsName: '선크림 A', priceToPay: 10000 }],
+          serachList: [
+            {
+              goodsNumber: 'A1',
+              goodsName: '선크림 A',
+              imagePath: '/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
+              priceToPay: 10000,
+            },
+          ],
         },
       }),
       'utf8',
@@ -90,6 +97,9 @@ describe('GET /api/oliveyoung/inventory', () => {
     expect(data.data.keyword).toBe('선크림');
     expect(data.data.inventory.inStockCount).toBe(1);
     expect(data.data.inventory.stockCheckedCount).toBe(1);
+    expect(data.data.inventory.products[0].imageUrl).toBe(
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg'
+    );
     expect(data.data.inventory.products[0].stockStatus).toBe('in_stock');
     expect(data.data.inventory.products[0].storeInventory.stores[0].stockLabel).toBe('재고 3개');
   });

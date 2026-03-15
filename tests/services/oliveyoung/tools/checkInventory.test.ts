@@ -71,6 +71,7 @@ describe('createCheckInventoryTool', () => {
               {
                 goodsNumber: 'A1',
                 goodsName: '선크림 A',
+                imagePath: '/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
                 priceToPay: 10000,
                 originalPrice: 15000,
                 discountRate: 33,
@@ -145,6 +146,9 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.inventory.inStockCount).toBe(1);
     expect(parsed.inventory.outOfStockCount).toBe(1);
     expect(parsed.inventory.products[0].inStock).toBe(true);
+    expect(parsed.inventory.products[0].imageUrl).toBe(
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg'
+    );
     expect(parsed.inventory.products[0].stockStatus).toBe('in_stock');
     expect(parsed.inventory.products[0].storeInventory.stores[0].stockLabel).toBe('재고 3개');
   });

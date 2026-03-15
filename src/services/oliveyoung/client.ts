@@ -49,8 +49,27 @@ interface EnrichProductsParams {
   maxProducts: number;
 }
 
+const OLIVEYOUNG_IMAGE_BASE_URL = 'https://image.oliveyoung.co.kr';
+
 function resolveOliveyoungInStock(o2oStockFlag: boolean, o2oRemainQuantity: number): boolean {
   return o2oStockFlag || o2oRemainQuantity > 0;
+}
+
+function resolveOliveyoungImageUrl(imagePath?: string): string | undefined {
+  if (!imagePath) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(imagePath)) {
+    return imagePath;
+  }
+
+  if (imagePath.startsWith('//')) {
+    return `https:${imagePath}`;
+  }
+
+  const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  return `${OLIVEYOUNG_IMAGE_BASE_URL}${normalizedPath}`;
 }
 
 function resolveOliveyoungStoreQuantity(remainQuantity: number, o2oRemainQuantity: number): number {
@@ -194,6 +213,7 @@ export async function fetchOliveyoungProducts(
     return {
       goodsNumber: product.goodsNumber || '',
       goodsName: product.goodsName || '',
+      imageUrl: resolveOliveyoungImageUrl(product.imagePath),
       priceToPay: product.priceToPay || 0,
       originalPrice: product.originalPrice || 0,
       discountRate: product.discountRate || 0,

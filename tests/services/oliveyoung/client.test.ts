@@ -238,6 +238,7 @@ describe('fetchOliveyoungProducts', () => {
             {
               goodsNumber: 'A1',
               goodsName: '립밤',
+              imagePath: '/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg',
               priceToPay: 5000,
               originalPrice: 7000,
               discountRate: 28,
@@ -256,9 +257,96 @@ describe('fetchOliveyoungProducts', () => {
 
     expect(result.totalCount).toBe(1);
     expect(result.products[0].goodsName).toBe('립밤');
+    expect(result.products[0].imageUrl).toBe(
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0001/A00000000000101ko.jpg'
+    );
     expect(result.products[0].inStock).toBe(true);
     expect(result.products[0].stockStatus).toBe('in_stock');
     expect(result.products[0].stockSource).toBe('global_search');
+  });
+
+  it('절대 이미지 URL은 그대로 유지한다', async () => {
+    mockFetch.mockResolvedValue(
+      createZyteResponse({
+        status: 'SUCCESS',
+        data: {
+          totalCount: 1,
+          nextPage: false,
+          serachList: [
+            {
+              goodsNumber: 'A10',
+              goodsName: '에센스',
+              imagePath: 'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0010/A00000000001001ko.jpg',
+            },
+          ],
+        },
+      })
+    );
+
+    const result = await fetchOliveyoungProducts(
+      { keyword: '에센스', page: 1, size: 20, sort: '01', includeSoldOut: false },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.products[0].imageUrl).toBe(
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0010/A00000000001001ko.jpg'
+    );
+  });
+
+  it('프로토콜 상대 이미지 URL은 https로 보정한다', async () => {
+    mockFetch.mockResolvedValue(
+      createZyteResponse({
+        status: 'SUCCESS',
+        data: {
+          totalCount: 1,
+          nextPage: false,
+          serachList: [
+            {
+              goodsNumber: 'A11',
+              goodsName: '크림',
+              imagePath: '//image.oliveyoung.co.kr/uploads/images/goods/10/0000/0011/A00000000001101ko.jpg',
+            },
+          ],
+        },
+      })
+    );
+
+    const result = await fetchOliveyoungProducts(
+      { keyword: '크림', page: 1, size: 20, sort: '01', includeSoldOut: false },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.products[0].imageUrl).toBe(
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0011/A00000000001101ko.jpg'
+    );
+  });
+
+  it('슬래시 없는 상대 이미지 경로는 절대 URL로 보정한다', async () => {
+    mockFetch.mockResolvedValue(
+      createZyteResponse({
+        status: 'SUCCESS',
+        data: {
+          totalCount: 1,
+          nextPage: false,
+          serachList: [
+            {
+              goodsNumber: 'A12',
+              goodsName: '세럼',
+              imagePath: 'uploads/images/goods/10/0000/0012/A00000000001201ko.jpg',
+            },
+          ],
+        },
+      })
+    );
+
+    const result = await fetchOliveyoungProducts(
+      { keyword: '세럼', page: 1, size: 20, sort: '01', includeSoldOut: false },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.products[0].imageUrl).toBe(
+      'https://image.oliveyoung.co.kr/uploads/images/goods/10/0000/0012/A00000000001201ko.jpg'
+    );
   });
 
   it('o2oRemainQuantity가 0이어도 o2oStockFlag가 true면 재고 있음으로 본다', async () => {
@@ -328,6 +416,7 @@ describe('fetchOliveyoungProducts', () => {
     );
 
     expect(result.products[0].goodsNumber).toBe('');
+    expect(result.products[0].imageUrl).toBeUndefined();
     expect(result.products[0].priceToPay).toBe(0);
   });
 

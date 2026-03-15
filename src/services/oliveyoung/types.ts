@@ -15,6 +15,7 @@ export interface OliveyoungStore {
 export interface OliveyoungProduct {
   goodsNumber: string;
   goodsName: string;
+  imageUrl?: string;
   priceToPay: number;
   originalPrice: number;
   discountRate: number;
@@ -72,6 +73,7 @@ interface OliveyoungApiData {
   serachList?: Array<{
     goodsNumber?: string;
     goodsName?: string;
+    imagePath?: string;
     priceToPay?: number;
     originalPrice?: number;
     discountRate?: number;
@@ -81,6 +83,7 @@ interface OliveyoungApiData {
   searchList?: Array<{
     goodsNumber?: string;
     goodsName?: string;
+    imagePath?: string;
     priceToPay?: number;
     originalPrice?: number;
     discountRate?: number;
