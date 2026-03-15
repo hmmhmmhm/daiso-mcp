@@ -26,6 +26,20 @@ describe('getImageUrl', () => {
 
     expect(result).toBe(`${DAISOMALL_API.IMAGE_BASE_URL}images/product/123.jpg`);
   });
+
+  it('절대 URL의 img 호스트를 cdn 호스트로 치환한다', () => {
+    const path = 'https://img.daisomall.co.kr/images/product/123.jpg';
+    const result = getImageUrl(path);
+
+    expect(result).toBe('https://cdn.daisomall.co.kr/images/product/123.jpg');
+  });
+
+  it('이미 cdn 호스트인 절대 URL은 그대로 유지한다', () => {
+    const path = 'https://cdn.daisomall.co.kr/images/product/123.jpg';
+    const result = getImageUrl(path);
+
+    expect(result).toBe(path);
+  });
 });
 
 describe('formatTime', () => {

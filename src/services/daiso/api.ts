@@ -47,6 +47,19 @@ export const DAISO_WEB_API = {
  */
 export function getImageUrl(path?: string): string | undefined {
   if (!path) return undefined;
+
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    try {
+      const url = new URL(path);
+      if (url.hostname === 'img.daisomall.co.kr') {
+        url.hostname = 'cdn.daisomall.co.kr';
+      }
+      return url.toString();
+    } catch {
+      return path;
+    }
+  }
+
   return `${DAISOMALL_API.IMAGE_BASE_URL}${path}`;
 }
 
