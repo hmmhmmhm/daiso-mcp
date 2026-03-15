@@ -328,11 +328,12 @@ Base URL: ${baseUrl}
 
 ### 7. 메가박스 주변 지점 찾기
 
-**설명**: 사용자 좌표 기준으로 메가박스 지점을 거리순으로 조회합니다.
+**설명**: 사용자 좌표 또는 위치 키워드 기준으로 메가박스 지점을 거리순으로 조회합니다.
 
 **URL**: ${baseUrl}/api/megabox/theaters?lat={위도}&lng={경도}
 
 **선택 파라미터**:
+- keyword: 위치 키워드 (예: 안산 중앙역, 강남역)
 - lat: 위도 (기본값: 37.5665)
 - lng: 경도 (기본값: 126.978)
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -340,6 +341,7 @@ Base URL: ${baseUrl}
 - limit: 최대 결과 수 (기본값: 10)
 
 **예시**:
+- ${baseUrl}/api/megabox/theaters?keyword=안산%20중앙역&limit=5
 - ${baseUrl}/api/megabox/theaters?lat=37.4982&lng=127.0264
 - ${baseUrl}/api/megabox/theaters?areaCode=11&limit=5
 
@@ -347,7 +349,7 @@ Base URL: ${baseUrl}
 
 ### 8. 메가박스 영화/회차 목록
 
-**설명**: 날짜/지점 조건으로 메가박스 영화와 상영 회차를 조회합니다.
+**설명**: 날짜/지점 조건으로 메가박스 영화와 상영 회차를 조회합니다. theaterId가 없고 위치 키워드/좌표가 있으면 가장 가까운 지점을 먼저 선택합니다.
 
 **URL**: ${baseUrl}/api/megabox/movies?playDate={YYYYMMDD}
 
@@ -355,9 +357,13 @@ Base URL: ${baseUrl}
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - theaterId: 지점 ID (예: 1372)
 - movieId: 영화 ID (예: 25104500)
+- keyword: 위치 키워드 (예: 안산 중앙역, 강남역)
+- lat: 위도
+- lng: 경도
 - areaCode: 지역 코드 (기본값: 11)
 
 **예시**:
+- ${baseUrl}/api/megabox/movies?playDate=20260315&keyword=안산%20중앙역
 - ${baseUrl}/api/megabox/movies?playDate=20260304&theaterId=1372
 - ${baseUrl}/api/megabox/movies?playDate=20260304&movieId=25104500
 
@@ -365,7 +371,7 @@ Base URL: ${baseUrl}
 
 ### 9. 메가박스 잔여 좌석 조회
 
-**설명**: 영화/지점/날짜 기준으로 회차별 잔여 좌석 수를 조회합니다.
+**설명**: 영화/지점/날짜 기준으로 회차별 잔여 좌석 수를 조회합니다. theaterId가 없고 위치 키워드/좌표가 있으면 가장 가까운 지점을 먼저 선택합니다.
 
 **URL**: ${baseUrl}/api/megabox/seats?playDate={YYYYMMDD}
 
@@ -373,10 +379,14 @@ Base URL: ${baseUrl}
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
 - theaterId: 지점 ID
 - movieId: 영화 ID
+- keyword: 위치 키워드 (예: 안산 중앙역, 강남역)
+- lat: 위도
+- lng: 경도
 - areaCode: 지역 코드 (기본값: 11)
 - limit: 최대 결과 수 (기본값: 50)
 
 **예시**:
+- ${baseUrl}/api/megabox/seats?playDate=20260315&keyword=안산%20중앙역
 - ${baseUrl}/api/megabox/seats?playDate=20260304&theaterId=1372
 - ${baseUrl}/api/megabox/seats?playDate=20260304&movieId=25104500&limit=20
 

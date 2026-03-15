@@ -108,6 +108,18 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/megabox/theaters']).toBeDefined();
     expect(spec.paths['/api/megabox/movies']).toBeDefined();
     expect(spec.paths['/api/megabox/seats']).toBeDefined();
+    expect(
+      ((spec.paths['/api/megabox/theaters'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
+        (parameter) => parameter.name === 'keyword',
+      ),
+    ).toBe(true);
+    expect(
+      (
+        spec.paths['/api/megabox/movies'] as {
+          get: { description: string };
+        }
+      ).get.description,
+    ).toContain('가장 가까운 지점');
     expect(spec.paths['/api/lottecinema/theaters']).toBeDefined();
     expect(spec.paths['/api/lottecinema/movies']).toBeDefined();
     expect(spec.paths['/api/lottecinema/seats']).toBeDefined();

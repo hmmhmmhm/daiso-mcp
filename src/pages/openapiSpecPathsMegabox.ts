@@ -7,8 +7,15 @@ export const OPENAPI_PATHS_MEGABOX = {
         get: {
           operationId: 'megaboxFindNearbyTheaters',
           summary: '메가박스 주변 지점 조회',
-          description: '좌표 기준으로 메가박스 지점을 거리순으로 조회합니다.',
+          description: '좌표 또는 위치 키워드 기준으로 메가박스 지점을 거리순으로 조회합니다. lat/lng가 없으면 keyword를 구글 지오코드로 보강할 수 있습니다.',
           parameters: [
+            {
+              name: 'keyword',
+              in: 'query',
+              required: false,
+              description: '위치 키워드 (예: 안산 중앙역, 강남역)',
+              schema: { type: 'string' },
+            },
             {
               name: 'lat',
               in: 'query',
@@ -69,7 +76,7 @@ export const OPENAPI_PATHS_MEGABOX = {
         get: {
           operationId: 'megaboxListNowShowing',
           summary: '메가박스 영화/회차 목록 조회',
-          description: '날짜, 지점, 영화 조건으로 메가박스 영화 및 상영 회차를 조회합니다.',
+          description: '날짜, 지점, 영화 조건으로 메가박스 영화 및 상영 회차를 조회합니다. theaterId가 없고 keyword 또는 좌표가 있으면 가장 가까운 지점을 먼저 선택합니다.',
           parameters: [
             {
               name: 'playDate',
@@ -91,6 +98,27 @@ export const OPENAPI_PATHS_MEGABOX = {
               required: false,
               description: '영화 ID (예: 25104500)',
               schema: { type: 'string', example: '25104500' },
+            },
+            {
+              name: 'keyword',
+              in: 'query',
+              required: false,
+              description: '위치 키워드 (예: 안산 중앙역, 강남역)',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'lat',
+              in: 'query',
+              required: false,
+              description: '위도',
+              schema: { type: 'number', format: 'float' },
+            },
+            {
+              name: 'lng',
+              in: 'query',
+              required: false,
+              description: '경도',
+              schema: { type: 'number', format: 'float' },
             },
             {
               name: 'areaCode',
@@ -124,7 +152,7 @@ export const OPENAPI_PATHS_MEGABOX = {
         get: {
           operationId: 'megaboxGetRemainingSeats',
           summary: '메가박스 잔여 좌석 조회',
-          description: '영화/지점/날짜 조건으로 회차별 잔여 좌석 수를 조회합니다.',
+          description: '영화/지점/날짜 조건으로 회차별 잔여 좌석 수를 조회합니다. theaterId가 없고 keyword 또는 좌표가 있으면 가장 가까운 지점을 먼저 선택합니다.',
           parameters: [
             {
               name: 'playDate',
@@ -146,6 +174,27 @@ export const OPENAPI_PATHS_MEGABOX = {
               required: false,
               description: '영화 ID',
               schema: { type: 'string' },
+            },
+            {
+              name: 'keyword',
+              in: 'query',
+              required: false,
+              description: '위치 키워드 (예: 안산 중앙역, 강남역)',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'lat',
+              in: 'query',
+              required: false,
+              description: '위도',
+              schema: { type: 'number', format: 'float' },
+            },
+            {
+              name: 'lng',
+              in: 'query',
+              required: false,
+              description: '경도',
+              schema: { type: 'number', format: 'float' },
             },
             {
               name: 'areaCode',

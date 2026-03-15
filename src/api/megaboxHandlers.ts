@@ -2,22 +2,17 @@
  * 메가박스 GET API 핸들러
  */
 
-import {
-  fetchMegaboxBookingList,
-  fetchMegaboxTheaterInfo,
-  toYyyymmdd,
-} from '../services/megabox/client.js';
+import { fetchMegaboxBookingList, toYyyymmdd } from '../services/megabox/client.js';
+import { fetchMegaboxNearbyTheaters, resolveMegaboxNearestTheater } from '../services/megabox/location.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 
-function calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return 6371 * c;
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 /**
@@ -25,64 +20,35 @@ function calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: num
  * GET /api/megabox/theaters?lat={위도}&lng={경도}&playDate={YYYYMMDD}&areaCode={지역코드}
  */
 export async function handleMegaboxFindNearbyTheaters(c: ApiContext) {
-  const lat = parseFloat(c.req.query('lat') || '37.5665');
-  const lng = parseFloat(c.req.query('lng') || '126.978');
+  const keyword = c.req.query('keyword') || undefined;
+  const lat = parseOptionalNumber(c.req.query('lat'));
+  const lng = parseOptionalNumber(c.req.query('lng'));
   const playDate = c.req.query('playDate') || toYyyymmdd();
-  const areaCode = c.req.query('areaCode') || '11';
+  const areaCode = c.req.query('areaCode') || undefined;
   const limit = parseInt(c.req.query('limit') || '10');
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000');
 
   try {
-    const { theaters } = await fetchMegaboxBookingList({
-      playDate,
-      areaCode,
-      timeout: timeoutMs,
-    });
-
-    const infoResults = await Promise.allSettled(
-      theaters.map((theater) => fetchMegaboxTheaterInfo(theater.theaterId, timeoutMs))
+    const result = await fetchMegaboxNearbyTheaters(
+      {
+        keyword,
+        latitude: lat,
+        longitude: lng,
+        playDate,
+        areaCode,
+        limit,
+        timeout: timeoutMs,
+      },
+      {
+        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        timeout: timeoutMs,
+      },
     );
-
-    const merged = theaters
-      .map((theater, index) => {
-        const infoResult = infoResults[index];
-        if (infoResult.status !== 'fulfilled') {
-          return null;
-        }
-
-        if (infoResult.value.latitude === null || infoResult.value.longitude === null) {
-          return null;
-        }
-
-        const distanceKm = calculateDistanceKm(
-          lat,
-          lng,
-          infoResult.value.latitude,
-          infoResult.value.longitude
-        );
-
-        return {
-          theaterId: theater.theaterId,
-          theaterName: theater.theaterName,
-          address: infoResult.value.address,
-          latitude: infoResult.value.latitude,
-          longitude: infoResult.value.longitude,
-          distanceKm: Number(distanceKm.toFixed(2)),
-        };
-      })
-      .filter((theater): theater is NonNullable<typeof theater> => theater !== null)
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, limit);
 
     return successResponse(
       c,
-      {
-        location: { latitude: lat, longitude: lng },
-        playDate,
-        areaCode,
-        theaters: merged,
-      },
-      { total: merged.length, pageSize: limit }
+      result,
+      { total: result.count, pageSize: limit }
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
@@ -96,17 +62,44 @@ export async function handleMegaboxFindNearbyTheaters(c: ApiContext) {
  */
 export async function handleMegaboxListNowShowing(c: ApiContext) {
   const playDate = c.req.query('playDate') || toYyyymmdd();
-  const theaterId = c.req.query('theaterId') || undefined;
+  const keyword = c.req.query('keyword') || undefined;
+  const lat = parseOptionalNumber(c.req.query('lat'));
+  const lng = parseOptionalNumber(c.req.query('lng'));
+  let theaterId = c.req.query('theaterId') || undefined;
   const movieId = c.req.query('movieId') || undefined;
-  const areaCode = c.req.query('areaCode') || '11';
+  const areaCode = c.req.query('areaCode') || undefined;
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000');
 
   try {
+    let resolvedTheater = null;
+    let resolvedLocation = null;
+
+    if (!theaterId && (keyword || typeof lat === 'number' || typeof lng === 'number')) {
+      const resolved = await resolveMegaboxNearestTheater(
+        {
+          keyword,
+          latitude: lat,
+          longitude: lng,
+          areaCode,
+          playDate,
+          timeout: timeoutMs,
+        },
+        {
+          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          timeout: timeoutMs,
+        },
+      );
+      theaterId = resolved.theater?.theaterId;
+      resolvedTheater = resolved.theater;
+      resolvedLocation = resolved.location;
+    }
+
+    const resolvedAreaCode = resolvedLocation?.areaCode || areaCode || '11';
     const result = await fetchMegaboxBookingList({
       playDate,
       theaterId,
       movieId,
-      areaCode,
+      areaCode: resolvedAreaCode,
       timeout: timeoutMs,
     });
 
@@ -117,8 +110,12 @@ export async function handleMegaboxListNowShowing(c: ApiContext) {
         filters: {
           theaterId: theaterId || null,
           movieId: movieId || null,
-          areaCode,
+          keyword: keyword || null,
+          latitude: lat ?? null,
+          longitude: lng ?? null,
+          areaCode: resolvedAreaCode,
         },
+        resolvedTheater,
         theaters: result.theaters,
         movies: result.movies,
         showtimes: result.showtimes,
@@ -137,18 +134,45 @@ export async function handleMegaboxListNowShowing(c: ApiContext) {
  */
 export async function handleMegaboxGetRemainingSeats(c: ApiContext) {
   const playDate = c.req.query('playDate') || toYyyymmdd();
-  const theaterId = c.req.query('theaterId') || undefined;
+  const keyword = c.req.query('keyword') || undefined;
+  const lat = parseOptionalNumber(c.req.query('lat'));
+  const lng = parseOptionalNumber(c.req.query('lng'));
+  let theaterId = c.req.query('theaterId') || undefined;
   const movieId = c.req.query('movieId') || undefined;
-  const areaCode = c.req.query('areaCode') || '11';
+  const areaCode = c.req.query('areaCode') || undefined;
   const limit = parseInt(c.req.query('limit') || '50');
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000');
 
   try {
+    let resolvedTheater = null;
+    let resolvedLocation = null;
+
+    if (!theaterId && (keyword || typeof lat === 'number' || typeof lng === 'number')) {
+      const resolved = await resolveMegaboxNearestTheater(
+        {
+          keyword,
+          latitude: lat,
+          longitude: lng,
+          areaCode,
+          playDate,
+          timeout: timeoutMs,
+        },
+        {
+          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          timeout: timeoutMs,
+        },
+      );
+      theaterId = resolved.theater?.theaterId;
+      resolvedTheater = resolved.theater;
+      resolvedLocation = resolved.location;
+    }
+
+    const resolvedAreaCode = resolvedLocation?.areaCode || areaCode || '11';
     const { showtimes } = await fetchMegaboxBookingList({
       playDate,
       theaterId,
       movieId,
-      areaCode,
+      areaCode: resolvedAreaCode,
       timeout: timeoutMs,
     });
 
@@ -170,8 +194,12 @@ export async function handleMegaboxGetRemainingSeats(c: ApiContext) {
         filters: {
           theaterId: theaterId || null,
           movieId: movieId || null,
-          areaCode,
+          keyword: keyword || null,
+          latitude: lat ?? null,
+          longitude: lng ?? null,
+          areaCode: resolvedAreaCode,
         },
+        resolvedTheater,
         seats,
       },
       { total: seats.length, pageSize: limit }

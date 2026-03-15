@@ -149,6 +149,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('pluCd + storeKeyword 조합도 지원');
     expect(text).toContain('storeInventory.stores[]');
     expect(text).toContain('stockLabel');
+    expect(text).toContain('/api/megabox/theaters?keyword=');
+    expect(text).toContain('가장 가까운 지점을 먼저 선택');
   });
 });
 

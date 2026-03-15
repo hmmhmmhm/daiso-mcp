@@ -143,8 +143,8 @@ AI: (페이지를 읽고 API 사용법 이해)
 사용자: 수납박스 검색해줘
 AI: (https://mcp.aka.page/api/daiso/products?q=수납박스 호출 후 결과 제공)
 
-사용자: 강남역 근처 메가박스 지점 찾아줘
-AI: (https://mcp.aka.page/api/megabox/theaters?lat=37.4982&lng=127.0264 호출 후 결과 제공)
+사용자: 안산 중앙역 근처 메가박스 지점 찾아줘
+AI: (https://mcp.aka.page/api/megabox/theaters?keyword=안산%20중앙역 호출 후 결과 제공)
 
 사용자: 잠실 근처 롯데시네마 지점 찾아줘
 AI: (https://mcp.aka.page/api/lottecinema/theaters?lat=37.5133&lng=127.1042 호출 후 결과 제공)

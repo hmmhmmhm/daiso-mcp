@@ -4,11 +4,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFindNearbyTheatersTool } from '../../../../src/services/megabox/tools/findNearbyTheaters.js';
+import { __testOnlyClearMegaboxLocationCaches } from '../../../../src/services/megabox/location.js';
 
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   mockFetch.mockReset();
+  __testOnlyClearMegaboxLocationCaches();
   vi.stubGlobal('fetch', mockFetch);
 });
 
@@ -73,5 +75,43 @@ describe('createFindNearbyTheatersTool', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.count).toBe(0);
     expect(parsed.theaters).toHaveLength(0);
+  });
+
+  it('위치 키워드를 지오코드해 안산 기준 지점을 반환한다', async () => {
+    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [
+              {
+                formatted_address: '대한민국 경기도 안산시 단원구',
+                geometry: {
+                  location: { lat: 37.3171, lng: 126.8389 },
+                },
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            areaBrchList: [{ brchNo: '4431', brchNm: '안산중앙' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response('<dt>도로명주소</dt><dd>경기 안산시</dd><a href="?lng=126.8389&lat=37.3171">지도</a>'),
+      );
+
+    const tool = createFindNearbyTheatersTool();
+    const result = await tool.handler({ keyword: '안산 중앙역', limit: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.areaCode).toBe('41');
+    expect(parsed.theaters[0].theaterId).toBe('4431');
+    delete process.env.GOOGLE_MAPS_API_KEY;
   });
 });
