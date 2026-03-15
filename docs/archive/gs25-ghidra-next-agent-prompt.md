@@ -56,7 +56,7 @@
 3. replay 이벤트 재수집
    - `scripts/gs25-webview-replay-capture.sh --host 127.0.0.1:27042`
    - 앱에서 재고찾기 시나리오 1회 수행
-   - `node scripts/gs25-replay-events-to-params.mjs <events.jsonl>`
+   - `npx tsx scripts/gs25-replay-events-to-params.ts <events.jsonl>`
 
 산출물:
 

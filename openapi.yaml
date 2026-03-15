@@ -1,27 +1,15 @@
 
 openapi: 3.1.0
 info:
-  title: 다이소 MCP API
+  title: 다이소 MCP API (OpenAI Actions용)
   description: |
-      다이소 제품 검색, 매장 찾기, 재고 확인을 위한 API입니다.
+      OpenAI 챗봇의 OpenAPI import 개수 제한을 피하기 위해 모든 GET API를 단일 facade 엔드포인트로 집약한 스펙입니다.
       
-      ## 주요 기능
-      - 🔍 **제품 검색**: 키워드로 다이소 제품 검색
-      - 🏪 **매장 찾기**: 지역/키워드로 매장 검색
-      - 📦 **재고 확인**: 온라인 및 오프라인 매장 재고 조회
-      - 🧭 **진열 위치 조회**: 매장 내 상품 구역/층 정보 조회
-      - 🏪 **GS25 매장/상품/재고 조회**: GS25 매장 탐색, 상품 검색, 재고 조회
-      - 7️⃣ **세븐일레븐 상품/매장/재고 조회**: 상품 검색, 매장 검색, 실재고 조회
-      - 🏪 **CU 매장/재고 조회**: CU 매장 탐색 및 상품 재고 검색
-      - 🎬 **메가박스 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
-      - 🎞️ **롯데시네마 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
-      - 🎥 **CGV 지점/영화 조회**: 극장 목록, 영화 목록, 시간표 조회
+      실제 런타임은 기존 /api/{service}/... 엔드포인트로 위임하며, 이 스펙은 OpenAI Actions 등록 전용으로 사용합니다.
       
-      ## 사용 팁
-      1. 한글 검색어는 URL 인코딩이 자동 처리됩니다
-      2. 재고 확인 시 먼저 제품 검색으로 제품 ID를 확인하세요
-      3. 위치 기반 재고 조회 시 lat, lng 파라미터를 활용하세요
-      4. 세븐일레븐 재고 조회는 keyword와 storeKeyword를 함께 사용하면 정확도가 높아집니다
+      브랜드명이 요청 앞부분에 나오면 뒤의 상품/재고 요청까지 같은 브랜드로 해석해야 합니다. 예: "안산 중앙역 주변 다이소 찾아주시고 핫식스 재고 찾아주세요"는 다이소 기준 조회를 먼저 수행하고, 결과가 없을 때만 다른 브랜드를 제안합니다.
+      
+      전체 개별 엔드포인트 스펙이 필요하면 /openapi-full.json 또는 /openapi-full.yaml 을 사용하세요.
   version: 1.0.0
   contact:
     name: GitHub Repository
@@ -30,1418 +18,313 @@ servers:
   - url: "https://mcp.aka.page"
     description: Production Server
 paths:
-  /api/daiso/products:
+  /api/actions/query:
     get:
-      operationId: searchProducts
-      summary: 제품 검색
-      description: 키워드로 다이소 제품을 검색합니다. 수납박스, 펜, 정리함 등 다양한 키워드로 검색할 수 있습니다.
+      operationId: queryAction
+      summary: 공통 GET 액션 실행
+      description: action 값에 따라 기존 GET API 엔드포인트로 프록시합니다. OpenAI Actions 등록 시 이 단일 엔드포인트를 사용하세요.
       parameters:
+        - name: action
+          in: query
+          required: true
+          description: 실행할 액션 이름입니다. 사용 가능한 값은 enum 목록을 참고하세요.
+          schema:
+            type: string
+            enum:
+              - daisoSearchProducts
+              - daisoGetProduct
+              - daisoFindStores
+              - daisoCheckInventory
+              - daisoGetDisplayLocation
+              - oliveyoungFindStores
+              - oliveyoungCheckInventory
+              - cuFindStores
+              - cuCheckInventory
+              - emart24FindStores
+              - emart24SearchProducts
+              - emart24CheckInventory
+              - lottemartFindStores
+              - lottemartSearchProducts
+              - gs25FindStores
+              - gs25SearchProducts
+              - gs25CheckInventory
+              - sevenelevenSearchProducts
+              - sevenelevenSearchStores
+              - sevenelevenCheckInventory
+              - sevenelevenGetPopwords
+              - sevenelevenGetCatalog
+              - megaboxFindTheaters
+              - megaboxListMovies
+              - megaboxGetSeats
+              - lottecinemaFindTheaters
+              - lottecinemaListMovies
+              - lottecinemaGetSeats
+              - cgvFindTheaters
+              - cgvSearchMovies
+              - cgvGetTimetable
         - name: q
           in: query
-          required: true
-          description: "검색 키워드 (예: 수납박스, 펜, 정리함)"
+          required: false
+          description: 다이소 제품 검색어
           schema:
             type: string
-          example: 수납박스
-        - name: page
+        - name: query
           in: query
           required: false
-          description: 페이지 번호
+          description: 세븐일레븐 상품 검색어
           schema:
-            type: integer
-            default: 1
-            minimum: 1
-        - name: pageSize
+            type: string
+        - name: itemCode
           in: query
           required: false
-          description: 페이지당 결과 수
+          description: GS25 상품 코드
           schema:
-            type: integer
-            default: 30
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProductSearchResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/daiso/products/{productId}:
-    get:
-      operationId: getProduct
-      summary: 제품 상세 정보
-      description: 제품 ID로 상세 정보를 조회합니다.
-      parameters:
+            type: string
         - name: productId
-          in: path
-          required: true
-          description: 제품 ID (제품 검색 결과의 id 값)
+          in: query
+          required: false
+          description: 제품 ID 또는 상세 조회용 path 파라미터
           schema:
             type: string
-          example: 1234567890
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProductDetailResponse"
-        404:
-          description: 제품을 찾을 수 없음
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/daiso/stores:
-    get:
-      operationId: findStores
-      summary: 매장 찾기
-      description: 키워드 또는 지역으로 다이소 매장을 검색합니다. keyword 또는 sido 중 하나는 필수입니다.
-      parameters:
         - name: keyword
           in: query
           required: false
-          description: "매장명 또는 주소 키워드 (예: 강남, 홍대, 안산)"
+          description: 공통 키워드 파라미터
           schema:
             type: string
-          example: 강남
         - name: sido
           in: query
           required: false
-          description: "시/도 (예: 서울, 경기, 부산)"
+          description: 다이소 시/도
           schema:
             type: string
-          example: 서울
         - name: gugun
           in: query
           required: false
-          description: "구/군 (예: 강남구, 마포구)"
+          description: 다이소 구/군
           schema:
             type: string
-          example: 강남구
         - name: dong
           in: query
           required: false
-          description: "동 (예: 역삼동, 합정동)"
+          description: 다이소 동
           schema:
             type: string
-        - name: limit
+        - name: area
           in: query
           required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 50
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StoreSearchResponse"
-        400:
-          description: 잘못된 요청 (필수 파라미터 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/daiso/inventory:
-    get:
-      operationId: checkInventory
-      summary: 재고 확인
-      description: 특정 제품의 온라인 재고와 매장별 재고를 확인합니다. 위치 정보를 제공하면 가까운 매장 순으로 정렬됩니다.
-      parameters:
-        - name: productId
-          in: query
-          required: true
-          description: 제품 ID (제품 검색 결과의 id 값)
-          schema:
-            type: string
-          example: 1234567890
-        - name: lat
-          in: query
-          required: false
-          description: "위도 (기본값: 서울 시청 37.5665)"
-          schema:
-            type: number
-            format: float
-            default: 37.5665
-          example: 37.4979
-        - name: lng
-          in: query
-          required: false
-          description: "경도 (기본값: 서울 시청 126.978)"
-          schema:
-            type: number
-            format: float
-            default: 126.978
-          example: 127.0276
-        - name: keyword
-          in: query
-          required: false
-          description: "매장 검색어 (예: 안산, 강남)"
-          schema:
-            type: string
-        - name: page
-          in: query
-          required: false
-          description: 페이지 번호
-          schema:
-            type: integer
-            default: 1
-            minimum: 1
-        - name: pageSize
-          in: query
-          required: false
-          description: 페이지당 결과 수
-          schema:
-            type: integer
-            default: 30
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InventoryResponse"
-        400:
-          description: 잘못된 요청 (제품 ID 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/daiso/display-location:
-    get:
-      operationId: getDisplayLocation
-      summary: 진열 위치 조회
-      description: 특정 상품의 매장 내 진열 위치(구역/층)를 조회합니다.
-      parameters:
-        - name: productId
-          in: query
-          required: true
-          description: 제품 ID (제품 검색 결과의 id 값)
-          schema:
-            type: string
-          example: 1234567890
-        - name: storeCode
-          in: query
-          required: true
-          description: 매장 코드 (재고 조회 결과의 storeCode 값)
-          schema:
-            type: string
-          example: 04515
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: object
-                    properties:
-                      productId:
-                        type: string
-                        example: 1234567890
-                      storeCode:
-                        type: string
-                        example: 04515
-                      hasLocation:
-                        type: boolean
-                        example: true
-                      locations:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            zoneNo:
-                              type: string
-                              example: 60
-                            stairNo:
-                              type: string
-                              example: 2
-                            storeErp:
-                              type: string
-                              example: 04515
-                      message:
-                        type: string
-                        nullable: true
-                        example: null
-        400:
-          description: 잘못된 요청 (필수 파라미터 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        500:
-          description: 진열 위치 조회 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/oliveyoung/stores:
-    get:
-      operationId: oliveyoungFindStores
-      summary: 올리브영 매장 검색
-      description: 위치(위도/경도)와 키워드로 올리브영 매장을 검색합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: false
-          description: "매장명 또는 지역 키워드 (예: 명동, 강남)"
-          schema:
-            type: string
-          example: 명동
-        - name: lat
-          in: query
-          required: false
-          description: "위도 (기본값: 서울 시청 37.5665)"
-          schema:
-            type: number
-            format: float
-            default: 37.5665
-        - name: lng
-          in: query
-          required: false
-          description: "경도 (기본값: 서울 시청 126.978)"
-          schema:
-            type: number
-            format: float
-            default: 126.978
-        - name: pageIdx
-          in: query
-          required: false
-          description: 매장 검색 페이지 번호
-          schema:
-            type: integer
-            default: 1
-            minimum: 1
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OliveyoungStoreSearchResponse"
-        500:
-          description: 올리브영 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/oliveyoung/inventory:
-    get:
-      operationId: oliveyoungCheckInventory
-      summary: 올리브영 재고 확인
-      description: 상품 키워드로 올리브영 재고를 검색하고 주변 매장 정보를 함께 조회합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: true
-          description: 재고를 확인할 상품 키워드
-          schema:
-            type: string
-          example: 선크림
-        - name: lat
-          in: query
-          required: false
-          description: "위도 (기본값: 서울 시청 37.5665)"
-          schema:
-            type: number
-            format: float
-            default: 37.5665
-        - name: lng
-          in: query
-          required: false
-          description: "경도 (기본값: 서울 시청 126.978)"
-          schema:
-            type: number
-            format: float
-            default: 126.978
-        - name: storeKeyword
-          in: query
-          required: false
-          description: 주변 매장 필터 키워드
-          schema:
-            type: string
-        - name: page
-          in: query
-          required: false
-          description: 상품 검색 페이지 번호
-          schema:
-            type: integer
-            default: 1
-            minimum: 1
-        - name: size
-          in: query
-          required: false
-          description: 페이지당 결과 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-        - name: sort
-          in: query
-          required: false
-          description: 정렬 코드
-          schema:
-            type: string
-            default: 01
-        - name: includeSoldOut
-          in: query
-          required: false
-          description: 품절 포함 여부 (true/false)
-          schema:
-            type: boolean
-            default: false
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OliveyoungInventoryResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        500:
-          description: 올리브영 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/cu/stores:
-    get:
-      operationId: cuFindStores
-      summary: CU 매장 검색
-      description: 위치(위도/경도)와 키워드로 CU 매장을 검색합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: false
-          description: "매장명 또는 지역 키워드 (예: 강남, 안산)"
-          schema:
-            type: string
-          example: 강남
-        - name: lat
-          in: query
-          required: false
-          description: 위도 (선택)
-          schema:
-            type: number
-            format: float
-        - name: lng
-          in: query
-          required: false
-          description: 경도 (선택)
-          schema:
-            type: number
-            format: float
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CuStoreSearchResponse"
-        500:
-          description: CU API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/cu/inventory:
-    get:
-      operationId: cuCheckInventory
-      summary: CU 재고 확인
-      description: 상품 키워드로 CU 재고를 조회하고 주변 매장 정보를 함께 반환합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: true
-          description: 재고를 확인할 상품 키워드
-          schema:
-            type: string
-          example: 과자
-        - name: lat
-          in: query
-          required: false
-          description: 위도 (선택)
-          schema:
-            type: number
-            format: float
-        - name: lng
-          in: query
-          required: false
-          description: 경도 (선택)
-          schema:
-            type: number
-            format: float
-        - name: storeKeyword
-          in: query
-          required: false
-          description: 주변 매장 필터 키워드
-          schema:
-            type: string
-        - name: size
-          in: query
-          required: false
-          description: 재고 검색 결과 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-        - name: offset
-          in: query
-          required: false
-          description: 재고 검색 시작 오프셋
-          schema:
-            type: integer
-            default: 0
-            minimum: 0
-        - name: searchSort
-          in: query
-          required: false
-          description: 재고 정렬 방식
-          schema:
-            type: string
-            default: recom
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CuInventoryResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/emart24/stores:
-    get:
-      operationId: emart24FindStores
-      summary: 이마트24 매장 검색
-      description: 키워드/지역 조건으로 이마트24 매장을 조회합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: false
-          description: "매장명 또는 지역 키워드 (예: 강남)"
+          description: 롯데마트 지역
           schema:
             type: string
         - name: area1
           in: query
           required: false
-          description: "시/도 (예: 서울특별시)"
+          description: 이마트24 1차 지역
           schema:
             type: string
         - name: area2
           in: query
           required: false
-          description: "구/군 (예: 강남구)"
+          description: 이마트24 2차 지역
+          schema:
+            type: string
+        - name: areaCode
+          in: query
+          required: false
+          description: 메가박스 지역 코드
+          schema:
+            type: string
+        - name: brandVariant
+          in: query
+          required: false
+          description: 롯데마트 브랜드 변형
           schema:
             type: string
         - name: lat
           in: query
           required: false
-          description: 위도 (선택)
+          description: 위도
           schema:
             type: number
             format: float
         - name: lng
           in: query
           required: false
-          description: 경도 (선택)
+          description: 경도
           schema:
             type: number
             format: float
-        - name: service24h
-          in: query
-          required: false
-          description: 24시간 매장만 조회 여부
-          schema:
-            type: boolean
-            default: false
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Emart24StoreSearchResponse"
-  /api/emart24/products:
-    get:
-      operationId: emart24SearchProducts
-      summary: 이마트24 상품 검색
-      description: 키워드로 이마트24 상품 목록을 조회합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: true
-          description: 상품 검색어
-          schema:
-            type: string
-          example: 두바이
         - name: page
           in: query
           required: false
           description: 페이지 번호
           schema:
             type: integer
-            default: 1
-            minimum: 1
+        - name: pageIdx
+          in: query
+          required: false
+          description: 올리브영 페이지 번호
+          schema:
+            type: integer
+        - name: pageLimit
+          in: query
+          required: false
+          description: 롯데마트 추가 페이지 수
+          schema:
+            type: integer
         - name: pageSize
           in: query
           required: false
-          description: 페이지당 결과 수
+          description: 페이지 크기
           schema:
             type: integer
-            default: 10
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Emart24ProductSearchResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/emart24/inventory:
-    get:
-      operationId: emart24CheckInventory
-      summary: 이마트24 재고 조회
-      description: PLU 코드와 매장 코드 목록으로 매장별 재고를 조회합니다.
-      parameters:
-        - name: pluCd
-          in: query
-          required: true
-          description: 상품 PLU 코드
-          schema:
-            type: string
-          example: 8800244010504
-        - name: bizNoArr
-          in: query
-          required: true
-          description: 쉼표 구분 매장 코드 목록
-          schema:
-            type: string
-          example: 28339,05015,23233
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Emart24InventoryResponse"
-        400:
-          description: 잘못된 요청 (필수 파라미터 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/gs25/stores:
-    get:
-      operationId: gs25FindStores
-      summary: GS25 매장 검색
-      description: 키워드/좌표 기준으로 GS25 매장을 조회합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: false
-          description: "매장명 또는 주소 키워드 (예: 강남)"
-          schema:
-            type: string
-        - name: lat
-          in: query
-          required: false
-          description: 위도
-          schema:
-            type: number
-            format: float
-        - name: lng
-          in: query
-          required: false
-          description: 경도
-          schema:
-            type: number
-            format: float
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 200
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Gs25StoreSearchResponse"
-  /api/gs25/products:
-    get:
-      operationId: gs25SearchProducts
-      summary: GS25 상품 키워드 검색
-      description: 키워드로 GS25 상품 후보를 조회합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: true
-          description: 상품 검색어
-          schema:
-            type: string
-          example: 오감자
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 200
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Gs25ProductSearchResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/gs25/inventory:
-    get:
-      operationId: gs25CheckInventory
-      summary: GS25 재고 조회
-      description: 상품 키워드 기준으로 GS25 매장별 재고를 조회합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: true
-          description: 상품 검색어
-          schema:
-            type: string
-          example: 오감자
-        - name: storeKeyword
-          in: query
-          required: false
-          description: 매장명/주소 필터 키워드
-          schema:
-            type: string
-          example: 강남
-        - name: lat
-          in: query
-          required: false
-          description: 위도
-          schema:
-            type: number
-            format: float
-        - name: lng
-          in: query
-          required: false
-          description: 경도
-          schema:
-            type: number
-            format: float
-        - name: storeLimit
-          in: query
-          required: false
-          description: 반환할 최대 매장 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 200
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Gs25InventoryResponse"
-        400:
-          description: 잘못된 요청 (필수 파라미터 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/seveneleven/products:
-    get:
-      operationId: sevenelevenSearchProducts
-      summary: 세븐일레븐 상품 검색
-      description: 키워드로 세븐일레븐 상품을 검색합니다.
-      parameters:
-        - name: query
-          in: query
-          required: true
-          description: 상품 검색어
-          schema:
-            type: string
-          example: 삼각김밥
-        - name: page
-          in: query
-          required: false
-          description: 페이지 번호
-          schema:
-            type: integer
-            default: 1
-            minimum: 1
         - name: size
           in: query
           required: false
-          description: 페이지당 결과 수
+          description: 페이지 크기 또는 검색 크기
           schema:
             type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
+        - name: offset
+          in: query
+          required: false
+          description: CU 검색 오프셋
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          description: 최대 결과 수
+          schema:
+            type: integer
+        - name: storeLimit
+          in: query
+          required: false
+          description: 매장 결과 제한 수
+          schema:
+            type: integer
+        - name: storeCode
+          in: query
+          required: false
+          description: 매장 코드
+          schema:
+            type: string
+        - name: storeName
+          in: query
+          required: false
+          description: 매장명
+          schema:
+            type: string
+        - name: storeKeyword
+          in: query
+          required: false
+          description: 매장 키워드
+          schema:
+            type: string
+        - name: playDate
+          in: query
+          required: false
+          description: 상영일(YYYYMMDD)
+          schema:
+            type: string
+        - name: regionCode
+          in: query
+          required: false
+          description: CGV 지역 코드
+          schema:
+            type: string
+        - name: theaterCode
+          in: query
+          required: false
+          description: CGV 극장 코드
+          schema:
+            type: string
+        - name: theaterId
+          in: query
+          required: false
+          description: 메가박스/롯데시네마 지점 ID
+          schema:
+            type: string
+        - name: movieCode
+          in: query
+          required: false
+          description: CGV 영화 코드
+          schema:
+            type: string
+        - name: movieId
+          in: query
+          required: false
+          description: 메가박스/롯데시네마 영화 ID
+          schema:
+            type: string
+        - name: pluCd
+          in: query
+          required: false
+          description: 이마트24 상품 PLU 코드
+          schema:
+            type: string
+        - name: bizNoArr
+          in: query
+          required: false
+          description: 이마트24 사업자번호 목록
+          schema:
+            type: string
+        - name: label
+          in: query
+          required: false
+          description: 세븐일레븐 인기 검색어 라벨
+          schema:
+            type: string
         - name: sort
           in: query
           required: false
           description: 정렬 기준
           schema:
             type: string
-            default: recommend
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProductSearchResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/seveneleven/stores:
-    get:
-      operationId: sevenelevenSearchStores
-      summary: 세븐일레븐 매장 검색
-      description: 키워드로 세븐일레븐 매장을 검색합니다.
-      parameters:
-        - name: keyword
+        - name: searchSort
           in: query
-          required: true
-          description: 매장 검색어
+          required: false
+          description: CU 검색 정렬 기준
           schema:
             type: string
-          example: 안산 중앙역
-        - name: limit
+        - name: service24h
           in: query
           required: false
-          description: 최대 결과 수
+          description: 이마트24 24시간 필터
           schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 9999
-      responses:
-        200:
-          description: 검색 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StoreSearchResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/seveneleven/inventory:
-    get:
-      operationId: sevenelevenCheckInventory
-      summary: 세븐일레븐 재고 확인
-      description: 상품 키워드와 매장 키워드로 세븐일레븐 매장별 재고 수량을 조회합니다.
-      parameters:
-        - name: keyword
-          in: query
-          required: true
-          description: 재고를 확인할 상품 검색어
-          schema:
-            type: string
-          example: 핫식스
-        - name: storeKeyword
+            type: boolean
+        - name: includeSoldOut
           in: query
           required: false
-          description: 매장명 또는 지역 키워드
+          description: 올리브영 품절 포함 여부
           schema:
-            type: string
-          example: 안산 중앙역
-        - name: storeLimit
-          in: query
-          required: false
-          description: 반환할 최대 매장 수
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-        - name: timeoutMs
-          in: query
-          required: false
-          description: 요청 제한 시간(ms)
-          schema:
-            type: integer
-            default: 20000
-            minimum: 1000
-            maximum: 60000
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SevenElevenInventoryResponse"
-        400:
-          description: 잘못된 요청 (검색어 누락)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        500:
-          description: 세븐일레븐 재고 조회 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/seveneleven/popwords:
-    get:
-      operationId: sevenelevenGetSearchPopwords
-      summary: 세븐일레븐 인기 검색어 조회
-      description: 세븐일레븐 인기 검색어 목록을 조회합니다.
-      parameters:
-        - name: label
-          in: query
-          required: false
-          description: "조회 라벨 (기본값: home)"
-          schema:
-            type: string
-            default: home
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProductSearchResponse"
-  /api/seveneleven/catalog:
-    get:
-      operationId: sevenelevenGetCatalogSnapshot
-      summary: 세븐일레븐 카탈로그 스냅샷
-      description: 공개 카탈로그(페이지/이슈/기획전) 데이터를 조회합니다.
-      parameters:
+            type: boolean
         - name: includeIssues
           in: query
           required: false
-          description: 이슈 상품 포함 여부
+          description: 세븐일레븐 이달의 행사지 포함 여부
           schema:
             type: boolean
-            default: true
         - name: includeExhibition
           in: query
           required: false
-          description: 기획전 포함 여부
+          description: 세븐일레븐 전시상품 포함 여부
           schema:
             type: boolean
-            default: true
-        - name: limit
+        - name: timeoutMs
           in: query
           required: false
-          description: 각 목록 최대 반환 수
+          description: 세븐일레븐 inventory 타임아웃
           schema:
             type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
       responses:
         200:
-          description: 조회 성공
+          description: 프록시 호출 성공
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ProductSearchResponse"
-  /api/megabox/theaters:
-    get:
-      operationId: megaboxFindNearbyTheaters
-      summary: 메가박스 주변 지점 조회
-      description: 좌표 기준으로 메가박스 지점을 거리순으로 조회합니다.
-      parameters:
-        - name: lat
-          in: query
-          required: false
-          description: "위도 (기본값: 서울 시청 37.5665)"
-          schema:
-            type: number
-            format: float
-            default: 37.5665
-        - name: lng
-          in: query
-          required: false
-          description: "경도 (기본값: 서울 시청 126.978)"
-          schema:
-            type: number
-            format: float
-            default: 126.978
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260304
-        - name: areaCode
-          in: query
-          required: false
-          description: "지역 코드 (기본값: 11, 서울)"
-          schema:
-            type: string
-            default: 11
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 10
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MegaboxTheaterSearchResponse"
-        500:
-          description: 메가박스 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/megabox/movies:
-    get:
-      operationId: megaboxListNowShowing
-      summary: 메가박스 영화/회차 목록 조회
-      description: 날짜, 지점, 영화 조건으로 메가박스 영화 및 상영 회차를 조회합니다.
-      parameters:
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260304
-        - name: theaterId
-          in: query
-          required: false
-          description: "지점 ID (예: 1372)"
-          schema:
-            type: string
-            example: 1372
-        - name: movieId
-          in: query
-          required: false
-          description: "영화 ID (예: 25104500)"
-          schema:
-            type: string
-            example: 25104500
-        - name: areaCode
-          in: query
-          required: false
-          description: "지역 코드 (기본값: 11, 서울)"
-          schema:
-            type: string
-            default: 11
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MegaboxMovieListResponse"
-        500:
-          description: 메가박스 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/megabox/seats:
-    get:
-      operationId: megaboxGetRemainingSeats
-      summary: 메가박스 잔여 좌석 조회
-      description: 영화/지점/날짜 조건으로 회차별 잔여 좌석 수를 조회합니다.
-      parameters:
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260304
-        - name: theaterId
-          in: query
-          required: false
-          description: 지점 ID
-          schema:
-            type: string
-        - name: movieId
-          in: query
-          required: false
-          description: 영화 ID
-          schema:
-            type: string
-        - name: areaCode
-          in: query
-          required: false
-          description: "지역 코드 (기본값: 11, 서울)"
-          schema:
-            type: string
-            default: 11
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 50
-            minimum: 1
-            maximum: 200
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MegaboxSeatListResponse"
-        500:
-          description: 메가박스 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/lottecinema/theaters:
-    get:
-      operationId: lottecinemaFindNearbyTheaters
-      summary: 롯데시네마 주변 지점 조회
-      description: 좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.
-      parameters:
-        - name: lat
-          in: query
-          required: false
-          description: "위도 (기본값: 서울 시청 37.5665)"
-          schema:
-            type: number
-            format: float
-            default: 37.5665
-        - name: lng
-          in: query
-          required: false
-          description: "경도 (기본값: 서울 시청 126.978)"
-          schema:
-            type: number
-            format: float
-            default: 126.978
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260310
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 10
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LotteCinemaTheaterSearchResponse"
-        500:
-          description: 롯데시네마 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/lottecinema/movies:
-    get:
-      operationId: lottecinemaListNowShowing
-      summary: 롯데시네마 영화/회차 목록 조회
-      description: 날짜, 지점, 영화 조건으로 롯데시네마 영화 및 상영 회차를 조회합니다.
-      parameters:
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260310
-        - name: theaterId
-          in: query
-          required: false
-          description: "지점 ID (예: 1016)"
-          schema:
-            type: string
-            example: 1016
-        - name: movieId
-          in: query
-          required: false
-          description: "대표 영화 코드 (예: 23816)"
-          schema:
-            type: string
-            example: 23816
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LotteCinemaMovieListResponse"
-        500:
-          description: 롯데시네마 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/lottecinema/seats:
-    get:
-      operationId: lottecinemaGetRemainingSeats
-      summary: 롯데시네마 잔여 좌석 조회
-      description: 영화/지점/날짜 조건으로 회차별 잔여 좌석 수를 조회합니다.
-      parameters:
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260310
-        - name: theaterId
-          in: query
-          required: false
-          description: 지점 ID
-          schema:
-            type: string
-            example: 1016
-        - name: movieId
-          in: query
-          required: false
-          description: 대표 영화 코드
-          schema:
-            type: string
-            example: 23816
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 50
-            minimum: 1
-            maximum: 200
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LotteCinemaSeatListResponse"
-        500:
-          description: 롯데시네마 API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/cgv/theaters:
-    get:
-      operationId: cgvFindTheaters
-      summary: CGV 극장 목록 조회
-      description: 날짜/지역 코드 조건으로 CGV 극장 목록을 조회합니다.
-      parameters:
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260304
-        - name: regionCode
-          in: query
-          required: false
-          description: "지역 코드 (예: 01 서울)"
-          schema:
-            type: string
-            example: 01
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 30
-            minimum: 1
-            maximum: 100
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CgvTheaterSearchResponse"
-        500:
-          description: CGV API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/cgv/movies:
-    get:
-      operationId: cgvSearchMovies
-      summary: CGV 영화 목록 조회
-      description: 날짜/극장 조건으로 CGV 영화 목록을 조회합니다.
-      parameters:
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260304
-        - name: theaterCode
-          in: query
-          required: false
-          description: "극장 코드 (예: 0056)"
-          schema:
-            type: string
-            example: 0056
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CgvMovieSearchResponse"
-        500:
-          description: CGV API 호출 실패
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /api/cgv/timetable:
-    get:
-      operationId: cgvGetTimetable
-      summary: CGV 시간표 조회
-      description: 날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다.
-      parameters:
-        - name: playDate
-          in: query
-          required: false
-          description: 조회 날짜 (YYYYMMDD)
-          schema:
-            type: string
-            example: 20260304
-        - name: theaterCode
-          in: query
-          required: false
-          description: 극장 코드
-          schema:
-            type: string
-        - name: movieCode
-          in: query
-          required: false
-          description: 영화 코드
-          schema:
-            type: string
-        - name: limit
-          in: query
-          required: false
-          description: 최대 결과 수
-          schema:
-            type: integer
-            default: 50
-            minimum: 1
-            maximum: 200
-      responses:
-        200:
-          description: 조회 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CgvTimetableResponse"
-        500:
-          description: CGV API 호출 실패
+                $ref: "#/components/schemas/ActionQueryResponse"
+        400:
+          description: 잘못된 요청
           content:
             application/json:
               schema:
@@ -1733,10 +616,99 @@ components:
           example: 37
         o2oStockFlag:
           type: boolean
+          description: 올리브영 원본 재고 가능 플래그
           example: true
         o2oRemainQuantity:
           type: integer
+          description: 올리브영 원본 잔여 수량 필드. 0이어도 재고가 있을 수 있음
           example: 0
+        inStock:
+          type: boolean
+          description: 현재 조회한 주변 매장 기준 재고 여부. storeInventory가 있으면 그 결과를 우선 반영
+          example: true
+        stockStatus:
+          type: string
+          enum:
+            - in_stock
+            - out_of_stock
+          example: in_stock
+        stockSource:
+          type: string
+          enum:
+            - global_search
+            - nearby_store
+          example: nearby_store
+        storeInventory:
+          $ref: "#/components/schemas/OliveyoungProductStoreInventory"
+    OliveyoungStockStore:
+      type: object
+      description: 올리브영 상품별 매장 재고 상태
+      properties:
+        storeCode:
+          type: string
+          example: B040
+        storeName:
+          type: string
+          example: 안산중앙역점
+        address:
+          type: string
+          example: 경기도 안산시 단원구 고잔2길 65 1층
+        latitude:
+          type: number
+          format: float
+          example: 37.3177184
+        longitude:
+          type: number
+          format: float
+          example: 126.8385857
+        distance:
+          type: number
+          format: float
+          example: 0.07
+        pickupYn:
+          type: boolean
+          example: true
+        salesStoreYn:
+          type: boolean
+          example: true
+        remainQuantity:
+          type: integer
+          example: 3
+        o2oRemainQuantity:
+          type: integer
+          example: 2
+        stockStatus:
+          type: string
+          enum:
+            - in_stock
+            - out_of_stock
+            - not_sold
+          example: in_stock
+        stockLabel:
+          type: string
+          example: 재고 3개
+        openYn:
+          type: boolean
+          example: true
+    OliveyoungProductStoreInventory:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          example: 1
+        inStockCount:
+          type: integer
+          example: 1
+        outOfStockCount:
+          type: integer
+          example: 0
+        notSoldCount:
+          type: integer
+          example: 0
+        stores:
+          type: array
+          items:
+            $ref: "#/components/schemas/OliveyoungStockStore"
     OliveyoungStoreSearchResponse:
       type: object
       properties:
@@ -1796,6 +768,14 @@ components:
                   type: integer
                 nextPage:
                   type: boolean
+                stockCheckedCount:
+                  type: integer
+                stockUncheckedCount:
+                  type: integer
+                inStockCount:
+                  type: integer
+                outOfStockCount:
+                  type: integer
                 products:
                   type: array
                   items:
@@ -2230,11 +1210,68 @@ components:
         data:
           type: object
           properties:
+            keyword:
+              type: string
+              example: 고양이 츄르
             pluCd:
               type: string
               example: 8800244010504
+            productCandidates:
+              type: array
+              items:
+                $ref: "#/components/schemas/Emart24Product"
+            location:
+              type: object
+              nullable: true
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                longitude:
+                  type: number
+                  format: float
+            storeFilters:
+              type: object
+              properties:
+                storeKeyword:
+                  type: string
+                  example: 안산 중앙역
+                appliedStoreKeyword:
+                  type: string
+                  example: 안산중앙역
+                area1:
+                  type: string
+                  example: 경기도
+                area2:
+                  type: string
+                  example: 안산시
+                service24h:
+                  type: boolean
+                  example: false
+                storeLimit:
+                  type: integer
+                  example: 10
+                directBizNos:
+                  type: array
+                  items:
+                    type: string
+                    example: 28339
+            nearbyStores:
+              type: object
+              properties:
+                totalCount:
+                  type: integer
+                  example: 3
+                stores:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Emart24Store"
             goodsInfo:
               type: object
+              nullable: true
+            count:
+              type: integer
+              example: 1
             stores:
               type: array
               items:
@@ -2253,6 +1290,135 @@ components:
                     type: string
                   phone:
                     type: string
+                  distanceM:
+                    type: number
+                    nullable: true
+                    example: 120
+    LotteMartStore:
+      type: object
+      properties:
+        area:
+          type: string
+          example: 서울
+        storeCode:
+          type: string
+          example: 2301
+        storeName:
+          type: string
+          example: 강변점
+        brandVariant:
+          type: string
+          example: lottemart
+        address:
+          type: string
+          example: 서울 광진구 광나루로 56길 85 테크노마트 B2
+        phone:
+          type: string
+          example: 02-3424-2502
+        openTime:
+          type: string
+          example: "10:00~23:00"
+        closedDays:
+          type: string
+          example: 03/08(일), 03/22(일)
+        parkingType:
+          type: string
+          example: 유료
+        parkingDetails:
+          type: string
+          example: "최초 무료주차 : 1시간"
+        detailUrl:
+          type: string
+          example: /mobiledowa/market/detail_shop.asp?werks=2301
+        latitude:
+          type: number
+          format: float
+          example: 37.5354
+        longitude:
+          type: number
+          format: float
+          example: 127.0958
+        distanceM:
+          type: number
+          nullable: true
+          example: 530
+    LotteMartProduct:
+      type: object
+      properties:
+        area:
+          type: string
+          example: 서울
+        storeCode:
+          type: string
+          example: 2301
+        storeName:
+          type: string
+          example: 강변점
+        keyword:
+          type: string
+          example: 콜라
+        productName:
+          type: string
+          example: 코카콜라
+        barcode:
+          type: string
+          example: 8801094011307
+        spec:
+          type: string
+          example: 1.2L
+        manufacturer:
+          type: string
+          example: 코카콜라음료 주식회사
+        price:
+          type: integer
+          example: 2980
+        stockQuantity:
+          type: integer
+          example: 20
+    LotteMartStoreSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            stores:
+              type: array
+              items:
+                $ref: "#/components/schemas/LotteMartStore"
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            page:
+              type: integer
+            pageSize:
+              type: integer
+    LotteMartProductSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            products:
+              type: array
+              items:
+                $ref: "#/components/schemas/LotteMartProduct"
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            page:
+              type: integer
+            pageSize:
+              type: integer
     Gs25Store:
       type: object
       properties:
@@ -2541,6 +1707,30 @@ components:
           type: number
           format: float
           example: 0.5
+    LotteCinemaResolvedLocation:
+      type: object
+      properties:
+        keyword:
+          type: string
+          nullable: true
+          example: 안산 중앙역
+        latitude:
+          type: number
+          format: float
+          nullable: true
+          example: 37.3172
+        longitude:
+          type: number
+          format: float
+          nullable: true
+          example: 126.839
+        geocodeUsed:
+          type: boolean
+          example: true
+        formattedAddress:
+          type: string
+          nullable: true
+          example: 대한민국 경기도 안산시 단원구 고잔동 535
     LotteCinemaMovie:
       type: object
       properties:
@@ -2610,15 +1800,22 @@ components:
         data:
           type: object
           properties:
-            location:
-              type: object
-              properties:
-                latitude:
-                  type: number
-                  format: float
-                longitude:
-                  type: number
-                  format: float
+            keyword:
+              type: string
+              nullable: true
+            latitude:
+              type: number
+              format: float
+              nullable: true
+            longitude:
+              type: number
+              format: float
+              nullable: true
+            geocodeUsed:
+              type: boolean
+            formattedAddress:
+              type: string
+              nullable: true
             playDate:
               type: string
             theaters:
@@ -2652,6 +1849,21 @@ components:
                 movieId:
                   type: string
                   nullable: true
+                keyword:
+                  type: string
+                  nullable: true
+                latitude:
+                  type: number
+                  format: float
+                  nullable: true
+                longitude:
+                  type: number
+                  format: float
+                  nullable: true
+            resolvedTheater:
+              anyOf:
+                - $ref: "#/components/schemas/LotteCinemaTheater"
+                - type: null
             theaters:
               type: array
               items:
@@ -2689,6 +1901,21 @@ components:
                 movieId:
                   type: string
                   nullable: true
+                keyword:
+                  type: string
+                  nullable: true
+                latitude:
+                  type: number
+                  format: float
+                  nullable: true
+                longitude:
+                  type: number
+                  format: float
+                  nullable: true
+            resolvedTheater:
+              anyOf:
+                - $ref: "#/components/schemas/LotteCinemaTheater"
+                - type: null
             seats:
               type: array
               items:
@@ -2712,6 +1939,22 @@ components:
         regionCode:
           type: string
           example: 01
+        latitude:
+          type: number
+          nullable: true
+          example: 37.5016
+        longitude:
+          type: number
+          nullable: true
+          example: 127.0264
+        distanceKm:
+          type: number
+          nullable: true
+          example: 0.8
+        address:
+          type: string
+          nullable: true
+          example: 서울특별시 강남구 강남대로 438
     CgvMovie:
       type: object
       properties:
@@ -2774,6 +2017,29 @@ components:
                 regionCode:
                   type: string
                   nullable: true
+                keyword:
+                  type: string
+                  nullable: true
+                latitude:
+                  type: number
+                  nullable: true
+                longitude:
+                  type: number
+                  nullable: true
+            keyword:
+              type: string
+              nullable: true
+            latitude:
+              type: number
+              nullable: true
+            longitude:
+              type: number
+              nullable: true
+            geocodeUsed:
+              type: boolean
+            formattedAddress:
+              type: string
+              nullable: true
             theaters:
               type: array
               items:
@@ -2802,6 +2068,19 @@ components:
                 theaterCode:
                   type: string
                   nullable: true
+                keyword:
+                  type: string
+                  nullable: true
+                latitude:
+                  type: number
+                  nullable: true
+                longitude:
+                  type: number
+                  nullable: true
+            resolvedTheater:
+              anyOf:
+                - $ref: "#/components/schemas/CgvTheater"
+                - type: null
             movies:
               type: array
               items:
@@ -2831,6 +2110,19 @@ components:
                 movieCode:
                   type: string
                   nullable: true
+                keyword:
+                  type: string
+                  nullable: true
+                latitude:
+                  type: number
+                  nullable: true
+                longitude:
+                  type: number
+                  nullable: true
+            resolvedTheater:
+              anyOf:
+                - $ref: "#/components/schemas/CgvTheater"
+                - type: null
             timetable:
               type: array
               items:
@@ -2859,3 +2151,17 @@ components:
               type: string
               description: 에러 메시지
               example: 검색어(q)를 입력해주세요.
+    ActionQueryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          additionalProperties: true
+          description: 대상 엔드포인트가 반환한 data 객체
+        meta:
+          type: object
+          additionalProperties: true
+          description: 대상 엔드포인트가 반환한 meta 객체

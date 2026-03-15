@@ -27,11 +27,11 @@
   - `docs/gs25-app-scraping-preparation-guide.md`
 - 스크립트:
   - `scripts/mitmproxy/gs25_capture_addons.py`
-  - `scripts/frida/gs25-msgapi-target-hook.js`
-  - `scripts/frida/gs25-b2c-java-net-hook.js`
-  - `scripts/frida/gs25-b2c-focused-dump.js`
-  - `scripts/frida/gs25-b2c-stacktrace-dump.js`
-  - `scripts/frida/gs25-b2c-cronet-probe.js`
+  - `scripts/frida/gs25-msgapi-target-hook.ts`
+  - `scripts/frida/gs25-b2c-java-net-hook.ts`
+  - `scripts/frida/gs25-b2c-focused-dump.ts`
+  - `scripts/frida/gs25-b2c-stacktrace-dump.ts`
+  - `scripts/frida/gs25-b2c-cronet-probe.ts`
 
 ## 4) 다음 세션 목표
 

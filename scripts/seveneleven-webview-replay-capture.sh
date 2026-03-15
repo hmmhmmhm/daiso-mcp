@@ -77,7 +77,7 @@ echo "Raw 로그: ${RAW_LOG}"
 echo "이벤트 JSONL: ${EVENTS_JSONL}"
 echo "종료: Ctrl+C"
 
-frida -H "${FRIDA_HOST}" -p "${PID}" -l scripts/frida/seveneleven-webview-minimal-replay.js 2>&1 \
+frida -H "${FRIDA_HOST}" -p "${PID}" -l scripts/frida/seveneleven-webview-minimal-replay.ts 2>&1 \
   | tee "${RAW_LOG}" \
   | awk '/\[SE_REPLAY\] /{ sub(/^.*\[SE_REPLAY\] /, ""); print; fflush(); }' \
   | tee -a "${EVENTS_JSONL}"

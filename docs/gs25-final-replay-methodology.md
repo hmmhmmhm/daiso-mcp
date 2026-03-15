@@ -95,7 +95,7 @@ blutter libapp.so blutter-out-gs25
 | `Encrypter::encrypt`   | 0xa984c4 | 실제 암호화   |
 | `Encrypter::decrypt64` | 0xa9b50c | Base64 복호화 |
 
-**스크립트 위치:** `scripts/frida/gs25-blutter-encrypter-hook.js`
+**스크립트 위치:** `scripts/frida/gs25-blutter-encrypter-hook.ts`
 
 ### 3.3 실행 방법
 
@@ -110,7 +110,7 @@ adb forward tcp:27042 tcp:27042
 adb shell pidof com.gsr.gs25
 
 # 4. Frida 스크립트 attach
-frida -H 127.0.0.1:27042 -p {PID} -l scripts/frida/gs25-blutter-encrypter-hook.js
+frida -H 127.0.0.1:27042 -p {PID} -l scripts/frida/gs25-blutter-encrypter-hook.ts
 
 # 5. 앱에서 재고찾기 수행 → 로그에 평문 캡처됨
 ```

@@ -63,7 +63,7 @@ mitmdump \
 ### Step 2. GS25 앱 핀닝 우회 주입
 
 ```bash
-frida -U -f com.gsr.gs25 -l scripts/frida/android-ssl-bypass.js
+frida -U -f com.gsr.gs25 -l scripts/frida/android-ssl-bypass.ts
 ```
 
 참고:
@@ -77,7 +77,7 @@ frida -U -f com.gsr.gs25 -l scripts/frida/android-ssl-bypass.js
 부트스트랩/헤더 경계 관찰용 보조 스크립트:
 
 ```bash
-frida -U -f com.gsr.gs25 -l scripts/frida/gs25-b2c-bootstrap-probe.js
+frida -U -f com.gsr.gs25 -l scripts/frida/gs25-b2c-bootstrap-probe.ts
 ```
 
 - 목적:
@@ -91,7 +91,7 @@ frida -U -f com.gsr.gs25 -l scripts/frida/gs25-b2c-bootstrap-probe.js
 WebView 리플레이 JSON 추출 스크립트:
 
 ```bash
-frida -U -f com.gsr.gs25 -l scripts/frida/gs25-webview-replay-extract.js
+frida -U -f com.gsr.gs25 -l scripts/frida/gs25-webview-replay-extract.ts
 ```
 
 - 출력 포맷:
@@ -113,7 +113,7 @@ scripts/gs25-webview-replay-capture.sh
 리플레이 파라미터 변환:
 
 ```bash
-node scripts/gs25-replay-events-to-params.mjs \
+npx tsx scripts/gs25-replay-events-to-params.ts \
   captures/gs25-replay-<timestamp>/gs25-replay-events.jsonl
 ```
 

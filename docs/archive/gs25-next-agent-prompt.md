@@ -12,9 +12,9 @@
 - 앱: `com.gsr.gs25`
 - 현재 완료 상태:
   - WebView 주입 함수 파싱 가능
-  - `scripts/frida/gs25-webview-replay-extract.js`로 `[GS25_REPLAY]` JSON 이벤트 출력 가능
+  - `scripts/frida/gs25-webview-replay-extract.ts`로 `[GS25_REPLAY]` JSON 이벤트 출력 가능
   - `scripts/gs25-webview-replay-capture.sh`로 JSONL 저장 가능
-  - `scripts/gs25-replay-events-to-params.mjs`로 params JSON 변환 가능
+  - `scripts/gs25-replay-events-to-params.ts`로 params JSON 변환 가능
 - MCP 설정:
   - `.mcp.json`에 `frida` 서버(`command: frida-mcp`) 추가됨
 
@@ -43,7 +43,7 @@
 
 4. 변환 실행
 
-- `node scripts/gs25-replay-events-to-params.mjs <events.jsonl 경로>`
+- `npx tsx scripts/gs25-replay-events-to-params.ts <events.jsonl 경로>`
 
 ## 이번 턴의 산출물 목표
 

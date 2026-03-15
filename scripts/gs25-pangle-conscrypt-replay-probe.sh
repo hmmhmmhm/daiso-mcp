@@ -95,8 +95,8 @@ fi
 adb_cmd shell am force-stop com.gsr.gs25 || true
 frida -U -f com.gsr.gs25 \
   -e "${CFG_JS}" \
-  -l scripts/frida/android-ssl-bypass.js \
-  -l scripts/frida/gs25-pangle-conscrypt-replay-hook.js \
+  -l scripts/frida/android-ssl-bypass.ts \
+  -l scripts/frida/gs25-pangle-conscrypt-replay-hook.ts \
   -q -t "${DURATION_SEC}" > "${OUT_LOG}" 2>&1 || true
 
 echo "saved: ${OUT_LOG}"

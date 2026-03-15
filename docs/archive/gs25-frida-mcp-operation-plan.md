@@ -36,7 +36,7 @@
 
 2. 경량 추출 attach
 
-- `scripts/frida/gs25-webview-replay-extract.js` 우선 적용
+- `scripts/frida/gs25-webview-replay-extract.ts` 우선 적용
 - 결과를 `[GS25_REPLAY]` JSON 이벤트로 수집
 
 3. 파일 저장
@@ -48,7 +48,7 @@
 
 4. 파라미터 변환
 
-- `node scripts/gs25-replay-events-to-params.mjs <events.jsonl>`
+- `npx tsx scripts/gs25-replay-events-to-params.ts <events.jsonl>`
 - 산출물:
   - `*.params.json` (`latestState`, `replaySequence`)
 

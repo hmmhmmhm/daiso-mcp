@@ -305,7 +305,7 @@ RSA/PKCS1 계열 심볼 다수 확인:
 
 파일:
 
-- `scripts/frida/seveneleven-signenc-hook.js`
+- `scripts/frida/seveneleven-signenc-hook.ts`
 
 기능:
 

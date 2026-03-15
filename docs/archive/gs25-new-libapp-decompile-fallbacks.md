@@ -68,7 +68,7 @@
 
 ```bash
 # blutter 핵심 신호 요약 생성
-node scripts/gs25-new-blutter-signal-extract.mjs \
+npx tsx scripts/gs25-new-blutter-signal-extract.ts \
   --in tmp/gs25-static/blutter-out-gs25 \
   --out docs/gs25-new-blutter-signal-summary.md
 ```

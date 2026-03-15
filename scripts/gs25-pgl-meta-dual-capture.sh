@@ -44,8 +44,8 @@ echo "Native 이벤트 JSONL: $NATIVE_JSONL"
 FRIDA_CMD=(
   frida
   -H "$HOST"
-  -l scripts/frida/gs25-pgl-meta-hook.js
-  -l scripts/frida/gs25-pgl-meta-native-trace.js
+  -l scripts/frida/gs25-pgl-meta-hook.ts
+  -l scripts/frida/gs25-pgl-meta-native-trace.ts
 )
 if [[ "$SPAWN" -eq 1 ]]; then
   FRIDA_CMD+=(-f com.gsr.gs25)

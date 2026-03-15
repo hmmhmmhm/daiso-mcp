@@ -178,6 +178,6 @@ GET /api/bff/v1/store?storeCode={storeCode}&serviceCode=01
 
 ## 관련 파일
 
-- `scripts/frida/gs25-blutter-encrypter-hook.js`: Frida 후킹 스크립트
+- `scripts/frida/gs25-blutter-encrypter-hook.ts`: Frida 후킹 스크립트
 - `captures/gs25-blutter-test/frida-v3.log`: 캡처 로그
 - `tmp/gs25-static/blutter-out-gs25/`: blutter 분석 결과

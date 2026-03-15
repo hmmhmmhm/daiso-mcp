@@ -39,7 +39,7 @@ echo "출력 디렉토리: $OUT_DIR"
 echo "Raw 로그: $RAW_LOG"
 echo "이벤트 JSONL: $JSONL"
 
-FRIDA_CMD=(frida -H "$HOST" -l scripts/frida/gs25-pgl-meta-native-trace.js)
+FRIDA_CMD=(frida -H "$HOST" -l scripts/frida/gs25-pgl-meta-native-trace.ts)
 if [[ "$SPAWN" -eq 1 ]]; then
   FRIDA_CMD+=(-f com.gsr.gs25)
 else

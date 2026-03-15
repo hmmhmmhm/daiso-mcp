@@ -89,7 +89,7 @@ cat > "${OUT_DIR}/README.txt" <<TXT
 - pid_retry: ${PID_RETRY}
 - host: ${FRIDA_HOST}
 - logcat_capture: $([[ "${CAPTURE_LOGCAT}" -eq 1 ]] && echo enabled || echo disabled)
-- script: scripts/frida/seveneleven-signenc-hook.js
+- script: scripts/frida/seveneleven-signenc-hook.ts
 
 수집 절차:
 1) 앱에서 재고 조회(상품 선택 -> 매장 선택)까지 진행
@@ -182,7 +182,7 @@ run_frida_capture() {
 
   echo "[INFO] attach mode=${mode} target=${target}" | tee -a "${RAW_LOG}"
   set +e
-  frida -H "${FRIDA_HOST}" "${mode}" "${target}" -l scripts/frida/seveneleven-signenc-hook.js 2>&1 \
+  frida -H "${FRIDA_HOST}" "${mode}" "${target}" -l scripts/frida/seveneleven-signenc-hook.ts 2>&1 \
     | tee -a "${RAW_LOG}" \
     | awk '/\[SE_SIGNENC\] /{ sub(/^.*\[SE_SIGNENC\] /, ""); print; fflush(); }' \
     | tee -a "${EVENTS_JSONL}"

@@ -96,7 +96,7 @@ mitmdump \
 기본 우회 스크립트(저장소에 존재):
 
 ```bash
-frida -U -f <SEVENELEVEN_PACKAGE> -l scripts/frida/android-ssl-bypass.js
+frida -U -f <SEVENELEVEN_PACKAGE> -l scripts/frida/android-ssl-bypass.ts
 ```
 
 필요 시 2차 대응:
@@ -192,7 +192,7 @@ jq -r '.request.host + "\t" + .request.method + "\t" + .request.path' \
 
 ### B. 사용 스크립트
 
-- 최소 후킹 스크립트: `scripts/frida/seveneleven-webview-minimal-replay.js`
+- 최소 후킹 스크립트: `scripts/frida/seveneleven-webview-minimal-replay.ts`
 - 캡처 러너: `scripts/seveneleven-webview-replay-capture.sh`
 
 ### C. 실행

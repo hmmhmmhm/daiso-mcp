@@ -77,7 +77,7 @@ echo "Raw 로그: ${RAW_LOG}"
 echo "이벤트 JSONL: ${EVENTS_JSONL}"
 echo "종료: Ctrl+C"
 
-frida -H "${FRIDA_HOST}" -p "${PID}" -l scripts/frida/gs25-webview-replay-extract.js 2>&1 \
+frida -H "${FRIDA_HOST}" -p "${PID}" -l scripts/frida/gs25-webview-replay-extract.ts 2>&1 \
   | tee "${RAW_LOG}" \
   | awk '/\[GS25_REPLAY\] /{ sub(/^.*\[GS25_REPLAY\] /, ""); print; fflush(); }' \
   | tee -a "${EVENTS_JSONL}"

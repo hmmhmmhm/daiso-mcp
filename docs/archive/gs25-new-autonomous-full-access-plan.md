@@ -156,7 +156,7 @@
   - 라운드 반복 오케스트레이션
   - 프로파일 순환(`baseline, flutter_tls, patch_cycle`)
   - 라운드 요약 누적(`manifest.jsonl`)
-- `scripts/gs25-new-round-summary.mjs`
+- `scripts/gs25-new-round-summary.ts`
   - `b2cSeen`, `tupleCount`, `replaySuccessCount`, `nextAction` 자동 판정
 
 기본 실행 예시:

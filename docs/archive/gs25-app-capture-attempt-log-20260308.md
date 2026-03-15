@@ -603,7 +603,7 @@ Round 31: 경량 attach 재검증 + WebView 경로 확인 (2026-03-11):
 Round 32: WebView bridge 전용 프로브 추가 (2026-03-11):
 
 - 새 스크립트:
-  - `scripts/frida/gs25-webview-bridge-probe.js`
+  - `scripts/frida/gs25-webview-bridge-probe.ts`
 - 후킹 범위:
   - `WebView.addJavascriptInterface`
   - `WebView.loadUrl`
@@ -686,7 +686,7 @@ Round 33: 필터링 후 WebView JS payload 확보 (2026-03-11):
 Round 34: JS->앱 콜백 직접 캡처 및 왕복 상관관계 확인 (2026-03-11):
 
 - 추가 스크립트:
-  - `scripts/frida/gs25-webview-callhandler-probe.js`
+  - `scripts/frida/gs25-webview-callhandler-probe.ts`
   - 타깃: `com.pichillilorenzo.flutter_inappwebview_android.webview.JavaScriptBridgeInterface._callHandler`
 
 - 실기기 상태:
@@ -756,7 +756,7 @@ Round 35: 다른 매장 선택 시 WebView 재주입 payload 확장 확인 (2026
 Round 36: JSON 자동 추출기 도입 및 실측 검증 (2026-03-11):
 
 - 신규 스크립트:
-  - `scripts/frida/gs25-webview-replay-extract.js`
+  - `scripts/frida/gs25-webview-replay-extract.ts`
   - 기능:
     - `evaluateJavascript`에서 아래 함수를 파싱해 JSON 이벤트 출력
     - `setAllStoreMarker` -> `markers`
@@ -796,7 +796,7 @@ Round 37: JSONL 캡처 러너 + 파라미터 변환기 추가 (2026-03-11):
   - `scripts/gs25-webview-replay-capture.sh`
     - Frida 추출기를 attach하고 `[GS25_REPLAY]`만 분리해
       `gs25-replay-events.jsonl`로 저장
-  - `scripts/gs25-replay-events-to-params.mjs`
+  - `scripts/gs25-replay-events-to-params.ts`
     - 이벤트 JSONL을 읽어 `latestState`/`replaySequence` 형태의
       리플레이 파라미터 JSON으로 변환
 
@@ -856,7 +856,7 @@ Round 38: 환경 재점검 + Ghidra 1차 정적분석 착수 (2026-03-12):
 Round 39: 리플레이 핵심 이벤트 엄격 검증 추가 (2026-03-12):
 
 - 변경:
-  - `scripts/gs25-replay-events-to-params.mjs`에
+  - `scripts/gs25-replay-events-to-params.ts`에
     `--strict-core` 옵션 추가
   - 핵심 이벤트 5종(`markers`, `marker_click`, `center`, `level`, `touchable`) 미충족 시
     변환 단계에서 비정상 종료
@@ -885,7 +885,7 @@ Round 40: ADB 자동 재현으로 핵심 이벤트 5종 충족 (2026-03-12):
   - `captures/gs25-replay-20260312-auto-r2/gs25-replay-events.params.json`
 
 - strict 검증:
-  - `node scripts/gs25-replay-events-to-params.mjs <jsonl> --strict-core`
+  - `npx tsx scripts/gs25-replay-events-to-params.ts <jsonl> --strict-core`
   - 결과: 통과 (`exit=0`)
   - `missingCoreEventTypes=[]`
   - `isCoreReplayReady=true`
@@ -904,7 +904,7 @@ Round 40: ADB 자동 재현으로 핵심 이벤트 5종 충족 (2026-03-12):
 Round 41: b2c 암복호화 윈도우 후킹 1차 적용 (2026-03-12):
 
 - 추가:
-  - `scripts/frida/gs25-b2c-crypto-window-hook.js`
+  - `scripts/frida/gs25-b2c-crypto-window-hook.ts`
   - `scripts/gs25-b2c-crypto-capture.sh`
 
 - 목적:
@@ -932,9 +932,9 @@ Round 41: b2c 암복호화 윈도우 후킹 1차 적용 (2026-03-12):
 Round 42: 네이티브 SSL 버퍼 후킹(spawn) 적용 (2026-03-12):
 
 - 추가 파일:
-  - `scripts/frida/gs25-b2c-native-payload-hook.js`
+  - `scripts/frida/gs25-b2c-native-payload-hook.ts`
   - `scripts/gs25-b2c-native-payload-capture.sh`
-  - `scripts/gs25-b2c-native-events-summary.mjs`
+  - `scripts/gs25-b2c-native-events-summary.ts`
 
 - 주요 변경:
   - capture 러너에 `--spawn` 옵션 추가
@@ -956,16 +956,16 @@ Round 42: 네이티브 SSL 버퍼 후킹(spawn) 적용 (2026-03-12):
   - `PRI * HTTP/2.0` 프리페이스와 HTTP/2 프레임 단서 확인
 
 - 요약 판정:
-  - `node scripts/gs25-b2c-native-events-summary.mjs captures/gs25-b2c-native-20260312-r6-spawn/gs25-b2c-native-events.jsonl`
+  - `npx tsx scripts/gs25-b2c-native-events-summary.ts captures/gs25-b2c-native-20260312-r6-spawn/gs25-b2c-native-events.jsonl`
   - `totalEvents=123`, `totalIoEvents=112`, `b2cHintCount=0`
   - 아직 `b2c-apigw/b2c-bff` 직접 단서는 미포착
 
 Round 43: r9 재수집 및 host/path 자동 매핑 보강 (2026-03-12):
 
 - 변경:
-  - `scripts/frida/gs25-b2c-native-payload-hook.js`
+  - `scripts/frida/gs25-b2c-native-payload-hook.ts`
     - hexdump fallback 길이 `64 -> 16384` 상향
-  - `scripts/gs25-b2c-native-events-summary.mjs`
+  - `scripts/gs25-b2c-native-events-summary.ts`
     - bytes 기반 HTTP/1 요청/Host 파싱으로 전환
     - `topHosts`, `topHostRequestLines` 산출 추가
   - `scripts/gs25-h2-header-decode.py`
@@ -973,7 +973,7 @@ Round 43: r9 재수집 및 host/path 자동 매핑 보강 (2026-03-12):
 
 - 실행:
   - `captures/gs25-b2c-native-20260312-r9-spawn` 생성
-  - `node scripts/gs25-b2c-native-events-summary.mjs captures/gs25-b2c-native-20260312-r9-spawn/gs25-b2c-native-events.jsonl`
+  - `npx tsx scripts/gs25-b2c-native-events-summary.ts captures/gs25-b2c-native-20260312-r9-spawn/gs25-b2c-native-events.jsonl`
   - `python3 scripts/gs25-h2-header-decode.py captures/gs25-b2c-native-20260312-r9-spawn/gs25-b2c-native-events.jsonl`
 
 - 결과:
@@ -995,11 +995,11 @@ Round 44: Ghidra+Frida로 PGL native 브릿지 매핑 (2026-03-12):
   - 문자열/클래스 단서: `com.pgl.ssdk.ces.a`
 
 - Frida 수집:
-  - `scripts/frida/gs25-jni-registernatives-hook.js`
+  - `scripts/frida/gs25-jni-registernatives-hook.ts`
   - `scripts/gs25-jni-natives-capture.sh`
-  - `scripts/frida/gs25-pgl-meta-hook.js`
+  - `scripts/frida/gs25-pgl-meta-hook.ts`
   - `scripts/gs25-pgl-meta-capture.sh`
-  - `scripts/gs25-pgl-meta-summary.mjs`
+  - `scripts/gs25-pgl-meta-summary.ts`
 
 - 실행 산출물:
   - `captures/gs25-jni-natives-20260312-r2/gs25-jni-natives-events.jsonl`
@@ -1023,12 +1023,12 @@ Round 44: Ghidra+Frida로 PGL native 브릿지 매핑 (2026-03-12):
 Round 45: `msg-api` 완전 리플레이 검증 (2026-03-12):
 
 - 변경:
-  - `scripts/gs25-msg-api-payload-extract.mjs`
+  - `scripts/gs25-msg-api-payload-extract.ts`
     - hexdump 바이트 파싱 로직 보정(주소/ASCII 컬럼 혼입 제거)
     - `/msg-api/login.m` 누락 해소
 
 - 실행:
-  - `node scripts/gs25-msg-api-payload-extract.mjs captures/gs25-b2c-native-20260312-r10-spawn/gs25-b2c-native-events.jsonl`
+  - `npx tsx scripts/gs25-msg-api-payload-extract.ts captures/gs25-b2c-native-20260312-r10-spawn/gs25-b2c-native-events.jsonl`
   - 대상 추출:
     - `/msg-api/deviceCert.m` (`d` 길이 492)
     - `/msg-api/setConfig.m` (`d` 길이 192)
@@ -1050,7 +1050,7 @@ Round 45: `msg-api` 완전 리플레이 검증 (2026-03-12):
 Round 46: `msg-api` 요청-응답 상관관계 추출 (2026-03-12):
 
 - 추가:
-  - `scripts/gs25-msg-api-response-extract.mjs`
+  - `scripts/gs25-msg-api-response-extract.ts`
     - `ssl` 포인터별 `ssl_write/ssl_read` stream 재조립
     - HTTP/1 요청/응답 파싱
     - chunked + gzip 응답 해제
@@ -1190,14 +1190,14 @@ Round 51: 전면확인 보정 + 재시도 캡처(r17~r20, 2026-03-12):
 Round 52: JNI RegisterNatives 매핑 확정 + Ghidra 오프셋 연계(2026-03-12):
 
 - 수정:
-  - `scripts/frida/gs25-jni-registernatives-hook.js`
+  - `scripts/frida/gs25-jni-registernatives-hook.ts`
     - `RegisterNatives`를 JNI 함수 테이블 index 215에서 직접 후킹
     - `register_native` 이벤트에 `moduleName/moduleOffset` 추가
-  - `scripts/gs25-jni-natives-summary.mjs` 추가
+  - `scripts/gs25-jni-natives-summary.ts` 추가
 
 - 실행:
   - `captures/gs25-jni-natives-20260312-r6-module-offset`
-  - `node scripts/gs25-jni-natives-summary.mjs .../gs25-jni-natives-events.jsonl`
+  - `npx tsx scripts/gs25-jni-natives-summary.ts .../gs25-jni-natives-events.jsonl`
 
 - 결과:
   - 등록 메서드 92건 관측
@@ -1212,11 +1212,11 @@ Round 52: JNI RegisterNatives 매핑 확정 + Ghidra 오프셋 연계(2026-03-12
 Round 53: `meta` 네이티브 분기 추적(code->helper) 확보(2026-03-12):
 
 - 추가:
-  - `scripts/frida/gs25-pgl-meta-native-trace.js`
+  - `scripts/frida/gs25-pgl-meta-native-trace.ts`
     - `libnms.so+0x39894(meta)`와 주요 helper 함수 동시 후킹
     - `meta` code 기준으로 helper 호출 태깅
   - `scripts/gs25-pgl-meta-native-trace-capture.sh`
-  - `scripts/gs25-pgl-meta-native-trace-summary.mjs`
+  - `scripts/gs25-pgl-meta-native-trace-summary.ts`
 
 - 실행:
   - `captures/gs25-pgl-meta-native-trace-20260312-r2`
@@ -1240,7 +1240,7 @@ Round 54: Java+Native 동시 캡처로 code별 반환 타입 상관 검증(2026-
 - 추가:
   - `scripts/gs25-pgl-meta-dual-capture.sh`
     - `gs25-pgl-meta-hook.js` + `gs25-pgl-meta-native-trace.js` 동시 수집
-  - `scripts/gs25-pgl-meta-dual-summary.mjs`
+  - `scripts/gs25-pgl-meta-dual-summary.ts`
     - code별 Java return class + native helper 빈도 통합 요약
 
 - 실행:
@@ -1260,7 +1260,7 @@ Round 54: Java+Native 동시 캡처로 code별 반환 타입 상관 검증(2026-
 Round 55: `301([B)` 반환 base64 복원 보정(2026-03-12):
 
 - 수정:
-  - `scripts/frida/gs25-pgl-meta-hook.js`
+  - `scripts/frida/gs25-pgl-meta-hook.ts`
     - `byte[]` 변환 실패 시 수동 base64 인코더 폴백 추가
 
 - 실행:
@@ -1277,7 +1277,7 @@ Round 55: `301([B)` 반환 base64 복원 보정(2026-03-12):
 Round 56: Java/Native 호출 단위 상관 매칭 검증(2026-03-12):
 
 - 추가:
-  - `scripts/gs25-pgl-meta-call-correlation.mjs`
+  - `scripts/gs25-pgl-meta-call-correlation.ts`
     - `meta_return`(Java) <-> `meta_leave`(Native) 최근접 timestamp 매칭
 
 - 실행:
@@ -1300,7 +1300,7 @@ Round 56: Java/Native 호출 단위 상관 매칭 검증(2026-03-12):
 Round 57: code별 payload 추출 자동화 + 실측(2026-03-12):
 
 - 추가:
-  - `scripts/gs25-pgl-meta-extract-code-payloads.mjs`
+  - `scripts/gs25-pgl-meta-extract-code-payloads.ts`
     - `meta_return`에서 code별 payload 추출/중복제거
     - `base64:` 접두 제거 후 길이/빈도 요약
 
@@ -1320,7 +1320,7 @@ Round 57: code별 payload 추출 자동화 + 실측(2026-03-12):
 Round 58: code301 payload 1차 디코드(2026-03-12):
 
 - 추가:
-  - `scripts/gs25-pgl-meta-decode-301.mjs`
+  - `scripts/gs25-pgl-meta-decode-301.ts`
     - code301 base64 -> binary 복원
     - protobuf wire-format 휴리스틱 파싱
     - 엔트로피 계산
@@ -1344,7 +1344,7 @@ Round 58: code301 payload 1차 디코드(2026-03-12):
 Round 59: code302/303 짧은 토큰 성상 분석(2026-03-12):
 
 - 추가:
-  - `scripts/gs25-pgl-meta-decode-short-tokens.mjs`
+  - `scripts/gs25-pgl-meta-decode-short-tokens.ts`
     - 25자 토큰(base64url) 디코드 길이/엔트로피 분석
 
 - 실행:
@@ -1364,7 +1364,7 @@ Round 59: code302/303 짧은 토큰 성상 분석(2026-03-12):
 Round 60: payload 안정성 집계(301/302/303, 2026-03-12):
 
 - 추가:
-  - `scripts/gs25-pgl-meta-payload-stability.mjs`
+  - `scripts/gs25-pgl-meta-payload-stability.ts`
     - 여러 캡처를 한 번에 읽어 code별 unique payload 수 집계
     - byte-list/base64 표현 차이 일부 정규화
 
@@ -1402,7 +1402,7 @@ Round 61: 302/303 토큰의 301 본문 포함 여부 점검(2026-03-12):
 Round 62: helper->meta 포인터 동일성 검증(2026-03-12):
 
 - 추가:
-  - `scripts/gs25-pgl-meta-pointer-flow.mjs`
+  - `scripts/gs25-pgl-meta-pointer-flow.ts`
     - 타깃 code에서 helper 반환 포인터와 최종 meta 반환 포인터 동일성 판정
 
 - 실행:
@@ -1421,13 +1421,13 @@ Round 63: code301 full payload 재수집 + protobuf 판정(2026-03-12):
   - 기존 훅에서 `retDeep`가 800자 제한으로 잘려(`...(truncated)`) protobuf 판정 정확도가 떨어짐
 
 - 수정:
-  - `scripts/frida/gs25-pgl-meta-hook.js`
+  - `scripts/frida/gs25-pgl-meta-hook.ts`
     - byte[] base64 출력 제한을 `800 -> 8192`로 상향
 
 - 추가:
-  - `scripts/gs25-pgl-meta-export-payload-bins.mjs`
+  - `scripts/gs25-pgl-meta-export-payload-bins.ts`
     - code별 payload를 `.bin`으로 추출, truncated 자동 제외
-  - `scripts/gs25-pgl-meta-protobuf-likelihood.mjs`
+  - `scripts/gs25-pgl-meta-protobuf-likelihood.ts`
     - wire-format 휴리스틱 판정
 
 - 실행:
@@ -1496,10 +1496,10 @@ Round 65: field#4(bytes) 재귀 분석 + Ghidra 교차확인(2026-03-12):
 Round 66: 301 간접 분기 타깃 런타임 고정(2026-03-12):
 
 - 추가:
-  - `scripts/frida/gs25-pgl-meta-301-indirect-probe.js`
+  - `scripts/frida/gs25-pgl-meta-301-indirect-probe.ts`
     - `meta(301)` + `FUN_00128654` + `FUN_0013d5b4(indirect)` 동시 후킹
   - `scripts/gs25-pgl-meta-301-indirect-capture.sh`
-  - `scripts/gs25-pgl-meta-301-indirect-summary.mjs`
+  - `scripts/gs25-pgl-meta-301-indirect-summary.ts`
 
 - 실행:
   - 동시 수집: `captures/gs25-pgl-meta-301-indirect-20260312-r2-dual`

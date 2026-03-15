@@ -73,7 +73,7 @@ echo "Raw 로그: ${RAW_LOG}"
 echo "이벤트 JSONL: ${EVENTS_JSONL}"
 echo "종료: Ctrl+C"
 
-FRIDA_CMD=(frida -H "${FRIDA_HOST}" -l scripts/frida/gs25-b2c-native-payload-hook.js)
+FRIDA_CMD=(frida -H "${FRIDA_HOST}" -l scripts/frida/gs25-b2c-native-payload-hook.ts)
 
 if [[ "${SPAWN}" -eq 1 ]]; then
   FRIDA_CMD+=(-f "${PACKAGE}")

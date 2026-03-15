@@ -341,7 +341,7 @@ run_round() {
 
   local b2c_events="${b2c_dir}/gs25-b2c-native-events.jsonl"
   if [[ -s "${b2c_events}" ]]; then
-    node scripts/gs25-b2c-native-events-summary.mjs "${b2c_events}" \
+    npx tsx scripts/gs25-b2c-native-events-summary.ts "${b2c_events}" \
       > "${round_dir}/b2c-summary.json"
   else
     log "round ${round_no}: b2c events 없음"
@@ -352,19 +352,19 @@ run_round() {
   local pgl_pipe="${pgl_dir}/gs25-pgl-meta-301-pipeline-events.jsonl"
 
   if [[ -s "${pgl_raw}" ]]; then
-    node scripts/gs25-pgl-meta-301-pipeline-extract.mjs "${pgl_raw}" "${pgl_java}" "${pgl_pipe}" \
+    npx tsx scripts/gs25-pgl-meta-301-pipeline-extract.ts "${pgl_raw}" "${pgl_java}" "${pgl_pipe}" \
       > "${round_dir}/pipeline-extract-summary.json"
   else
     log "round ${round_no}: pipeline raw 로그 없음"
   fi
 
   if [[ -s "${pgl_java}" ]]; then
-    node scripts/gs25-pgl-meta-summary.mjs "${pgl_java}" > "${round_dir}/pgl-meta-summary.json"
+    npx tsx scripts/gs25-pgl-meta-summary.ts "${pgl_java}" > "${round_dir}/pgl-meta-summary.json"
   fi
 
   local tuple_file="${round_dir}/301-replay-tuples.json"
   if [[ -s "${pgl_pipe}" ]]; then
-    node scripts/gs25-pgl-meta-301-export-replay-tuples.mjs "${pgl_pipe}" --out "${tuple_file}" \
+    npx tsx scripts/gs25-pgl-meta-301-export-replay-tuples.ts "${pgl_pipe}" --out "${tuple_file}" \
       > "${round_dir}/tuple-export.log"
   fi
 
@@ -383,14 +383,14 @@ run_round() {
         > "${round_dir}/replay-check.log" 2>&1 || true
     fi
     if [[ -s "${replay_dir}/mitmdump-replay-raw.log" ]]; then
-      node scripts/gs25-301-replay-result-summary.mjs \
+      npx tsx scripts/gs25-301-replay-result-summary.ts \
         "${replay_dir}/mitmdump-replay-raw.log" \
         > "${round_dir}/301-replay-summary.json"
     fi
   fi
 
   local summary_file="${round_dir}/round-summary.json"
-  node scripts/gs25-new-round-summary.mjs "${round_dir}" --profile "${profile}" --out "${summary_file}" \
+  npx tsx scripts/gs25-new-round-summary.ts "${round_dir}" --profile "${profile}" --out "${summary_file}" \
     > "${round_dir}/round-summary.log"
   append_manifest "${summary_file}"
 }

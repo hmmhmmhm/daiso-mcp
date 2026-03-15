@@ -322,7 +322,7 @@ daiso 인터랙티브 모드
 - [다이소 네트워크 분석 결과](./docs/daiso-network-analysis-result.md)
 - [다이소 Playwright 네트워크 분석](./docs/daiso-playwright-network-analysis.md)
 - [다이소 리플레이 세션 테스트 HTML](./docs/daiso-replay-session-test.html)
-- [다이소 테스트 리플레이 스크립트](./docs/daiso-test-replay.js)
+- [다이소 테스트 리플레이 스크립트](./docs/daiso-test-replay.ts)
 
 ### CU
 
@@ -350,9 +350,9 @@ daiso 인터랙티브 모드
 - [올리브영 Playwright MCP 온보딩](./docs/oliveyoung-playwright-mcp-onboarding.md)
 - [올리브영 Playwright 네트워크 분석](./docs/oliveyoung-playwright-network-analysis.md)
 - [올리브영 Lightpanda 검증](./docs/oliveyoung-lightpanda-validation.md)
-- [올리브영 리플레이 세션 테스트 스크립트](./docs/oliveyoung-replay-session-test.js)
-- [올리브영 Zyte 대역폭 테스트](./docs/oliveyoung-zyte-bandwidth-test.js)
-- [올리브영 Zyte 리플레이 테스트](./docs/oliveyoung-zyte-replay-test.js)
+- [올리브영 리플레이 세션 테스트 스크립트](./docs/oliveyoung-replay-session-test.ts)
+- [올리브영 Zyte 대역폭 테스트](./docs/oliveyoung-zyte-bandwidth-test.ts)
+- [올리브영 Zyte 리플레이 테스트](./docs/oliveyoung-zyte-replay-test.ts)
 
 ### 영화관
 

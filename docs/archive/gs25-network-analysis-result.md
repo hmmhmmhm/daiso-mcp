@@ -242,7 +242,7 @@ CONNECT 요약:
 - `mitmdump`: 설치/실행 가능 (`Mitmproxy 12.2.1`)
 - `frida`: 설치 확인 (`17.5.2`)
 - `adb`: 미설치(`adb not found`)로 로컬에서 기기 연결 상태 직접 점검 불가
-- `scripts/frida/android-ssl-bypass.js`: 저장소 내 미확인
+- `scripts/frida/android-ssl-bypass.ts`: 저장소 내 미확인
 
 실행 중 캡처 세션:
 
@@ -276,7 +276,7 @@ CONNECT 요약:
 
 - 기기 루팅 완료 (`su` 동작 확인)
 - `frida-server 17.5.2 (android-arm64)` 기기 실행
-- `scripts/frida/android-ssl-bypass.js` 주입 후 GS25 앱 실행
+- `scripts/frida/android-ssl-bypass.ts` 주입 후 GS25 앱 실행
 - Android 프록시 `172.30.1.27:8080` 설정
 
 요청 관측 요약 (`requests.jsonl`):
@@ -320,7 +320,7 @@ CONNECT 관측 요약 (`connects.jsonl`):
 
 프로브 설정:
 
-- `scripts/frida/gs25-msgapi-probe.js` 주입
+- `scripts/frida/gs25-msgapi-probe.ts` 주입
   - SSL 우회
   - `URL/URLConnection` 관찰
   - `Base64` 및 `Cipher.doFinal` 관찰
@@ -353,7 +353,7 @@ CONNECT 관측 요약 (`connects.jsonl`):
 
 후킹 변경점:
 
-- `scripts/frida/gs25-msgapi-target-hook.js`에 `WebViewClient.onReceivedSslError` /
+- `scripts/frida/gs25-msgapi-target-hook.ts`에 `WebViewClient.onReceivedSslError` /
   `SslErrorHandler.proceed()` 강제 허용 로직 추가
 
 핵심 관측:
@@ -389,7 +389,7 @@ CONNECT 관측 요약 (`connects.jsonl`):
 후킹/실행 조건:
 
 - 루팅 기기 + `frida-server 17.5.2`
-- `scripts/frida/gs25-msgapi-target-hook.js` 적용
+- `scripts/frida/gs25-msgapi-target-hook.ts` 적용
   - SSL 우회 + WebView SSL `proceed()` 허용
   - WebView URL 로드/스토리지 덤프 보조 후킹 포함
 - Android 프록시: `172.30.1.27:8080`
@@ -437,7 +437,7 @@ CONNECT 관측 요약 (`connects.jsonl`):
 실행 조건:
 
 - Android 프록시: `172.30.1.27:8082`
-- Frida 후킹: `scripts/frida/gs25-msgapi-target-hook.js`
+- Frida 후킹: `scripts/frida/gs25-msgapi-target-hook.ts`
 - 사용자 재현: 재고조회 시나리오 직접 수행 후 종료
 
 요청 관측 요약:
@@ -535,7 +535,7 @@ PCAP 계층 핵심 관측 (TLS SNI):
 
 추가 후킹:
 
-- `scripts/frida/gs25-b2c-java-net-hook.js`
+- `scripts/frida/gs25-b2c-java-net-hook.ts`
   - `java.net.Socket.connect`
   - `HttpsURLConnection.connect`
   - `org.chromium.net.UrlRequest$Builder`(Cronet)
@@ -582,7 +582,7 @@ PCAP 계층 관측(TLS SNI, KST):
 
 후킹 변경점:
 
-- `scripts/frida/gs25-msgapi-target-hook.js` 확장
+- `scripts/frida/gs25-msgapi-target-hook.ts` 확장
   - 난독화 객체(`S5/K5/L5/E5/G5/F5`)의 필드 리플렉션 덤프(`fields{...}`) 추가
   - `Map/List/JSONObject` 계열 문자열화 강화
 
@@ -627,7 +627,7 @@ PCAP 관측(TLS SNI, KST):
 
 추가 후킹:
 
-- `scripts/frida/gs25-b2c-focused-dump.js`
+- `scripts/frida/gs25-b2c-focused-dump.ts`
   - 난독 클래스 메서드 중 문자열/JSON/바이트 타입 경계만 선별 후킹
   - Flutter MethodChannel(`invokeMethod`) 인자 덤프
   - WebView `addJavascriptInterface` 관찰
@@ -675,7 +675,7 @@ PCAP 관측(TLS SNI, KST):
 
 추가 후킹:
 
-- `scripts/frida/gs25-b2c-stacktrace-dump.js`
+- `scripts/frida/gs25-b2c-stacktrace-dump.ts`
   - `String(byte[])` 생성 지점
   - `JSONObject(String)` 생성 지점
   - `Cipher.doFinal([B)` 출력 바이트
@@ -724,7 +724,7 @@ PCAP 관측(TLS SNI):
 
 추가 후킹:
 
-- `scripts/frida/gs25-b2c-cronet-probe.js`
+- `scripts/frida/gs25-b2c-cronet-probe.ts`
   - `org.chromium.net.UrlRequest$Builder.setHttpMethod/addHeader/build`
   - `java.net.URL` 생성자 보조 추적
 
@@ -781,11 +781,11 @@ PCAP 관측(TLS SNI):
 - 캡처: `captures/gs25-android-20260309-r7` ~ `captures/gs25-android-20260309-r13`
 - 주요 스크립트:
   - `scripts/mitmproxy/gs25_capture_addons.py`
-  - `scripts/frida/gs25-msgapi-target-hook.js`
-  - `scripts/frida/gs25-b2c-java-net-hook.js`
-  - `scripts/frida/gs25-b2c-focused-dump.js`
-  - `scripts/frida/gs25-b2c-stacktrace-dump.js`
-  - `scripts/frida/gs25-b2c-cronet-probe.js`
+  - `scripts/frida/gs25-msgapi-target-hook.ts`
+  - `scripts/frida/gs25-b2c-java-net-hook.ts`
+  - `scripts/frida/gs25-b2c-focused-dump.ts`
+  - `scripts/frida/gs25-b2c-stacktrace-dump.ts`
+  - `scripts/frida/gs25-b2c-cronet-probe.ts`
 
 다음 세션 우선순위:
 
@@ -1020,7 +1020,7 @@ PCAP 관측(TLS SNI):
 
 - 캡처 스택: `mitmdump(:8082, GS host focus) + frida(java-net-hook + msgapi-dparam-hook) + tcpdump(any)`
 - Frida 추가 스크립트:
-  - `scripts/frida/gs25-msgapi-dparam-hook.js`
+  - `scripts/frida/gs25-msgapi-dparam-hook.ts`
   - 목적: `URLConnection.getOutputStream`/`OutputStream.write`에서 `d=` 전송 바디 직접 관찰
 - 사용자 재현 입력: `재현 완료`
 
@@ -1080,7 +1080,7 @@ PCAP 관측(TLS SNI):
 
 - 캡처 스택: `mitmdump(:8082, GS host focus) + frida(java-net + dparam + okio) + tcpdump(any)`
 - Frida 추가 스크립트:
-  - `scripts/frida/gs25-msgapi-okio-hook.js`
+  - `scripts/frida/gs25-msgapi-okio-hook.ts`
   - 목적: `okio.Buffer`/`okio.RealBufferedSink`/`okio.ByteString`에서 `d=` 페이로드 관찰
 - 사용자 재현 입력: `재현 완료`
 
@@ -1143,7 +1143,7 @@ PCAP 관측(TLS SNI):
 
 - 캡처 스택: `mitmdump(:8082, GS host focus) + frida(java-net + crypto-window) + tcpdump(any)`
 - Frida 추가 스크립트:
-  - `scripts/frida/gs25-msgapi-crypto-window-hook.js`
+  - `scripts/frida/gs25-msgapi-crypto-window-hook.ts`
   - 목적: `msg-api URL` 발생 후 5초 동안만 `Base64/Cipher/String` 이벤트 집중 수집
 - 사용자 재현 입력: `재현 완료`
 
@@ -1206,7 +1206,7 @@ PCAP 관측(TLS SNI):
   - 프록시 미사용
   - tcpdump 미사용
 - 스크립트:
-  - `scripts/frida/gs25-frida-only-pinning-audit.js`
+  - `scripts/frida/gs25-frida-only-pinning-audit.ts`
 - 사용자 재현 입력: `재현 완료`
 
 Pinning 관련 관측:
@@ -1251,7 +1251,7 @@ Pinning 관련 관측:
   - 프록시 미사용
   - tcpdump 미사용
 - 스크립트:
-  - `scripts/frida/gs25-frida-only-pinning-deep-audit.js`
+  - `scripts/frida/gs25-frida-only-pinning-deep-audit.ts`
 - 사용자 재현 입력: `재현 완료`
 
 핵심 관측:
@@ -1293,8 +1293,8 @@ pinning 판정(r21):
   - 프록시 미사용
   - tcpdump 미사용
 - 스크립트:
-  - `scripts/frida/gs25-frida-only-pinning-deep-audit.js`
-  - `scripts/frida/gs25-frida-only-native-connect-audit.js`
+  - `scripts/frida/gs25-frida-only-pinning-deep-audit.ts`
+  - `scripts/frida/gs25-frida-only-native-connect-audit.ts`
 - 사용자 재현 입력: `재현 완료`
 
 핵심 관측:
@@ -1405,9 +1405,9 @@ GS25 현 상태에 대한 해석(추론 포함):
 - 캡처 스택: `frida(deep-pinning+native-connect+tls-keylog+root-bypass) + tcpdump`
 - 스크립트:
   - `/tmp/frida/gs25-root-detection-bypass.js` (HTTP Toolkit root-detection bypass 기반)
-  - `scripts/frida/gs25-frida-only-pinning-deep-audit.js`
-  - `scripts/frida/gs25-frida-only-native-connect-audit.js`
-  - `scripts/frida/gs25-b2c-tls-keylog.js`
+  - `scripts/frida/gs25-frida-only-pinning-deep-audit.ts`
+  - `scripts/frida/gs25-frida-only-native-connect-audit.ts`
+  - `scripts/frida/gs25-b2c-tls-keylog.ts`
 - 사용자 재현 입력: `재현 완료`
 
 핵심 관측:
@@ -1467,10 +1467,10 @@ b2c 평문 API 확보 결과:
 - 캡처 스택: `frida(modified-tls-keylog+native-resolver+pinning-deep+root-bypass) + tcpdump`
 - 사용자 재현 입력: `재현 완료`
 - 스크립트 변경:
-  - `scripts/frida/gs25-b2c-tls-keylog.js`
+  - `scripts/frida/gs25-b2c-tls-keylog.ts`
     - TLS export 전역/모듈 스캔 추가
     - `SSL_write`/`SSL_read`에서 `SSL_get_servername` readback 훅 추가
-  - `scripts/frida/gs25-frida-only-native-connect-audit.js`
+  - `scripts/frida/gs25-frida-only-native-connect-audit.ts`
     - `android_getaddrinfofornetcontext`, `gethostbyname` 훅 추가
 
 핵심 관측:
@@ -1534,7 +1534,7 @@ b2c 평문 API 확보 결과(r24):
 - 캡처 스택: `frida(tls-fdmap+resolver+pinning-deep+root-bypass) + tcpdump`
 - 사용자 재현 입력: `재현 완료`
 - 스크립트 변경:
-  - `scripts/frida/gs25-b2c-tls-keylog.js`
+  - `scripts/frida/gs25-b2c-tls-keylog.ts`
     - `SSL_set_fd` / `SSL_do_handshake` 훅 추가
     - `ssl↔fd↔host` 매핑 테이블 추가
 
@@ -2143,12 +2143,12 @@ Amplitude 이벤트 캐시 분석 (2026-03-10):
   - 현재 시점에서는 이들을 복호화 키로 단정하지 않음
 
 - 레포 내 기존 Frida 스크립트 점검 결과:
-  - `scripts/frida/gs25-frida-only-pinning-audit.js`
-  - `scripts/frida/gs25-b2c-java-net-hook.js`
-  - `scripts/frida/gs25-b2c-cronet-probe.js`
-  - `scripts/frida/gs25-b2c-native-net-hook.js`
-  - `scripts/frida/gs25-b2c-focused-dump.js`
-  - `scripts/frida/gs25-b2c-stacktrace-dump.js`
+  - `scripts/frida/gs25-frida-only-pinning-audit.ts`
+  - `scripts/frida/gs25-b2c-java-net-hook.ts`
+  - `scripts/frida/gs25-b2c-cronet-probe.ts`
+  - `scripts/frida/gs25-b2c-native-net-hook.ts`
+  - `scripts/frida/gs25-b2c-focused-dump.ts`
+  - `scripts/frida/gs25-b2c-stacktrace-dump.ts`
   - 전반적으로 `pinning/network/url/header/string/json` 축 후킹은 준비돼 있음
   - 반면 `appKeyApi`, `readXTenantId`, `_b2cApiNoAuthorizationDio`,
     `ApiResponseEncrypter`, `decryptBytesWithEnv`를 직접 노리는
@@ -2161,7 +2161,7 @@ Amplitude 이벤트 캐시 분석 (2026-03-10):
 
 - 후속 조치:
   - 위 공백을 메우기 위해
-    `scripts/frida/gs25-b2c-bootstrap-probe.js`를 추가함
+    `scripts/frida/gs25-b2c-bootstrap-probe.ts`를 추가함
   - 이 스크립트는 다음 경계만 선별 관찰함
     - `io.flutter.plugin.common.MethodChannel.invokeMethod`
     - `io.flutter.plugin.common.MethodCall.argument`
@@ -2181,9 +2181,9 @@ Amplitude 이벤트 캐시 분석 (2026-03-10):
 
 - `frida-server`를 다시 기동하고 `adb forward tcp:27042 tcp:27042` 후
   동일 PID(`com.gsr.gs25`)에 다음 스크립트를 동시 attach함
-  - `scripts/frida/gs25-b2c-bootstrap-probe.js`
-  - `scripts/frida/gs25-b2c-cronet-probe.js`
-  - `scripts/frida/gs25-b2c-java-net-hook.js`
+  - `scripts/frida/gs25-b2c-bootstrap-probe.ts`
+  - `scripts/frida/gs25-b2c-cronet-probe.ts`
+  - `scripts/frida/gs25-b2c-java-net-hook.ts`
 - 결과:
   - 이번에는 이전과 달리 attach 직후 즉시 크래시하지 않았음
   - 즉 "모든 Frida attach가 즉시 죽는다"보다는
@@ -2237,7 +2237,7 @@ Amplitude 이벤트 캐시 분석 (2026-03-10):
 WebView bridge 전용 프로브 추가 및 1차 실측 (2026-03-11):
 
 - 위 가설을 검증하기 위해
-  `scripts/frida/gs25-webview-bridge-probe.js`를 추가함
+  `scripts/frida/gs25-webview-bridge-probe.ts`를 추가함
 - 후킹 대상:
   - `android.webkit.WebView.addJavascriptInterface`
   - `android.webkit.WebView.loadUrl`
@@ -2336,7 +2336,7 @@ WebView JS->앱 브리지 콜백 직접 캡처 (Round 34, 2026-03-11):
 
 - 추가 후킹:
   - `com.pichillilorenzo.flutter_inappwebview_android.webview.JavaScriptBridgeInterface._callHandler`
-  - 스크립트: `scripts/frida/gs25-webview-callhandler-probe.js`
+  - 스크립트: `scripts/frida/gs25-webview-callhandler-probe.ts`
 
 - 캡처 성공 이벤트:
   - `onMarkerClick`
@@ -2377,7 +2377,7 @@ Round 35 추가 확인 (2026-03-11):
 Round 36: 리플레이용 JSON 추출기 검증 (2026-03-11):
 
 - 추가 스크립트:
-  - `scripts/frida/gs25-webview-replay-extract.js`
+  - `scripts/frida/gs25-webview-replay-extract.ts`
 - 출력 포맷:
   - `[GS25_REPLAY] {"t":"<event>","ts":<unix_ms>,"payload":{...}}`
 - 파싱 대상:
@@ -2476,7 +2476,7 @@ Ghidra 병행 분석:
 
 변경:
 
-- `scripts/gs25-replay-events-to-params.mjs`에 핵심 이벤트 검증 로직 추가
+- `scripts/gs25-replay-events-to-params.ts`에 핵심 이벤트 검증 로직 추가
   - 신규 옵션: `--strict-core`
   - 검증 대상 5종:
     - `markers`
@@ -2524,7 +2524,7 @@ Ghidra 병행 분석:
 
 핵심 검증:
 
-- `node scripts/gs25-replay-events-to-params.mjs ... --strict-core` 통과 (`exit=0`)
+- `npx tsx scripts/gs25-replay-events-to-params.ts ... --strict-core` 통과 (`exit=0`)
 - 이벤트 5종 모두 존재:
   - `markers`, `marker_click`, `center`, `level`, `touchable`
 - params 확인:
@@ -2549,7 +2549,7 @@ Ghidra 병행 분석:
 
 추가 파일:
 
-- `scripts/frida/gs25-b2c-crypto-window-hook.js`
+- `scripts/frida/gs25-b2c-crypto-window-hook.ts`
   - URL/URI/Cronet 헤더/메서드 후킹
   - `Base64`, `Cipher.doFinal([B)` 후킹
   - 이벤트 포맷:
@@ -2596,7 +2596,7 @@ Ghidra 병행 분석:
 
 추가/변경:
 
-- `scripts/frida/gs25-b2c-native-payload-hook.js`
+- `scripts/frida/gs25-b2c-native-payload-hook.ts`
   - `connect`, `SSL_set_tlsext_host_name`, `SSL_set_fd`, `SSL_get_fd`,
     `SSL_write`, `SSL_read`, `send/recv/write/read` 후킹
   - 이벤트 포맷:
@@ -2604,7 +2604,7 @@ Ghidra 병행 분석:
   - unknown 세션 샘플 로그 상한 확장(`200`)
 - `scripts/gs25-b2c-native-payload-capture.sh`
   - `--spawn` 옵션 추가 (`frida -f com.gsr.gs25`)
-- `scripts/gs25-b2c-native-events-summary.mjs`
+- `scripts/gs25-b2c-native-events-summary.ts`
   - JSONL에서 요청 라인/경로 빈도 요약
 
 실행:
@@ -2653,9 +2653,9 @@ Ghidra 병행 분석:
 
 수정:
 
-- `scripts/frida/gs25-b2c-native-payload-hook.js`
+- `scripts/frida/gs25-b2c-native-payload-hook.ts`
   - hexdump fallback 길이를 `64 -> DUMP_LIMIT(16384)`로 상향
-- `scripts/gs25-b2c-native-events-summary.mjs`
+- `scripts/gs25-b2c-native-events-summary.ts`
   - hex 문자열/표준 hexdump를 모두 처리하는 bytes 파서로 교체
   - 텍스트 추정 기반이 아니라 HTTP/1 헤더(`Host`) 직접 파싱으로 변경
   - `topHosts`, `topHostRequestLines` 출력 추가
@@ -2700,17 +2700,17 @@ Ghidra 병행 분석:
 
 동적(Frida):
 
-- `scripts/frida/gs25-jni-registernatives-hook.js`
+- `scripts/frida/gs25-jni-registernatives-hook.ts`
   - `RegisterNatives` 심볼 직접 후킹은 기기 빌드에서 실패
   - fallback으로 native 메서드 reflection 스냅샷 수행
-- `scripts/frida/gs25-pgl-meta-hook.js`
+- `scripts/frida/gs25-pgl-meta-hook.ts`
   - `com.pgl.ssdk.ces.a.meta(int, Context, Object)` 호출/반환 계측
 
 실행:
 
 - `captures/gs25-jni-natives-20260312-r2`
 - `captures/gs25-pgl-meta-20260312-r1`
-- `node scripts/gs25-pgl-meta-summary.mjs captures/gs25-pgl-meta-20260312-r1/gs25-pgl-meta-events.jsonl`
+- `npx tsx scripts/gs25-pgl-meta-summary.ts captures/gs25-pgl-meta-20260312-r1/gs25-pgl-meta-events.jsonl`
 
 핵심 관측:
 
@@ -2737,7 +2737,7 @@ Ghidra 병행 분석:
 
 수정:
 
-- `scripts/gs25-msg-api-payload-extract.mjs`
+- `scripts/gs25-msg-api-payload-extract.ts`
   - hexdump 디코드 로직 보정:
     - 주소/ASCII 컬럼 혼입 가능성을 제거하고 바이트 토큰 우선 파싱
   - 결과:
@@ -2745,7 +2745,7 @@ Ghidra 병행 분석:
 
 실행:
 
-- `node scripts/gs25-msg-api-payload-extract.mjs captures/gs25-b2c-native-20260312-r10-spawn/gs25-b2c-native-events.jsonl`
+- `npx tsx scripts/gs25-msg-api-payload-extract.ts captures/gs25-b2c-native-20260312-r10-spawn/gs25-b2c-native-events.jsonl`
 - 전체 라운드 비교:
   - `r9`, `r10`에서 동일한 `d` 프리뷰 패턴 확인
   - `/msg-api/deviceCert.m`, `/msg-api/setConfig.m`, `/msg-api/login.m` 모두 추출
@@ -2778,7 +2778,7 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/gs25-msg-api-response-extract.mjs`
+- `scripts/gs25-msg-api-response-extract.ts`
   - `ssl` 포인터별 stream 재조립
   - HTTP/1 request/response 파싱
   - chunked body 파싱 + gzip 해제
@@ -2786,8 +2786,8 @@ Ghidra 병행 분석:
 
 실행:
 
-- `node scripts/gs25-msg-api-response-extract.mjs captures/gs25-b2c-native-20260312-r9-spawn/gs25-b2c-native-events.jsonl`
-- `node scripts/gs25-msg-api-response-extract.mjs captures/gs25-b2c-native-20260312-r10-spawn/gs25-b2c-native-events.jsonl`
+- `npx tsx scripts/gs25-msg-api-response-extract.ts captures/gs25-b2c-native-20260312-r9-spawn/gs25-b2c-native-events.jsonl`
+- `npx tsx scripts/gs25-msg-api-response-extract.ts captures/gs25-b2c-native-20260312-r10-spawn/gs25-b2c-native-events.jsonl`
 
 결과:
 
@@ -2819,9 +2819,9 @@ Ghidra 병행 분석:
   - `scripts/gs25-b2c-native-payload-capture.sh --spawn`
   - `adb shell monkey -p com.gsr.gs25 --throttle 180 -v 500`
 - 요약:
-  - `node scripts/gs25-b2c-native-events-summary.mjs .../r11.../gs25-b2c-native-events.jsonl`
-  - `node scripts/gs25-msg-api-payload-extract.mjs .../r11.../gs25-b2c-native-events.jsonl`
-  - `node scripts/gs25-msg-api-response-extract.mjs .../r11.../gs25-b2c-native-events.jsonl`
+  - `npx tsx scripts/gs25-b2c-native-events-summary.ts .../r11.../gs25-b2c-native-events.jsonl`
+  - `npx tsx scripts/gs25-msg-api-payload-extract.ts .../r11.../gs25-b2c-native-events.jsonl`
+  - `npx tsx scripts/gs25-msg-api-response-extract.ts .../r11.../gs25-b2c-native-events.jsonl`
 
 결과:
 
@@ -2988,10 +2988,10 @@ Ghidra 병행 분석:
 
 핵심 변경:
 
-- `scripts/frida/gs25-jni-registernatives-hook.js`
+- `scripts/frida/gs25-jni-registernatives-hook.ts`
   - `RegisterNatives`를 JNI 함수 테이블 인덱스(215)에서 직접 후킹하도록 보정
   - 각 등록 메서드에 `moduleName/moduleOffset` 기록 추가
-- `scripts/gs25-jni-natives-summary.mjs`
+- `scripts/gs25-jni-natives-summary.ts`
   - 클래스별/모듈별 JNI 등록 요약기 추가
 
 실행:
@@ -3025,11 +3025,11 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/frida/gs25-pgl-meta-native-trace.js`
+- `scripts/frida/gs25-pgl-meta-native-trace.ts`
   - `libnms.so+0x39894(meta)` 진입 시 code를 태깅
   - `FUN_00139a5c` 및 주요 helper 함수들의 호출을 code별로 기록
 - `scripts/gs25-pgl-meta-native-trace-capture.sh`
-- `scripts/gs25-pgl-meta-native-trace-summary.mjs`
+- `scripts/gs25-pgl-meta-native-trace-summary.ts`
 
 실행:
 
@@ -3064,7 +3064,7 @@ Ghidra 병행 분석:
 - `scripts/gs25-pgl-meta-dual-capture.sh`
   - `gs25-pgl-meta-hook.js` + `gs25-pgl-meta-native-trace.js` 동시 로드
   - Java/Native 이벤트를 각각 JSONL로 분리 저장
-- `scripts/gs25-pgl-meta-dual-summary.mjs`
+- `scripts/gs25-pgl-meta-dual-summary.ts`
   - code별 Java 리턴 타입 + native helper 빈도를 통합 요약
 
 실행:
@@ -3099,7 +3099,7 @@ Ghidra 병행 분석:
 
 변경:
 
-- `scripts/frida/gs25-pgl-meta-hook.js`
+- `scripts/frida/gs25-pgl-meta-hook.ts`
   - `byte[]` 직렬화 실패 시 수동 base64 인코더 폴백 추가
 
 실행:
@@ -3120,14 +3120,14 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/gs25-pgl-meta-call-correlation.mjs`
+- `scripts/gs25-pgl-meta-call-correlation.ts`
   - Java `meta_return`과 Native `meta_leave`를 같은 `code`에서 최근접 timestamp로 매칭
   - 매칭 호출에 대해 native helper 체인을 함께 출력
 
 실행:
 
 - `captures/gs25-pgl-meta-dual-20260312-r2-correl`
-- `node scripts/gs25-pgl-meta-call-correlation.mjs ... --max-delta-ms 2500`
+- `npx tsx scripts/gs25-pgl-meta-call-correlation.ts ... --max-delta-ms 2500`
 
 결과:
 
@@ -3149,7 +3149,7 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/gs25-pgl-meta-extract-code-payloads.mjs`
+- `scripts/gs25-pgl-meta-extract-code-payloads.ts`
   - Java `meta_return`에서 code별 payload를 추출/중복제거
   - `base64:` 접두 제거, 길이/빈도 요약 출력
 
@@ -3173,7 +3173,7 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/gs25-pgl-meta-decode-301.mjs`
+- `scripts/gs25-pgl-meta-decode-301.ts`
   - code `301`의 base64 payload를 바이너리로 복원
   - protobuf wire-format 휴리스틱 파싱 + 엔트로피 계산
 
@@ -3202,7 +3202,7 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/gs25-pgl-meta-decode-short-tokens.mjs`
+- `scripts/gs25-pgl-meta-decode-short-tokens.ts`
   - code `302/303` 반환 문자열의 base64url 디코드 분석
 
 실행:
@@ -3226,7 +3226,7 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/gs25-pgl-meta-payload-stability.mjs`
+- `scripts/gs25-pgl-meta-payload-stability.ts`
   - 다중 캡처 파일을 입력받아 code별 unique payload 수 집계
   - byte-list/base64 표현 차이를 일부 정규화
 
@@ -3273,7 +3273,7 @@ Ghidra 병행 분석:
 
 추가:
 
-- `scripts/gs25-pgl-meta-pointer-flow.mjs`
+- `scripts/gs25-pgl-meta-pointer-flow.ts`
   - code별 타깃 helper `ret` 포인터와 `meta_leave ret` 포인터 동일성 집계
 
 실행:
@@ -3298,13 +3298,13 @@ Ghidra 병행 분석:
 
 추가/수정:
 
-- `scripts/frida/gs25-pgl-meta-hook.js`
+- `scripts/frida/gs25-pgl-meta-hook.ts`
   - `byte[]`의 `retDeep` base64 출력 상한을 `800 -> 8192`로 상향
   - 목적: `...(truncated)` 없는 원문 payload 확보
-- `scripts/gs25-pgl-meta-export-payload-bins.mjs`
+- `scripts/gs25-pgl-meta-export-payload-bins.ts`
   - `meta_return`의 base64/base64url payload를 code별 `.bin`으로 추출
   - `...(truncated)` payload 자동 제외
-- `scripts/gs25-pgl-meta-protobuf-likelihood.mjs`
+- `scripts/gs25-pgl-meta-protobuf-likelihood.ts`
   - protobuf wire-format 휴리스틱(필드/소비율/완전소비) 판정기
 
 실행:
@@ -3414,11 +3414,11 @@ Ghidra 교차확인:
 
 추가:
 
-- `scripts/frida/gs25-pgl-meta-301-indirect-probe.js`
+- `scripts/frida/gs25-pgl-meta-301-indirect-probe.ts`
   - `meta(301)` + `FUN_00128654` + `FUN_0013d5b4(indirect)` 동시 후킹
   - `FUN_0013d5b4` 첫 인자(점프 대상 함수 포인터) 로그
 - `scripts/gs25-pgl-meta-301-indirect-capture.sh`
-- `scripts/gs25-pgl-meta-301-indirect-summary.mjs`
+- `scripts/gs25-pgl-meta-301-indirect-summary.ts`
 
 실행:
 
@@ -3453,7 +3453,7 @@ Ghidra 교차확인:
 
 핵심 수정:
 
-- `scripts/frida/gs25-pgl-meta-301-pipeline-probe.js`
+- `scripts/frida/gs25-pgl-meta-301-pipeline-probe.ts`
   - `Memory.readU8/readPointer` 호출을 포인터 메서드(`ptr.readU8/readPointer`)로 교체
   - `fn2ae64_leave`에서 `outPtr/outLen/outB64` 직접 추출 가능하도록 보강
 
@@ -3477,7 +3477,7 @@ Ghidra 교차확인:
 
 추가(런 간 변동성):
 
-- 도구: `scripts/gs25-pgl-meta-301-variability.mjs`
+- 도구: `scripts/gs25-pgl-meta-301-variability.ts`
 - 리포트:
   - `captures/gs25-pgl-meta-301-variability-r12-vs-r14.json`
 
@@ -3502,7 +3502,7 @@ Ghidra 교차확인:
 
 추가:
 
-- `scripts/gs25-pgl-meta-301-token-correlation.mjs`
+- `scripts/gs25-pgl-meta-301-token-correlation.ts`
   - 다수 pipeline 캡처 파일에서 `seq` 단위로
     - `in.field#2`(토큰)
     - `out(field#4)` 해시
@@ -3535,7 +3535,7 @@ Ghidra 교차확인:
 
 추가:
 
-- `scripts/gs25-pgl-meta-301-token-issuance-map.mjs`
+- `scripts/gs25-pgl-meta-301-token-issuance-map.ts`
   - 각 캡처 디렉터리의
     - `gs25-pgl-meta-events.jsonl` (`code=302/303` 반환 토큰)
     - `gs25-pgl-meta-301-pipeline-events.jsonl` (`fn2ae64 in.field#2` 소비 토큰)
@@ -3574,7 +3574,7 @@ Ghidra 교차확인:
 
 방법:
 
-- `scripts/frida/gs25-pgl-meta-301-pipeline-probe.js`에 override 로직 추가
+- `scripts/frida/gs25-pgl-meta-301-pipeline-probe.ts`에 override 로직 추가
   - `fn2ae64_enter` 시 입력 protobuf `field#2`를 동일 길이 토큰으로 교체 가능
   - 실험 후 기본값은 다시 비활성화(`OVERRIDE_TOKEN=''`)로 복구
 
@@ -3613,7 +3613,7 @@ Ghidra 교차확인:
 
 추가:
 
-- `scripts/gs25-pgl-meta-301-export-replay-tuples.mjs`
+- `scripts/gs25-pgl-meta-301-export-replay-tuples.ts`
   - pipeline events에서 seq별로 다음 튜플을 추출:
     - `token(field#2)`
     - `field#4`(base64)
@@ -3671,7 +3671,7 @@ mitmdump -s scripts/mitm/gs25_301_replay_injector.py \
 - 실행기:
   - `scripts/gs25-301-replay-mitm-run.sh`
 - 결과 요약기:
-  - `scripts/gs25-301-replay-result-summary.mjs`
+  - `scripts/gs25-301-replay-result-summary.ts`
 
 실행 예:
 
@@ -3686,7 +3686,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
 요약 예:
 
 ```bash
-node scripts/gs25-301-replay-result-summary.mjs \
+npx tsx scripts/gs25-301-replay-result-summary.ts \
   captures/gs25-301-replay-run-YYYYmmdd-HHMMSS/mitmdump-replay-raw.log
 ```
 
@@ -3704,7 +3704,7 @@ node scripts/gs25-301-replay-result-summary.mjs \
 - 배치 실행:
   - `scripts/gs25-301-replay-batch-run.sh`
 - 배치 집계:
-  - `scripts/gs25-301-replay-batch-summary.mjs`
+  - `scripts/gs25-301-replay-batch-summary.ts`
 
 배치 실행 예:
 
@@ -3718,7 +3718,7 @@ bash scripts/gs25-301-replay-batch-run.sh \
 배치 집계 예:
 
 ```bash
-node scripts/gs25-301-replay-batch-summary.mjs \
+npx tsx scripts/gs25-301-replay-batch-summary.ts \
   captures/gs25-301-replay-batch-YYYYmmdd-HHMMSS/manifest.jsonl
 ```
 
@@ -3780,20 +3780,20 @@ node scripts/gs25-301-replay-batch-summary.mjs \
 추가:
 
 - Frida 후커:
-  - `scripts/frida/gs25-pangle-conscrypt-replay-hook.js`
+  - `scripts/frida/gs25-pangle-conscrypt-replay-hook.ts`
     - `NativeCrypto.ENGINE_SSL_write_direct`
     - `NativeCrypto.ENGINE_SSL_write_BIO_direct`
     - host/len 기반 write probe 수집
 - 실행기:
   - `scripts/gs25-pangle-conscrypt-capture.sh`
 - 요약기:
-  - `scripts/gs25-pangle-conscrypt-summary.mjs`
+  - `scripts/gs25-pangle-conscrypt-summary.ts`
 
 실행:
 
 ```bash
 scripts/gs25-pangle-conscrypt-capture.sh captures/gs25-pangle-conscrypt-r5.log
-node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5.log
+npx tsx scripts/gs25-pangle-conscrypt-summary.ts captures/gs25-pangle-conscrypt-r5.log
 ```
 
 요약 결과(r5):
@@ -3817,7 +3817,7 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 
 핵심 수정:
 
-- `scripts/frida/gs25-pangle-conscrypt-replay-hook.js`
+- `scripts/frida/gs25-pangle-conscrypt-replay-hook.ts`
   - direct 메모리 읽기를 `Memory.readByteArray` 대신 `ArrayBuffer.wrap(ptr, len)`로 변경
   - 결과적으로 `api16-access-wf-sg.pangle.io`의 direct write 원문(hex/ascii) 덤프 복구
   - 경로 필터를 다중 경로로 확장:
@@ -3859,7 +3859,7 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 추가:
 
 - 응답 요약기:
-  - `scripts/gs25-pangle-conscrypt-read-summary.mjs`
+  - `scripts/gs25-pangle-conscrypt-read-summary.ts`
 - 비교 결과:
   - `captures/gs25-pangle-conscrypt-compare-r19-r18-r21.json`
 
@@ -3899,7 +3899,7 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 추가:
 
 - protobuf 가능성 요약기:
-  - `scripts/gs25-pangle-conscrypt-protobuf-likelihood.mjs`
+  - `scripts/gs25-pangle-conscrypt-protobuf-likelihood.ts`
 - 결과 파일:
   - `captures/gs25-pangle-conscrypt-protobuf-likelihood-r20.json`
   - `captures/gs25-pangle-conscrypt-protobuf-likelihood-r10.json`
@@ -3907,7 +3907,7 @@ node scripts/gs25-pangle-conscrypt-summary.mjs captures/gs25-pangle-conscrypt-r5
 실행:
 
 ```bash
-node scripts/gs25-pangle-conscrypt-protobuf-likelihood.mjs \
+npx tsx scripts/gs25-pangle-conscrypt-protobuf-likelihood.ts \
   captures/gs25-pangle-conscrypt-r20-full1690.log
 ```
 
@@ -3980,13 +3980,13 @@ protobuf 점검(r22):
 
 코드 변경:
 
-- `scripts/frida/gs25-pangle-conscrypt-replay-hook.js`
+- `scripts/frida/gs25-pangle-conscrypt-replay-hook.ts`
   - `PANGLE_REPLAY_AFTER_PATH` 추가
   - `pangle_req`에서 path 매칭 시 host별 arm
   - 다음 direct write에서 `direct_replay_after_path_applied` 이벤트로 1회 교체 가능
 - `scripts/gs25-pangle-conscrypt-replay-probe.sh`
   - `--after-path` 옵션 추가
-- `scripts/gs25-pangle-conscrypt-read-summary.mjs`
+- `scripts/gs25-pangle-conscrypt-read-summary.ts`
   - `direct_replay_after_path_applied` 카운트 반영
 
 실험 A (r24, 길이기반 8192 교체):
@@ -4040,7 +4040,7 @@ scripts/gs25-pangle-conscrypt-replay-probe.sh \
 
 조치:
 
-- `scripts/frida/gs25-pangle-conscrypt-replay-hook.js` 기본 `PANGLE_PATH_FILTER`에
+- `scripts/frida/gs25-pangle-conscrypt-replay-hook.ts` 기본 `PANGLE_PATH_FILTER`에
   위 2개 경로를 추가
 
 검증(r26):
@@ -4173,7 +4173,7 @@ scripts/gs25-pangle-path-hunt.sh \
   - `scripts/gs25-hybrid-flow.sh`
     - `idle(20s)` + `stock-flow` 조합
 - 헌트 로그 집계:
-  - `scripts/gs25-pangle-hunt-summary.mjs`
+  - `scripts/gs25-pangle-hunt-summary.ts`
 
 실행:
 
@@ -4204,7 +4204,7 @@ scripts/gs25-pangle-path-hunt.sh \
 추가:
 
 - path/길이 집계 스크립트:
-  - `scripts/gs25-pangle-path-len-summary.mjs`
+  - `scripts/gs25-pangle-path-len-summary.ts`
 
 집계(하이브리드 6로그):
 

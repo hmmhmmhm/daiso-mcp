@@ -111,17 +111,17 @@
 - Cloudflare 챌린지로 인해 초기 접속 실패 가능
 - 실측 시 UA/브라우저 세션 상태 영향 있음
 - 세션 테스트 스크립트는 `--mode=browser`에서 실측 성공 확인
-  - 예: `node docs/oliveyoung-replay-session-test.js --mode=browser --loop=1 --headless=false`
+  - 예: `npx tsx docs/oliveyoung-replay-session-test.ts --mode=browser --loop=1 --headless=false`
 - 서버 구현 시 공식 API 정책/약관 준수 필요
 
 ## Zyte API 검증 (추가)
 
 검증일: 2026-03-03 (KST)
 
-- 검증 스크립트: `docs/oliveyoung-zyte-replay-test.js`
+- 검증 스크립트: `docs/oliveyoung-zyte-replay-test.ts`
 - 인증: `.env`의 `ZYTE_API_KEY` 사용 (저장소에는 `.env.example`만 커밋)
 - 실행:
-  - `node docs/oliveyoung-zyte-replay-test.js --loop=3 --keyword=선크림 --store=명동`
+  - `npx tsx docs/oliveyoung-zyte-replay-test.ts --loop=3 --keyword=선크림 --store=명동`
 - 결과:
   - 홈페이지 렌더(`browserHtml`) 기준 Cloudflare 챌린지 미검출
   - `POST /oystore/api/storeFinder/find-store`: `3/3` 성공
@@ -138,8 +138,8 @@
 ## Zyte 전송량/비용 실측 (추가)
 
 측정일: 2026-03-03 (KST)
-측정 스크립트: `docs/oliveyoung-zyte-bandwidth-test.js`
-실행: `node docs/oliveyoung-zyte-bandwidth-test.js --loop=10 --keyword=선크림 --store=명동`
+측정 스크립트: `docs/oliveyoung-zyte-bandwidth-test.ts`
+실행: `npx tsx docs/oliveyoung-zyte-bandwidth-test.ts --loop=10 --keyword=선크림 --store=명동`
 
 ### 실측 평균 (10회)
 

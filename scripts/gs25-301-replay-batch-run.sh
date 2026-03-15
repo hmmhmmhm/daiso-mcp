@@ -17,7 +17,7 @@ PROXY_HOST=""
 PROXY_PORT="8080"
 RESTORE_PROXY="1"
 FRIDA_SSL_BYPASS="0"
-FRIDA_SCRIPTS="scripts/frida/android-ssl-bypass.js"
+FRIDA_SCRIPTS="scripts/frida/android-ssl-bypass.ts"
 PACKAGE_NAME="${PACKAGE_NAME:-com.gsr.gs25}"
 
 usage() {
@@ -185,7 +185,7 @@ for spec in "${tuple_arr[@]}"; do
     raw_log="${run_dir}/mitmdump-replay-raw.log"
     summary_json="${run_dir}/summary.json"
     if [[ -f "${raw_log}" ]]; then
-      node scripts/gs25-301-replay-result-summary.mjs "${raw_log}" > "${summary_json}" || true
+      npx tsx scripts/gs25-301-replay-result-summary.ts "${raw_log}" > "${summary_json}" || true
     fi
 
     node - <<'JS' "${MANIFEST}" "${run_dir}" "${tuple_file}" "${tuple_idx}" "${mode}" "${summary_json}"

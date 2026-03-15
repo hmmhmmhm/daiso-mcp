@@ -19,7 +19,7 @@ PROXY_PORT="8080"
 PROXY_HOST=""
 RESTORE_PROXY="1"
 FRIDA_SSL_BYPASS="0"
-FRIDA_SCRIPTS="scripts/frida/android-ssl-bypass.js"
+FRIDA_SCRIPTS="scripts/frida/android-ssl-bypass.ts"
 FRIDA_LOG_NAME="frida-ssl-bypass.log"
 PACKAGE_NAME="${PACKAGE_NAME:-com.gsr.gs25}"
 
@@ -308,4 +308,4 @@ trap - EXIT INT TERM
 
 echo "완료: ${RAW_LOG}"
 echo "다음 명령으로 요약하세요:"
-echo "  node scripts/gs25-301-replay-result-summary.mjs ${RAW_LOG}"
+echo "  npx tsx scripts/gs25-301-replay-result-summary.ts ${RAW_LOG}"

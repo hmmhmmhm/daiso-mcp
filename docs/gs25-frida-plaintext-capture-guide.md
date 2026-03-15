@@ -9,7 +9,7 @@ Flutter 기반 GS25 앱(우리동네GS)의 암호화된 API 요청/응답을 평
 ## 스크립트 위치
 
 ```
-scripts/frida/gs25-blutter-encrypter-hook.js (v4)
+scripts/frida/gs25-blutter-encrypter-hook.ts (v4)
 ```
 
 ## 주요 기능
@@ -70,10 +70,10 @@ adb shell pidof com.gsr.gs25
 
 ```bash
 # 실시간 로그 확인
-frida -H 127.0.0.1:27042 -p {PID} -l scripts/frida/gs25-blutter-encrypter-hook.js
+frida -H 127.0.0.1:27042 -p {PID} -l scripts/frida/gs25-blutter-encrypter-hook.ts
 
 # 파일로 저장
-frida -H 127.0.0.1:27042 -p {PID} -l scripts/frida/gs25-blutter-encrypter-hook.js 2>&1 | tee captures/frida-capture.log
+frida -H 127.0.0.1:27042 -p {PID} -l scripts/frida/gs25-blutter-encrypter-hook.ts 2>&1 | tee captures/frida-capture.log
 ```
 
 ### 5. 앱에서 원하는 기능 수행
@@ -148,6 +148,6 @@ frida -H 127.0.0.1:27042 -p {PID} -l scripts/frida/gs25-blutter-encrypter-hook.j
 
 ## 관련 파일
 
-- `scripts/frida/gs25-blutter-encrypter-hook.js` - Frida 후킹 스크립트
+- `scripts/frida/gs25-blutter-encrypter-hook.ts` - Frida 후킹 스크립트
 - `docs/gs25-final-replay-methodology.md` - API 리플레이 전체 방법론
 - `tmp/gs25-static/blutter-out-gs25/` - blutter 분석 산출물

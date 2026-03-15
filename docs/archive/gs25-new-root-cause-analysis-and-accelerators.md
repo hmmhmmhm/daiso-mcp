@@ -140,7 +140,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
 
 - 실행:
   - `captures/gs25-new-autonomous-20260313-103950`
-  - 옵션: `--ssl-bypass-script scripts/frida/android-ssl-bypass.js`
+  - 옵션: `--ssl-bypass-script scripts/frida/android-ssl-bypass.ts`
 - 결과:
   - 2/2 라운드 모두 `b2cWoodongsConnectSeen=true`
   - `m.woodongs.com`, `b2c-pay.woodongs.com` CONNECT는 반복 관측
@@ -211,7 +211,7 @@ bash scripts/gs25-301-replay-mitm-run.sh \
 - 신규 도구:
   - `scripts/gs25-new-preflight-check.sh`
     - ADB 연결/패키지/frida-server/adb forward/http_proxy/root modules/app pid를 실행 전 점검
-  - `scripts/gs25-new-capture-scoreboard.mjs`
+  - `scripts/gs25-new-capture-scoreboard.ts`
     - `captures/gs25-new-autonomous-*`를 일괄 집계해 `b2c/tuple/woodongs` 신호를 표로 비교
 - 회귀 실행:
   - `captures/gs25-new-autonomous-20260313-145708`

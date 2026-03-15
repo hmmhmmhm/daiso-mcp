@@ -77,7 +77,7 @@ echo "Raw 로그: ${RAW_LOG}"
 echo "이벤트 JSONL: ${EVENTS_JSONL}"
 echo "종료: Ctrl+C"
 
-frida -H "${FRIDA_HOST}" -p "${PID}" -l scripts/frida/gs25-b2c-crypto-window-hook.js 2>&1 \
+frida -H "${FRIDA_HOST}" -p "${PID}" -l scripts/frida/gs25-b2c-crypto-window-hook.ts 2>&1 \
   | tee "${RAW_LOG}" \
   | awk '/\[GS25_B2C_CRYPTO\] /{ sub(/^.*\[GS25_B2C_CRYPTO\] /, ""); print; fflush(); }' \
   | tee -a "${EVENTS_JSONL}"

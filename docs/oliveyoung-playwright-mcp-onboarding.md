@@ -71,7 +71,7 @@
   - 실측 로그 요약, 엔드포인트 표, 필수 헤더/쿠키 표
 - `docs/oliveyoung-network-analysis-result.md`
   - 리플레이 성공/실패 결론, 구현 가능성 판정
-- `docs/oliveyoung-replay-session-test.js`
+- `docs/oliveyoung-replay-session-test.ts`
   - 재현 스크립트
 - `docs/oliveyoung-replay-session-test.html` (선택)
   - 브라우저 수동 검증용 페이지

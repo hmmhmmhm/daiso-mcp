@@ -48,8 +48,8 @@ echo "Pipeline 이벤트: $PIPE_JSONL"
 
 FRIDA_CMD=(
   frida -H "$HOST"
-  -l scripts/frida/gs25-pgl-meta-hook.js
-  -l scripts/frida/gs25-pgl-meta-301-pipeline-probe.js
+  -l scripts/frida/gs25-pgl-meta-hook.ts
+  -l scripts/frida/gs25-pgl-meta-301-pipeline-probe.ts
 )
 if [[ "$SPAWN" -eq 1 ]]; then
   FRIDA_CMD+=(-f com.gsr.gs25)

@@ -75,6 +75,9 @@ const LOCATION_STOPWORDS = new Set([
   '주세요요',
   '역',
 ]);
+const BRAND_PATTERN = /\b(?:cgv|씨지브이)\b/giu;
+const TRAILING_INTENT_PATTERN =
+  /\s+(?:극장|영화관|영화|상영작|시간표|좌석|잔여좌석|남은좌석|목록|찾고|찾아|찾아서|알려|보여|추천|조회|확인|해주세요|해줘).*/u;
 
 const userGeocodeCache = new Map<
   string,
@@ -100,8 +103,30 @@ function isValidCoordinate(value: number | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, '').toLowerCase();
+}
+
+function sanitizeLocationKeyword(keyword: string): string {
+  const trimmed = normalizeWhitespace(keyword);
+  if (trimmed.length === 0) {
+    return '';
+  }
+
+  let sanitized = normalizeWhitespace(trimmed.replace(BRAND_PATTERN, ' '));
+  const nearbyMatch = sanitized.match(/^(.+?)\s*(?:근처|주변)\s*(?:극장|영화관)?(?:\s.*)?$/u);
+
+  if (nearbyMatch?.[1]) {
+    sanitized = normalizeWhitespace(nearbyMatch[1]);
+  } else {
+    sanitized = normalizeWhitespace(sanitized.replace(TRAILING_INTENT_PATTERN, ''));
+  }
+
+  return sanitized || trimmed;
 }
 
 function extractLocationTokens(...values: Array<string | null | undefined>): string[] {
@@ -181,7 +206,7 @@ export async function resolveCgvLocation(
   params: ResolveCgvLocationParams,
   options: RequestOptions = {},
 ): Promise<CgvResolvedLocation> {
-  const keyword = (params.keyword || '').trim();
+  const keyword = sanitizeLocationKeyword((params.keyword || '').trim());
   const hasCoordinates = isValidCoordinate(params.latitude) && isValidCoordinate(params.longitude);
 
   if (hasCoordinates) {
