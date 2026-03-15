@@ -15,6 +15,7 @@
 ## 엔드포인트 판정
 
 1. `POST /oystore/api/storeFinder/find-store`
+
 - 목적: 매장 검색(위치/키워드)
 - 필수 Body 필드(실측 기준):
   - `lat`, `lon`, `pageIdx`, `searchWords`, `pogKeys`, `serviceKeys`, `mapLat`, `mapLon`
@@ -23,6 +24,7 @@
   - `GET` 시 `405 Method Not Allowed`
 
 2. `POST /oystore/api/stock/product-search-v3`
+
 - 목적: 매장 맥락 상품/재고 리스트
 - 필수 Body 필드(실측 기준):
   - `includeSoldOut`, `keyword`, `page`, `sort`, `size`
@@ -43,7 +45,9 @@
 ## MCP 도구 스키마 초안
 
 ### 1) `oliveyoung_find_stores`
+
 입력:
+
 ```json
 {
   "searchWords": "명동",
@@ -56,7 +60,9 @@
   "mapLon": 126.98517710459745
 }
 ```
+
 출력:
+
 ```json
 {
   "status": "SUCCESS",
@@ -76,7 +82,9 @@
 ```
 
 ### 2) `oliveyoung_search_stock_products`
+
 입력:
+
 ```json
 {
   "keyword": "선크림",
@@ -86,7 +94,9 @@
   "includeSoldOut": false
 }
 ```
+
 출력:
+
 ```json
 {
   "status": "SUCCESS",
@@ -163,6 +173,7 @@
 ## 캐싱 설계 시 비용 절감 추정
 
 가정:
+
 - `find-store`와 `product-search-v3` 모두 동일 적중률 `h`
 - 유효 요청 수: `총요청수 = 수집건수 x 2 x (1 - h)`
 
@@ -218,6 +229,7 @@
 ## 재고 라이브성 우선 캐시 정책 (설계안)
 
 목표:
+
 - 비용 절감은 유지하되, 재고 정확도를 우선 보장
 - 재고 관련 오판(있다고 보여주나 실제 없음) 최소화
 
@@ -228,6 +240,7 @@
 - `inventory fields` (`o2oStockFlag`, `o2oRemainQuantity`): TTL `30~90초`
 
 핵심:
+
 - 동일 API 응답이라도 저장 시 **메타 데이터와 재고 필드를 분리 캐시**
 - 응답 조합 시 `meta cache + inventory cache`를 합성
 
@@ -249,6 +262,7 @@
 ### 사용자/클라이언트 투명성
 
 응답 필드에 아래 메타를 포함:
+
 - `fetchedAt`: 원본 조회 시각(ISO)
 - `cacheAgeSec`: 캐시 경과 시간
 - `inventoryFreshSec`: 재고 필드 신선도(초)
@@ -267,6 +281,7 @@
 - `force_refresh_ratio`
 
 권장 초기 목표:
+
 - `inventory_mismatch_rate < 1%`
 - `inventory_p95_age_sec < 60`
 
