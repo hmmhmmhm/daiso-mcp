@@ -47,7 +47,7 @@ Base URL: ${baseUrl}
         "id": "1234567890",
         "name": "PP 수납박스 대형",
         "price": 5000,
-        "imageUrl": "https://img.daisomall.co.kr/...",
+        "imageUrl": "https://cdn.daisomall.co.kr/...",
         "soldOut": false,
         "isNew": false,
         "pickupAvailable": true
@@ -78,7 +78,7 @@ Base URL: ${baseUrl}
     "name": "PP 수납박스 대형",
     "price": 5000,
     "currency": "KRW",
-    "imageUrl": "https://img.daisomall.co.kr/...",
+    "imageUrl": "https://cdn.daisomall.co.kr/...",
     "brand": "다이소",
     "soldOut": false,
     "isNew": false
@@ -171,7 +171,7 @@ Base URL: ${baseUrl}
     "product": {
       "id": "1234567890",
       "name": "PP 수납박스 대형",
-      "imageUrl": "https://img.daisomall.co.kr/...",
+      "imageUrl": "https://cdn.daisomall.co.kr/...",
       "brand": "다이소",
       "soldOut": false,
       "isNew": false

@@ -22,7 +22,7 @@ export const DAISOMALL_API = {
   DISPLAY_LOCATION: 'https://fapi.daisomall.co.kr/pdo/selIntPdStDispInfo',
 
   /** 이미지 CDN 베이스 URL */
-  IMAGE_BASE_URL: 'https://img.daisomall.co.kr',
+  IMAGE_BASE_URL: 'https://cdn.daisomall.co.kr',
 } as const;
 
 /**

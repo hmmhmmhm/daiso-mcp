@@ -22,7 +22,7 @@ export const OPENAPI_COMPONENTS = {
             imageUrl: {
               type: 'string',
               description: '제품 이미지 URL',
-              example: 'https://img.daisomall.co.kr/...',
+              example: 'https://cdn.daisomall.co.kr/...',
             },
             soldOut: { type: 'boolean', description: '품절 여부', example: false },
             isNew: { type: 'boolean', description: '신상품 여부', example: false },

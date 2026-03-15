@@ -64,7 +64,7 @@ describe('API 상수', () => {
 
     it('올바른 도메인을 사용한다', () => {
       expect(DAISOMALL_API.SEARCH_PRODUCTS).toContain('daisomall.co.kr');
-      expect(DAISOMALL_API.IMAGE_BASE_URL).toContain('img.daisomall.co.kr');
+      expect(DAISOMALL_API.IMAGE_BASE_URL).toContain('cdn.daisomall.co.kr');
     });
   });
 
