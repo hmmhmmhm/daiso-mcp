@@ -1,8 +1,12 @@
 /**
  * 다이소 API 헬퍼 함수 테스트
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { getImageUrl, formatTime, DAISOMALL_API, DAISO_WEB_API } from '../../../src/services/daiso/api.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('getImageUrl', () => {
   it('유효한 경로가 주어지면 전체 URL을 반환한다', () => {
@@ -39,6 +43,27 @@ describe('getImageUrl', () => {
     const result = getImageUrl(path);
 
     expect(result).toBe(path);
+  });
+
+  it('절대 URL 파싱에 실패하면 원본 문자열을 반환한다', () => {
+    const path = 'https://img.daisomall.co.kr/images/product/123.jpg';
+    const OriginalUrl = globalThis.URL;
+
+    class ThrowingUrl {
+      constructor() {
+        throw new TypeError('invalid url');
+      }
+    }
+
+    const urlSpy = vi
+      .spyOn(globalThis, 'URL')
+      .mockImplementation(ThrowingUrl as unknown as typeof URL);
+
+    const result = getImageUrl(path);
+
+    expect(result).toBe(path);
+    expect(urlSpy).toHaveBeenCalledWith(path);
+    expect(globalThis.URL).not.toBe(OriginalUrl);
   });
 });
 
