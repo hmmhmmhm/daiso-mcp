@@ -33,6 +33,7 @@ describe('generatePromptText', () => {
     // 올리브영 API
     expect(text).toContain('/api/oliveyoung/stores');
     expect(text).toContain('/api/oliveyoung/products');
+    expect(text).toContain('products[].imageUrl');
     expect(text).toContain('/api/oliveyoung/inventory');
     expect(text).toContain('/api/lottemart/stores');
     expect(text).toContain('/api/lottemart/products');
@@ -169,6 +170,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택');
     expect(text).toContain('/api/cgv/theaters?playDate=20260315&keyword=안산%20중앙역');
     expect(text).toContain('CGV 상영 시간표를 조회합니다. theaterCode가 없으면');
+    expect(text).toContain('올리브영 상품 이미지 표시');
+    expect(text).toContain('각 상품 이미지를 생략하지 말고 모두 렌더링');
   });
 });
 

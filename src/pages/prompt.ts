@@ -237,6 +237,10 @@ Base URL: ${baseUrl}
 
 **설명**: 키워드로 올리브영 상품 목록을 조회합니다. 사용자가 "올리브영 마스크팩 어떤 거 있나요", "립밤 종류 보여줘"처럼 상품 후보나 종류를 묻는 경우에는 이 API를 먼저 사용하세요.
 
+**표시 규칙**:
+- 응답의 \`products[].imageUrl\`이 있으면 각 상품 이미지를 반드시 마크다운 이미지로 함께 렌더링합니다.
+- 여러 상품이 나오면 첫 상품만 대표로 보여주지 말고, 이미지가 있는 상품은 전부 표시합니다.
+
 **URL**: ${baseUrl}/api/oliveyoung/products?keyword={검색어}
 
 **필수 파라미터**:
@@ -626,6 +630,7 @@ Base URL: ${baseUrl}
 8. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 9. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
 10. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
+11. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다.
 
 ---
 
