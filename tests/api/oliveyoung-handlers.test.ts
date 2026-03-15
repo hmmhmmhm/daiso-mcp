@@ -199,6 +199,21 @@ describe('handleOliveyoungSearchProducts', () => {
       500
     );
   });
+
+  it('올리브영 상품 검색의 알 수 없는 에러를 처리한다', async () => {
+    mockFetch.mockRejectedValue(undefined);
+
+    const ctx = createMockContext({ keyword: '마스크팩' });
+    await handleOliveyoungSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: { code: 'OLIVEYOUNG_PRODUCT_SEARCH_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
+      }),
+      500
+    );
+  });
 });
 
 describe('handleOliveyoungCheckInventory', () => {
