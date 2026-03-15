@@ -143,6 +143,9 @@ describe('generatePromptText', () => {
     expect(text).toContain('브랜드가 명시되면 일단 해당 브랜드에서 실제 조회 후');
     expect(text).toContain('브랜드가 앞부분에만 나와도 뒤 요청 전체를 다이소 기준으로 처리');
     expect(text).toContain('결과가 없을 때만 다른 브랜드 대안을 짧게 제안');
+    expect(text).toContain('이미지 적극 표시');
+    expect(text).toContain('응답에 `imageUrl`이 있으면');
+    expect(text).toContain('이미지 URL을 눈에 띄게 함께 제시');
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
     expect(text).toContain('재고 응답의 storeCode를 확인한 뒤');

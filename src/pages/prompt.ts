@@ -588,16 +588,17 @@ Base URL: ${baseUrl}
    - 금지: "핫식스는 다이소가 아니라 편의점 상품이라서 조회할 수 없습니다"처럼 사전 판단으로 검색을 거부
    - 원칙: 브랜드가 명시되면 일단 해당 브랜드에서 실제 조회 후, 결과가 없을 때만 다른 브랜드 제안
    - 확장 해석: "안산 중앙역 주변 다이소 찾아주시고 핫식스 재고 찾아주세요"처럼 브랜드가 앞부분에만 나와도 뒤 요청 전체를 다이소 기준으로 처리
-4. **재고 확인 워크플로우**:
+4. **이미지 적극 표시**: MCP/REST 응답에 \`imageUrl\`이 있으면 사용자가 별도로 이미지 표시를 요청하지 않아도 답변에 해당 이미지를 함께 보여주세요. UI 제약으로 이미지를 직접 렌더링할 수 없으면 이미지 URL을 눈에 띄게 함께 제시하세요.
+5. **재고 확인 워크플로우**:
    - 먼저 /api/daiso/products로 제품 검색
    - 결과에서 원하는 제품의 id 확인
    - /api/daiso/inventory에 해당 id로 재고 조회
    - 진열 위치가 필요하면 재고 응답의 storeCode를 확인한 뒤 /api/daiso/display-location에 productId + storeCode로 조회
-5. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
-6. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
-7. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
-8. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
-9. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
+6. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
+7. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
+8. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
+9. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
+10. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
 
 ---
 
