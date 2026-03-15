@@ -146,6 +146,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('이미지 적극 표시');
     expect(text).toContain('응답에 `imageUrl`이 있으면');
     expect(text).toContain('반드시 마크다운 이미지로 렌더링');
+    expect(text).toContain('각 항목의 이미지를 전부 표시');
     expect(text).toContain('임의로 생략하지 마세요');
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
