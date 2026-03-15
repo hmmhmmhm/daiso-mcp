@@ -68,6 +68,16 @@ export interface Product {
   onlineStock?: number;
 }
 
+// 재고 응답용 상품 요약 정보
+export interface ProductSummary {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  brand?: string;
+  soldOut?: boolean;
+  isNew?: boolean;
+}
+
 // 상품 검색 응답
 export interface ProductSearchResponse {
   resultSet: {

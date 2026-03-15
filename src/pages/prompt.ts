@@ -168,6 +168,14 @@ Base URL: ${baseUrl}
   "success": true,
   "data": {
     "productId": "1234567890",
+    "product": {
+      "id": "1234567890",
+      "name": "PP 수납박스 대형",
+      "imageUrl": "https://img.daisomall.co.kr/...",
+      "brand": "다이소",
+      "soldOut": false,
+      "isNew": false
+    },
     "location": { "latitude": 37.5665, "longitude": 126.978 },
     "onlineStock": 150,
     "storeInventory": {

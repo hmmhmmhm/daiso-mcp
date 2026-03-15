@@ -114,6 +114,24 @@ describe('GET /api/daiso/inventory', () => {
     mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: false })));
     // 매장 재고 응답
     mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: false })));
+    // 상품 메타데이터 응답
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          resultSet: {
+            result: [{
+              totalSize: 1,
+              resultDocuments: [{
+                PD_NO: '12345',
+                PDNM: '테스트상품',
+                PD_PRC: '1000',
+                ATCH_FILE_URL: '/img.jpg',
+              }],
+            }],
+          },
+        }),
+      ),
+    );
 
     const res = await app.request('/api/daiso/inventory?productId=12345');
 
@@ -121,6 +139,7 @@ describe('GET /api/daiso/inventory', () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(data.data.productId).toBe('12345');
+    expect(data.data.product.imageUrl).toContain('/img.jpg');
   });
 
   it('productId 없이 요청하면 에러를 반환한다', async () => {
@@ -141,6 +160,22 @@ describe('GET /api/daiso/inventory', () => {
             data: {
               msStrVOList: [],
               intStrCont: 0,
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            resultSet: {
+              result: [{
+                totalSize: 1,
+                resultDocuments: [{
+                  PD_NO: '12345',
+                  PDNM: '테스트상품',
+                  PD_PRC: '1000',
+                }],
+              }],
             },
           }),
         ),

@@ -7,6 +7,7 @@ import {
   fetchStoreInventory,
   createCheckInventoryTool,
 } from '../../../../src/services/daiso/tools/checkInventory.js';
+import { createMockProductResponse } from '../../../api/testHelpers.js';
 
 const mockFetch = vi.fn();
 
@@ -292,11 +293,33 @@ describe('createCheckInventoryTool', () => {
         },
       }))
     );
+    // 상품 메타데이터 응답
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify(createMockProductResponse([
+        {
+          PD_NO: '12345',
+          PDNM: '테스트상품',
+          ATCH_FILE_URL: '/images/test.jpg',
+          BRND_NM: '다이소',
+          SOLD_OUT_YN: 'N',
+          NEW_PD_YN: 'Y',
+          PD_PRC: '1000',
+        },
+      ])))
+    );
 
     const tool = createCheckInventoryTool();
     const result = await tool.handler({ productId: '12345' });
 
     const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.product).toEqual({
+      id: '12345',
+      name: '테스트상품',
+      imageUrl: expect.stringContaining('/images/test.jpg'),
+      brand: '다이소',
+      soldOut: false,
+      isNew: true,
+    });
     expect(parsed.onlineStock).toBe(100);
     expect(parsed.storeInventory.inStockCount).toBe(1);
     expect(parsed.storeInventory.outOfStockCount).toBe(1);
@@ -311,6 +334,10 @@ describe('createCheckInventoryTool', () => {
     // 매장 재고 응답
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ success: false }))
+    );
+    // 상품 메타데이터 응답
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resultSet: { result: [{}] } }))
     );
 
     const tool = createCheckInventoryTool();
@@ -330,6 +357,10 @@ describe('createCheckInventoryTool', () => {
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ success: false }))
     );
+    // 상품 메타데이터 응답
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ resultSet: { result: [{}] } }))
+    );
 
     const tool = createCheckInventoryTool();
     const result = await tool.handler({
@@ -341,5 +372,22 @@ describe('createCheckInventoryTool', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.location.latitude).toBe(35.1796);
     expect(parsed.location.longitude).toBe(129.0756);
+  });
+
+  it('상품 메타데이터 조회가 실패해도 재고 정보를 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, data: { stck: 1 } }))
+    );
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: true, data: { msStrVOList: [], intStrCont: 0 } }))
+    );
+    mockFetch.mockRejectedValueOnce(new Error('metadata failed'));
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ productId: '12345' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.product).toBeUndefined();
+    expect(parsed.onlineStock).toBe(1);
   });
 });

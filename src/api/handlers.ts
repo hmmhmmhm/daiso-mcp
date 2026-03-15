@@ -14,6 +14,7 @@ import {
 import { fetchProductById } from '../services/daiso/tools/getPriceInfo.js';
 import { fetchDisplayLocation } from '../services/daiso/tools/getDisplayLocation.js';
 import { getImageUrl } from '../services/daiso/api.js';
+import { toProductSummary } from '../services/daiso/product.js';
 import {
   enrichOliveyoungProductsWithNearbyStoreInventory,
   fetchOliveyoungProducts,
@@ -124,15 +125,18 @@ export async function handleCheckInventory(c: ApiContext) {
   }
 
   try {
-    const [onlineStock, storeResult] = await Promise.all([
+    const [onlineStock, storeResult, productDoc] = await Promise.all([
       fetchOnlineStock(productId),
       fetchStoreInventory(productId, lat, lng, page, pageSize, keyword),
+      fetchProductById(productId).catch(() => null),
     ]);
 
     const inStockStores = storeResult.stores.filter((s) => s.quantity > 0);
+    const product = productDoc ? toProductSummary(productDoc) : undefined;
 
     const result = {
       productId,
+      product,
       location: { latitude: lat, longitude: lng },
       onlineStock,
       storeInventory: {

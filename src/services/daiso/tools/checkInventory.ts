@@ -6,10 +6,17 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import type { StoreInventory, StoreInventoryResponse, OnlineStockResponse } from '../types.js';
+import type {
+  ProductSummary,
+  StoreInventory,
+  StoreInventoryResponse,
+  OnlineStockResponse,
+} from '../types.js';
 import { DAISOMALL_API } from '../api.js';
 import { fetchDaisoJson } from '../client.js';
 import { buildDaisoStoreKeywordVariants } from '../../../utils/daisoKeyword.js';
+import { fetchProductById } from './getPriceInfo.js';
+import { toProductSummary } from '../product.js';
 
 /** 도구 입력 인터페이스 */
 interface CheckInventoryArgs {
@@ -19,6 +26,19 @@ interface CheckInventoryArgs {
   longitude?: number;
   page?: number;
   pageSize?: number;
+}
+
+/**
+ * 재고 응답에 함께 노출할 상품 요약 정보를 조회합니다.
+ * 부가 정보이므로 실패해도 전체 재고 조회는 계속 진행합니다.
+ */
+async function fetchInventoryProduct(productId: string): Promise<ProductSummary | undefined> {
+  try {
+    const product = await fetchProductById(productId);
+    return product ? toProductSummary(product) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -120,9 +140,10 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   }
 
   // 온라인 재고와 매장 재고 동시 조회
-  const [onlineStock, storeResult] = await Promise.all([
+  const [onlineStock, storeResult, product] = await Promise.all([
     fetchOnlineStock(productId),
     fetchStoreInventory(productId, latitude, longitude, page, pageSize, storeQuery),
+    fetchInventoryProduct(productId),
   ]);
 
   // 재고 있는 매장과 없는 매장 분류
@@ -131,6 +152,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
 
   const result = {
     productId,
+    product,
     location: { latitude, longitude },
     onlineStock,
     storeInventory: {

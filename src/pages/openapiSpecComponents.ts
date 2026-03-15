@@ -43,6 +43,18 @@ export const OPENAPI_COMPONENTS = {
             isNew: { type: 'boolean', description: '신상품 여부' },
           },
         },
+        InventoryProduct: {
+          type: 'object',
+          description: '재고 응답에 포함되는 상품 요약 정보',
+          properties: {
+            id: { type: 'string', description: '제품 ID' },
+            name: { type: 'string', description: '제품명' },
+            imageUrl: { type: 'string', description: '제품 이미지 URL' },
+            brand: { type: 'string', description: '브랜드명' },
+            soldOut: { type: 'boolean', description: '품절 여부' },
+            isNew: { type: 'boolean', description: '신상품 여부' },
+          },
+        },
         Store: {
           type: 'object',
           description: '매장 정보',
@@ -138,6 +150,7 @@ export const OPENAPI_COMPONENTS = {
               type: 'object',
               properties: {
                 productId: { type: 'string', description: '제품 ID' },
+                product: { $ref: '#/components/schemas/InventoryProduct' },
                 location: {
                   type: 'object',
                   properties: {
