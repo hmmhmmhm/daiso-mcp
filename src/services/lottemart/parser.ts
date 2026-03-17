@@ -37,15 +37,24 @@ function decodeHtmlEntities(value: string): string {
 }
 
 function stripHtmlComments(value: string): string {
-  let sanitized = value;
-  let previous = '';
+  let sanitized = '';
+  let index = 0;
 
-  while (sanitized !== previous) {
-    previous = sanitized;
-    sanitized = sanitized.replace(/<!--[\s\S]*?-->/g, '').replace(/<!--|--!?>/g, '');
+  while (index < value.length) {
+    if (value.startsWith('<!--', index)) {
+      const commentEnd = value.indexOf('-->', index + 4);
+      if (commentEnd < 0) {
+        break;
+      }
+      index = commentEnd + 3;
+      continue;
+    }
+
+    sanitized += value[index];
+    index += 1;
   }
 
-  return sanitized;
+  return sanitized.replaceAll('<!--', '').replaceAll('-->', '');
 }
 
 function stripTags(value: string): string {

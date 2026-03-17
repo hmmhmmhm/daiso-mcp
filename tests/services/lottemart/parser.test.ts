@@ -205,4 +205,27 @@ describe('HTML 파서 보조 분기', () => {
     expect(product.barcode).toBe('8801000000000');
     expect(product.spec).toBe('600ML');
   });
+
+  it('닫히지 않은 주석은 나머지 내용을 버린다', () => {
+    const [product] = parseProducts(
+      '서울',
+      '2301',
+      '강변점',
+      '행사',
+      `
+        <ul class="list-result">
+          <li>
+            <div class="prod-box">
+              <div class="prod-name">행사상품</div>
+              <div class="prod-count"><!-- 잘못된 주석</div>
+            </div>
+          </li>
+        </ul>
+      `,
+    );
+
+    expect(product.productName).toBe('행사상품');
+    expect(product.barcode).toBe('');
+    expect(product.spec).toBe('');
+  });
 });
