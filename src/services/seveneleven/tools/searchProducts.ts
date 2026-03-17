@@ -4,7 +4,7 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import { searchSevenElevenProducts } from '../client.js';
+import { searchSevenElevenProductsWithVariants } from '../productKeyword.js';
 
 interface SearchProductsArgs {
   query: string;
@@ -21,17 +21,12 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     throw new Error('상품 검색어(query)를 입력해주세요.');
   }
 
-  const result = await searchSevenElevenProducts(
-    {
-      query,
-      page,
-      size,
-      sort,
-    },
-    {
-      timeout: timeoutMs,
-    },
-  );
+  const result = await searchSevenElevenProductsWithVariants(query, {
+    page,
+    size,
+    sort,
+    timeout: timeoutMs,
+  });
 
   return {
     content: [
@@ -46,6 +41,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
             totalCount: result.totalCount,
             count: result.products.length,
             collectionIds: result.collectionIds,
+            appliedQueries: result.appliedQueries,
             products: result.products,
           },
           null,

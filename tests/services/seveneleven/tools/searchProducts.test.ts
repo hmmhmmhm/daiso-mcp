@@ -91,4 +91,150 @@ describe('createSearchProductsTool', () => {
       }),
     );
   });
+
+  it('필요하면 대체 질의로 상품을 찾아 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '후르츠산도',
+                Collection: [{ CollectionId: 'offline', Documentset: { totalCount: 0, Document: [] } }],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '샌드',
+                Collection: [
+                  {
+                    CollectionId: 'offline',
+                    Documentset: {
+                      totalCount: 1,
+                      Document: [
+                        {
+                          prdNo: '3',
+                          itemCd: '880000000030',
+                          itemOnm: '그린)샤빠딸후르츠샌드',
+                          onlinePrice: 3200,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '후르츠',
+                Collection: [
+                  {
+                    CollectionId: 'offline',
+                    Documentset: {
+                      totalCount: 2,
+                      Document: [
+                        {
+                          prdNo: '1',
+                          itemCd: '880000000010',
+                          itemOnm: '농심)후르츠텔라48g',
+                          onlinePrice: 1500,
+                        },
+                        {
+                          prdNo: '2',
+                          itemCd: '880000000020',
+                          itemOnm: '그린)샤빠딸후르츠샌드',
+                          onlinePrice: 3200,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '후르츠샌드위치',
+                Collection: [{ CollectionId: 'offline', Documentset: { totalCount: 0, Document: [] } }],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '후르츠샌드',
+                Collection: [{ CollectionId: 'offline', Documentset: { totalCount: 0, Document: [] } }],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                query: '샌드',
+                Collection: [
+                  {
+                    CollectionId: 'offline',
+                    Documentset: {
+                      totalCount: 1,
+                      Document: [
+                        {
+                          prdNo: '3',
+                          itemCd: '880000000030',
+                          itemOnm: '그린)샤빠딸후르츠샌드',
+                          onlinePrice: 3200,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      );
+
+    const tool = createSearchProductsTool();
+    const result = await tool.handler({ query: '후르츠산도', size: 10 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.products[0].itemName).toBe('그린)샤빠딸후르츠샌드');
+    expect(parsed.appliedQueries).toEqual([
+      '후르츠산도',
+      '후르츠',
+      '후르츠샌드위치',
+      '후르츠샌드',
+      '샌드',
+    ]);
+  });
 });

@@ -276,11 +276,8 @@ describe('createCheckInventoryTool', () => {
   });
 
   it('상품이 검색되지 않으면 product가 null이다', async () => {
-    // 상품 검색 결과 없음
     mockFetch
-      .mockResolvedValueOnce(
-        makeProductResponse([]),
-      )
+      .mockResolvedValueOnce(makeProductResponse([]))
       .mockResolvedValueOnce(
         makeStoreResponse([
           {
@@ -304,6 +301,82 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.product).toBeNull();
     expect(parsed.stockAvailable).toBe(false);
     expect(parsed.inventory.totalStoreCount).toBe(1);
+    expect(parsed.note).toContain('상품 검색 결과가 없어');
+  });
+
+  it('산도 검색어도 샌드 계열 상품으로 재고 조회를 이어간다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeProductResponse([]))
+      .mockResolvedValueOnce(
+        makeProductResponse([
+          {
+            prdNo: '777',
+            itemCd: '8807777777777',
+            itemOnm: '그린)샤빠딸후르츠샌드',
+            onlinePrice: 3200,
+            onlineCost: 3200,
+          },
+          {
+            prdNo: '778',
+            itemCd: '8808888888888',
+            itemOnm: '농심)후르츠텔라48g',
+            onlinePrice: 1500,
+            onlineCost: 1500,
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeProductResponse([]))
+      .mockResolvedValueOnce(makeProductResponse([]))
+      .mockResolvedValueOnce(makeProductResponse([]))
+      .mockResolvedValueOnce(
+        makeStoreResponse([
+          {
+            field: {
+              storeCd: '54928',
+              storeNm: '안산중앙일번가점',
+              addr1: '경기 안산시 단원구 중앙대로 100',
+              addr2: '',
+              storeLat: '37.3156',
+              storeLon: '126.8384',
+              pickupYn: 'Y',
+              dlvyYn: 'N',
+              storeCloseYn: 'N',
+            },
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeStockProductMetaResponse({
+          itemCd: '8807777777777',
+          itemOnm: '그린)샤빠딸후르츠샌드',
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeStockSuccessResponse([
+          {
+            storeCd: '54928',
+            stock: 3,
+            stokMngQty: 0,
+          },
+        ]),
+      );
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ keyword: '후르츠산도', storeKeyword: '안산 중앙역' });
+
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.product.itemCode).toBe('8807777777777');
+    expect(parsed.product.itemName).toBe('그린)샤빠딸후르츠샌드');
+    expect(parsed.stockAvailable).toBe(true);
+    expect(parsed.inventory.stores[0].stockQuantity).toBe(3);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      7,
+      'https://new.7-elevenapp.co.kr/api/v1/open/product/search/stock?itemCd=8807777777777',
+      expect.objectContaining({
+        method: 'GET',
+      }),
+    );
   });
 
   it('storeKeyword 없이도 동작한다', async () => {

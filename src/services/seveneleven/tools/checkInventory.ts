@@ -57,7 +57,9 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     },
   );
 
-  const note = result.stockAvailable
+  const note = !result.product
+    ? '상품 검색 결과가 없어 재고를 조회하지 못했습니다. 다른 상품명이나 더 짧은 키워드로 다시 시도해주세요.'
+    : result.stockAvailable
     ? '실시간 재고 데이터가 포함되어 있습니다.'
     : isEncryptedStockFailure(result.stockError)
       ? '실시간 재고 API가 암호화 검증에서 거절되었습니다. 현재 구현의 평문 요청만으로는 재고 수량을 조회할 수 없습니다.'

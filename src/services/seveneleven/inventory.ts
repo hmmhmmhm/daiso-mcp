@@ -11,8 +11,8 @@ import { SEVENELEVEN_API } from './api.js';
 import {
   fetchSevenElevenStockProductMeta,
   fetchSevenElevenStoresByKeyword,
-  searchSevenElevenProducts,
 } from './client.js';
+import { pickBestSevenElevenProduct, searchSevenElevenProductsWithVariants } from './productKeyword.js';
 import type {
   SevenElevenApiEnvelope,
   SevenElevenStockError,
@@ -310,8 +310,12 @@ export async function checkSevenElevenInventory(
   const { productKeyword, storeKeyword, storeLimit = 20 } = params;
 
   // 1) 상품 검색
-  const productResult = await searchSevenElevenProducts({ query: productKeyword }, options);
-  const firstProduct = productResult.products.find((p) => p.itemCode.length > 0) || productResult.products[0] || null;
+  const productResult = await searchSevenElevenProductsWithVariants(productKeyword, options);
+  const firstProduct =
+    pickBestSevenElevenProduct(productResult.products, productKeyword) ||
+    productResult.products.find((p) => p.itemCode.length > 0) ||
+    productResult.products[0] ||
+    null;
 
   // 2) 매장 검색
   const storeResult = await fetchSevenElevenStoresByKeyword({ keyword: storeKeyword, limit: 100 }, options);
