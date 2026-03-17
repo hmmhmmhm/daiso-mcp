@@ -28,16 +28,28 @@ export function detectBrandVariant(storeName: string) {
 function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(/&#x2F;/gi, '/');
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&amp;/gi, '&');
+}
+
+function stripHtmlComments(value: string): string {
+  let sanitized = value;
+  let previous = '';
+
+  while (sanitized !== previous) {
+    previous = sanitized;
+    sanitized = sanitized.replace(/<!--[\s\S]*?-->/g, '').replace(/<!--|--!?>/g, '');
+  }
+
+  return sanitized;
 }
 
 function stripTags(value: string): string {
-  return value.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ');
+  return stripHtmlComments(value).replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ');
 }
 
 function normalizeWhitespace(value: string): string {
@@ -138,7 +150,7 @@ export function parseProducts(
           normalizeWhitespace(extractFirstMatch(/<div class="prod-name">([\s\S]*?)<\/div>/, block)) ||
           normalizeWhitespace(extractFirstMatch(/<div class="layer-head">([\s\S]*?)<\/div>/, block)),
         barcode: normalizeWhitespace(extractFirstMatch(/<!--\s*([^>]+?)\s*-->/, rawSpec)),
-        spec: normalizeWhitespace(rawSpec.replace(/<!--[\s\S]*?-->/g, '')),
+        spec: normalizeWhitespace(stripHtmlComments(rawSpec)),
         manufacturer: normalizeWhitespace(extractFirstMatch(/제조사\s*:\s*<\/th>\s*<td>([\s\S]*?)<\/td>/, block)),
         price: toNumber(extractFirstMatch(/가격\s*:\s*<\/th>\s*<td>([\s\S]*?)<\/td>/, block)),
         stockQuantity: toNumber(extractFirstMatch(/재고\s*:\s*<\/th>\s*<td>([\s\S]*?)<\/td>/, block)),

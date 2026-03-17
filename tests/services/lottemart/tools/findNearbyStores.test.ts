@@ -78,7 +78,7 @@ describe('createFindNearbyStoresTool', () => {
         return Promise.resolve(createSessionResponse());
       }
 
-      if (url.includes('maps.googleapis.com')) {
+      if (new URL(url).hostname === 'maps.googleapis.com') {
         expect(url).toContain('key=override-key');
         return Promise.resolve(
           new Response(

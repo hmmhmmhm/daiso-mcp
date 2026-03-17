@@ -49,11 +49,50 @@ Java.perform(function () {
     return s.slice(0, MAX_PAYLOAD_PREVIEW) + '...';
   }
 
+  function normalizeUrlCandidate(v) {
+    return safe(v).trim().toLowerCase();
+  }
+
+  function extractUrlHost(v) {
+    var candidate = normalizeUrlCandidate(v);
+    var match;
+    if (!candidate) {
+      return '';
+    }
+    if (
+      candidate.indexOf('javascript:') === 0 ||
+      candidate.indexOf('vbscript:') === 0 ||
+      candidate.indexOf('data:') === 0
+    ) {
+      return '';
+    }
+    if (candidate.indexOf('//') === 0) {
+      candidate = 'https:' + candidate;
+    }
+    match = candidate.match(/^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/);
+    if (!match) {
+      return '';
+    }
+    return match[1].replace(/:\d+$/, '');
+  }
+
+  function hostEqualsOrSubdomain(host, domain) {
+    return !!host && (host === domain || host.endsWith('.' + domain));
+  }
+
+  function hasExecutableUrlScheme(v) {
+    var candidate = normalizeUrlCandidate(v);
+    return (
+      candidate.indexOf('javascript:') === 0 ||
+      candidate.indexOf('vbscript:') === 0 ||
+      candidate.indexOf('data:') === 0
+    );
+  }
+
   function looksInteresting(v) {
     var l = safe(v).toLowerCase();
     return (
-      l.indexOf('data:text/html') >= 0 ||
-      l.indexOf('javascript:') === 0 ||
+      hasExecutableUrlScheme(v) ||
       l.indexOf('woodongs') >= 0 ||
       l.indexOf('b2c') >= 0 ||
       l.indexOf('stock') >= 0 ||
@@ -71,20 +110,21 @@ Java.perform(function () {
   }
 
   function isNoise(v) {
+    var host = extractUrlHost(v);
     var l = safe(v).toLowerCase();
     return (
-      l.indexOf('googleads.g.doubleclick.net') >= 0 ||
+      hostEqualsOrSubdomain(host, 'googleads.g.doubleclick.net') ||
+      hostEqualsOrSubdomain(host, 'doubleclick.net') ||
+      hostEqualsOrSubdomain(host, 'googleadservices.com') ||
       l.indexOf('google.afma') >= 0 ||
       l.indexOf('omidbridge') >= 0 ||
-      l.indexOf('adsjsinterface') >= 0 ||
-      l.indexOf('doubleclick') >= 0 ||
-      l.indexOf('adservice') >= 0
+      l.indexOf('adsjsinterface') >= 0
     );
   }
 
   function shouldLogHtml(data) {
-    var l = safe(data).toLowerCase();
-    return l.indexOf('data:text/html') >= 0 || l.indexOf('<html') >= 0;
+    var l = normalizeUrlCandidate(data);
+    return l.indexOf('data:text/html') === 0 || l.indexOf('<html') >= 0;
   }
 
   try {

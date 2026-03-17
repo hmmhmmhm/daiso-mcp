@@ -53,6 +53,35 @@ Java.perform(function () {
     return one.slice(0, MAX_PREVIEW) + '...';
   }
 
+  function extractUrlHost(value) {
+    var candidate = safeToString(value).trim().toLowerCase();
+    var match;
+    if (!candidate) {
+      return '';
+    }
+    if (
+      candidate.indexOf('javascript:') === 0 ||
+      candidate.indexOf('vbscript:') === 0 ||
+      candidate.indexOf('data:') === 0
+    ) {
+      return '';
+    }
+    if (candidate.indexOf('//') === 0) {
+      candidate = 'https:' + candidate;
+    }
+    match = candidate.match(/^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/);
+    if (match) {
+      candidate = match[1];
+    } else {
+      candidate = candidate.split(/[/?#]/, 1)[0] || '';
+    }
+    return candidate.replace(/:\d+$/, '');
+  }
+
+  function matchesUrlHost(value, expectedHost) {
+    return extractUrlHost(value) === expectedHost;
+  }
+
   function stringifyMap(mapObj) {
     try {
       var out = [];
@@ -314,7 +343,7 @@ Java.perform(function () {
     loadUrl1.implementation = function (url) {
       var ret = loadUrl1.call(this, url);
       var u = safeToString(url);
-      if (u.indexOf('m.woodongs.com') >= 0) {
+      if (matchesUrlHost(u, 'm.woodongs.com')) {
         log('[WebView.loadUrl] ' + u);
         try {
           var cm = CookieManager.getInstance();
@@ -349,7 +378,7 @@ Java.perform(function () {
     loadUrl2.implementation = function (url, headers) {
       var ret = loadUrl2.call(this, url, headers);
       var u = safeToString(url);
-      if (u.indexOf('m.woodongs.com') >= 0) {
+      if (matchesUrlHost(u, 'm.woodongs.com')) {
         log('[WebView.loadUrl+headers] ' + u + ' headers=' + preview(safeToString(headers)));
       }
       return ret;

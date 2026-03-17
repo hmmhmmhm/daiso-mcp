@@ -71,6 +71,21 @@ function parseArgs() {
   return { roundDir, profile, outPath };
 }
 
+function normalizeHostCandidate(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+
+  const withoutScheme = normalized.replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/^\/\//, '');
+  const host = withoutScheme.split(/[/?#]/, 1)[0] || '';
+  return host.replace(/:\d+$/, '');
+}
+
+function matchesHostCandidate(value, expectedHost) {
+  return normalizeHostCandidate(value) === expectedHost;
+}
+
 function nextActionOf({ b2cSeen, b2cHostHit, b2cWoodongsConnectSeen, tupleCount, replaySuccessCount }) {
   if (!b2cSeen) return 'rotate_visibility_profile';
   if (!b2cHostHit && b2cWoodongsConnectSeen) return 'focus_pinning_bypass_for_woodongs';
@@ -101,7 +116,10 @@ function main() {
   const woodongsConnectSeen = [...connectHosts].some((h) => h.endsWith('.woodongs.com'));
   const b2cHostHit = topHosts.some((h) => {
     const host = String(h?.host || '');
-    return host.includes('b2c-apigw.woodongs.com') || host.includes('b2c-bff.woodongs.com');
+    return (
+      matchesHostCandidate(host, 'b2c-apigw.woodongs.com') ||
+      matchesHostCandidate(host, 'b2c-bff.woodongs.com')
+    );
   });
   const b2cHintCount = Number(b2cSummary?.b2cHintCount || 0);
   const b2cSeen = b2cHostHit || b2cHintCount > 0 || b2cWoodongsConnectSeen;

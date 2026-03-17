@@ -182,4 +182,27 @@ describe('HTML 파서 보조 분기', () => {
       totalPages: 1,
     });
   });
+
+  it('엔티티를 한 번만 해석하고 주석 블록을 제거한다', () => {
+    const [product] = parseProducts(
+      '서울',
+      '2301',
+      '강변점',
+      '행사',
+      `
+        <ul class="list-result">
+          <li>
+            <div class="prod-box">
+              <div class="prod-name">행사&amp;lt;상품&amp;gt;</div>
+              <div class="prod-count"><!-- 8801000000000 -->600ML</div>
+            </div>
+          </li>
+        </ul>
+      `,
+    );
+
+    expect(product.productName).toBe('행사&lt;상품&gt;');
+    expect(product.barcode).toBe('8801000000000');
+    expect(product.spec).toBe('600ML');
+  });
 });

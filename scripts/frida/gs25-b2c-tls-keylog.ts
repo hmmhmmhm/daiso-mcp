@@ -49,6 +49,18 @@
     }
   }
 
+  function normalizeHost(value) {
+    var host = readCStringSafe(value) || '';
+    if (!host) {
+      host = '' + (value || '');
+    }
+    return host.trim().toLowerCase().replace(/:\d+$/, '');
+  }
+
+  function hostEqualsOrSubdomain(host, domain) {
+    return !!host && (host === domain || host.endsWith('.' + domain));
+  }
+
   function findExport(names) {
     for (var i = 0; i < names.length; i += 1) {
       var name = names[i];
@@ -147,11 +159,7 @@
         }
         var key = ptrKey(ssl);
         sslToHost[key] = host;
-        if (
-          host.indexOf('woodongs.com') >= 0 ||
-          host.indexOf('gsshop.com') >= 0 ||
-          host.indexOf('b2c-') >= 0
-        ) {
+        if (interestingHost(host)) {
           log('[SNI] ssl=' + key + ' host=' + host);
         }
       },
@@ -345,9 +353,8 @@
   }
 
   function interestingHost(host) {
-    if (!host) return false;
-    var h = host.toLowerCase();
-    return h.indexOf('woodongs.com') >= 0 || h.indexOf('gsshop.com') >= 0 || h.indexOf('b2c-') >= 0;
+    var normalized = normalizeHost(host);
+    return hostEqualsOrSubdomain(normalized, 'woodongs.com') || hostEqualsOrSubdomain(normalized, 'gsshop.com');
   }
 
   var scanCount = 0;
