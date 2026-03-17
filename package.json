@@ -59,10 +59,10 @@
     "node": ">=20 <21"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250110.0",
+    "@cloudflare/workers-types": "^4.20260316.1",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.3.3",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.0",
     "chart.js": "^4.5.1",
     "chartjs-node-canvas": "^5.0.0",
     "chartjs-plugin-datalabels": "^2.2.0",
@@ -74,8 +74,8 @@
     "prettier": "^3.8.1",
     "tsx": "^4.20.6",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.56.1",
-    "vitest": "^4.0.18",
+    "typescript-eslint": "^8.57.0",
+    "vitest": "^4.1.0",
     "wrangler": "^4.73.0"
   },
   "overrides": {
@@ -84,7 +84,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "hono": "^4.12.5",
+    "hono": "^4.12.8",
     "workers-mcp": "^0.0.13"
   }
 }
