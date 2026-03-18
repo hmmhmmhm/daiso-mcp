@@ -166,6 +166,11 @@ describe('generatePromptText', () => {
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
     expect(text).toContain('재고 응답의 storeCode를 확인한 뒤');
+    expect(text).toContain('상품명 단계 검색');
+    expect(text).toContain('검색어 전체를 먼저 그대로 조회');
+    expect(text).toContain('공백/브랜드어 제거, 표기 변형, 더 짧은 핵심어 순으로');
+    expect(text).toContain('추정 매칭임을 짧게 밝힌 뒤 재고를 안내');
+    expect(text).toContain('위치/브랜드/상품명은 한 인자에 섞지 말고');
     expect(text).toContain('pluCd + storeKeyword 조합도 지원');
     expect(text).toContain('storeInventory.stores[]');
     expect(text).toContain('stockLabel');
