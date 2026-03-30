@@ -73,7 +73,7 @@
     "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "tsx": "^4.20.6",
-    "typescript": "^5.7.2",
+    "typescript": "^6.0.2",
     "typescript-eslint": "^8.57.0",
     "vitest": "^4.1.0",
     "wrangler": "^4.73.0"
