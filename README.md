@@ -18,11 +18,11 @@
 [![Coverage](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml)
 
 <!-- WORKERS_INVOCATIONS_CHART:START -->
-<h3>Cloudflare Workers 호출량 (2026-03-01 ~ 2026-03-31, 31일)</h3>
+<h3>Cloudflare Workers 호출량 (2026-03-01 ~ 2026-04-01, 32일)</h3>
 
-<img src="./assets/analytics/workers-invocations.png?v=2026-03-31T15:48:31.057Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 2026-03-31)" width="100%">
+<img src="./assets/analytics/workers-invocations.png?v=2026-04-01T15:50:55.274Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 2026-04-01)" width="100%">
 
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-04-01 00:48 KST</sub>
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-04-02 00:50 KST</sub>
 
 <!-- WORKERS_INVOCATIONS_CHART:END -->
 
