@@ -400,3 +400,12 @@ MIT License
 
 - `npm run typecheck`
 - `npm test`
+
+
+## DaisoMall Excel Crawler
+
+A Windows Tkinter/PyInstaller desktop crawler is available under `desktop/`.
+It exports DaisoMall product/category data to Excel with embedded thumbnails.
+Optional OpenRouter image extraction is supported but disabled by default in the UI.
+
+See `docs/daisomall-excel-crawler.md` for endpoints, local run commands, and Windows build instructions.

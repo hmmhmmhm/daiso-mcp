@@ -1,0 +1,56 @@
+name: build-daiso-windows
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build-daiso-windows.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Compile check
+        run: python -m compileall daiso_excel_crawler main.py
+
+      - name: Capture UI screenshot
+        run: |
+          mkdir outputs
+          python tools/capture_ui.py outputs/ui-screenshot.png
+
+      - name: Upload UI screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: DaisoExcelCrawler-ui-screenshot
+          path: desktop/outputs/ui-screenshot.png
+          if-no-files-found: error
+
+      - name: Build EXE
+        run: pyinstaller --clean --noconfirm daiso_crawler.spec
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DaisoExcelCrawler-windows
+          path: desktop/dist/DaisoExcelCrawler.exe
+          if-no-files-found: error

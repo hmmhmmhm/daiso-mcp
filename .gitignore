@@ -156,3 +156,10 @@ captures/
 tmp/
 **/__pycache__/
 *.pyc
+
+DEPLOYMENT.md
+desktop/outputs/
+desktop/.venv/
+desktop/build/
+desktop/dist/
+.secrets/
