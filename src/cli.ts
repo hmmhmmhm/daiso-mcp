@@ -9,7 +9,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { printHelp, printCommandHelp } from './cliHelp.js';
-import type { InteractiveCliDeps } from './cliInteractive.js';
 import { createDefaultDeps } from './cli/deps.js';
 import type { CliDeps } from './cli/types.js';
 import { DEFAULT_BASE_URL, DEFAULT_MCP_URL } from './cli/constants.js';
