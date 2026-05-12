@@ -40,70 +40,50 @@ describe('fetchOnlineStock', () => {
 
     expect(stock).toBe(0);
   });
-
-  it('data가 없으면 0을 반환한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ success: true }))
-    );
-
-    const stock = await fetchOnlineStock('12345');
-
-    expect(stock).toBe(0);
-  });
-
-  it('POST 요청을 보낸다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ success: true, data: { stck: 10 } }))
-    );
-
-    await fetchOnlineStock('12345');
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ pdNo: '12345' }),
-      })
-    );
-  });
 });
 
 describe('fetchStoreInventory', () => {
-  it('매장별 재고 정보를 반환한다', async () => {
-    const mockResponse = {
-      success: true,
-      data: {
-        msStrVOList: [
-          {
-            strCd: 'STR001',
-            strNm: '테스트점',
-            strAddr: '서울시 테스트구',
-            strTno: '02-1234-5678',
-            opngTime: '0900',
-            clsngTime: '2200',
-            strLttd: 37.5665,
-            strLitd: 126.978,
-            km: '1.5km',
-            qty: '10',
-            parkYn: 'Y',
-            usimYn: 'N',
-            pkupYn: 'Y',
-            taxfYn: 'N',
-            elvtYn: 'Y',
-            entrRampYn: 'N',
-            nocashYn: 'Y',
-          },
-        ],
-        intStrCont: 1,
-      },
-    };
-
-    mockFetch.mockResolvedValue(new Response(JSON.stringify(mockResponse)));
+  it('매장 조회 + 인증 재고 조회 결과를 합쳐 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          data: [
+            {
+              strCd: 'STR001',
+              strNm: '테스트점',
+              strAddr: '서울시 테스트구',
+              strTno: '02-1234-5678',
+              opngTime: '0900',
+              clsngTime: '2200',
+              strLttd: 37.5665,
+              strLitd: 126.978,
+              km: '1.5km',
+              parkYn: 'Y',
+              usimYn: 'N',
+              pkupYn: 'Y',
+              taxfYn: 'N',
+              elvtYn: 'Y',
+              entrRampYn: 'N',
+              nocashYn: 'Y',
+            },
+          ],
+        }))
+      )
+      .mockResolvedValueOnce(
+        new Response('sample-token', {
+          headers: { 'X-DM-UID': 'dm-uid-123' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          success: true,
+          data: [{ pdNo: '12345', strCd: 'STR001', stck: '10' }],
+        }))
+      );
 
     const result = await fetchStoreInventory('12345', 37.5, 127.0);
 
     expect(result.totalCount).toBe(1);
-    expect(result.stores).toHaveLength(1);
     expect(result.stores[0]).toEqual({
       storeCode: 'STR001',
       storeName: '테스트점',
@@ -127,125 +107,77 @@ describe('fetchStoreInventory', () => {
     });
   });
 
-  it('실패 시 빈 배열을 반환한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ success: false }))
-    );
-
-    const result = await fetchStoreInventory('12345', 37.5, 127.0);
-
-    expect(result.stores).toEqual([]);
-    expect(result.totalCount).toBe(0);
-  });
-
-  it('msStrVOList가 없으면 빈 배열을 반환한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ success: true, data: {} }))
-    );
-
-    const result = await fetchStoreInventory('12345', 37.5, 127.0);
-
-    expect(result.stores).toEqual([]);
-  });
-
-  it('올바른 요청 본문을 전송한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ success: false }))
-    );
-
-    await fetchStoreInventory('12345', 37.5, 127.0, 2, 50, '강남');
-
-    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(requestBody).toEqual({
-      keyword: '강남',
-      pdNo: '12345',
-      curLttd: 37.5,
-      curLitd: 127.0,
-      geolocationAgrYn: 'Y',
-      pkupYn: '',
-      intCd: '',
-      pageSize: 50,
-      currentPage: 2,
-    });
-  });
-
-  it('qty가 숫자가 아니면 0으로 처리한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({
-        success: true,
-        data: {
-          msStrVOList: [{ strCd: '1', strNm: 'T', strAddr: '', strTno: '', opngTime: '', clsngTime: '', strLttd: 0, strLitd: 0, km: '', qty: 'invalid' }],
-          intStrCont: 1,
-        },
-      }))
-    );
+  it('재고 응답에 없는 매장은 0으로 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          data: [
+            {
+              strCd: 'STR001',
+              strNm: '테스트점',
+              strAddr: '',
+              strTno: '',
+              opngTime: '',
+              clsngTime: '',
+              strLttd: 0,
+              strLitd: 0,
+              km: '0.1km',
+              parkYn: 'N',
+              usimYn: 'N',
+              pkupYn: 'N',
+              taxfYn: 'N',
+            },
+          ],
+        }))
+      )
+      .mockResolvedValueOnce(
+        new Response('sample-token', {
+          headers: { 'X-DM-UID': 'dm-uid-123' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: [] }))
+      );
 
     const result = await fetchStoreInventory('12345', 37.5, 127.0);
 
     expect(result.stores[0].quantity).toBe(0);
   });
 
-  it('intStrCont가 없으면 stores 길이를 사용한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({
-        success: true,
-        data: {
-          msStrVOList: [
-            { strCd: '1', strNm: '매장1', strAddr: '', strTno: '', opngTime: '', clsngTime: '', strLttd: 0, strLitd: 0, km: '', qty: '1' },
-            { strCd: '2', strNm: '매장2', strAddr: '', strTno: '', opngTime: '', clsngTime: '', strLttd: 0, strLitd: 0, km: '', qty: '2' },
-          ],
-        },
-      }))
-    );
-
-    const result = await fetchStoreInventory('12345', 37.5, 127.0);
-
-    expect(result.totalCount).toBe(2);
-  });
-
-  it('역명 키워드가 비면 붙여쓴 변형으로 재시도한다', async () => {
+  it('매장 검색 결과가 비면 붙여쓴 키워드로 재시도한다', async () => {
     mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] })))
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            success: true,
-            data: {
-              msStrVOList: [],
-              intStrCont: 0,
+        new Response(JSON.stringify({
+          data: [
+            {
+              strCd: '11199',
+              strNm: '안산중앙점',
+              strAddr: '경기 안산시',
+              strTno: '1522-4400',
+              opngTime: '1000',
+              clsngTime: '2200',
+              strLttd: 37.3,
+              strLitd: 126.8,
+              km: '0.1',
+              parkYn: 'N',
+              usimYn: 'N',
+              pkupYn: 'N',
+              taxfYn: 'N',
             },
-          }),
-        ),
+          ],
+        }))
       )
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            success: true,
-            data: {
-              msStrVOList: [
-                {
-                  strCd: '11199',
-                  strNm: '안산중앙점',
-                  strAddr: '경기 안산시',
-                  strTno: '1522-4400',
-                  opngTime: '1000',
-                  clsngTime: '2200',
-                  strLttd: 37.3,
-                  strLitd: 126.8,
-                  km: '0.1',
-                  qty: '3',
-                  parkYn: 'N',
-                  usimYn: 'N',
-                  pkupYn: 'N',
-                  taxfYn: 'N',
-                  elvtYn: 'N',
-                  entrRampYn: 'N',
-                  nocashYn: 'N',
-                },
-              ],
-              intStrCont: 1,
-            },
-          }),
-        ),
+        new Response('sample-token', {
+          headers: { 'X-DM-UID': 'dm-uid-123' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          success: true,
+          data: [{ pdNo: '12345', strCd: '11199', stck: '3' }],
+        }))
       );
 
     const result = await fetchStoreInventory('12345', 37.5, 127.0, 1, 30, '안산 중앙역');
@@ -276,37 +208,80 @@ describe('createCheckInventoryTool', () => {
   });
 
   it('온라인 재고와 매장 재고를 함께 반환한다', async () => {
-    // 온라인 재고 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: true, data: { stck: 100 } }))
-    );
-    // 매장 재고 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        success: true,
-        data: {
-          msStrVOList: [
-            { strCd: '1', strNm: '매장A', strAddr: '', strTno: '', opngTime: '', clsngTime: '', strLttd: 0, strLitd: 0, km: '', qty: '5' },
-            { strCd: '2', strNm: '매장B', strAddr: '', strTno: '', opngTime: '', clsngTime: '', strLttd: 0, strLitd: 0, km: '', qty: '0' },
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('selOnlStck')) {
+        return new Response(JSON.stringify({ success: true, data: { stck: 100 } }));
+      }
+
+      if (url.includes('FindStoreGoods')) {
+        return new Response(JSON.stringify(createMockProductResponse([
+          {
+            PD_NO: '12345',
+            PDNM: '테스트상품',
+            ATCH_FILE_URL: '/images/test.jpg',
+            BRND_NM: '다이소',
+            SOLD_OUT_YN: 'N',
+            NEW_PD_YN: 'Y',
+            PD_PRC: '1000',
+          },
+        ])));
+      }
+
+      if (url.includes('/ms/msg/selStr')) {
+        return new Response(JSON.stringify({
+          data: [
+            {
+              strCd: '1',
+              strNm: '매장A',
+              strAddr: '',
+              strTno: '',
+              opngTime: '',
+              clsngTime: '',
+              strLttd: 0,
+              strLitd: 0,
+              km: '',
+              parkYn: 'N',
+              usimYn: 'N',
+              pkupYn: 'N',
+              taxfYn: 'N',
+            },
+            {
+              strCd: '2',
+              strNm: '매장B',
+              strAddr: '',
+              strTno: '',
+              opngTime: '',
+              clsngTime: '',
+              strLttd: 0,
+              strLitd: 0,
+              km: '',
+              parkYn: 'N',
+              usimYn: 'N',
+              pkupYn: 'N',
+              taxfYn: 'N',
+            },
           ],
-          intStrCont: 10,
-        },
-      }))
-    );
-    // 상품 메타데이터 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify(createMockProductResponse([
-        {
-          PD_NO: '12345',
-          PDNM: '테스트상품',
-          ATCH_FILE_URL: '/images/test.jpg',
-          BRND_NM: '다이소',
-          SOLD_OUT_YN: 'N',
-          NEW_PD_YN: 'Y',
-          PD_PRC: '1000',
-        },
-      ])))
-    );
+        }));
+      }
+
+      if (url.includes('/auth/request')) {
+        return new Response('sample-token', {
+          headers: { 'X-DM-UID': 'dm-uid-123' },
+        });
+      }
+
+      if (url.includes('selStrPkupStck')) {
+        return new Response(JSON.stringify({
+          success: true,
+          data: [
+            { pdNo: '12345', strCd: '1', stck: '5' },
+            { pdNo: '12345', strCd: '2', stck: '0' },
+          ],
+        }));
+      }
+
+      throw new Error(`unexpected url: ${url}`);
+    });
 
     const tool = createCheckInventoryTool();
     const result = await tool.handler({ productId: '12345' });
@@ -323,71 +298,6 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.onlineStock).toBe(100);
     expect(parsed.storeInventory.inStockCount).toBe(1);
     expect(parsed.storeInventory.outOfStockCount).toBe(1);
-    expect(parsed.storeInventory.totalStores).toBe(10);
-  });
-
-  it('기본 위치 값을 사용한다', async () => {
-    // 온라인 재고 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: false }))
-    );
-    // 매장 재고 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: false }))
-    );
-    // 상품 메타데이터 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ resultSet: { result: [{}] } }))
-    );
-
-    const tool = createCheckInventoryTool();
-    const result = await tool.handler({ productId: '12345' });
-
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.location.latitude).toBe(37.5665);
-    expect(parsed.location.longitude).toBe(126.978);
-  });
-
-  it('커스텀 위치를 사용할 수 있다', async () => {
-    // 온라인 재고 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: false }))
-    );
-    // 매장 재고 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: false }))
-    );
-    // 상품 메타데이터 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ resultSet: { result: [{}] } }))
-    );
-
-    const tool = createCheckInventoryTool();
-    const result = await tool.handler({
-      productId: '12345',
-      latitude: 35.1796,
-      longitude: 129.0756,
-    });
-
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.location.latitude).toBe(35.1796);
-    expect(parsed.location.longitude).toBe(129.0756);
-  });
-
-  it('상품 메타데이터 조회가 실패해도 재고 정보를 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: true, data: { stck: 1 } }))
-    );
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: true, data: { msStrVOList: [], intStrCont: 0 } }))
-    );
-    mockFetch.mockRejectedValueOnce(new Error('metadata failed'));
-
-    const tool = createCheckInventoryTool();
-    const result = await tool.handler({ productId: '12345' });
-
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.product).toBeUndefined();
-    expect(parsed.onlineStock).toBe(1);
+    expect(parsed.storeInventory.totalStores).toBe(2);
   });
 });

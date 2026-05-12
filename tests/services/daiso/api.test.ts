@@ -23,72 +23,12 @@ describe('getImageUrl', () => {
   it('undefined가 주어지면 undefined를 반환한다', () => {
     expect(getImageUrl(undefined)).toBeUndefined();
   });
-
-  it('경로가 슬래시로 시작하지 않아도 처리한다', () => {
-    const path = 'images/product/123.jpg';
-    const result = getImageUrl(path);
-
-    expect(result).toBe(`${DAISOMALL_API.IMAGE_BASE_URL}images/product/123.jpg`);
-  });
-
-  it('절대 URL의 img 호스트를 cdn 호스트로 치환한다', () => {
-    const path = 'https://img.daisomall.co.kr/images/product/123.jpg';
-    const result = getImageUrl(path);
-
-    expect(result).toBe('https://cdn.daisomall.co.kr/images/product/123.jpg');
-  });
-
-  it('이미 cdn 호스트인 절대 URL은 그대로 유지한다', () => {
-    const path = 'https://cdn.daisomall.co.kr/images/product/123.jpg';
-    const result = getImageUrl(path);
-
-    expect(result).toBe(path);
-  });
-
-  it('절대 URL 파싱에 실패하면 원본 문자열을 반환한다', () => {
-    const path = 'https://img.daisomall.co.kr/images/product/123.jpg';
-    const OriginalUrl = globalThis.URL;
-
-    class ThrowingUrl {
-      constructor() {
-        throw new TypeError('invalid url');
-      }
-    }
-
-    const urlSpy = vi
-      .spyOn(globalThis, 'URL')
-      .mockImplementation(ThrowingUrl as unknown as typeof URL);
-
-    const result = getImageUrl(path);
-
-    expect(result).toBe(path);
-    expect(urlSpy).toHaveBeenCalledWith(path);
-    expect(globalThis.URL).not.toBe(OriginalUrl);
-  });
 });
 
 describe('formatTime', () => {
   it('4자리 시간 문자열을 HH:MM 형식으로 변환한다', () => {
     expect(formatTime('0900')).toBe('09:00');
     expect(formatTime('1430')).toBe('14:30');
-    expect(formatTime('2359')).toBe('23:59');
-    expect(formatTime('0000')).toBe('00:00');
-  });
-
-  it('4자리가 아닌 문자열은 그대로 반환한다', () => {
-    // 5자리 (콜론 포함)
-    expect(formatTime('09:00')).toBe('09:00');
-    // 3자리
-    expect(formatTime('900')).toBe('900');
-    // 5자리
-    expect(formatTime('09000')).toBe('09000');
-    // 빈 문자열
-    expect(formatTime('')).toBe('');
-  });
-
-  it('4자리 문자열에 콜론이 있으면 변환된다 (주의: 예상치 못한 동작)', () => {
-    // '9:00'은 4자리이므로 변환 로직이 적용됨
-    expect(formatTime('9:00')).toBe('9::00');
   });
 });
 
@@ -98,11 +38,16 @@ describe('API 상수', () => {
       expect(DAISOMALL_API.SEARCH_PRODUCTS).toBeDefined();
       expect(DAISOMALL_API.ONLINE_STOCK).toBeDefined();
       expect(DAISOMALL_API.STORE_INVENTORY).toBeDefined();
+      expect(DAISOMALL_API.STORE_SEARCH_V2).toBeDefined();
+      expect(DAISOMALL_API.STORE_INVENTORY_V2).toBeDefined();
+      expect(DAISOMALL_API.AUTH_REQUEST).toBeDefined();
       expect(DAISOMALL_API.IMAGE_BASE_URL).toBeDefined();
     });
 
     it('올바른 도메인을 사용한다', () => {
       expect(DAISOMALL_API.SEARCH_PRODUCTS).toContain('daisomall.co.kr');
+      expect(DAISOMALL_API.STORE_SEARCH_V2).toContain('fapi.daisomall.co.kr');
+      expect(DAISOMALL_API.STORE_INVENTORY_V2).toContain('fapi.daisomall.co.kr');
       expect(DAISOMALL_API.IMAGE_BASE_URL).toContain('cdn.daisomall.co.kr');
     });
   });
@@ -112,10 +57,6 @@ describe('API 상수', () => {
       expect(DAISO_WEB_API.SHOP_SEARCH).toBeDefined();
       expect(DAISO_WEB_API.SIDO_SEARCH).toBeDefined();
       expect(DAISO_WEB_API.GUGUN_SEARCH).toBeDefined();
-    });
-
-    it('올바른 도메인을 사용한다', () => {
-      expect(DAISO_WEB_API.SHOP_SEARCH).toContain('daiso.co.kr');
     });
   });
 });

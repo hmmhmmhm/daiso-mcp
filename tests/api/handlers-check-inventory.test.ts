@@ -11,47 +11,60 @@ setupFetchMock(mockFetch);
 
 describe('handleCheckInventory', () => {
   it('재고 정보를 반환한다', async () => {
-    // 온라인 재고 응답
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { stck: 50 } })));
-    // 매장 재고 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('selOnlStck')) {
+        return new Response(JSON.stringify({ success: true, data: { stck: 50 } }));
+      }
+
+      if (url.includes('/ms/msg/selStr')) {
+        return new Response(JSON.stringify({
+          data: [
+            {
+              strCd: '1',
+              strNm: '매장A',
+              strAddr: '',
+              strTno: '',
+              opngTime: '',
+              clsngTime: '',
+              strLttd: 0,
+              strLitd: 0,
+              km: '',
+              parkYn: 'N',
+              usimYn: 'N',
+              pkupYn: 'N',
+              taxfYn: 'N',
+            },
+          ],
+        }));
+      }
+
+      if (url.includes('/auth/request')) {
+        return new Response('sample-token', { headers: { 'X-DM-UID': 'dm-uid-123' } });
+      }
+
+      if (url.includes('selStrPkupStck')) {
+        return new Response(JSON.stringify({
           success: true,
-          data: {
-            msStrVOList: [
-              {
-                strCd: '1',
-                strNm: '매장A',
-                strAddr: '',
-                strTno: '',
-                opngTime: '',
-                clsngTime: '',
-                strLttd: 0,
-                strLitd: 0,
-                km: '',
-                qty: '5',
-              },
-            ],
-            intStrCont: 1,
+          data: [{ pdNo: '12345', strCd: '1', stck: '5' }],
+        }));
+      }
+
+      if (url.includes('FindStoreGoods')) {
+        return new Response(JSON.stringify(createMockProductResponse([
+          {
+            PD_NO: '12345',
+            PDNM: '테스트상품',
+            PD_PRC: '5000',
+            ATCH_FILE_URL: '/img.jpg',
+            BRND_NM: '다이소',
+            SOLD_OUT_YN: 'N',
+            NEW_PD_YN: 'Y',
           },
-        }),
-      ),
-    );
-    // 상품 메타데이터 응답
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify(createMockProductResponse([
-        {
-          PD_NO: '12345',
-          PDNM: '테스트상품',
-          PD_PRC: '5000',
-          ATCH_FILE_URL: '/img.jpg',
-          BRND_NM: '다이소',
-          SOLD_OUT_YN: 'N',
-          NEW_PD_YN: 'Y',
-        },
-      ]))),
-    );
+        ])));
+      }
+
+      throw new Error(`unexpected url: ${url}`);
+    });
 
     const ctx = createMockContext({ productId: '12345' });
     await handleCheckInventory(ctx);
@@ -87,12 +100,18 @@ describe('handleCheckInventory', () => {
   });
 
   it('위치 파라미터를 처리한다', async () => {
-    // 온라인 재고 응답
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: false })));
-    // 매장 재고 응답
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: false })));
-    // 상품 메타데이터 응답
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ resultSet: { result: [{}] } })));
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('selOnlStck')) {
+        return new Response(JSON.stringify({ success: false }));
+      }
+      if (url.includes('/ms/msg/selStr')) {
+        return new Response(JSON.stringify({ data: [] }));
+      }
+      if (url.includes('FindStoreGoods')) {
+        return new Response(JSON.stringify({ resultSet: { result: [{}] } }));
+      }
+      throw new Error(`unexpected url: ${url}`);
+    });
 
     const ctx = createMockContext({ productId: '12345', lat: '35.1', lng: '129.0' });
     await handleCheckInventory(ctx);
@@ -137,9 +156,18 @@ describe('handleCheckInventory', () => {
   });
 
   it('상품 메타데이터 조회가 실패해도 재고 정보를 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { stck: 50 } })));
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { msStrVOList: [], intStrCont: 0 } })));
-    mockFetch.mockRejectedValueOnce(new Error('metadata failed'));
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('selOnlStck')) {
+        return new Response(JSON.stringify({ success: true, data: { stck: 50 } }));
+      }
+      if (url.includes('/ms/msg/selStr')) {
+        return new Response(JSON.stringify({ data: [] }));
+      }
+      if (url.includes('FindStoreGoods')) {
+        throw new Error('metadata failed');
+      }
+      throw new Error(`unexpected url: ${url}`);
+    });
 
     const ctx = createMockContext({ productId: '12345' });
     await handleCheckInventory(ctx);

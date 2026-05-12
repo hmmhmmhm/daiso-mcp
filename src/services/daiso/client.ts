@@ -5,6 +5,9 @@
  */
 
 import { type FetchOptions, fetchJson, fetchText, fetchWithTimeout } from '../../utils/http.js';
+import { DAISOMALL_API } from './api.js';
+
+const DAISO_AUTH_KEY = 'PRE_AUTH_ENC_KEY';
 
 const DAISO_DEFAULT_HEADERS = {
   'User-Agent':
@@ -38,5 +41,89 @@ export async function fetchDaisoHtml(url: string, options: FetchOptions = {}): P
   return fetchText(url, {
     ...options,
     headers: withDaisoHeaders(options.headers),
+  });
+}
+
+function base64FromBytes(bytes: Uint8Array): string {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(bytes).toString('base64');
+  }
+
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  if (typeof btoa === 'function') {
+    return btoa(binary);
+  }
+
+  throw new Error('Base64 인코딩을 지원하지 않는 환경입니다.');
+}
+
+async function createDaisoAuthHeader(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(DAISO_AUTH_KEY),
+    { name: 'AES-CBC' },
+    false,
+    ['encrypt'],
+  );
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-CBC', iv },
+    key,
+    encoder.encode(token),
+  );
+
+  return `${base64FromBytes(iv)}${base64FromBytes(new Uint8Array(encrypted))}`;
+}
+
+export interface DaisoAuthContext {
+  authorization: string;
+  dmUid: string;
+  cookie: string;
+}
+
+export async function createDaisoAuthContext(): Promise<DaisoAuthContext> {
+  const response = await daisoFetch(DAISOMALL_API.AUTH_REQUEST, {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    throw new Error(`다이소 인증 토큰 요청 실패: ${response.status} ${response.statusText}`);
+  }
+
+  const token = (await response.text()).trim();
+  const dmUid = response.headers.get('x-dm-uid')?.trim() || '';
+
+  if (!token) {
+    throw new Error('다이소 인증 토큰이 비어 있습니다.');
+  }
+
+  if (!dmUid) {
+    throw new Error('다이소 인증 응답에 X-DM-UID 헤더가 없습니다.');
+  }
+
+  const authorization = await createDaisoAuthHeader(token);
+  return {
+    authorization: `Bearer ${authorization}`,
+    dmUid,
+    cookie: `DM_UID=${dmUid}`,
+  };
+}
+
+export async function fetchDaisoJsonWithAuth<T>(url: string, options: FetchOptions = {}): Promise<T> {
+  const auth = await createDaisoAuthContext();
+
+  return fetchJson<T>(url, {
+    ...options,
+    headers: withDaisoHeaders({
+      ...options.headers,
+      Authorization: auth.authorization,
+      'X-DM-UID': auth.dmUid,
+      Cookie: auth.cookie,
+    }),
   });
 }

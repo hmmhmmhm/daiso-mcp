@@ -9,11 +9,12 @@ import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type {
   ProductSummary,
   StoreInventory,
-  StoreInventoryResponse,
+  StoreInventoryV2Response,
+  StoreSearchV2Response,
   OnlineStockResponse,
 } from '../types.js';
 import { DAISOMALL_API } from '../api.js';
-import { fetchDaisoJson } from '../client.js';
+import { fetchDaisoJson, fetchDaisoJsonWithAuth } from '../client.js';
 import { buildDaisoStoreKeywordVariants } from '../../../utils/daisoKeyword.js';
 import { fetchProductById } from './getPriceInfo.js';
 import { toProductSummary } from '../product.js';
@@ -72,27 +73,44 @@ export async function fetchStoreInventory(
   const searchKeywords = keyword ? buildDaisoStoreKeywordVariants(keyword) : [''];
 
   for (const searchKeyword of searchKeywords) {
-    const data = await fetchDaisoJson<StoreInventoryResponse>(DAISOMALL_API.STORE_INVENTORY, {
+    const storeSearch = await fetchDaisoJson<StoreSearchV2Response>(DAISOMALL_API.STORE_SEARCH_V2, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        inclusiveStrCd: '',
         keyword: searchKeyword,
-        pdNo: productNo,
         curLttd: lat,
         curLitd: lng,
-        geolocationAgrYn: 'Y',
-        pkupYn: '',
-        intCd: '',
-        pageSize,
-        currentPage: page,
       }),
     });
 
-    if (!data.success || !data.data?.msStrVOList) {
+    const searchedStores = (storeSearch.data || []).slice((page - 1) * pageSize, page * pageSize);
+    if (searchedStores.length === 0) {
+      if (searchKeyword === searchKeywords[searchKeywords.length - 1]) {
+        return { stores: [], totalCount: 0 };
+      }
       continue;
     }
 
-    const stores: StoreInventory[] = data.data.msStrVOList.map((store) => ({
+    const inventoryResponse = await fetchDaisoJsonWithAuth<StoreInventoryV2Response>(
+      DAISOMALL_API.STORE_INVENTORY_V2,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          searchedStores.map((store) => ({
+            pdNo: productNo,
+            strCd: store.strCd,
+          })),
+        ),
+      },
+    );
+
+    const quantities = new Map(
+      (inventoryResponse.data || []).map((item) => [item.strCd, parseInt(item.stck) || 0]),
+    );
+
+    const stores: StoreInventory[] = searchedStores.map((store) => ({
       storeCode: store.strCd,
       storeName: store.strNm,
       address: store.strAddr,
@@ -102,7 +120,7 @@ export async function fetchStoreInventory(
       lat: store.strLttd,
       lng: store.strLitd,
       distance: store.km,
-      quantity: parseInt(store.qty) || 0,
+      quantity: quantities.get(store.strCd) ?? 0,
       options: {
         parking: store.parkYn === 'Y',
         simCard: store.usimYn === 'Y',
@@ -114,9 +132,10 @@ export async function fetchStoreInventory(
       },
     }));
 
-    if (stores.length > 0 || searchKeyword === searchKeywords[searchKeywords.length - 1]) {
-      return { stores, totalCount: data.data.intStrCont || stores.length };
-    }
+    return {
+      stores,
+      totalCount: storeSearch.data?.length || stores.length,
+    };
   }
 
   return { stores: [], totalCount: 0 };

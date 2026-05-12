@@ -151,21 +151,13 @@ describe('GET /api/daiso/inventory', () => {
   });
 
   it('역명 키워드가 비면 붙여쓴 변형으로 재시도한다', async () => {
-    mockFetch
-      .mockResolvedValueOnce(new Response(JSON.stringify({ success: false })))
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            success: true,
-            data: {
-              msStrVOList: [],
-              intStrCont: 0,
-            },
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
+    mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('selOnlStck')) {
+        return new Response(JSON.stringify({ success: false }));
+      }
+
+      if (url.includes('FindStoreGoods')) {
+        return new Response(
           JSON.stringify({
             resultSet: {
               result: [{
@@ -178,14 +170,18 @@ describe('GET /api/daiso/inventory', () => {
               }],
             },
           }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            success: true,
-            data: {
-              msStrVOList: [
+        );
+      }
+
+      if (url.includes('/ms/msg/selStr')) {
+        const body = JSON.parse(String(init?.body || '{}'));
+        if (body.keyword === '안산 중앙역') {
+          return new Response(JSON.stringify({ data: [] }));
+        }
+        if (body.keyword === '안산중앙역') {
+          return new Response(
+            JSON.stringify({
+              data: [
                 {
                   strCd: '11199',
                   strNm: '안산중앙점',
@@ -196,7 +192,6 @@ describe('GET /api/daiso/inventory', () => {
                   strLttd: 37.3,
                   strLitd: 126.8,
                   km: '0.1',
-                  qty: '3',
                   parkYn: 'N',
                   usimYn: 'N',
                   pkupYn: 'N',
@@ -206,11 +201,28 @@ describe('GET /api/daiso/inventory', () => {
                   nocashYn: 'N',
                 },
               ],
-              intStrCont: 1,
-            },
+            }),
+          );
+        }
+      }
+
+      if (url.includes('/auth/request')) {
+        return new Response('sample-token', {
+          headers: { 'X-DM-UID': 'dm-uid-123' },
+        });
+      }
+
+      if (url.includes('selStrPkupStck')) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [{ pdNo: '12345', strCd: '11199', stck: '3' }],
           }),
-        ),
-      );
+        );
+      }
+
+      throw new Error(`unexpected url: ${url}`);
+    });
 
     const res = await app.request('/api/daiso/inventory?productId=12345&keyword=%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD');
 
