@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -91,6 +92,24 @@ describe('createDaisoAuthContext', () => {
     expect(context.cookie).toBe('DM_UID=dm-uid-123');
     expect(context.authorization).toMatch(/^Bearer /);
   });
+
+
+  it('응답 상태가 실패면 에러를 던진다', async () => {
+    mockFetch.mockResolvedValue(new Response('nope', { status: 500, statusText: 'Internal Server Error' }));
+
+    await expect(createDaisoAuthContext()).rejects.toThrow('다이소 인증 토큰 요청 실패: 500');
+  });
+
+  it('토큰이 비어 있으면 에러를 던진다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response('   ', {
+        headers: { 'X-DM-UID': 'dm-uid-123' },
+      }),
+    );
+
+    await expect(createDaisoAuthContext()).rejects.toThrow('다이소 인증 토큰이 비어 있습니다.');
+  });
+
 
   it('X-DM-UID 헤더가 없으면 에러를 던진다', async () => {
     mockFetch.mockResolvedValue(new Response('sample-token'));

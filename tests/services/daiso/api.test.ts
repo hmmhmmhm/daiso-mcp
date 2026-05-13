@@ -23,12 +23,26 @@ describe('getImageUrl', () => {
   it('undefined가 주어지면 undefined를 반환한다', () => {
     expect(getImageUrl(undefined)).toBeUndefined();
   });
+
+  it('img.daisomall.co.kr 절대 URL을 CDN 도메인으로 변환한다', () => {
+    expect(getImageUrl('https://img.daisomall.co.kr/images/product/123.jpg')).toBe(
+      'https://cdn.daisomall.co.kr/images/product/123.jpg',
+    );
+  });
+
+  it('파싱할 수 없는 절대 URL 형태는 원문을 반환한다', () => {
+    expect(getImageUrl('https://%')).toBe('https://%');
+  });
 });
 
 describe('formatTime', () => {
   it('4자리 시간 문자열을 HH:MM 형식으로 변환한다', () => {
     expect(formatTime('0900')).toBe('09:00');
     expect(formatTime('1430')).toBe('14:30');
+  });
+
+  it('4자리가 아니면 원문을 반환한다', () => {
+    expect(formatTime('휴무')).toBe('휴무');
   });
 });
 

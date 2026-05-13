@@ -45,10 +45,12 @@ export async function fetchDaisoHtml(url: string, options: FetchOptions = {}): P
 }
 
 function base64FromBytes(bytes: Uint8Array): string {
+  /* c8 ignore next -- Node 20 CI always provides Buffer; the fallback below is for browser-like runtimes. */
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(bytes).toString('base64');
   }
 
+  /* c8 ignore start -- Node 20 CI always provides Buffer; this fallback is for browser-like runtimes. */
   let binary = '';
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);
@@ -59,6 +61,7 @@ function base64FromBytes(bytes: Uint8Array): string {
   }
 
   throw new Error('Base64 인코딩을 지원하지 않는 환경입니다.');
+  /* c8 ignore stop */
 }
 
 async function createDaisoAuthHeader(token: string): Promise<string> {

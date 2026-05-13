@@ -40,6 +40,16 @@ describe('fetchOnlineStock', () => {
 
     expect(stock).toBe(0);
   });
+
+  it('성공 응답에 재고 데이터가 없으면 0을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ success: true }))
+    );
+
+    const stock = await fetchOnlineStock('12345');
+
+    expect(stock).toBe(0);
+  });
 });
 
 describe('fetchStoreInventory', () => {
@@ -107,7 +117,60 @@ describe('fetchStoreInventory', () => {
     });
   });
 
-  it('재고 응답에 없는 매장은 0으로 처리한다', async () => {
+  it('재고 응답에 없거나 숫자가 아닌 매장은 0으로 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          data: [
+            {
+              strCd: 'STR001',
+              strNm: '테스트점',
+              strAddr: '',
+              strTno: '',
+              opngTime: '',
+              clsngTime: '',
+              strLttd: 0,
+              strLitd: 0,
+              km: '0.1km',
+              parkYn: 'N',
+              usimYn: 'N',
+              pkupYn: 'N',
+              taxfYn: 'N',
+            },
+            {
+              strCd: 'STR002',
+              strNm: '테스트점2',
+              strAddr: '',
+              strTno: '',
+              opngTime: '',
+              clsngTime: '',
+              strLttd: 0,
+              strLitd: 0,
+              km: '0.2km',
+              parkYn: 'N',
+              usimYn: 'N',
+              pkupYn: 'N',
+              taxfYn: 'N',
+            },
+          ],
+        }))
+      )
+      .mockResolvedValueOnce(
+        new Response('sample-token', {
+          headers: { 'X-DM-UID': 'dm-uid-123' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: [{ pdNo: '12345', strCd: 'STR002', stck: 'NaN' }] }))
+      );
+
+    const result = await fetchStoreInventory('12345', 37.5, 127.0);
+
+    expect(result.stores[0].quantity).toBe(0);
+    expect(result.stores[1].quantity).toBe(0);
+  });
+
+  it('재고 응답 data가 없으면 모든 매장을 0으로 처리한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(JSON.stringify({
@@ -136,7 +199,7 @@ describe('fetchStoreInventory', () => {
         })
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ success: true, data: [] }))
+        new Response(JSON.stringify({ success: true }))
       );
 
     const result = await fetchStoreInventory('12345', 37.5, 127.0);
@@ -190,6 +253,14 @@ describe('fetchStoreInventory', () => {
     expect(firstRequestBody.keyword).toBe('안산 중앙역');
     expect(secondRequestBody.keyword).toBe('안산중앙역');
   });
+
+  it('모든 키워드 검색 결과가 비면 빈 결과를 반환한다', async () => {
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify({ data: [] })));
+
+    const result = await fetchStoreInventory('12345', 37.5, 127.0, 1, 30, '안산 중앙역');
+
+    expect(result).toEqual({ stores: [], totalCount: 0 });
+  });
 });
 
 describe('createCheckInventoryTool', () => {
@@ -205,6 +276,58 @@ describe('createCheckInventoryTool', () => {
 
     await expect(tool.handler({ productId: '' })).rejects.toThrow('상품 ID(productId)를 입력해주세요.');
     await expect(tool.handler({ productId: '  ' })).rejects.toThrow('상품 ID(productId)를 입력해주세요.');
+  });
+
+  it('상품 요약 조회가 실패해도 재고 결과를 반환한다', async () => {
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('selOnlStck')) {
+        return new Response(JSON.stringify({ success: true, data: { stck: 7 } }));
+      }
+
+      if (url.includes('FindStoreGoods')) {
+        throw new Error('product lookup failed');
+      }
+
+      if (url.includes('/ms/msg/selStr')) {
+        return new Response(JSON.stringify({ data: [] }));
+      }
+
+      throw new Error(`unexpected url: ${url}`);
+    });
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ productId: '12345' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.product).toBeUndefined();
+    expect(parsed.onlineStock).toBe(7);
+    expect(parsed.storeInventory.totalStores).toBe(0);
+  });
+
+  it('상품 요약 조회 결과가 비어도 재고 결과를 반환한다', async () => {
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('selOnlStck')) {
+        return new Response(JSON.stringify({ success: true, data: { stck: 7 } }));
+      }
+
+      if (url.includes('FindStoreGoods')) {
+        return new Response(JSON.stringify(createMockProductResponse([])));
+      }
+
+      if (url.includes('/ms/msg/selStr')) {
+        return new Response(JSON.stringify({ data: [] }));
+      }
+
+      throw new Error(`unexpected url: ${url}`);
+    });
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ productId: '12345' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.product).toBeUndefined();
+    expect(parsed.onlineStock).toBe(7);
+    expect(parsed.storeInventory.totalStores).toBe(0);
   });
 
   it('온라인 재고와 매장 재고를 함께 반환한다', async () => {

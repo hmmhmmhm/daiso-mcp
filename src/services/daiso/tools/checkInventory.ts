@@ -84,7 +84,8 @@ export async function fetchStoreInventory(
       }),
     });
 
-    const searchedStores = (storeSearch.data || []).slice((page - 1) * pageSize, page * pageSize);
+    const allStores = storeSearch.data || [];
+    const searchedStores = allStores.slice((page - 1) * pageSize, page * pageSize);
     if (searchedStores.length === 0) {
       if (searchKeyword === searchKeywords[searchKeywords.length - 1]) {
         return { stores: [], totalCount: 0 };
@@ -134,10 +135,11 @@ export async function fetchStoreInventory(
 
     return {
       stores,
-      totalCount: storeSearch.data?.length || stores.length,
+      totalCount: allStores.length,
     };
   }
 
+  /* c8 ignore next -- searchKeywords is always non-empty; this is a defensive fallback. */
   return { stores: [], totalCount: 0 };
 }
 
