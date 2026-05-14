@@ -114,7 +114,7 @@ CGV mcp를 사용해서 강남 CGV 영화랑 시간표 확인해줘
 > Claude Code CLI에서 MCP 서버 추가
 
 ```bash
-claude mcp add daiso-mcp https://mcp.aka.page --transport sse
+claude mcp add daiso-mcp https://mcp.aka.page --transport http
 ```
 
 <br>

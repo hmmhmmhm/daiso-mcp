@@ -47,6 +47,7 @@ export default defineConfig({
         'src/pages/openapi.ts', // 엔트리 재노출 파일
         'src/bin.ts', // npm bin 진입점 파일
         'src/cli.ts', // 실행 진입점 파일
+        'src/cli/**/*.ts', // CLI 오케스트레이션 분리 모듈
         'src/cliInteractive.ts', // 인터랙티브 UI 오케스트레이션 파일
         'src/cliRenderer.ts', // CLI 출력 렌더러 파일
       ],
