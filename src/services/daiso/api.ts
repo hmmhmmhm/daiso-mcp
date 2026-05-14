@@ -15,8 +15,17 @@ export const DAISOMALL_API = {
   /** 온라인 재고 조회 API */
   ONLINE_STOCK: 'https://mapi.daisomall.co.kr/ms/msg/selOnlStck',
 
-  /** 매장별 재고 조회 API */
+  /** 구 재고 조회 API (현재 403 Unauthorized 발생) */
   STORE_INVENTORY: 'https://mapi.daisomall.co.kr/ms/msg/newIntSelStr',
+
+  /** 현재 사용 중인 인증 토큰 요청 API */
+  AUTH_REQUEST: 'https://fapi.daisomall.co.kr/auth/request',
+
+  /** 현재 사용 중인 위치 기반 매장 조회 API */
+  STORE_SEARCH_V2: 'https://fapi.daisomall.co.kr/ms/msg/selStr',
+
+  /** 현재 사용 중인 매장별 재고 조회 API */
+  STORE_INVENTORY_V2: 'https://fapi.daisomall.co.kr/pd/pdh/selStrPkupStck',
 
   /** 매장 내 상품 진열 위치 조회 API */
   DISPLAY_LOCATION: 'https://fapi.daisomall.co.kr/pdo/selIntPdStDispInfo',

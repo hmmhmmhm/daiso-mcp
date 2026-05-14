@@ -108,31 +108,40 @@ export interface OnlineStockResponse {
   success: boolean;
 }
 
-// 매장 재고 응답
-export interface StoreInventoryResponse {
-  data: {
-    msStrVOList: Array<{
-      strCd: string;
-      strNm: string;
-      strAddr: string;
-      strTno: string;
-      opngTime: string;
-      clsngTime: string;
-      strLttd: number;
-      strLitd: number;
-      km: string;
-      qty: string;
-      parkYn: string;
-      usimYn: string;
-      pkupYn: string;
-      taxfYn: string;
-      elvtYn?: string;
-      entrRampYn?: string;
-      nocashYn?: string;
-    }>;
-    intStrCont: number;
-  };
+export interface StoreSearchV2Response {
+  message: string | null;
+  data: Array<{
+    strCd: string;
+    strNm: string;
+    strAddr: string;
+    strTno: string;
+    opngTime: string;
+    clsngTime: string;
+    strLttd: number;
+    strLitd: number;
+    km: string;
+    parkYn: string;
+    usimYn: string;
+    pkupYn: string;
+    taxfYn: string;
+    elvtYn?: string;
+    entrRampYn?: string;
+    nocashYn?: string;
+  }>;
+}
+
+export interface StoreInventoryV2Item {
+  pdNo: string;
+  strCd: string;
+  sleStsCd?: string;
+  stck: string;
+}
+
+export interface StoreInventoryV2Response {
+  message: string | null;
+  data: StoreInventoryV2Item[];
   success: boolean;
+  returnCode?: string | null;
 }
 
 // 진열 위치 정보
