@@ -180,6 +180,27 @@ describe('MCP 엔드포인트', () => {
     expect(data.error).toBe('Session not found');
   });
 
+  it('세션 ID가 유실된 POST 요청은 stateless MCP 처리로 fallback한다', async () => {
+    const res = await app.request('/mcp', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/event-stream',
+        'Content-Type': 'application/json',
+        'mcp-session-id': 'missing-session-id',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: {},
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-mcp-session-fallback')).toBe('stateless');
+    expect(res.headers.get('Content-Type')).toContain('text/event-stream');
+  });
+
   it('POST /도 MCP 요청을 처리한다', async () => {
     const res = await app.request('/', {
       method: 'POST',

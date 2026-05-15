@@ -114,7 +114,7 @@ export async function fetchLotteCinemaTicketingPage(
     timeout,
   );
 
-  const theaters = (response.Cinemas?.Cinemas?.Items || [])
+  const theaters = Array.from(new Map((response.Cinemas?.Cinemas?.Items || [])
     .filter((item) => item.CinemaID && item.CinemaNameKR && item.DivisionCode && item.DetailDivisionCode)
     .map((item) => ({
       theaterId: String(item.CinemaID),
@@ -124,7 +124,8 @@ export async function fetchLotteCinemaTicketingPage(
       latitude: toNullableNumber(item.Latitude),
       longitude: toNullableNumber(item.Longitude),
       address: item.CinemaAddrSummary || '',
-    }));
+    }))
+    .map((theater) => [theater.theaterId, theater] as const)).values());
 
   const movies = (response.Movies?.Movies?.Items || [])
     .filter((item) => item.RepresentationMovieCode && item.MovieNameKR)

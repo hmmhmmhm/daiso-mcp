@@ -70,7 +70,20 @@ describe('GET /api/seveneleven/popwords', () => {
 
     const data = await res.json();
     expect(data.success).toBe(true);
+    expect(data.data.available).toBe(true);
     expect(data.data.keywords).toEqual(['삼각김밥', '도시락']);
+  });
+
+  it('인기 검색어가 비어 있으면 unavailable 안내를 포함한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: {} })));
+
+    const res = await app.request('/api/seveneleven/popwords?label=home');
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.available).toBe(false);
+    expect(data.data.note).toContain('찾지 못했습니다');
   });
 });
 

@@ -161,8 +161,17 @@ function normalizeStore(raw: NonNullable<Gs25StoreStockResponse['stores']>[numbe
   };
 }
 
-function buildCacheKey(params: Required<Pick<FetchGs25StoresParams, 'serviceCode' | 'keyword' | 'storeCode'>>): string {
-  return `${params.serviceCode}:${params.keyword}:${params.storeCode}`;
+function buildCacheKey(
+  params: Required<Pick<FetchGs25StoresParams, 'serviceCode' | 'keyword' | 'storeCode'>> &
+    Pick<FetchGs25StoresParams, 'latitude' | 'longitude' | 'itemCode'>,
+): string {
+  return [
+    params.serviceCode,
+    params.itemCode?.trim() || params.keyword,
+    params.storeCode,
+    typeof params.latitude === 'number' ? params.latitude : '',
+    typeof params.longitude === 'number' ? params.longitude : '',
+  ].join(':');
 }
 
 export function calculateDistanceM(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -214,6 +223,19 @@ export function filterGs25StoresByKeyword(stores: Gs25Store[], keyword: string):
 
     return false;
   });
+}
+
+export function selectGs25StoresForKeyword(
+  stores: Gs25Store[],
+  keyword: string,
+  options: { relaxWhenEmpty?: boolean } = {},
+): { stores: Gs25Store[]; filterRelaxed: boolean } {
+  const filtered = filterGs25StoresByKeyword(stores, keyword);
+  if (filtered.length > 0 || !options.relaxWhenEmpty || keyword.trim().length === 0 || stores.length === 0) {
+    return { stores: filtered, filterRelaxed: false };
+  }
+
+  return { stores, filterRelaxed: true };
 }
 
 export function attachDistanceToGs25Stores(
@@ -359,6 +381,9 @@ export async function fetchGs25Stores(
     serviceCode,
     keyword: itemCode.trim() || keyword.trim(),
     storeCode: storeCode.trim(),
+    itemCode: itemCode.trim(),
+    latitude,
+    longitude,
   });
 
   if (useCache) {

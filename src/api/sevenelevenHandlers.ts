@@ -183,8 +183,13 @@ export async function handleSevenElevenGetSearchPopwords(c: ApiContext) {
 
     return successResponse(c, {
       label,
+      available: keywords.length > 0,
       count: keywords.length,
       keywords,
+      note:
+        keywords.length === 0
+          ? '현재 응답에서 인기 검색어 목록을 찾지 못했습니다.'
+          : '홈 인기 검색어를 조회했습니다.',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';

@@ -146,6 +146,15 @@ const handleMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
   if (sessionId) {
     const existing = mcpSessions.get(sessionId);
     if (!existing) {
+      if (c.req.method === 'POST') {
+        const transport = new WebStandardStreamableHTTPServerTransport();
+        const server = createMcpServer(c.env);
+        await server.connect(transport);
+        const response = await transport.handleRequest(c.req.raw);
+        response.headers.set('x-mcp-session-fallback', 'stateless');
+        return response;
+      }
+
       return c.json(
         {
           error: 'Session not found',

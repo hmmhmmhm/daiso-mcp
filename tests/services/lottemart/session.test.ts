@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __testOnlyClearLotteMartSessionCache,
+  __testOnlyCreateLotteMartSocketResponse,
   fetchLotteMartHtml,
   fetchLotteMartPageWithSession,
   getCachedLotteMartSessionCookie,
@@ -103,6 +104,32 @@ describe('lottemart session helpers', () => {
     await fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, '');
 
     await expect(getCachedLotteMartSessionCookie(1000)).resolves.toBe('ASPSESSIONID=D');
+  });
+
+  it('소켓 raw 응답에 HTTP 헤더 경계가 없으면 fallback 가능하도록 null을 반환한다', async () => {
+    expect(__testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode(''))).toBeNull();
+    expect(__testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode('not-http'))).toBeNull();
+    expect(__testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode('not-http\r\n\r\nbody'))).toBeNull();
+  });
+
+  it('소켓 raw HTTP 응답을 Response로 변환한다', async () => {
+    const raw = new TextEncoder().encode(
+      'HTTP/1.1 200 OK\r\nMalformed-Header\r\nContent-Type: text/html\r\n\r\n<html>ok</html>',
+    );
+
+    const response = __testOnlyCreateLotteMartSocketResponse(raw);
+
+    expect(response?.status).toBe(200);
+    expect(response?.headers.get('Content-Type')).toBe('text/html');
+    await expect(response?.text()).resolves.toBe('<html>ok</html>');
+  });
+
+  it('소켓 raw HTTP 응답의 상태 코드가 숫자가 아니면 500으로 변환한다', () => {
+    const raw = new TextEncoder().encode('HTTP/1.1 BROKEN\r\nContent-Type: text/html\r\n\r\n');
+
+    const response = __testOnlyCreateLotteMartSocketResponse(raw);
+
+    expect(response?.status).toBe(500);
   });
 
   it('getSetCookie가 없으면 set-cookie 헤더를 사용한다', async () => {

@@ -11,6 +11,7 @@ import {
   fetchGs25Stores,
   filterGs25StoresByKeyword,
   geocodeGs25Address,
+  selectGs25StoresForKeyword,
   sortGs25Stores,
 } from '../client.js';
 
@@ -145,7 +146,10 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     }
   }
 
-  const filteredByStoreKeyword = filterGs25StoresByKeyword(stockResult.stores, storeKeyword);
+  const selectedByStoreKeyword = selectGs25StoresForKeyword(stockResult.stores, storeKeyword, {
+    relaxWhenEmpty: typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number',
+  });
+  const filteredByStoreKeyword = selectedByStoreKeyword.stores;
   const withDistance = attachDistanceToGs25Stores(filteredByStoreKeyword, resolvedLatitude, resolvedLongitude);
   const stores = sortGs25Stores(withDistance).slice(0, storeLimit);
 
@@ -169,6 +173,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
             itemCode: resolvedItemCode,
             storeKeyword,
             geocodeUsed,
+            filterRelaxed: selectedByStoreKeyword.filterRelaxed,
             location: {
               latitude: resolvedLatitude,
               longitude: resolvedLongitude,

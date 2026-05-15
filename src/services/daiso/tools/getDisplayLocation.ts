@@ -8,7 +8,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { DisplayLocation, DisplayLocationResponse } from '../types.js';
 import { DAISOMALL_API } from '../api.js';
-import { fetchDaisoJson } from '../client.js';
+import { fetchDaisoJsonWithAuth } from '../client.js';
 
 /** 도구 입력 인터페이스 */
 interface GetDisplayLocationArgs {
@@ -32,7 +32,7 @@ export async function fetchDisplayLocation(
   productId: string,
   storeCode: string,
 ): Promise<DisplayLocationResult> {
-  const data = await fetchDaisoJson<DisplayLocationResponse>(DAISOMALL_API.DISPLAY_LOCATION, {
+  const data = await fetchDaisoJsonWithAuth<DisplayLocationResponse>(DAISOMALL_API.DISPLAY_LOCATION, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pdNo: productId, strCd: storeCode }),

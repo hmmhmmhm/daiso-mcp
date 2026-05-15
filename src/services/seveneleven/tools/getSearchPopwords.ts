@@ -25,6 +25,7 @@ async function getSearchPopwords(args: GetSearchPopwordsArgs): Promise<McpToolRe
         text: JSON.stringify(
           {
             label,
+            available: keywords.length > 0,
             count: keywords.length,
             keywords,
             note:

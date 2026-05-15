@@ -93,4 +93,55 @@ describe('createFindNearbyStoresTool', () => {
 
     process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
   });
+
+  it('지오코딩이 성공하면 좌표 기반 매장 조회를 사용하고 키워드 필터가 비어도 가까운 매장을 반환한다', async () => {
+    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
+    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [
+              {
+                storeCode: 'near',
+                storeName: '역삼센터점',
+                storeAddress: '서울 테헤란로',
+                storeXCoordination: '127.0276',
+                storeYCoordination: '37.4979',
+              },
+              {
+                storeCode: 'far',
+                storeName: '부산해운대점',
+                storeAddress: '부산 해운대구',
+                storeXCoordination: '129.16',
+                storeYCoordination: '35.16',
+              },
+            ],
+          }),
+        ),
+      );
+
+    const tool = createFindNearbyStoresTool();
+    const result = await tool.handler({ keyword: '강남', limit: 5 });
+
+    const storeUrl = new URL(String(mockFetch.mock.calls[1]?.[0]));
+    expect(storeUrl.searchParams.get('centerPositionYCoordination')).toBe('37.4979');
+    expect(storeUrl.searchParams.get('centerPositionXCoordination')).toBe('127.0276');
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.filterRelaxed).toBe(true);
+    expect(parsed.count).toBe(2);
+    expect(parsed.stores[0].storeCode).toBe('near');
+
+    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+  });
 });

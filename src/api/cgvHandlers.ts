@@ -194,7 +194,11 @@ export async function handleCgvGetTimetable(c: ApiContext) {
           zyteApiKey: c.env?.ZYTE_API_KEY,
         });
 
-    const filtered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
+    const exactFiltered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
+    const filterRelaxed = Boolean(movieCode && exactFiltered.length === 0 && timetable.length > 0);
+    const filtered = filterRelaxed
+      ? filterAndSortTimetable(timetable, { theaterCode, limit })
+      : exactFiltered;
 
     return successResponse(
       c,
@@ -208,6 +212,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
           longitude: longitude ?? null,
         },
         resolvedTheater,
+        filterRelaxed,
         timetable: filtered,
       },
       { total: filtered.length, pageSize: limit },

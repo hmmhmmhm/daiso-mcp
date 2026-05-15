@@ -7,8 +7,8 @@ import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import {
   attachDistanceToGs25Stores,
   fetchGs25Stores,
-  filterGs25StoresByKeyword,
   geocodeGs25Address,
+  selectGs25StoresForKeyword,
   sortGs25Stores,
 } from '../client.js';
 
@@ -53,14 +53,18 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   const result = await fetchGs25Stores(
     {
       serviceCode,
+      latitude: resolvedLatitude,
+      longitude: resolvedLongitude,
     },
     {
       timeout: timeoutMs,
     },
   );
 
-  const filtered = filterGs25StoresByKeyword(result.stores, keyword);
-  const withDistance = attachDistanceToGs25Stores(filtered, resolvedLatitude, resolvedLongitude);
+  const selected = selectGs25StoresForKeyword(result.stores, keyword, {
+    relaxWhenEmpty: typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number',
+  });
+  const withDistance = attachDistanceToGs25Stores(selected.stores, resolvedLatitude, resolvedLongitude);
   const stores = sortGs25Stores(withDistance).slice(0, limit);
 
   return {
@@ -81,7 +85,8 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
                 : null,
             cacheHit: result.cacheHit,
             totalCount: result.totalCount,
-            filteredCount: filtered.length,
+            filteredCount: selected.stores.length,
+            filterRelaxed: selected.filterRelaxed,
             count: stores.length,
             stores,
           },

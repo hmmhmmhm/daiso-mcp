@@ -40,6 +40,52 @@ type LotteMartSocketConnect = (
   writable: WritableStream<Uint8Array>;
 };
 
+export function __testOnlyCreateLotteMartSocketResponse(raw: Uint8Array): Response | null {
+  const delimiter = new TextEncoder().encode('\r\n\r\n');
+  let boundary = -1;
+  for (let index = 0; index <= raw.length - delimiter.length; index += 1) {
+    let matched = true;
+    for (let inner = 0; inner < delimiter.length; inner += 1) {
+      if (raw[index + inner] !== delimiter[inner]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) {
+      boundary = index;
+      break;
+    }
+  }
+
+  if (boundary < 0) {
+    return null;
+  }
+
+  const headerText = new TextDecoder().decode(raw.slice(0, boundary));
+  if (!headerText.startsWith('HTTP/')) {
+    return null;
+  }
+
+  const bodyBytes = raw.slice(boundary + delimiter.length);
+  const headerLinesRaw = headerText.split('\r\n');
+  const statusLine = headerLinesRaw.shift() as string;
+  const [, statusCodeText = '500', ...statusTextParts] = statusLine.split(' ');
+  const responseHeaders = new Headers();
+  for (const line of headerLinesRaw) {
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex < 0) {
+      continue;
+    }
+    responseHeaders.append(line.slice(0, separatorIndex).trim(), line.slice(separatorIndex + 1).trim());
+  }
+
+  return new Response(bodyBytes, {
+    status: parseInt(statusCodeText, 10) || 500,
+    statusText: statusTextParts.join(' ').trim(),
+    headers: responseHeaders,
+  });
+}
+
 /* c8 ignore start */
 async function fetchLotteMartSocketResponse(url: string, init: RequestInit, sessionCookie: string): Promise<Response | null> {
   let connectFn: LotteMartSocketConnect | null = null;
@@ -103,45 +149,7 @@ async function fetchLotteMartSocketResponse(url: string, init: RequestInit, sess
     offset += chunk.length;
   }
 
-  const delimiter = new TextEncoder().encode('\r\n\r\n');
-  let boundary = -1;
-  for (let index = 0; index <= raw.length - delimiter.length; index += 1) {
-    let matched = true;
-    for (let inner = 0; inner < delimiter.length; inner += 1) {
-      if (raw[index + inner] !== delimiter[inner]) {
-        matched = false;
-        break;
-      }
-    }
-    if (matched) {
-      boundary = index;
-      break;
-    }
-  }
-
-  if (boundary < 0) {
-    throw new Error('롯데마트 소켓 응답 헤더를 파싱하지 못했습니다.');
-  }
-
-  const headerText = new TextDecoder().decode(raw.slice(0, boundary));
-  const bodyBytes = raw.slice(boundary + delimiter.length);
-  const headerLinesRaw = headerText.split('\r\n');
-  const statusLine = headerLinesRaw.shift() || 'HTTP/1.1 500 Socket Error';
-  const [, statusCodeText = '500', ...statusTextParts] = statusLine.split(' ');
-  const responseHeaders = new Headers();
-  for (const line of headerLinesRaw) {
-    const separatorIndex = line.indexOf(':');
-    if (separatorIndex < 0) {
-      continue;
-    }
-    responseHeaders.append(line.slice(0, separatorIndex).trim(), line.slice(separatorIndex + 1).trim());
-  }
-
-  return new Response(bodyBytes, {
-    status: parseInt(statusCodeText, 10) || 500,
-    statusText: statusTextParts.join(' ').trim(),
-    headers: responseHeaders,
-  });
+  return __testOnlyCreateLotteMartSocketResponse(raw);
 }
 /* c8 ignore end */
 

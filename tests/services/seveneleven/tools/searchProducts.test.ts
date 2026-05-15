@@ -92,6 +92,41 @@ describe('createSearchProductsTool', () => {
     );
   });
 
+  it('size보다 많은 상품이 내려와도 요청한 개수만 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            SearchQueryResult: {
+              query: '핫식스',
+              Collection: [
+                {
+                  CollectionId: 'offline',
+                  Documentset: {
+                    totalCount: 2,
+                    Document: [
+                      { prdNo: '1', itemCd: '8801', itemOnm: '핫식스 오리지널' },
+                      { prdNo: '2', itemCd: '8802', itemOnm: '핫식스 제로' },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+
+    const tool = createSearchProductsTool();
+    const result = await tool.handler({ query: '핫식스', size: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.count).toBe(1);
+    expect(parsed.products).toHaveLength(1);
+    expect(parsed.products[0].itemCode).toBe('8801');
+  });
+
   it('필요하면 대체 질의로 상품을 찾아 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
