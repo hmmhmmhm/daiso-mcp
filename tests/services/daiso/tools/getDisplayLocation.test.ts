@@ -9,6 +9,12 @@ import {
 
 const mockFetch = vi.fn();
 
+function mockDisplayLocationResponse(body: unknown): void {
+  mockFetch
+    .mockResolvedValueOnce(new Response('display-token', { headers: { 'X-DM-UID': 'dm-uid-123' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify(body)));
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   vi.stubGlobal('fetch', mockFetch);
@@ -31,7 +37,7 @@ describe('fetchDisplayLocation', () => {
       ],
     };
 
-    mockFetch.mockResolvedValue(new Response(JSON.stringify(mockResponse)));
+    mockDisplayLocationResponse(mockResponse);
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -50,7 +56,7 @@ describe('fetchDisplayLocation', () => {
       message: '조회 실패',
     };
 
-    mockFetch.mockResolvedValue(new Response(JSON.stringify(mockResponse)));
+    mockDisplayLocationResponse(mockResponse);
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -65,7 +71,7 @@ describe('fetchDisplayLocation', () => {
       data: [],
     };
 
-    mockFetch.mockResolvedValue(new Response(JSON.stringify(mockResponse)));
+    mockDisplayLocationResponse(mockResponse);
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -74,17 +80,32 @@ describe('fetchDisplayLocation', () => {
   });
 
   it('fetch 요청 body에 {pdNo, strCd} JSON이 포함되어야 함', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: [] })));
+    mockDisplayLocationResponse({ success: true, data: [] });
 
     await fetchDisplayLocation('12345', '04515');
 
-    expect(mockFetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenLastCalledWith(
       expect.any(String),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ pdNo: '12345', strCd: '04515' }),
+        headers: expect.objectContaining({
+          Authorization: expect.stringContaining('Bearer '),
+          'X-DM-UID': 'dm-uid-123',
+          Cookie: 'DM_UID=dm-uid-123',
+        }),
       }),
     );
+  });
+
+  it('진열 위치 조회 전에 다이소 인증 토큰을 요청한다', async () => {
+    mockDisplayLocationResponse({ success: true, data: [] });
+
+    await fetchDisplayLocation('12345', '04515');
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ method: 'GET' }));
+    expect(mockFetch.mock.calls[1]?.[1]).toEqual(expect.objectContaining({ method: 'POST' }));
   });
 
   it('응답의 storeErp가 없으면 storeCode 값으로 대체되어야 함', async () => {
@@ -98,7 +119,7 @@ describe('fetchDisplayLocation', () => {
       ],
     };
 
-    mockFetch.mockResolvedValue(new Response(JSON.stringify(mockResponse)));
+    mockDisplayLocationResponse(mockResponse);
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -127,7 +148,7 @@ describe('fetchDisplayLocation', () => {
       ],
     };
 
-    mockFetch.mockResolvedValue(new Response(JSON.stringify(mockResponse)));
+    mockDisplayLocationResponse(mockResponse);
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -138,7 +159,7 @@ describe('fetchDisplayLocation', () => {
   });
 
   it('success:false 응답에서 message가 없으면 null을 반환', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: false })));
+    mockDisplayLocationResponse({ success: false });
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -147,14 +168,10 @@ describe('fetchDisplayLocation', () => {
   });
 
   it('data 항목에 zoneNo가 없으면 빈 문자열로 처리', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: [{ stairNo: '2', storeErp: '04515' }],
-        }),
-      ),
-    );
+    mockDisplayLocationResponse({
+      success: true,
+      data: [{ stairNo: '2', storeErp: '04515' }],
+    });
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -162,14 +179,10 @@ describe('fetchDisplayLocation', () => {
   });
 
   it('data 항목에 stairNo가 없으면 빈 문자열로 처리', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: [{ zoneNo: '60', storeErp: '04515' }],
-        }),
-      ),
-    );
+    mockDisplayLocationResponse({
+      success: true,
+      data: [{ zoneNo: '60', storeErp: '04515' }],
+    });
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -177,14 +190,10 @@ describe('fetchDisplayLocation', () => {
   });
 
   it('data가 배열이 아닌 경우 빈 locations 배열 반환', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: null,
-        }),
-      ),
-    );
+    mockDisplayLocationResponse({
+      success: true,
+      data: null,
+    });
 
     const result = await fetchDisplayLocation('12345', '04515');
 
@@ -224,20 +233,16 @@ describe('createGetDisplayLocationTool', () => {
   });
 
   it('진열 위치가 있을 때 locations에 층/구역 정보가 포함되어야 함', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: [
-            {
-              zoneNo: '60',
-              stairNo: '2',
-              storeErp: '04515',
-            },
-          ],
-        }),
-      ),
-    );
+    mockDisplayLocationResponse({
+      success: true,
+      data: [
+        {
+          zoneNo: '60',
+          stairNo: '2',
+          storeErp: '04515',
+        },
+      ],
+    });
 
     const tool = createGetDisplayLocationTool();
     const result = await tool.handler({ productId: '12345', storeCode: '04515' });
@@ -249,14 +254,10 @@ describe('createGetDisplayLocationTool', () => {
   });
 
   it('진열 위치가 없을 때 hasLocation이 false', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: [],
-        }),
-      ),
-    );
+    mockDisplayLocationResponse({
+      success: true,
+      data: [],
+    });
 
     const tool = createGetDisplayLocationTool();
     const result = await tool.handler({ productId: '12345', storeCode: '04515' });
@@ -267,14 +268,10 @@ describe('createGetDisplayLocationTool', () => {
   });
 
   it('stairNo가 없는 진열 위치에서 zoneNo만 포함', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: [{ zoneNo: '60', storeErp: '04515' }],
-        }),
-      ),
-    );
+    mockDisplayLocationResponse({
+      success: true,
+      data: [{ zoneNo: '60', storeErp: '04515' }],
+    });
 
     const tool = createGetDisplayLocationTool();
     const result = await tool.handler({ productId: '12345', storeCode: '04515' });
@@ -285,14 +282,10 @@ describe('createGetDisplayLocationTool', () => {
   });
 
   it('zoneNo가 null인 경우 빈 문자열로 변환', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: [{ stairNo: '2', zoneNo: null, storeErp: '04515' }],
-        }),
-      ),
-    );
+    mockDisplayLocationResponse({
+      success: true,
+      data: [{ stairNo: '2', zoneNo: null, storeErp: '04515' }],
+    });
 
     const tool = createGetDisplayLocationTool();
     const result = await tool.handler({ productId: '12345', storeCode: '04515' });

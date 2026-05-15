@@ -235,14 +235,16 @@ describe('GET /api/daiso/inventory', () => {
 
 describe('GET /api/daiso/display-location', () => {
   it('진열 위치 정보를 반환한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          success: true,
-          data: [{ zoneNo: '60', stairNo: '2', storeErp: '04515' }],
-        }),
-      ),
-    );
+    mockFetch
+      .mockResolvedValueOnce(new Response('display-token', { headers: { 'X-DM-UID': 'dm-uid-123' } }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [{ zoneNo: '60', stairNo: '2', storeErp: '04515' }],
+          }),
+        ),
+      );
 
     const res = await app.request('/api/daiso/display-location?productId=12345&storeCode=04515');
 

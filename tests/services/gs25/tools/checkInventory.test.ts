@@ -3,12 +3,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { clearGs25StoresCache } from '../../../../src/services/gs25/client.js';
 import { createCheckInventoryTool } from '../../../../src/services/gs25/tools/checkInventory.js';
 
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   mockFetch.mockReset();
+  clearGs25StoresCache();
   vi.stubGlobal('fetch', mockFetch);
 });
 
@@ -177,5 +179,53 @@ describe('createCheckInventoryTool', () => {
     // 좌표는 기본값(서울 강남)이 설정됨
     expect(parsed.location).toEqual({ latitude: 37.4979, longitude: 127.0276 });
     expect(parsed.product.name).toBeNull();
+  });
+
+  it('위치 기반 재고 조회 결과가 있으면 storeKeyword 문자열 필터가 비어도 가까운 재고 매장을 유지한다', async () => {
+    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
+    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+
+    mockFetch.mockResolvedValueOnce(
+      createStoreStockResponse([
+        { storeCode: 'BASE1', storeName: '역삼센터점', storeAddress: '서울 강남구 테헤란로 1' },
+      ]),
+    );
+
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          status: 'OK',
+          results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
+        }),
+      ),
+    );
+
+    mockFetch.mockResolvedValueOnce(createTotalSearchResponse('8801117752804', '오감자'));
+
+    mockFetch.mockResolvedValueOnce(
+      createStoreStockResponse([
+        {
+          storeCode: 'near',
+          storeName: '역삼센터점',
+          storeAddress: '서울 테헤란로',
+          storeXCoordination: '127.0276',
+          storeYCoordination: '37.4979',
+          searchItemName: '오감자',
+          searchItemSellPrice: 1700,
+          realStockQuantity: 3,
+        },
+      ]),
+    );
+
+    const tool = createCheckInventoryTool();
+    const result = await tool.handler({ keyword: '오감자', storeKeyword: '강남', storeLimit: 5 });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.filterRelaxed).toBe(true);
+    expect(parsed.inventory.count).toBe(1);
+    expect(parsed.inventory.stores[0].storeCode).toBe('near');
+    expect(parsed.inventory.inStockStoreCount).toBe(1);
+
+    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
   });
 });

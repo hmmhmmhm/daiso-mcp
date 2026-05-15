@@ -85,6 +85,47 @@ describe('fetchLotteCinemaTicketingPage', () => {
     expect(result.movies[0].durationMinutes).toBe(127);
   });
 
+  it('같은 theaterId가 여러 지역 상세 코드로 내려와도 한 번만 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          IsOK: true,
+          ResultMessage: 'SUCCESS',
+          Cinemas: {
+            Cinemas: {
+              Items: [
+                {
+                  CinemaID: '1016',
+                  CinemaNameKR: '월드타워',
+                  DivisionCode: '1',
+                  DetailDivisionCode: '0001',
+                  Latitude: '37.5132941',
+                  Longitude: '127.104215',
+                  CinemaAddrSummary: '서울 송파구 올림픽로 300',
+                },
+                {
+                  CinemaID: '1016',
+                  CinemaNameKR: '월드타워',
+                  DivisionCode: '2',
+                  DetailDivisionCode: '0002',
+                  Latitude: '37.5132941',
+                  Longitude: '127.104215',
+                  CinemaAddrSummary: '서울 송파구 올림픽로 300',
+                },
+              ],
+            },
+          },
+          Movies: { Movies: { Items: [] } },
+        }),
+      ),
+    );
+
+    const result = await fetchLotteCinemaTicketingPage();
+
+    expect(result.theaters).toHaveLength(1);
+    expect(result.theaters[0].theaterId).toBe('1016');
+  });
+
   it('HTTP 에러를 처리한다', async () => {
     mockFetch.mockResolvedValue(new Response('fail', { status: 500 }));
 

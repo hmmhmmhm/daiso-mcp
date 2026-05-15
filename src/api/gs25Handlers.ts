@@ -10,6 +10,7 @@ import {
   fetchGs25Stores,
   filterGs25StoresByKeyword,
   geocodeGs25Address,
+  selectGs25StoresForKeyword,
   sortGs25Stores,
 } from '../services/gs25/client.js';
 
@@ -47,14 +48,18 @@ export async function handleGs25FindStores(c: ApiContext) {
     const storeResult = await fetchGs25Stores(
       {
         serviceCode,
+        latitude,
+        longitude,
       },
       {
         timeout: 20000,
       },
     );
 
-    const filtered = filterGs25StoresByKeyword(storeResult.stores, keyword);
-    const withDistance = attachDistanceToGs25Stores(filtered, latitude, longitude);
+    const selected = selectGs25StoresForKeyword(storeResult.stores, keyword, {
+      relaxWhenEmpty: typeof latitude === 'number' && typeof longitude === 'number',
+    });
+    const withDistance = attachDistanceToGs25Stores(selected.stores, latitude, longitude);
     const stores = sortGs25Stores(withDistance).slice(0, limit);
 
     return successResponse(
@@ -68,10 +73,11 @@ export async function handleGs25FindStores(c: ApiContext) {
             ? { latitude, longitude }
             : null,
         cacheHit: storeResult.cacheHit,
+        filterRelaxed: selected.filterRelaxed,
         stores,
       },
       {
-        total: filtered.length,
+        total: selected.stores.length,
         pageSize: limit,
       },
     );
@@ -233,7 +239,10 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       }
     }
 
-    const filtered = filterGs25StoresByKeyword(stockResult.stores, storeKeyword);
+    const selected = selectGs25StoresForKeyword(stockResult.stores, storeKeyword, {
+      relaxWhenEmpty: typeof latitude === 'number' && typeof longitude === 'number',
+    });
+    const filtered = selected.stores;
     const withDistance = attachDistanceToGs25Stores(filtered, latitude, longitude);
     const stores = sortGs25Stores(withDistance).slice(0, storeLimit);
 
@@ -251,6 +260,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       itemCode: resolvedItemCode,
       storeKeyword,
       geocodeUsed,
+      filterRelaxed: selected.filterRelaxed,
       location:
         typeof latitude === 'number' && typeof longitude === 'number'
           ? { latitude, longitude }

@@ -196,7 +196,8 @@ export async function fetchCgvTimetable(params: CommonFetchParams): Promise<CgvT
       if (filteredByMovie.length > 0) {
         return filteredByMovie;
       }
-      return fetchTimetableByMovieCode(playDate, theaterCode, params.movieCode, params);
+      const timetableByMovieCode = await fetchTimetableByMovieCode(playDate, theaterCode, params.movieCode, params);
+      return timetableByMovieCode.length > 0 ? timetableByMovieCode : timetableBySite;
     }
     return timetableBySite;
   }

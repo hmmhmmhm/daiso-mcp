@@ -571,6 +571,50 @@ describe('handleCgvGetTimetable', () => {
     expect(payload.data.timetable[0].startTime).toBe('09:30');
   });
 
+  it('movieCode 필터 결과가 비어도 극장 시간표가 있으면 필터 완화 결과를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [
+              {
+                siteNo: '0056',
+                siteNm: 'CGV강남',
+                scnYmd: '20260304',
+                scnSseq: '1',
+                movNo: 'M2',
+                movNm: '다른 영화',
+                scnsrtTm: '0930',
+                scnendTm: '1130',
+                stcnt: 100,
+                frSeatCnt: 30,
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            statusMessage: '조회 되었습니다.',
+            data: [],
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ playDate: '20260304', theaterCode: '0056', movieCode: 'M1' });
+    await handleCgvGetTimetable(ctx);
+
+    const payload = (ctx.json as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      data: { filterRelaxed: boolean; timetable: Array<{ movieCode: string }> };
+    };
+    expect(payload.data.filterRelaxed).toBe(true);
+    expect(payload.data.timetable[0].movieCode).toBe('M2');
+  });
+
   it('theaterCode/movieCode가 없으면 null 필터를 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

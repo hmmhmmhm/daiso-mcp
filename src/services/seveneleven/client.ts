@@ -226,7 +226,7 @@ export async function searchSevenElevenProducts(
 
   const collectionProducts = normalizeProducts(allDocuments);
   const contentProducts = normalizeProducts(Array.isArray(data.content) ? data.content : []);
-  const products = collectionProducts.length > 0 ? collectionProducts : contentProducts;
+  const products = (collectionProducts.length > 0 ? collectionProducts : contentProducts).slice(0, pageSize);
 
   return {
     query: queryResult?.query || query,
