@@ -45,7 +45,7 @@ export async function handleGs25FindStores(c: ApiContext) {
       }
     }
 
-    const storeResult = await fetchGs25Stores(
+    let storeResult = await fetchGs25Stores(
       {
         serviceCode,
         latitude,
@@ -55,6 +55,38 @@ export async function handleGs25FindStores(c: ApiContext) {
         timeout: 20000,
       },
     );
+    let fallbackUsed = false;
+
+    if (storeResult.stores.length === 0 && typeof latitude === 'number' && typeof longitude === 'number') {
+      try {
+        const fallbackProduct = (await fetchGs25SearchProducts('오감자', { timeout: 20000 })).find(
+          (product) => product.itemCode.trim().length > 0,
+        );
+
+        if (fallbackProduct) {
+          const fallbackResult = await fetchGs25Stores(
+            {
+              serviceCode,
+              itemCode: fallbackProduct.itemCode,
+              realTimeStockYn: 'Y',
+              latitude,
+              longitude,
+              useCache: false,
+            },
+            {
+              timeout: 20000,
+            },
+          );
+
+          if (fallbackResult.stores.length > 0) {
+            storeResult = fallbackResult;
+            fallbackUsed = true;
+          }
+        }
+      } catch {
+        fallbackUsed = false;
+      }
+    }
 
     const selected = selectGs25StoresForKeyword(storeResult.stores, keyword, {
       relaxWhenEmpty: typeof latitude === 'number' && typeof longitude === 'number',
@@ -74,6 +106,7 @@ export async function handleGs25FindStores(c: ApiContext) {
             : null,
         cacheHit: storeResult.cacheHit,
         filterRelaxed: selected.filterRelaxed,
+        fallbackUsed,
         stores,
       },
       {

@@ -6,6 +6,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import {
   attachDistanceToGs25Stores,
+  fetchGs25SearchProducts,
   fetchGs25Stores,
   geocodeGs25Address,
   selectGs25StoresForKeyword,
@@ -50,7 +51,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     }
   }
 
-  const result = await fetchGs25Stores(
+  let result = await fetchGs25Stores(
     {
       serviceCode,
       latitude: resolvedLatitude,
@@ -60,6 +61,42 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
       timeout: timeoutMs,
     },
   );
+  let fallbackUsed = false;
+
+  if (
+    result.stores.length === 0 &&
+    typeof resolvedLatitude === 'number' &&
+    typeof resolvedLongitude === 'number'
+  ) {
+    try {
+      const fallbackProduct = (await fetchGs25SearchProducts('오감자', { timeout: timeoutMs })).find(
+        (product) => product.itemCode.trim().length > 0,
+      );
+
+      if (fallbackProduct) {
+        const fallbackResult = await fetchGs25Stores(
+          {
+            serviceCode,
+            itemCode: fallbackProduct.itemCode,
+            realTimeStockYn: 'Y',
+            latitude: resolvedLatitude,
+            longitude: resolvedLongitude,
+            useCache: false,
+          },
+          {
+            timeout: timeoutMs,
+          },
+        );
+
+        if (fallbackResult.stores.length > 0) {
+          result = fallbackResult;
+          fallbackUsed = true;
+        }
+      }
+    } catch {
+      fallbackUsed = false;
+    }
+  }
 
   const selected = selectGs25StoresForKeyword(result.stores, keyword, {
     relaxWhenEmpty: typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number',
@@ -87,6 +124,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
             totalCount: result.totalCount,
             filteredCount: selected.stores.length,
             filterRelaxed: selected.filterRelaxed,
+            fallbackUsed,
             count: stores.length,
             stores,
           },

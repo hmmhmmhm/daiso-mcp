@@ -66,7 +66,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
   };
 }
 
-export function createSearchProductsTool(): ToolRegistration {
+export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'lottemart_search_products',
     metadata: {
@@ -85,6 +85,10 @@ export function createSearchProductsTool(): ToolRegistration {
           .describe(`요청 제한 시간(ms, 기본값: ${DEFAULT_LOTTEMART_TIMEOUT_MS})`),
       },
     },
-    handler: searchProducts as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args: SearchProductsArgs) =>
+      searchProducts({
+        ...args,
+        zyteApiKey: args.zyteApiKey || zyteApiKey,
+      })) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

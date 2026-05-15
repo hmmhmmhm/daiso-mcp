@@ -8,6 +8,18 @@ import { createFindNearbyStoresTool } from '../../../../src/services/lottemart/t
 
 const mockFetch = vi.fn();
 const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
+const createZyteResponse = (bodyText: string) =>
+  new Response(
+    JSON.stringify({
+      statusCode: 200,
+      httpResponseBody: Buffer.from(bodyText, 'utf8').toString('base64'),
+    }),
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+  );
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -121,5 +133,40 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.area).toBeNull();
     expect(parsed.brandVariant).toBeNull();
     expect(parsed.count).toBe(1);
+  });
+
+  it('기본 Zyte 키로 직접 매장 조회 실패를 우회한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(
+        createZyteResponse(`
+          <section class="sub-wrap result-shop-list">
+            <ul class="list-result">
+              <li>
+                <div class="shop-tit">잠실점</div>
+                <div class="shop-desc">
+                  <ul>
+                    <li><span>주소 : </span> 서울 송파구 올림픽로 240</li>
+                    <li><span>상담전화 : </span><a onclick="goClick('2301');">02-411-8025</a></li>
+                  </ul>
+                </div>
+                <a class="link" href="./detail_shop.asp?werks=2301"></a>
+              </li>
+            </ul>
+          </section>
+        `),
+      );
+
+    const tool = createFindNearbyStoresTool(undefined, 'test-zyte-key');
+    const result = await tool.handler({
+      area: '서울',
+      keyword: '잠실',
+      limit: 1,
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.count).toBe(1);
+    expect(parsed.stores[0].storeName).toBe('잠실점');
+    expect(String(mockFetch.mock.calls[1]?.[0])).toBe('https://api.zyte.com/v1/extract');
   });
 });

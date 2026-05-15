@@ -17,15 +17,23 @@ const LOTTEMART_METADATA: ServiceMetadata = {
 class LotteMartService implements ServiceProvider {
   readonly metadata = LOTTEMART_METADATA;
 
-  constructor(private readonly googleMapsApiKey?: string) {}
+  constructor(
+    private readonly googleMapsApiKey?: string,
+    private readonly zyteApiKey?: string,
+  ) {}
 
   getTools(): ToolRegistration[] {
-    return [createFindNearbyStoresTool(this.googleMapsApiKey), createSearchProductsTool()];
+    return [
+      createFindNearbyStoresTool(this.googleMapsApiKey, this.zyteApiKey),
+      createSearchProductsTool(this.zyteApiKey),
+    ];
   }
 }
 
-export function createLotteMartService(options: { googleMapsApiKey?: string } = {}): ServiceProvider {
-  return new LotteMartService(options.googleMapsApiKey);
+export function createLotteMartService(
+  options: { googleMapsApiKey?: string; zyteApiKey?: string } = {},
+): ServiceProvider {
+  return new LotteMartService(options.googleMapsApiKey, options.zyteApiKey);
 }
 
 export * from './types.js';

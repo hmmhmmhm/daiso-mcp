@@ -36,6 +36,7 @@ export async function handleLotteMartFindStores(c: ApiContext) {
       {
         timeout: DEFAULT_LOTTEMART_TIMEOUT_MS,
         googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        zyteApiKey: c.env?.ZYTE_API_KEY,
       },
     );
 
@@ -92,6 +93,7 @@ export async function handleLotteMartSearchProducts(c: ApiContext) {
       },
       {
         timeout: DEFAULT_LOTTEMART_TIMEOUT_MS,
+        zyteApiKey: c.env?.ZYTE_API_KEY,
       },
     );
 
