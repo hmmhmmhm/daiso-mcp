@@ -437,6 +437,338 @@ describe('searchLotteMartProducts', () => {
     expect(result.products[0].barcode).toBe('8801094011307');
   });
 
+  it('구형 상품 엔드포인트가 막히면 제타 상품 API로 대체 조회한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            productGroups: [
+              {
+                decoratedProducts: [
+                  {
+                    retailerProductId: 'OS8801094011307',
+                    name: '코카콜라 (1.2L)',
+                    brand: '코카콜라',
+                    packSizeDescription: '1200ml',
+                    price: { amount: '3790', currency: 'KRW' },
+                    available: true,
+                  },
+                  {
+                    retailerProductId: 'OS8801056178055',
+                    name: '제로 펩시콜라 라임향',
+                    brand: '펩시',
+                    packSizeDescription: '1.5L',
+                    price: { amount: '2980', currency: 'KRW' },
+                    available: false,
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+      );
+
+    const result = await searchLotteMartProducts({
+      area: '서울',
+      storeName: '강변점',
+      keyword: '콜라',
+    });
+
+    expect(result.totalCount).toBe(2);
+    expect(result.totalPages).toBe(1);
+    expect(result.products).toEqual([
+      expect.objectContaining({
+        storeCode: '2301',
+        storeName: '강변점',
+        productName: '코카콜라 (1.2L)',
+        barcode: '8801094011307',
+        spec: '1200ml',
+        manufacturer: '코카콜라',
+        price: 3790,
+        stockQuantity: 1,
+      }),
+      expect.objectContaining({
+        productName: '제로 펩시콜라 라임향',
+        barcode: '8801056178055',
+        stockQuantity: 0,
+      }),
+    ]);
+    expect(String(mockFetch.mock.calls[3][0])).toContain('lottemartzetta.com/api/webproductpagews');
+  });
+
+  it('매장 옵션 조회가 막혀도 요청에 매장 식별자가 있으면 제타 상품 API로 대체 조회한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            productGroups: [
+              {
+                decoratedProducts: [
+                  {
+                    retailerProductId: 'OS8801094012007',
+                    name: '코카콜라 (1.8L)',
+                    brand: '코카콜라',
+                    packSizeDescription: '1800ml',
+                    price: { amount: '2770', currency: 'KRW' },
+                    available: true,
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+      );
+
+    const result = await searchLotteMartProducts({
+      area: '서울',
+      storeCode: '2301',
+      keyword: '콜라',
+    });
+
+    expect(result.storeCode).toBe('2301');
+    expect(result.storeName).toBe('롯데마트 2301');
+    expect(result.products[0]).toEqual(
+      expect.objectContaining({
+        productName: '코카콜라 (1.8L)',
+        barcode: '8801094012007',
+        price: 2770,
+      }),
+    );
+    expect(String(mockFetch.mock.calls[2][0])).toContain('lottemartzetta.com/api/webproductpagews');
+  });
+
+  it('제타 대체 조회가 실패하면 기존 경로와 제타 경로 오류를 함께 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403, statusText: 'Forbidden' }));
+
+    await expect(
+      searchLotteMartProducts({
+        area: '서울',
+        storeName: '강변점',
+        keyword: '콜라',
+      }),
+    ).rejects.toThrow('기존 경로(API 요청 실패: 522 Origin timeout - error code: 522), 제타 경로');
+  });
+
+  it('제타 대체 조회는 다음 페이지 토큰과 불완전한 상품 필드를 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            metadata: { nextPageToken: 'next-token' },
+            productGroups: [
+              {
+                decoratedProducts: [
+                  {
+                    retailerProductId: 'OS8801094593025',
+                    name: '코카콜라 (215ML*6입)',
+                    price: { amount: 'not-a-number' },
+                  },
+                  {
+                    retailerProductId: 'OSNO_NAME',
+                    name: '',
+                    price: { amount: '1000' },
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            productGroups: [
+              {
+                decoratedProducts: [
+                  {
+                    retailerProductId: 'OS8801094011307',
+                    name: '코카콜라 (1.2L)',
+                    brand: '코카콜라',
+                    packSizeDescription: '1200ml',
+                    price: { amount: '3790' },
+                    available: true,
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+      );
+
+    const result = await searchLotteMartProducts({
+      area: '서울',
+      storeName: '강변점',
+      keyword: '콜라',
+      pageLimit: 2,
+    });
+
+    expect(result.totalCount).toBe(2);
+    expect(result.totalPages).toBe(2);
+    expect(result.products[0]).toEqual(
+      expect.objectContaining({
+        productName: '코카콜라 (215ML*6입)',
+        barcode: '8801094593025',
+        price: 0,
+        stockQuantity: 1,
+      }),
+    );
+    expect(result.products[1].productName).toBe('코카콜라 (1.2L)');
+    expect(String(mockFetch.mock.calls[4][0])).toContain('pageToken=next-token');
+  });
+
+  it('매장명만 있어도 매장 옵션 실패 시 제타 기본 매장 코드로 대체 조회한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            metadata: { nextPageToken: 'still-more' },
+            productGroups: [{}],
+          }),
+        ),
+      );
+
+    const result = await searchLotteMartProducts({
+      area: '서울',
+      storeName: '강변점',
+      keyword: '콜라',
+      pageLimit: 1,
+    });
+
+    expect(result.area).toBe('서울');
+    expect(result.storeCode).toBe('zetta');
+    expect(result.storeName).toBe('강변점');
+    expect(result.totalPages).toBe(2);
+    expect(result.products).toEqual([]);
+  });
+
+  it('제타 대체 조회는 상품 그룹이 없는 응답을 빈 결과로 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({})));
+
+    const result = await searchLotteMartProducts({
+      area: '서울',
+      storeName: '강변점',
+      keyword: '콜라',
+      pageLimit: 0,
+    });
+
+    expect(result.totalCount).toBe(0);
+    expect(result.totalPages).toBe(1);
+    expect(result.products).toEqual([]);
+  });
+
+  it('지역 없이 매장명만 있어도 매장 옵션 장애 시 제타 기본 지역으로 대체 조회한다', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === 'https://company.lottemart.com/mobiledowa/') {
+        return Promise.resolve(createSessionResponse());
+      }
+      if (url.startsWith('https://lottemartzetta.com/')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              productGroups: [
+                {
+                  decoratedProducts: [
+                    {
+                      name: '브랜드 없는 콜라',
+                    },
+                  ],
+                },
+              ],
+            }),
+          ),
+        );
+      }
+      return Promise.resolve(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }));
+    });
+
+    const result = await searchLotteMartProducts({
+      storeName: '강변점',
+      keyword: '콜라',
+      pageLimit: 10,
+    });
+
+    expect(result.area).toBe('서울');
+    expect(result.storeCode).toBe('zetta');
+    expect(result.products[0]).toEqual(
+      expect.objectContaining({
+        productName: '브랜드 없는 콜라',
+        barcode: '',
+        price: 0,
+      }),
+    );
+  });
+
+  it('제타 대체 조회는 음수 페이지 제한을 1페이지로 보정한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            metadata: { nextPageToken: 'ignored-next-page' },
+            productGroups: [
+              {
+                decoratedProducts: [
+                  {
+                    retailerProductId: 'OS8801094011307',
+                    name: '코카콜라 (1.2L)',
+                    price: { amount: '3790' },
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+      );
+
+    const result = await searchLotteMartProducts({
+      area: '서울',
+      storeName: '강변점',
+      keyword: '콜라',
+      pageLimit: -1,
+    });
+
+    expect(result.totalPages).toBe(2);
+    expect(result.products).toHaveLength(1);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+  });
+
+  it('제타 대체 조회 실패 메시지는 비 Error 예외도 처리한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockRejectedValueOnce('primary failed')
+      .mockRejectedValueOnce('zetta failed');
+
+    await expect(
+      searchLotteMartProducts({
+        area: '서울',
+        storeName: '강변점',
+        keyword: '콜라',
+      }),
+    ).rejects.toThrow('기존 경로(알 수 없는 오류가 발생했습니다.), 제타 경로(알 수 없는 오류가 발생했습니다.)');
+  });
+
   it('역명 키워드를 붙여쓴 변형으로도 매장을 찾는다', async () => {
     mockFetch
       .mockResolvedValueOnce(createSessionResponse())
