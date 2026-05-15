@@ -70,7 +70,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   };
 }
 
-export function createFindNearbyStoresTool(googleMapsApiKey?: string): ToolRegistration {
+export function createFindNearbyStoresTool(googleMapsApiKey?: string, zyteApiKey?: string): ToolRegistration {
   return {
     name: 'lottemart_find_nearby_stores',
     metadata: {
@@ -97,6 +97,7 @@ export function createFindNearbyStoresTool(googleMapsApiKey?: string): ToolRegis
       findNearbyStores({
         ...args,
         googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
+        zyteApiKey: args.zyteApiKey || zyteApiKey,
       })) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
