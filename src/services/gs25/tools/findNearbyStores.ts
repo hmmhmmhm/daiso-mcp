@@ -6,12 +6,13 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import {
   attachDistanceToGs25Stores,
-  fetchGs25SearchProducts,
   fetchGs25Stores,
   geocodeGs25Address,
   selectGs25StoresForKeyword,
   sortGs25Stores,
 } from '../client.js';
+
+const FALLBACK_STORE_LOOKUP_ITEM_CODE = '8801117752804';
 
 interface FindNearbyStoresArgs {
   latitude?: number;
@@ -69,29 +70,23 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     typeof resolvedLongitude === 'number'
   ) {
     try {
-      const fallbackProduct = (await fetchGs25SearchProducts('오감자', { timeout: timeoutMs })).find(
-        (product) => product.itemCode.trim().length > 0,
+      const fallbackResult = await fetchGs25Stores(
+        {
+          serviceCode,
+          itemCode: FALLBACK_STORE_LOOKUP_ITEM_CODE,
+          realTimeStockYn: 'Y',
+          latitude: resolvedLatitude,
+          longitude: resolvedLongitude,
+          useCache: false,
+        },
+        {
+          timeout: timeoutMs,
+        },
       );
 
-      if (fallbackProduct) {
-        const fallbackResult = await fetchGs25Stores(
-          {
-            serviceCode,
-            itemCode: fallbackProduct.itemCode,
-            realTimeStockYn: 'Y',
-            latitude: resolvedLatitude,
-            longitude: resolvedLongitude,
-            useCache: false,
-          },
-          {
-            timeout: timeoutMs,
-          },
-        );
-
-        if (fallbackResult.stores.length > 0) {
-          result = fallbackResult;
-          fallbackUsed = true;
-        }
+      if (fallbackResult.stores.length > 0) {
+        result = fallbackResult;
+        fallbackUsed = true;
       }
     } catch {
       fallbackUsed = false;

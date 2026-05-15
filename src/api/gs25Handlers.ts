@@ -14,6 +14,8 @@ import {
   sortGs25Stores,
 } from '../services/gs25/client.js';
 
+const GS25_FALLBACK_STORE_LOOKUP_ITEM_CODE = '8801117752804';
+
 /**
  * GS25 매장 검색 API 핸들러
  * GET /api/gs25/stores?keyword={키워드}&lat={위도}&lng={경도}
@@ -59,29 +61,23 @@ export async function handleGs25FindStores(c: ApiContext) {
 
     if (storeResult.stores.length === 0 && typeof latitude === 'number' && typeof longitude === 'number') {
       try {
-        const fallbackProduct = (await fetchGs25SearchProducts('오감자', { timeout: 20000 })).find(
-          (product) => product.itemCode.trim().length > 0,
+        const fallbackResult = await fetchGs25Stores(
+          {
+            serviceCode,
+            itemCode: GS25_FALLBACK_STORE_LOOKUP_ITEM_CODE,
+            realTimeStockYn: 'Y',
+            latitude,
+            longitude,
+            useCache: false,
+          },
+          {
+            timeout: 20000,
+          },
         );
 
-        if (fallbackProduct) {
-          const fallbackResult = await fetchGs25Stores(
-            {
-              serviceCode,
-              itemCode: fallbackProduct.itemCode,
-              realTimeStockYn: 'Y',
-              latitude,
-              longitude,
-              useCache: false,
-            },
-            {
-              timeout: 20000,
-            },
-          );
-
-          if (fallbackResult.stores.length > 0) {
-            storeResult = fallbackResult;
-            fallbackUsed = true;
-          }
+        if (fallbackResult.stores.length > 0) {
+          storeResult = fallbackResult;
+          fallbackUsed = true;
         }
       } catch {
         fallbackUsed = false;

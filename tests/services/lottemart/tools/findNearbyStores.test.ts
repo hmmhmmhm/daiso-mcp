@@ -162,11 +162,57 @@ describe('createFindNearbyStoresTool', () => {
       area: '서울',
       keyword: '잠실',
       limit: 1,
+      timeoutMs: 1234,
     });
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.count).toBe(1);
     expect(parsed.stores[0].storeName).toBe('잠실점');
     expect(String(mockFetch.mock.calls[1]?.[0])).toBe('https://api.zyte.com/v1/extract');
+  });
+
+  it('키워드가 있으면 롯데마트 upstream 매장 검색어 파라미터를 함께 보낸다', async () => {
+    mockFetch.mockImplementation((_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(init?.body)).toContain('m_schWord=%EC%9E%A0%EC%8B%A4');
+      return Promise.resolve(
+        new Response(`
+          <section class="sub-wrap result-shop-list">
+            <ul class="list-result">
+              <li>
+                <div class="shop-tit">제타플렉스 잠실점</div>
+                <div class="shop-desc">
+                  <ul>
+                    <li><span>주소 : </span> 서울 송파구 올림픽로 240</li>
+                    <li><span>상담전화 : </span><a onclick="goClick('2301');">02-411-8025</a></li>
+                  </ul>
+                </div>
+                <a class="link" href="./detail_shop.asp?werks=2301"></a>
+              </li>
+            </ul>
+          </section>
+        `),
+      );
+    });
+
+    const tool = createFindNearbyStoresTool();
+    const result = await tool.handler({
+      area: '서울',
+      keyword: '잠실',
+      limit: 1,
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.count).toBe(1);
+    expect(parsed.stores[0].storeName).toBe('제타플렉스 잠실점');
+
+    const cachedResult = await tool.handler({
+      area: '서울',
+      keyword: '잠실',
+      limit: 1,
+      timeoutMs: 1234,
+    });
+    const cachedParsed = JSON.parse(cachedResult.content[0].text);
+    expect(cachedParsed.count).toBe(1);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -153,6 +153,46 @@ export async function fetchLotteMartStoresByArea(
   return stores;
 }
 
+async function fetchLotteMartStoresByAreaKeyword(
+  area: string,
+  keyword: string,
+  options: RequestOptions & { timeout: number },
+): Promise<LotteMartStore[]> {
+  const normalizedArea = normalizeArea(area) as LotteMartAreaCode;
+  const normalizedKeyword = keyword.trim();
+  const cacheKey = `${normalizedArea}:${normalizedKeyword}`;
+  const cached = storeCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.stores;
+  }
+
+  const body = new URLSearchParams();
+  body.set('m_area', normalizedArea);
+  body.set('m_schWord', normalizedKeyword);
+
+  const html = await fetchLotteMartPageWithSession(
+    LOTTEMART_API.STORE_SEARCH_PATH,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    },
+    options.timeout,
+    await getLotteMartSessionCookie(options),
+    options.zyteApiKey,
+  );
+
+  const stores = parseStores(toDisplayArea(normalizedArea), html);
+  storeCache.set(cacheKey, {
+    expiresAt: Date.now() + STORE_CACHE_TTL_MS,
+    stores,
+  });
+
+  return stores;
+}
+
 export async function geocodeLotteMartAddress(address: string, options: RequestOptions = {}) {
   const keyword = address.trim();
   if (keyword.length === 0) {
@@ -237,7 +277,13 @@ export async function fetchLotteMartStores(
   const targetAreas = getTargetAreas(area);
   const hasKeyword = keyword.trim().length > 0;
   const fetchAreaStores = (currentArea: string) =>
-    fetchLotteMartStoresByArea(currentArea, { timeout, sessionCookie, zyteApiKey: options.zyteApiKey });
+    hasKeyword
+      ? fetchLotteMartStoresByAreaKeyword(currentArea, keyword, {
+          timeout,
+          sessionCookie,
+          zyteApiKey: options.zyteApiKey,
+        })
+      : fetchLotteMartStoresByArea(currentArea, { timeout, sessionCookie, zyteApiKey: options.zyteApiKey });
 
   const keywordMatchedStores = hasKeyword
     ? await fetchKeywordMatchedStores(targetAreas, keyword, brandVariant, limit, fetchAreaStores)

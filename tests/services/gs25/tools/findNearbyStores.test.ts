@@ -162,21 +162,6 @@ describe('createFindNearbyStoresTool', () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            SearchQueryResult: {
-              Collection: [
-                {
-                  Documentset: {
-                    Document: [{ field: { itemCode: '8801117752804', itemName: '오감자' } }],
-                  },
-                },
-              ],
-            },
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
             stores: [
               {
                 storeCode: 'near',
@@ -201,7 +186,7 @@ describe('createFindNearbyStoresTool', () => {
     process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
   });
 
-  it('좌표 기반 매장 조회가 비고 fallback 상품 조회가 실패해도 빈 매장 결과를 반환한다', async () => {
+  it('좌표 기반 매장 조회가 비고 fallback 재고 조회가 실패해도 빈 매장 결과를 반환한다', async () => {
     const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
     process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
 
@@ -215,41 +200,7 @@ describe('createFindNearbyStoresTool', () => {
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
-      .mockRejectedValueOnce(new Error('product search unavailable'));
-
-    const tool = createFindNearbyStoresTool();
-    const result = await tool.handler({ keyword: '강남', limit: 3 });
-
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.fallbackUsed).toBe(false);
-    expect(parsed.count).toBe(0);
-
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
-  });
-
-  it('fallback 상품 후보가 없으면 빈 매장 결과를 반환한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
-
-    mockFetch
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            SearchQueryResult: {
-              Collection: [{ Documentset: { Document: [{ field: { itemCode: '', itemName: '오감자' } }] } }],
-            },
-          }),
-        ),
-      );
+      .mockRejectedValueOnce(new Error('fallback stock unavailable'));
 
     const tool = createFindNearbyStoresTool();
     const result = await tool.handler({ keyword: '강남', limit: 3 });
@@ -275,21 +226,6 @@ describe('createFindNearbyStoresTool', () => {
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            SearchQueryResult: {
-              Collection: [
-                {
-                  Documentset: {
-                    Document: [{ field: { itemCode: '8801117752804', itemName: '오감자' } }],
-                  },
-                },
-              ],
-            },
-          }),
-        ),
-      )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })));
 
     const tool = createFindNearbyStoresTool();
