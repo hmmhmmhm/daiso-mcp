@@ -666,6 +666,35 @@ docs: API 사용 가이드 업데이트
 
 ---
 
+## 릴리스 절차
+
+npm 패키지를 배포할 때는 게시된 버전과 Git 기록이 같은 커밋을 가리키도록 아래 순서를 지킵니다.
+
+```bash
+npm version patch
+npm run release:dry-run
+git push origin main --follow-tags
+npm publish
+npm view daiso version
+```
+
+- `npm version`은 버전 변경 커밋과 `vX.Y.Z` 태그를 함께 만듭니다.
+- `npm run release:dry-run`으로 `dist`, `openapi.json`, `openapi.yaml` 포함 여부를 확인합니다.
+- `git push origin main --follow-tags`가 성공한 뒤 `npm publish`를 실행합니다.
+- 게시 후 `npm view daiso version`으로 registry 반영 버전을 확인합니다.
+
+---
+
+## 운영 메모
+
+- 이 저장소의 기본 작업 브랜치는 `main`이며, open PR 또는 open issue가 있으면 먼저 triage합니다.
+- 모든 `src/**/*.ts` 파일은 450줄 이하를 유지합니다.
+- npm `daiso` 배포 전에는 `npm run check`, `npm run test:coverage`, `npm audit`를 확인합니다.
+- 외부 사이트 응답 회귀는 `.github/workflows/external-smoke.yml`의 `npm run cli:smoke`로 야간 및 수동 확인합니다.
+- 개인 작업 메모는 `/Users/hm/Documents/personal-agent/projects/daiso-mcp/PROJECT.md`에 둘 수 있지만, 여러 에이전트가 알아야 하는 규칙은 이 파일에 반영합니다.
+
+---
+
 ## 참고 자료
 
 - [Conventional Commits](https://www.conventionalcommits.org/)
