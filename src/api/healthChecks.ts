@@ -300,7 +300,7 @@ async function runSingleCheck(
 
 export async function runHealthChecks(params: RunHealthChecksParams): Promise<HealthCheckSummary> {
   const now = params.now || Date.now;
-  const fetchImpl = params.fetchImpl || fetch;
+  const fetchImpl = params.fetchImpl || ((input, init) => globalThis.fetch(input, init));
   const mode = params.mode || 'quick';
   const timeoutMs = clampTimeout(params.timeoutMs ?? DEFAULT_HEALTH_CHECK_TIMEOUT_MS);
   const cacheKey = createCacheKey({ ...params, mode, timeoutMs, baseUrl: params.baseUrl });

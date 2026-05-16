@@ -2,11 +2,15 @@
  * 상세 헬스 체크 실행기 테스트
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { __testOnlyClearHealthCheckCache, runHealthChecks } from '../../src/api/healthChecks.js';
 
 beforeEach(() => {
   __testOnlyClearHealthCheckCache();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -30,6 +34,26 @@ describe('runHealthChecks', () => {
     expect(result.status).toBe('skipped');
     expect(result.checks).toEqual([]);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('fetchImpl이 없으면 전역 fetch를 globalThis 컨텍스트로 호출한다', async () => {
+    const globalFetch = vi.fn(function (this: unknown) {
+      if (this !== globalThis) {
+        throw new Error('invalid fetch this');
+      }
+      return Promise.resolve(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+    });
+    vi.stubGlobal('fetch', globalFetch);
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'daiso.products',
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(globalFetch).toHaveBeenCalledTimes(1);
   });
 
   it('빈 결과는 degraded 상태로 집계한다', async () => {
