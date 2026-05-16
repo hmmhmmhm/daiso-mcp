@@ -2,5 +2,8 @@ name = "daiso-mcp"
 main = "src/index.ts"
 compatibility_date = "2025-01-23"
 
+[vars]
+HEALTH_CHECK_BASE_URL = "https://daiso-mcp.hmmhmmhm.workers.dev"
+
 [observability]
 enabled = true

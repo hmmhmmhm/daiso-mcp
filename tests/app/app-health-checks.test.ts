@@ -87,6 +87,32 @@ describe('GET /api/health/checks', () => {
     expect(String(mockFetch.mock.calls[0][0])).toContain('timeoutMs=1234');
   });
 
+  it('HEALTH_CHECK_BASE_URL이 있으면 내부 체크 기준 URL로 사용한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          products: [{ productName: '코카콜라' }],
+        },
+        meta: { total: 1 },
+      }),
+    );
+
+    const res = await app.request(
+      'https://mcp.aka.page/api/health/checks?check=lottemart.products&fresh=true',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+        HEALTH_CHECK_BASE_URL: 'https://daiso-mcp.example.workers.dev',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/daiso-mcp\.example\.workers\.dev\/api\/lottemart\/products/);
+  });
+
   it('service 필터로 여러 체크를 실행하고 실패를 집계한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

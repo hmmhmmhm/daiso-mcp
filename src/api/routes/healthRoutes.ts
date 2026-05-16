@@ -38,8 +38,9 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
 
     const mode = c.req.query('mode') === 'deep' ? 'deep' : 'quick';
     const timeoutMs = Number.parseInt(c.req.query('timeoutMs') || '3000', 10);
+    const baseUrl = c.env?.HEALTH_CHECK_BASE_URL?.trim() || new URL(c.req.url).origin;
     const result = await runHealthChecks({
-      baseUrl: new URL(c.req.url).origin,
+      baseUrl,
       service: c.req.query('service') || undefined,
       check: c.req.query('check') || undefined,
       mode,
