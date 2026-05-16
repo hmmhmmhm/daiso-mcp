@@ -1,6 +1,6 @@
 {
   "name": "daiso",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Daiso MCP Server for mobile access via Cloudflare Workers",
   "main": "dist/index.js",
   "bin": {
@@ -50,7 +50,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hmmhmmhm/daiso-mcp.git"
+    "url": "git+https://github.com/hmmhmmhm/daiso-mcp.git"
   },
   "homepage": "https://github.com/hmmhmmhm/daiso-mcp#readme",
   "bugs": {
@@ -80,8 +80,9 @@
     "wrangler": "^4.73.0"
   },
   "overrides": {
-    "flatted": "3.4.1",
-    "undici": "7.24.0"
+    "flatted": "3.4.2",
+    "undici": "7.24.0",
+    "brace-expansion": "5.0.6"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
