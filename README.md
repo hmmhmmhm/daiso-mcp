@@ -218,6 +218,23 @@ npx daiso products 수납박스 --json
 - OpenAI 챗봇 등록용 축약 스펙: `https://mcp.aka.page/openapi.json`
 - OpenAI 챗봇 등록용 YAML: `https://mcp.aka.page/openapi.yaml`
 - 전체 개별 엔드포인트 스펙(JSON): `https://mcp.aka.page/openapi-full.json`
+
+### 운영 헬스 체크
+
+서비스별 API 상태를 즉시 확인할 때는 `GET /api/health/checks`를 사용합니다. 이 엔드포인트는 `HEALTH_CHECK_SECRET` 환경 변수가 설정되어 있어야 하며, 요청에는 `Authorization: Bearer <secret>` 또는 `x-health-check-key: <secret>` 헤더가 필요합니다.
+
+```bash
+curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
+  "https://mcp.aka.page/api/health/checks?check=lottemart.products&fresh=true&includeSamples=true"
+```
+
+주요 쿼리:
+
+- `service=gs25`: 특정 서비스만 확인
+- `check=lottemart.products`: 특정 체크만 확인
+- `mode=quick|deep`: 체크 모드 선택
+- `fresh=true`: 60초 캐시 우회
+- `includeSamples=true`: 첫 결과 이름 샘플 포함
 - 전체 개별 엔드포인트 스펙(YAML): `https://mcp.aka.page/openapi-full.yaml`
 
 기본 `openapi.json`은 OpenAI Actions import 제한에 맞추기 위해 `GET /api/actions/query` 단일 facade만 노출합니다.

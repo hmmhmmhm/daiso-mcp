@@ -41,6 +41,7 @@ import { registerCuRoutes } from './api/routes/cuRoutes.js';
 import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 import { registerGs25Routes } from './api/routes/gs25Routes.js';
 import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
+import { registerHealthRoutes } from './api/routes/healthRoutes.js';
 
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
@@ -207,7 +208,14 @@ app.use(
   cors({
     origin: '*',
     allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'mcp-session-id', 'Last-Event-ID', 'mcp-protocol-version'],
+    allowHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-health-check-key',
+      'mcp-session-id',
+      'Last-Event-ID',
+      'mcp-protocol-version',
+    ],
     exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
   })
 );
@@ -225,6 +233,7 @@ app.get('/', (c) => {
     endpoints: {
       mcp: '/ 또는 /mcp (POST) - MCP 프로토콜 엔드포인트',
       health: '/health (GET) - 헬스 체크',
+      healthChecks: '/api/health/checks (GET) - 서비스별 상세 헬스 체크',
       openapi: '/openapi.json (GET) - OpenAI Actions용 축약 OpenAPI',
       openapiFull: '/openapi-full.json (GET) - 전체 OpenAPI',
       actionsQuery: '/api/actions/query (GET) - 기존 GET API 통합 facade',
@@ -246,6 +255,7 @@ app.on(['POST', 'DELETE', 'OPTIONS'], '/', async (c) => {
 
 // 헬스 체크 엔드포인트
 app.get('/health', (c) => c.json({ status: 'ok' }));
+registerHealthRoutes(app);
 
 // 프롬프트 페이지 (MCP 미지원 에이전트용)
 app.get('/prompt', (c) => {

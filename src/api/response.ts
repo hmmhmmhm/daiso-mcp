@@ -7,6 +7,7 @@ import type { Context } from 'hono';
 export interface AppBindings {
   ZYTE_API_KEY?: string;
   GOOGLE_MAPS_API_KEY?: string;
+  HEALTH_CHECK_SECRET?: string;
 }
 
 export type ApiContext = Context<{ Bindings: AppBindings }>;
@@ -44,7 +45,7 @@ export function errorResponse(
   c: ApiContext,
   code: string,
   message: string,
-  status: 400 | 404 | 500 = 400,
+  status: 400 | 401 | 403 | 404 | 500 | 503 = 400,
 ) {
   return c.json<ApiResponse<never>>(
     {
