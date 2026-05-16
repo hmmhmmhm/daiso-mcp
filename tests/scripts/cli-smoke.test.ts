@@ -7,7 +7,30 @@ import { runCliSmoke } from '../../scripts/cli-smoke.ts';
 
 describe('runCliSmoke', () => {
   it('필수 CLI 명령이 모두 성공하면 0을 반환한다', async () => {
-    const runCommand = vi.fn().mockResolvedValue(0);
+    const runCommand = vi.fn((_command: string, args: string[]) => {
+      const command = args[1];
+      if (command === 'health') {
+        return Promise.resolve({ exitCode: 0, stdout: JSON.stringify({ status: 'ok' }), stderr: '' });
+      }
+
+      const stdoutByCommand: Record<string, unknown> = {
+        'gs25-products': { success: true, data: { keyword: '콜라' } },
+        'gs25-stores': { success: true, data: { keyword: '강남' } },
+        'seveneleven-products': { success: true, data: { query: '커피' } },
+        'emart24-products': { success: true, data: { keyword: '커피' } },
+        'lottemart-products': { success: true, data: { keyword: '콜라' } },
+        'lottecinema-theaters': { success: true, data: { keyword: '잠실' } },
+      };
+      const path = args[2];
+      const getPayload =
+        path === '/api/oliveyoung/products'
+          ? { success: true, data: { keyword: '선크림' } }
+          : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
+            ? { success: true, data: { keyword: '강남' } }
+            : undefined;
+      const payload = stdoutByCommand[command] || getPayload || { success: true, data: {} };
+      return Promise.resolve({ exitCode: 0, stdout: JSON.stringify(payload), stderr: '' });
+    });
     const writeOut = vi.fn();
     const writeErr = vi.fn();
 
@@ -38,7 +61,10 @@ describe('runCliSmoke', () => {
   });
 
   it('하나라도 실패하면 즉시 non-zero를 반환한다', async () => {
-    const runCommand = vi.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+    const runCommand = vi
+      .fn()
+      .mockResolvedValueOnce({ exitCode: 0, stdout: JSON.stringify({ status: 'ok' }), stderr: '' })
+      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'boom' });
     const writeOut = vi.fn();
     const writeErr = vi.fn();
 
@@ -53,5 +79,43 @@ describe('runCliSmoke', () => {
     expect(exitCode).toBe(1);
     expect(runCommand).toHaveBeenCalledTimes(2);
     expect(writeErr).toHaveBeenCalledWith(expect.stringContaining('CLI smoke 실패'));
+  });
+
+  it('JSON 응답이 기대한 사용자 입력을 반영하지 않으면 실패한다', async () => {
+    const runCommand = vi.fn((_command: string, args: string[]) => {
+      const command = args[1];
+      const payloadByCommand: Record<string, unknown> = {
+        health: { status: 'ok' },
+        'gs25-products': { success: true, data: { keyword: '콜라' } },
+        'gs25-stores': { success: true, data: { keyword: '강남' } },
+        'seveneleven-products': { success: true, data: { query: '커피' } },
+        'emart24-products': { success: true, data: { keyword: '커피' } },
+        'lottemart-products': { success: true, data: { keyword: '콜라' } },
+        'lottecinema-theaters': { success: true, data: { keyword: null } },
+      };
+      const path = args[2];
+      const getPayload =
+        path === '/api/oliveyoung/products'
+          ? { success: true, data: { keyword: '선크림' } }
+          : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
+            ? { success: true, data: { keyword: '강남' } }
+            : undefined;
+      const payload = payloadByCommand[command] || getPayload || { success: true, data: {} };
+
+      return Promise.resolve({ exitCode: 0, stdout: JSON.stringify(payload), stderr: '' });
+    });
+    const writeOut = vi.fn();
+    const writeErr = vi.fn();
+
+    const exitCode = await runCliSmoke({
+      runCommand,
+      writeOut,
+      writeErr,
+      command: 'node',
+      cliPath: 'dist/bin.js',
+    });
+
+    expect(exitCode).toBe(1);
+    expect(writeErr).toHaveBeenCalledWith(expect.stringContaining('CLI smoke 검증 실패'));
   });
 });

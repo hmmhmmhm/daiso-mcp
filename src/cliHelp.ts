@@ -194,22 +194,25 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
   'lottecinema-theaters': [
     '명령: lottecinema-theaters',
     '설명: 롯데시네마 주변 지점 API를 호출합니다.',
-    '사용법: daiso lottecinema-theaters [--keyword 값] [--lat 값] [--lng 값] [--playDate YYYYMMDD] [--limit N] [--json]',
+    '사용법: daiso lottecinema-theaters [keyword] [--lat 값] [--lng 값] [--playDate YYYYMMDD] [--limit N] [--json]',
     '옵션: --keyword, --lat, --lng, --playDate, --limit, --json',
+    '예시: daiso lottecinema-theaters 잠실 --limit 5',
     '예시: daiso lottecinema-theaters --keyword "안산 중앙역" --limit 5',
   ],
   'lottecinema-movies': [
     '명령: lottecinema-movies',
     '설명: 롯데시네마 영화/회차 API를 호출합니다.',
-    '사용법: daiso lottecinema-movies [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--keyword 값] [--lat 값] [--lng 값] [--json]',
+    '사용법: daiso lottecinema-movies [keyword] [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--lat 값] [--lng 값] [--json]',
     '옵션: --playDate, --theaterId, --movieId, --keyword, --lat, --lng, --json',
+    '예시: daiso lottecinema-movies 잠실 --playDate 20260310',
     '예시: daiso lottecinema-movies --playDate 20260310 --keyword "안산 중앙역"',
   ],
   'lottecinema-seats': [
     '명령: lottecinema-seats',
     '설명: 롯데시네마 잔여 좌석 API를 호출합니다.',
-    '사용법: daiso lottecinema-seats [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--keyword 값] [--lat 값] [--lng 값] [--limit N] [--json]',
+    '사용법: daiso lottecinema-seats [keyword] [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--lat 값] [--lng 값] [--limit N] [--json]',
     '옵션: --playDate, --theaterId, --movieId, --keyword, --lat, --lng, --limit, --json',
+    '예시: daiso lottecinema-seats 잠실 --playDate 20260310 --movieId 23816',
     '예시: daiso lottecinema-seats --playDate 20260310 --keyword "안산 중앙역" --movieId 23816',
   ],
   'lottemart-stores': [

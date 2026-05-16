@@ -298,6 +298,11 @@ export async function handleLottecinemaTheaters(options: string[], deps: CliDeps
     return printCommandHelp('lottecinema-theaters', deps.writeOut, deps.writeErr);
   }
 
+  const keyword = parsed.positionals[0];
+  if (keyword) {
+    parsed.options.keyword = keyword;
+  }
+
   const targetUrl = toUrl('/api/lottecinema/theaters');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
@@ -312,6 +317,11 @@ export async function handleLottecinemaMovies(options: string[], deps: CliDeps):
     return printCommandHelp('lottecinema-movies', deps.writeOut, deps.writeErr);
   }
 
+  const keyword = parsed.positionals[0];
+  if (keyword) {
+    parsed.options.keyword = keyword;
+  }
+
   const targetUrl = toUrl('/api/lottecinema/movies');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
@@ -324,6 +334,11 @@ export async function handleLottecinemaSeats(options: string[], deps: CliDeps): 
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('lottecinema-seats', deps.writeOut, deps.writeErr);
+  }
+
+  const keyword = parsed.positionals[0];
+  if (keyword) {
+    parsed.options.keyword = keyword;
   }
 
   const targetUrl = toUrl('/api/lottecinema/seats');

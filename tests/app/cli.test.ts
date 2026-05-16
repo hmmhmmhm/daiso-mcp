@@ -335,6 +335,22 @@ describe('CLI', () => {
     );
   });
 
+  it('lottecinema-theaters 명령은 위치 검색어를 positional 인자로 받는다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['lottecinema-theaters', '잠실', '--limit', '5'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottecinema/theaters?limit=5&keyword=%EC%9E%A0%EC%8B%A4',
+    );
+  });
+
   it('lottecinema-movies 명령은 롯데시네마 영화/회차 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
@@ -348,6 +364,22 @@ describe('CLI', () => {
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://mcp.aka.page/api/lottecinema/movies?playDate=20260310&theaterId=3012',
+    );
+  });
+
+  it('lottecinema-movies 명령은 위치 검색어를 positional 인자로 받는다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { movies: [], showtimes: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['lottecinema-movies', '잠실', '--playDate', '20260310'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottecinema/movies?playDate=20260310&keyword=%EC%9E%A0%EC%8B%A4',
     );
   });
 
@@ -367,6 +399,22 @@ describe('CLI', () => {
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://mcp.aka.page/api/lottecinema/seats?playDate=20260310&theaterId=3012&movieId=23816&limit=10',
+    );
+  });
+
+  it('lottecinema-seats 명령은 위치 검색어를 positional 인자로 받는다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { seats: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['lottecinema-seats', '잠실', '--movieId', '23816', '--limit', '10'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/lottecinema/seats?movieId=23816&limit=10&keyword=%EC%9E%A0%EC%8B%A4',
     );
   });
 
