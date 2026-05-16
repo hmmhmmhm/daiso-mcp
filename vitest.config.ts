@@ -38,13 +38,22 @@ export default defineConfig({
         'src/core/types.ts', // 타입만 정의
         'src/core/interfaces.ts', // 인터페이스만 정의
         'src/services/**/types.ts', // 타입만 정의
+        'src/services/**/clientTypes.ts', // 타입만 정의
         'src/api/emart24Handlers.ts', // 신규 서비스 핸들러는 별도 통합 검증
+        'src/api/gs25Handlers.ts', // 외부 BFF 연동 핸들러는 별도 통합 검증
         'src/api/lottecinemaHandlers.ts', // 신규 서비스 핸들러는 별도 통합 검증
+        'src/api/sevenelevenHandlers.ts', // 외부 웹/앱 연동 핸들러는 별도 통합 검증
         'src/services/emart24/client.ts', // 신규 서비스 클라이언트는 별도 실측 기반 검증
+        'src/services/gs25/client.ts', // 외부 BFF 클라이언트는 별도 실측 기반 검증
         'src/services/lottecinema/client.ts', // 신규 서비스 클라이언트는 별도 실측 기반 검증
+        'src/services/seveneleven/client.ts', // 외부 웹/앱 클라이언트는 별도 실측 기반 검증
+        'src/services/seveneleven/inventory.ts', // 외부 재고 암호화 경로는 별도 실측 기반 검증
         'src/services/emart24/tools/checkInventory.ts', // 신규 서비스 재고 도구는 별도 실측 기반 검증
+        'src/services/gs25/tools/checkInventory.ts', // 외부 BFF 재고 도구는 별도 통합 검증
         'src/services/lottecinema/tools/getRemainingSeats.ts', // 신규 서비스 좌석 도구는 별도 실측 기반 검증
+        'src/services/seveneleven/tools/checkInventory.ts', // 외부 재고 암호화 경로는 별도 실측 기반 검증
         'src/pages/openapi.ts', // 엔트리 재노출 파일
+        'src/pages/openapiSpec.ts', // 엔트리 재노출 파일
         'src/bin.ts', // npm bin 진입점 파일
         'src/cli.ts', // 실행 진입점 파일
         'src/cli/**/*.ts', // CLI 오케스트레이션 분리 모듈
