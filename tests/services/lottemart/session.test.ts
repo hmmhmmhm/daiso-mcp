@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __testOnlyClearLotteMartSessionCache,
   __testOnlyCreateLotteMartSocketResponse,
+  __testOnlyFetchLotteMartSocketResponse,
   fetchLotteMartHtml,
   fetchLotteMartPageWithSession,
   getCachedLotteMartSessionCookie,
@@ -130,6 +131,117 @@ describe('lottemart session helpers', () => {
     const response = __testOnlyCreateLotteMartSocketResponse(raw);
 
     expect(response?.status).toBe(500);
+  });
+
+  it('소켓 응답이 멈추면 timeout 후 fallback 가능하도록 null을 반환한다', async () => {
+    const stalledConnect = vi.fn(() => ({
+      readable: new ReadableStream<Uint8Array>({
+        cancel: async () => {
+          throw new Error('reader cancel failed');
+        },
+      }),
+      writable: new WritableStream<Uint8Array>(),
+    }));
+
+    await expect(
+      __testOnlyFetchLotteMartSocketResponse(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        'ASPSESSIONID=HANG',
+        stalledConnect,
+        5,
+      ),
+    ).resolves.toBeNull();
+
+    expect(stalledConnect).toHaveBeenCalledOnce();
+  });
+
+  it('소켓 응답을 정상 HTTP Response로 변환한다', async () => {
+    const raw = new TextEncoder().encode('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nsocket ok');
+    const connect = vi.fn(() => ({
+      readable: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(raw.slice(0, 20));
+          controller.enqueue(raw.slice(20));
+          controller.close();
+        },
+      }),
+      writable: new WritableStream<Uint8Array>(),
+    }));
+
+    const response = await __testOnlyFetchLotteMartSocketResponse(
+      'https://company.lottemart.com/mobiledowa/test?x=1',
+      { body: 'a=1' },
+      'ASPSESSIONID=OK',
+      connect,
+      1000,
+    );
+
+    expect(response?.status).toBe(200);
+    await expect(response?.text()).resolves.toBe('socket ok');
+  });
+
+  it('소켓 쓰기나 닫기가 멈추면 null을 반환한다', async () => {
+    const never = new Promise<void>(() => {});
+    const writableWithStalledWrite = new WritableStream<Uint8Array>({
+      write: () => never,
+      abort: async () => {
+        throw new Error('write abort failed');
+      },
+    });
+    const writableWithStalledClose = new WritableStream<Uint8Array>({
+      close: () => never,
+      abort: async () => {
+        throw new Error('close abort failed');
+      },
+    });
+    const readable = () =>
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.close();
+        },
+      });
+
+    await expect(
+      __testOnlyFetchLotteMartSocketResponse(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        '',
+        () => ({ readable: readable(), writable: writableWithStalledWrite }),
+        5,
+      ),
+    ).resolves.toBeNull();
+
+    await expect(
+      __testOnlyFetchLotteMartSocketResponse(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        '',
+        () => ({ readable: readable(), writable: writableWithStalledClose }),
+        5,
+      ),
+    ).resolves.toBeNull();
+  });
+
+  it('소켓 쓰기 실패는 원래 에러를 전달한다', async () => {
+    const writableWithFailedWrite = new WritableStream<Uint8Array>({
+      write: async () => {
+        throw new Error('socket write failed');
+      },
+    });
+
+    await expect(
+      __testOnlyFetchLotteMartSocketResponse(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        '',
+        () => ({
+          readable: new ReadableStream<Uint8Array>(),
+          writable: writableWithFailedWrite,
+        }),
+        1000,
+      ),
+    ).rejects.toThrow('socket write failed');
   });
 
   it('getSetCookie가 없으면 set-cookie 헤더를 사용한다', async () => {

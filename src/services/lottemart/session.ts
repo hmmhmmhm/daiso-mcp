@@ -40,6 +40,24 @@ type LotteMartSocketConnect = (
   writable: WritableStream<Uint8Array>;
 };
 
+function withSocketTimeout<T>(operation: Promise<T>, timeout: number): Promise<T | null> {
+  const timeoutMs = Math.max(1, Math.trunc(timeout));
+
+  return new Promise<T | null>((resolve, reject) => {
+    const timeoutId = setTimeout(() => resolve(null), timeoutMs);
+    operation.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
 export function __testOnlyCreateLotteMartSocketResponse(raw: Uint8Array): Response | null {
   const delimiter = new TextEncoder().encode('\r\n\r\n');
   let boundary = -1;
@@ -86,20 +104,13 @@ export function __testOnlyCreateLotteMartSocketResponse(raw: Uint8Array): Respon
   });
 }
 
-/* c8 ignore start */
-async function fetchLotteMartSocketResponse(url: string, init: RequestInit, sessionCookie: string): Promise<Response | null> {
-  let connectFn: LotteMartSocketConnect | null = null;
-  try {
-    const socketsModule = await import('cloudflare:sockets');
-    connectFn = socketsModule.connect as LotteMartSocketConnect;
-  } catch {
-    return null;
-  }
-
-  if (!connectFn) {
-    return null;
-  }
-
+export async function __testOnlyFetchLotteMartSocketResponse(
+  url: string,
+  init: RequestInit,
+  sessionCookie: string,
+  connectFn: LotteMartSocketConnect,
+  timeout: number,
+): Promise<Response | null> {
   const requestUrl = new URL(url);
   const headers = withLotteMartSessionCookie(
     {
@@ -125,21 +136,34 @@ async function fetchLotteMartSocketResponse(url: string, init: RequestInit, sess
     port: 80,
   }, { allowHalfOpen: true });
   const writer = socket.writable.getWriter();
-  await writer.write(new TextEncoder().encode(requestText));
-  await writer.close();
+  const encodedRequest = new TextEncoder().encode(requestText);
+  if ((await withSocketTimeout(writer.write(encodedRequest), timeout)) === null) {
+    void writer.abort().catch(Boolean);
+    return null;
+  }
+  if ((await withSocketTimeout(writer.close(), timeout)) === null) {
+    void writer.abort().catch(Boolean);
+    return null;
+  }
 
   const reader = socket.readable.getReader();
   const chunks: Uint8Array[] = [];
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) {
-      break;
+  try {
+    while (true) {
+      const readResult = await withSocketTimeout(reader.read(), timeout);
+      if (readResult === null) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      const { value, done } = readResult;
+      if (done) {
+        break;
+      }
+      chunks.push(value as Uint8Array);
     }
-    if (value) {
-      chunks.push(value);
-    }
+  } finally {
+    reader.releaseLock();
   }
-  reader.releaseLock();
 
   const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
   const raw = new Uint8Array(totalLength);
@@ -150,6 +174,28 @@ async function fetchLotteMartSocketResponse(url: string, init: RequestInit, sess
   }
 
   return __testOnlyCreateLotteMartSocketResponse(raw);
+}
+
+/* c8 ignore start */
+async function fetchLotteMartSocketResponse(
+  url: string,
+  init: RequestInit,
+  sessionCookie: string,
+  timeout: number,
+): Promise<Response | null> {
+  let connectFn: LotteMartSocketConnect | null = null;
+  try {
+    const socketsModule = await import('cloudflare:sockets');
+    connectFn = socketsModule.connect as LotteMartSocketConnect;
+  } catch {
+    return null;
+  }
+
+  if (!connectFn) {
+    return null;
+  }
+
+  return __testOnlyFetchLotteMartSocketResponse(url, init, sessionCookie, connectFn, timeout);
 }
 /* c8 ignore end */
 
@@ -205,7 +251,7 @@ async function fetchLotteMartResponse(
   timeout: number,
   sessionCookie: string,
 ): Promise<Response> {
-  const socketResponse = await fetchLotteMartSocketResponse(url, init, sessionCookie);
+  const socketResponse = await fetchLotteMartSocketResponse(url, init, sessionCookie, timeout);
   if (socketResponse) {
     return socketResponse;
   }
