@@ -27,6 +27,7 @@ describe('runHealthChecks', () => {
     const result = await runHealthChecks({
       baseUrl: 'https://example.com',
       mode: 'deep',
+      check: 'missing.check',
       fetchImpl,
       now: () => 1000,
     });
@@ -34,6 +35,126 @@ describe('runHealthChecks', () => {
     expect(result.status).toBe('skipped');
     expect(result.checks).toEqual([]);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('deep 모드에서 CLI 계약 체크를 실행한다', async () => {
+    const fetchImpl = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).includes('/health')
+          ? jsonResponse({ status: 'ok' })
+          : jsonResponse({ success: true, data: { ok: true }, meta: { total: 1 } }),
+      ),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'cli.contract',
+        service: 'cli',
+        target: 'api-contract',
+        status: 'ok',
+      }),
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/example\.com\/health\?timeoutMs=3000$/),
+      expect.any(Object),
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining('/api/daiso/products?q='),
+      expect.any(Object),
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining('/api/lottemart/products?'),
+      expect.any(Object),
+    );
+  });
+
+  it('CLI 계약 체크는 API envelope가 아니면 fail을 반환한다', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ status: 'ok' }))
+      .mockResolvedValueOnce(jsonResponse({ success: false, error: { message: 'bad envelope' } }));
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('fail');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'cli.contract',
+        status: 'fail',
+        message: 'bad envelope',
+      }),
+    );
+  });
+
+  it('CLI 계약 체크는 객체가 아닌 응답과 fetch 예외를 fail로 처리한다', async () => {
+    const nonObjectResult = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl: vi.fn().mockResolvedValueOnce(jsonResponse('not-an-object')),
+      now: () => 1000,
+      fresh: true,
+    });
+    const errorResult = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl: vi.fn().mockRejectedValueOnce(new Error('cli network down')),
+      now: () => 1000,
+      fresh: true,
+    });
+    const stringErrorResult = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl: vi.fn().mockRejectedValueOnce('cli network down'),
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(nonObjectResult.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'fail',
+        message: '/health CLI 계약 응답이 올바르지 않습니다.',
+      }),
+    );
+    expect(errorResult.checks[0].message).toBe('cli network down');
+    expect(stringErrorResult.checks[0].message).toBe('알 수 없는 오류가 발생했습니다.');
+  });
+
+  it('CLI 계약 체크는 JSON이 아닌 응답을 fail로 처리한다', async () => {
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl: vi.fn().mockResolvedValueOnce(new Response('not-json', { status: 200 })),
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'fail',
+        message: '/health CLI 계약 응답이 올바르지 않습니다.',
+      }),
+    );
   });
 
   it('fetchImpl이 없으면 전역 fetch를 globalThis 컨텍스트로 호출한다', async () => {

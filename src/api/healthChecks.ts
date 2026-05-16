@@ -10,6 +10,7 @@ export interface HealthCheckDefinition {
   target: string;
   mode: 'quick' | 'deep';
   path: string;
+  kind?: 'api' | 'cli-contract';
 }
 
 export interface HealthCheckResult {
@@ -64,6 +65,14 @@ const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 3000;
 const MAX_HEALTH_CHECK_TIMEOUT_MS = 10_000;
 
 const HEALTH_CHECKS: HealthCheckDefinition[] = [
+  {
+    id: 'cli.contract',
+    service: 'cli',
+    target: 'api-contract',
+    mode: 'deep',
+    kind: 'cli-contract',
+    path: '/health',
+  },
   {
     id: 'daiso.products',
     service: 'daiso',
@@ -240,11 +249,94 @@ function buildCheckUrl(baseUrl: string, check: HealthCheckDefinition, timeoutMs:
   return url.toString();
 }
 
+const CLI_CONTRACT_PATHS = [
+  '/health',
+  '/api/daiso/products?q=%ED%85%8C%EC%9D%B4%ED%94%84&pageSize=1',
+  '/api/daiso/stores?keyword=%EA%B0%95%EB%82%A8&pageSize=1',
+  '/api/gs25/products?keyword=%EC%BD%9C%EB%9D%BC&limit=1',
+  '/api/gs25/stores?keyword=%EA%B0%95%EB%82%A8&limit=1',
+  '/api/seveneleven/products?query=%EC%BB%A4%ED%94%BC&size=1',
+  '/api/emart24/products?keyword=%EC%BB%A4%ED%94%BC&pageSize=1',
+  '/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeCode=2301&area=%EC%84%9C%EC%9A%B8&pageLimit=1',
+  '/api/oliveyoung/products?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&size=1',
+  '/api/megabox/theaters?keyword=%EA%B0%95%EB%82%A8&limit=1',
+  '/api/lottecinema/theaters?keyword=%EC%9E%A0%EC%8B%A4&limit=1',
+  '/api/cgv/theaters?keyword=%EA%B0%95%EB%82%A8&limit=1',
+];
+
+function isCliCompatibleEnvelope(path: string, body: unknown): boolean {
+  if (!body || typeof body !== 'object') {
+    return false;
+  }
+
+  const record = body as Record<string, unknown>;
+  if (path === '/health') {
+    return record.status === 'ok';
+  }
+
+  return record.success === true && typeof record.data === 'object' && record.data !== null;
+}
+
+async function runCliContractCheck(
+  check: HealthCheckDefinition,
+  params: Required<Pick<RunHealthChecksParams, 'baseUrl' | 'fetchImpl' | 'now' | 'timeoutMs'>>,
+): Promise<HealthCheckResult> {
+  const startedAt = params.now();
+
+  for (const path of CLI_CONTRACT_PATHS) {
+    const syntheticCheck = { ...check, path };
+    try {
+      const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, syntheticCheck, params.timeoutMs), {
+        signal: AbortSignal.timeout(params.timeoutMs),
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        status?: string;
+        error?: { message?: string };
+      };
+
+      if (!response.ok || !isCliCompatibleEnvelope(path, body)) {
+        return {
+          id: check.id,
+          service: check.service,
+          target: check.target,
+          status: 'fail',
+          durationMs: params.now() - startedAt,
+          httpStatus: response.status,
+          message: body.error?.message || `${path} CLI 계약 응답이 올바르지 않습니다.`,
+        };
+      }
+    } catch (error) {
+      return {
+        id: check.id,
+        service: check.service,
+        target: check.target,
+        status: 'fail',
+        durationMs: params.now() - startedAt,
+        message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
+      };
+    }
+  }
+
+  return {
+    id: check.id,
+    service: check.service,
+    target: check.target,
+    status: 'ok',
+    durationMs: params.now() - startedAt,
+    message: `${CLI_CONTRACT_PATHS.length} CLI contract endpoint(s) passed`,
+  };
+}
+
 async function runSingleCheck(
   check: HealthCheckDefinition,
   params: Required<Pick<RunHealthChecksParams, 'baseUrl' | 'fetchImpl' | 'now' | 'timeoutMs'>> &
     Pick<RunHealthChecksParams, 'includeSamples'>,
 ): Promise<HealthCheckResult> {
+  if (check.kind === 'cli-contract') {
+    return runCliContractCheck(check, params);
+  }
+
   const timeoutMs = params.timeoutMs;
   const startedAt = params.now();
 

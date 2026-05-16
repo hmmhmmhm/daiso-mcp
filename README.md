@@ -242,6 +242,12 @@ curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
 - `fresh=true`: 60초 캐시 우회
 - `includeSamples=true`: 첫 결과 이름 샘플 포함
 
+배포 전 로컬에서 CLI 모드까지 확인할 때는 아래 명령을 사용합니다.
+
+```bash
+npm run cli:smoke
+```
+
 기본 `openapi.json`은 OpenAI Actions import 제한에 맞추기 위해 `GET /api/actions/query` 단일 facade만 노출합니다.
 기존 서비스별 GET API는 유지되며, 자세한 배경은 [OpenAPI Actions Facade 문서](./docs/openapi-actions-facade.md)에 정리했습니다.
 

@@ -23,6 +23,7 @@
     "deploy": "wrangler deploy",
     "build": "tsc && npx tsx scripts/generate-openapi.ts",
     "build:openapi": "npx tsx scripts/generate-openapi.ts",
+    "cli:smoke": "npm run build && npx tsx scripts/cli-smoke.ts",
     "update:workers-chart": "npx tsx scripts/update-workers-invocations-chart.ts",
     "prepack": "npm run build",
     "prepublishOnly": "npm run check && npm run build",

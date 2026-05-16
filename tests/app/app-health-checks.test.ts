@@ -207,7 +207,15 @@ describe('GET /api/health/checks', () => {
     expect((await second.json()).cached).toBe(true);
   });
 
-  it('deep 모드와 y 플래그를 파싱한다', async () => {
+  it('deep 모드와 y 플래그를 파싱하고 CLI 계약 체크를 실행한다', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).includes('/health')
+          ? jsonResponse({ status: 'ok' })
+          : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+      ),
+    );
+
     const res = await app.request(
       '/api/health/checks?mode=deep&includeSamples=y',
       {
@@ -220,8 +228,13 @@ describe('GET /api/health/checks', () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.status).toBe('skipped');
+    expect(data.status).toBe('ok');
     expect(data.filters.mode).toBe('deep');
-    expect(data.checks).toEqual([]);
+    expect(data.checks).toEqual([
+      expect.objectContaining({
+        id: 'cli.contract',
+        status: 'ok',
+      }),
+    ]);
   });
 });
