@@ -164,6 +164,11 @@ describe('generatePromptText', () => {
     expect(text).toContain('규칙 7');
     expect(text).toContain('query string까지 포함한 전체 URL');
     expect(text).toContain('재고 확인 워크플로우');
+    expect(text).toContain('최소 정보 요청 처리');
+    expect(text).toContain('사용자가 상품명만 주면 먼저 상품 검색 도구로 후보를 찾고');
+    expect(text).toContain('사용자가 위치를 대강 말하면 keyword/storeKeyword에 그대로 넣어 먼저 조회');
+    expect(text).toContain('도구가 productId, itemCode, storeCode 같은 내부 ID를 요구하면');
+    expect(text).toContain('사용자에게 바로 ID를 요구하지 말고');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');
     expect(text).toContain('재고 응답의 storeCode를 확인한 뒤');
     expect(text).toContain('상품명 단계 검색');

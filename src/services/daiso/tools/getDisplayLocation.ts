@@ -94,12 +94,12 @@ export function createGetDisplayLocationTool(): ToolRegistration {
     metadata: {
       title: '진열 위치 조회',
       description:
-        '다이소 매장 내 상품의 진열 위치(구역/층)를 조회합니다. 상품 ID와 매장 코드가 필요합니다.',
+        '다이소 매장 내 상품의 진열 위치(구역/층)를 조회합니다. 상품 ID와 매장 코드가 필요합니다. storeCode를 모르면 먼저 daiso_check_inventory로 재고를 조회하고 storeInventory.stores[].storeCode를 사용하세요.',
       inputSchema: {
         productId: z.string().describe('상품 ID (daiso_search_products로 조회한 상품의 id)'),
         storeCode: z
           .string()
-          .describe('매장 코드 (daiso_check_inventory로 조회한 매장의 storeCode)'),
+          .describe('매장 코드. storeCode를 모르면 먼저 daiso_check_inventory 결과의 storeInventory.stores[].storeCode를 확인하세요.'),
       },
     },
     handler: getDisplayLocation as (args: unknown) => Promise<McpToolResponse>,

@@ -212,6 +212,14 @@ describe('createGetDisplayLocationTool', () => {
     expect(typeof tool.handler).toBe('function');
   });
 
+  it('도구 설명은 storeCode를 모르는 MCP 사용자를 재고 조회로 유도한다', () => {
+    const tool = createGetDisplayLocationTool();
+
+    expect(tool.metadata.description).toContain('storeCode를 모르면');
+    expect(tool.metadata.description).toContain('daiso_check_inventory');
+    expect(tool.metadata.inputSchema.storeCode.description).toContain('storeCode를 모르면 먼저 daiso_check_inventory');
+  });
+
   it('productId가 빈 문자열이면 에러를 throw', async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: [] })));
 

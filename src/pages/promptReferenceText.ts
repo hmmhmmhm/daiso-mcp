@@ -82,16 +82,22 @@ export function buildPromptReferenceText(baseUrl: string): string {
    - 결과에서 원하는 제품의 id 확인
    - /api/daiso/inventory에 해당 id로 재고 조회
    - 진열 위치가 필요하면 재고 응답의 storeCode를 확인한 뒤 /api/daiso/display-location에 productId + storeCode로 조회
-6. **상품명 단계 검색**:
+   - 다이소 재고 조회는 storeCode가 필요하지 않습니다.
+6. **최소 정보 요청 처리**:
+   - 사용자가 상품명만 주면 먼저 상품 검색 도구로 후보를 찾고, 응답의 productId/itemCode/pluCd를 다음 단계에 전달합니다.
+   - 사용자가 위치를 대강 말하면 keyword/storeKeyword에 그대로 넣어 먼저 조회하고, 결과가 없을 때만 공백 제거, 역/점 접미어 제거 같은 변형을 시도합니다.
+   - 도구가 productId, itemCode, storeCode 같은 내부 ID를 요구하면 사용자에게 바로 ID를 요구하지 말고, 검색/재고 응답에서 먼저 확인합니다.
+   - "근처", "주변"처럼 위치가 없는 표현만 있으면 기본 좌표 결과를 단정하지 말고 사용자의 지역/역명/좌표를 물어봅니다.
+7. **상품명 단계 검색**:
    - 재고 검색은 어떤 서비스이든 검색어 전체를 먼저 그대로 조회하고, 실패할 때만 공백/브랜드어 제거, 표기 변형, 더 짧은 핵심어 순으로 단계적으로 넓혀서 다시 시도합니다.
    - 너무 넓은 축약어로만 매칭된 경우에는 확정 상품처럼 단정하지 말고, 추정 매칭임을 짧게 밝힌 뒤 재고를 안내합니다.
    - 위치/브랜드/상품명은 한 인자에 섞지 말고 가능한 한 분리해서 도구에 전달합니다.
-7. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
-8. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
-9. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
-10. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
-11. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
-12. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
+8. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
+9. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
+10. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
+11. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
+12. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
+13. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
 
 ---
 

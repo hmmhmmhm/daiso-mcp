@@ -271,6 +271,14 @@ describe('createCheckInventoryTool', () => {
     expect(tool.metadata.title).toBe('재고 확인');
   });
 
+  it('도구 설명은 상품명만 아는 MCP 사용자를 제품 검색으로 유도한다', () => {
+    const tool = createCheckInventoryTool();
+
+    expect(tool.metadata.description).toContain('상품명만 아는 경우');
+    expect(tool.metadata.description).toContain('daiso_search_products');
+    expect(tool.metadata.inputSchema.productId.description).toContain('상품명만 알면 먼저 daiso_search_products');
+  });
+
   it('productId가 없으면 에러를 던진다', async () => {
     const tool = createCheckInventoryTool();
 

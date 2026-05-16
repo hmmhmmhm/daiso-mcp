@@ -45,6 +45,21 @@ describe('OpenAPI 페이지', () => {
         (parameter) => parameter.name === 'itemCode',
       ),
     ).toBe(true);
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.find(
+        (parameter) => parameter.name === 'productId',
+      )?.description,
+    ).toContain('상품명만 알면 먼저 daisoSearchProducts');
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.find(
+        (parameter) => parameter.name === 'storeCode',
+      )?.description,
+    ).toContain('storeInventory.stores[].storeCode');
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.find(
+        (parameter) => parameter.name === 'storeName',
+      )?.description,
+    ).toContain('모르면 먼저 lottemartFindNearbyStores');
   });
 
   it('전체 OpenAPI 스펙 객체를 생성한다', () => {

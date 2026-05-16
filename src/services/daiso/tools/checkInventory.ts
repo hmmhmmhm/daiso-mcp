@@ -200,9 +200,11 @@ export function createCheckInventoryTool(): ToolRegistration {
     metadata: {
       title: '재고 확인',
       description:
-        '특정 제품의 매장별 재고를 확인합니다. 매장명/주소 검색 또는 위치 기반으로 조회합니다.',
+        '특정 제품의 매장별 재고를 확인합니다. 상품명만 아는 경우 daiso_search_products로 후보를 먼저 찾은 뒤 productId를 전달하세요. 매장명/주소 검색 또는 위치 기반으로 조회합니다. "근처/주변"처럼 위치가 모호하면 storeQuery, latitude/longitude 또는 사용자 위치를 먼저 확인하세요.',
       inputSchema: {
-        productId: z.string().describe('제품 ID (daiso_search_products로 조회한 상품의 id)'),
+        productId: z
+          .string()
+          .describe('제품 ID. 상품명만 알면 먼저 daiso_search_products로 상품의 id를 확인하세요.'),
         storeQuery: z.string().optional().describe('매장 검색어 (매장명 또는 주소, 예: 안산 중앙역)'),
         latitude: z.number().optional().default(37.5665).describe('위도 (기본값: 서울 시청 37.5665)'),
         longitude: z.number().optional().default(126.978).describe('경도 (기본값: 서울 시청 126.978)'),
