@@ -64,3 +64,17 @@ export function toQueryOptions(options: Record<string, string>): Record<string, 
   }
   return queryOptions;
 }
+
+export function findUnknownOption(
+  options: Record<string, string>,
+  allowedOptions: readonly string[],
+): string | null {
+  const allowed = new Set(allowedOptions);
+  for (const key of Object.keys(options)) {
+    if (!allowed.has(key)) {
+      return key;
+    }
+  }
+
+  return null;
+}

@@ -156,6 +156,10 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   if (command === 'seveneleven-catalog') return await handleSevenElevenCatalog(options, resolvedDeps);
 
   resolvedDeps.writeErr(`알 수 없는 명령어: ${command}`);
+  if (command === 'search') {
+    const query = options[0] ?? '<검색어>';
+    resolvedDeps.writeErr(`혹시 찾으신 명령: daiso products ${query}`);
+  }
   resolvedDeps.writeErr('도움말: daiso help');
   return 1;
 }

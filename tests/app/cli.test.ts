@@ -62,6 +62,20 @@ describe('CLI', () => {
     expect(output.join('\n')).toContain('사용법:');
   });
 
+  it('기본 도움말은 정보가 부족한 사용자를 위한 탐색 흐름을 안내한다', async () => {
+    const { output, deps } = createDeps();
+
+    const exitCode = await runCli([], deps);
+    const text = output.join('\n');
+
+    expect(exitCode).toBe(0);
+    expect(text).toContain('정보가 부족할 때');
+    expect(text).toContain('제품명을 먼저 검색해 productId를 확인');
+    expect(text).toContain('매장을 먼저 검색해 storeName 또는 storeCode를 확인');
+    expect(text).toContain('npx daiso products');
+    expect(text).toContain('npx daiso inventory');
+  });
+
   it('help <command>는 상세 도움말을 출력한다', async () => {
     const { output, deps } = createDeps();
 
@@ -268,6 +282,29 @@ describe('CLI', () => {
     );
   });
 
+  it('display-location 일반 출력은 실제 진열 위치를 보여준다', async () => {
+    const { output, deps } = createDeps();
+    deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          productId: '1034604',
+          storeCode: '04515',
+          hasLocation: true,
+          locations: [{ zoneNo: 'A12', stairNo: '2F', storeErp: '04515' }],
+        },
+      }),
+    } as unknown as Response);
+
+    const exitCode = await runCli(['display-location', '1034604', '04515'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(output.join('\n')).toContain('진열 위치: 있음');
+    expect(output.join('\n')).toContain('A12');
+    expect(output.join('\n')).toContain('2F');
+  });
+
   it('display-location 명령은 인자가 부족하면 실패한다', async () => {
     const { errors, deps } = createDeps();
 
@@ -275,6 +312,26 @@ describe('CLI', () => {
 
     expect(exitCode).toBe(1);
     expect(errors[0]).toContain('productId와 storeCode가 필요합니다');
+    expect(errors[0]).toContain('storeCode를 모르면 먼저 daiso inventory 1034604 --keyword 매장명');
+  });
+
+  it('stores 일반 출력은 매장 코드와 주소를 보여준다', async () => {
+    const { output, deps } = createDeps();
+    deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          stores: [{ name: '강남역점', storeCode: '11199', address: '서울 강남구 강남대로' }],
+        },
+      }),
+    } as unknown as Response);
+
+    const exitCode = await runCli(['stores', '강남역'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(output.join('\n')).toContain('강남역점 [11199]');
+    expect(output.join('\n')).toContain('서울 강남구 강남대로');
   });
 
   it('cu-stores 명령은 CU 매장 API를 호출한다', async () => {
@@ -526,6 +583,7 @@ describe('CLI', () => {
 
     expect(exitCode).toBe(1);
     expect(errors[0]).toContain('--storeCode 또는 --storeName이 필요합니다');
+    expect(errors[0]).toContain('매장을 모르면 먼저 daiso lottemart-stores 잠실 --area 서울');
   });
 
   it('gs25-stores 명령은 GS25 매장 API를 호출한다', async () => {
@@ -700,6 +758,26 @@ describe('CLI', () => {
     expect(errors[0]).toContain('검색어가 필요합니다');
   });
 
+  it('inventory 명령은 제품 ID가 없으면 제품명 검색부터 안내한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['inventory'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors[0]).toContain('제품 ID가 필요합니다');
+    expect(errors[0]).toContain('제품명만 알면 먼저 daiso products 수납박스');
+  });
+
+  it('inventory 명령은 알 수 없는 옵션을 거부한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['inventory', '1034604', '--store', '강남역점'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors.join('\n')).toContain('알 수 없는 옵션: --store');
+    expect(errors.join('\n')).toContain('매장명은 --keyword로 전달하세요');
+  });
+
   it('health 명령은 예외를 처리한다', async () => {
     const { errors, deps } = createDeps();
 
@@ -804,6 +882,16 @@ describe('CLI', () => {
 
     expect(exitCode).toBe(1);
     expect(errors.join('\n')).toContain('알 수 없는 명령어');
+  });
+
+  it('search 명령처럼 흔한 오입력은 대체 명령을 제안한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['search', '수납박스'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors.join('\n')).toContain('알 수 없는 명령어: search');
+    expect(errors.join('\n')).toContain('혹시 찾으신 명령: daiso products 수납박스');
   });
 
   it('직접 실행 여부를 올바르게 판별한다', () => {

@@ -144,7 +144,9 @@ export async function handleLotteMartProducts(options: string[], deps: CliDeps):
   }
 
   if (!parsed.options.storeCode && !parsed.options.storeName) {
-    deps.writeErr('lottemart-products 명령은 --storeCode 또는 --storeName이 필요합니다. 예: daiso lottemart-products 콜라 --storeName 강변점');
+    deps.writeErr(
+      'lottemart-products 명령은 --storeCode 또는 --storeName이 필요합니다. 매장을 모르면 먼저 daiso lottemart-stores 잠실 --area 서울 명령으로 storeName/storeCode를 확인하세요. 예: daiso lottemart-products 콜라 --storeName 강변점',
+    );
     return 1;
   }
 

@@ -79,11 +79,46 @@ function formatCollection(title: string, items: unknown): string[] {
       detail += ` / ${toText(price)}원`;
     }
 
+    const detailParts = [
+      entry.address,
+      entry.distance !== undefined ? `${toText(entry.distance)}km` : undefined,
+      entry.quantity !== undefined ? `수량 ${toText(entry.quantity)}` : undefined,
+    ].filter((value): value is string | number | boolean => value !== undefined);
+    if (detailParts.length > 0) {
+      detail += ` / ${detailParts.map(toText).join(' / ')}`;
+    }
+
     lines.push(detail);
   }
 
   if (items.length > preview.length) {
     lines.push(`...외 ${items.length - preview.length}건`);
+  }
+
+  return lines;
+}
+
+function formatDisplayLocation(data: Record<string, unknown>): string[] {
+  const lines = [`진열 위치: ${data.hasLocation === true ? '있음' : '없음'}`];
+  if (!Array.isArray(data.locations) || data.locations.length === 0) {
+    return lines;
+  }
+
+  lines.push(`위치 목록: ${data.locations.length}건`);
+  for (const location of data.locations.slice(0, 5)) {
+    if (!isRecord(location)) {
+      lines.push(`- ${toText(location)}`);
+      continue;
+    }
+
+    const zoneNo = toText(location.zoneNo);
+    const stairNo = toText(location.stairNo);
+    const storeErp = location.storeErp !== undefined ? ` / storeErp ${toText(location.storeErp)}` : '';
+    lines.push(`- 구역 ${zoneNo} / 층 ${stairNo}${storeErp}`);
+  }
+
+  if (data.locations.length > 5) {
+    lines.push(`...외 ${data.locations.length - 5}건`);
   }
 
   return lines;
@@ -146,6 +181,8 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
     lines.push(...formatProductDetail(data));
   } else if (command === 'inventory') {
     lines.push(...formatInventory(data));
+  } else if (command === 'display-location') {
+    lines.push(...formatDisplayLocation(data));
   } else if (command === 'cu-inventory') {
     lines.push(...formatCollection('매장 목록', isRecord(data.nearbyStores) ? data.nearbyStores.stores : undefined));
     lines.push(...formatCollection('재고 항목', isRecord(data.inventory) ? data.inventory.items : undefined));

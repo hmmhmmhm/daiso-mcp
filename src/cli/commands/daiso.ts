@@ -4,7 +4,7 @@
 
 import { printCommandHelp } from '../../cliHelp.js';
 import type { CliDeps } from '../types.js';
-import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../args.js';
+import { findUnknownOption, parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../args.js';
 import { requestAndPrintResponse, requestAndPrintStoresWithKeywordFallback } from '../http.js';
 
 export async function handleGet(options: string[], deps: CliDeps): Promise<number> {
@@ -113,10 +113,25 @@ export async function handleInventory(options: string[], deps: CliDeps): Promise
     return printCommandHelp('inventory', deps.writeOut, deps.writeErr);
   }
 
+  const unknownOption = findUnknownOption(parsed.options, [
+    'help',
+    'json',
+    'keyword',
+    'lat',
+    'lng',
+    'page',
+    'pageSize',
+  ]);
+  if (unknownOption) {
+    deps.writeErr(`알 수 없는 옵션: --${unknownOption}`);
+    deps.writeErr('매장명은 --keyword로 전달하세요. 예: daiso inventory 1034604 --keyword 강남역');
+    return 1;
+  }
+
   const productId = parsed.positionals[0];
   if (!productId) {
     deps.writeErr(
-      'inventory 명령은 제품 ID가 필요합니다. 예: daiso inventory 1034604 --keyword 강남역',
+      'inventory 명령은 제품 ID가 필요합니다. 제품명만 알면 먼저 daiso products 수납박스 명령으로 productId를 확인하세요. 예: daiso inventory 1034604 --keyword 강남역',
     );
     return 1;
   }
@@ -145,7 +160,7 @@ export async function handleDisplayLocation(options: string[], deps: CliDeps): P
 
   if (!productId || !storeCode) {
     deps.writeErr(
-      'display-location 명령은 productId와 storeCode가 필요합니다. 예: daiso display-location 1034604 04515',
+      'display-location 명령은 productId와 storeCode가 필요합니다. storeCode를 모르면 먼저 daiso inventory 1034604 --keyword 매장명 결과의 storeInventory.stores[].storeCode를 확인하세요. 예: daiso display-location 1034604 04515',
     );
     return 1;
   }
