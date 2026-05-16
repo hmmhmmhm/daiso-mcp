@@ -13,6 +13,7 @@ import {
   geocodeGs25Address,
   sortGs25Stores,
 } from '../../../src/services/gs25/client.js';
+import { normalizeStore, toNumber } from '../../../src/services/gs25/storeUtils.js';
 
 const mockFetch = vi.fn();
 
@@ -67,6 +68,39 @@ describe('fetchGs25Stores', () => {
     );
   });
 
+  it('누락된 매장 필드를 기본값으로 정규화한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          stores: [
+            {
+              storeCode: 'V000',
+              propertyList: [
+                { storePropertyCode: 'P1', storePropertyType: 'service' },
+                { storePropertyName: '픽업' },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await fetchGs25Stores({ useCache: false });
+
+    expect(result.stores[0]).toEqual(
+      expect.objectContaining({
+        storeCode: 'V000',
+        storeName: '',
+        address: '',
+        phone: '',
+        serviceCode: '',
+        realStockQuantity: 0,
+        searchItemSellPrice: null,
+        propertyNames: ['픽업'],
+      }),
+    );
+  });
+
   it('캐시가 있으면 재요청하지 않는다', async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: 'A' }] })));
 
@@ -88,6 +122,42 @@ describe('fetchGs25Stores', () => {
 });
 
 describe('유틸 함수', () => {
+  it('normalizeStore는 비정상 숫자 필드를 안전한 기본값으로 정규화한다', () => {
+    const store = normalizeStore({
+      storeCode: '',
+      storeName: '',
+      storeAddress: '',
+      storeTelephoneNumber: '',
+      storeXCoordination: Number.NaN,
+      storeYCoordination: { value: 37.5 } as never,
+      serviceCode: '',
+      realStockQuantity: Number.POSITIVE_INFINITY,
+      pickupStkQty: 'bad',
+      dlvyStkQty: { value: 1 } as never,
+      isSoldOutYn: true as never,
+      searchItemName: null as never,
+      searchItemSellPrice: 'bad',
+      propertyList: [{ storePropertyName: '', storePropertyImage: 'icon.png' }],
+    });
+
+    expect(store).toEqual(
+      expect.objectContaining({
+        storeCode: '',
+        storeName: '',
+        longitude: 0,
+        latitude: 0,
+        realStockQuantity: 0,
+        pickupStockQuantity: 0,
+        deliveryStockQuantity: 0,
+        isSoldOut: true,
+        searchItemName: '',
+        searchItemSellPrice: 0,
+        properties: [],
+      }),
+    );
+    expect(toNumber('not-a-number')).toBe(0);
+  });
+
   it('calculateDistanceM는 동일 좌표에서 0을 반환한다', () => {
     expect(calculateDistanceM(37.5, 127.0, 37.5, 127.0)).toBe(0);
   });
@@ -141,6 +211,26 @@ describe('유틸 함수', () => {
     const filtered = filterGs25StoresByKeyword(stores, '안산 중앙역');
     expect(filtered).toHaveLength(1);
     expect(filtered[0].storeCode).toBe('1');
+  });
+
+  it('filterGs25StoresByKeyword는 다중 토큰을 모두 포함하는 매장을 찾는다', () => {
+    const stores = [
+      {
+        storeCode: '1',
+        storeName: '중앙점',
+        address: '경기 안산시 단원구',
+        propertyNames: [],
+      },
+      {
+        storeCode: '2',
+        storeName: '중앙점',
+        address: '서울 중구',
+        propertyNames: [],
+      },
+    ] as never;
+
+    const filtered = filterGs25StoresByKeyword(stores, '안산 단원구');
+    expect(filtered.map((store) => store.storeCode)).toEqual(['1']);
   });
 
   it('attachDistanceToGs25Stores는 거리 값을 추가한다', () => {
@@ -207,6 +297,63 @@ describe('유틸 함수', () => {
     expect(sorted[0].storeCode).toBe('2');
   });
 
+  it('sortGs25Stores는 거리가 같으면 재고 많은 매장을 우선한다', () => {
+    const sorted = sortGs25Stores([
+      {
+        storeCode: '1',
+        storeName: 'A',
+        distanceM: 100,
+        realStockQuantity: 1,
+      },
+      {
+        storeCode: '2',
+        storeName: 'B',
+        distanceM: 100,
+        realStockQuantity: 5,
+      },
+    ] as never);
+
+    expect(sorted[0].storeCode).toBe('2');
+  });
+
+  it('sortGs25Stores는 거리 미상 매장을 뒤로 보낸다', () => {
+    const sorted = sortGs25Stores([
+      {
+        storeCode: '1',
+        storeName: 'A',
+        distanceM: null,
+        realStockQuantity: 10,
+      },
+      {
+        storeCode: '2',
+        storeName: 'B',
+        distanceM: 500,
+        realStockQuantity: 0,
+      },
+    ] as never);
+
+    expect(sorted[0].storeCode).toBe('2');
+  });
+
+  it('sortGs25Stores는 거리 미상 매장끼리도 재고순으로 정렬한다', () => {
+    const sorted = sortGs25Stores([
+      {
+        storeCode: '1',
+        storeName: 'A',
+        distanceM: null,
+        realStockQuantity: 1,
+      },
+      {
+        storeCode: '2',
+        storeName: 'B',
+        distanceM: null,
+        realStockQuantity: 5,
+      },
+    ] as never);
+
+    expect(sorted[0].storeCode).toBe('2');
+  });
+
   it('extractGs25ProductCandidates는 상품 후보를 집계한다', () => {
     const products = extractGs25ProductCandidates([
       { searchItemName: '오감자', searchItemSellPrice: 1700, realStockQuantity: 3 },
@@ -232,6 +379,27 @@ describe('유틸 함수', () => {
     ] as never);
 
     expect(products[0].name).toBe('가상품');
+  });
+
+  it('extractGs25ProductCandidates는 빈 상품명과 재고 매장 수 정렬을 처리한다', () => {
+    const products = extractGs25ProductCandidates([
+      { searchItemName: '', searchItemSellPrice: 1000, realStockQuantity: 100 },
+      { searchItemName: '재고많음', searchItemSellPrice: 1000, realStockQuantity: 3 },
+      { searchItemName: '재고적음', searchItemSellPrice: 1000, realStockQuantity: 1 },
+      { searchItemName: '재고많음', searchItemSellPrice: 1000, realStockQuantity: 2 },
+    ] as never);
+
+    expect(products.map((product) => product.name)).toEqual(['재고많음', '재고적음']);
+    expect(products[0].inStockStoreCount).toBe(2);
+  });
+
+  it('extractGs25ProductCandidates는 가격 null 상품을 별도 후보로 묶는다', () => {
+    const products = extractGs25ProductCandidates([
+      { searchItemName: '콜라', searchItemSellPrice: null, realStockQuantity: 1 },
+      { searchItemName: '콜라', searchItemSellPrice: 2000, realStockQuantity: 1 },
+    ] as never);
+
+    expect(products).toHaveLength(2);
   });
 });
 
