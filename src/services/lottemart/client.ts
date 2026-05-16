@@ -2,9 +2,10 @@
  * 롯데마트 모바일 도와센터 클라이언트
  */
 
-import { fetchJson } from '../../utils/http.js';
 import { LOTTEMART_API, type LotteMartAreaCode } from './api.js';
 import { DEFAULT_LOTTEMART_TIMEOUT_MS } from './config.js';
+import type { FetchLotteMartStoresParams, RequestOptions, SearchLotteMartProductsParams } from './clientTypes.js';
+import { __testOnlyClearLotteMartGeocodeCache, geocodeLotteMartAddress } from './geocode.js';
 import {
   __testOnlyClearLotteMartSessionCache,
   fetchLotteMartHtml,
@@ -30,70 +31,12 @@ import {
   parseStores,
   sortStores,
 } from './parser.js';
+import { createZettaFallbackStore, fetchZettaLotteMartProductsWithPrimaryError } from './zetta.js';
 import type { LotteMartMarketOption, LotteMartProduct, LotteMartStore } from './types.js';
 
-interface RequestOptions {
-  timeout?: number;
-  googleMapsApiKey?: string;
-  zyteApiKey?: string;
-  sessionCookie?: string;
-}
-
-interface FetchLotteMartStoresParams {
-  area?: string;
-  keyword?: string;
-  brandVariant?: string;
-  latitude?: number;
-  longitude?: number;
-  limit?: number;
-}
-
-interface SearchLotteMartProductsParams {
-  area?: string;
-  storeCode?: string;
-  storeName?: string;
-  keyword: string;
-  pageLimit?: number;
-}
-
-interface GoogleGeocodeResponse {
-  status: string;
-  results?: Array<{
-    geometry?: {
-      location?: {
-        lat?: number;
-        lng?: number;
-      };
-    };
-  }>;
-}
-
-interface ZettaProductPageResponse {
-  productGroups?: Array<{
-    decoratedProducts?: ZettaProduct[];
-  }>;
-  metadata?: {
-    nextPageToken?: string;
-  };
-}
-
-interface ZettaProduct {
-  retailerProductId?: string;
-  name?: string;
-  brand?: string;
-  packSizeDescription?: string;
-  price?: {
-    amount?: string;
-  };
-  available?: boolean;
-}
-
 const STORE_CACHE_TTL_MS = 30 * 60 * 1000;
-const GEOCODE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const LOTTEMART_PRODUCT_LEGACY_TIMEOUT_MS = 7000;
-const ZETTA_PRODUCT_SEARCH_URL = 'https://lottemartzetta.com/api/webproductpagews/v6/product-pages/search';
 const storeCache = new Map<string, { expiresAt: number; stores: LotteMartStore[] }>();
-const geocodeCache = new Map<string, { expiresAt: number; value: { latitude: number; longitude: number } | null }>();
 
 async function getLotteMartSessionCookie(options: RequestOptions): Promise<string> {
   if (options.sessionCookie) {
@@ -213,55 +156,6 @@ async function fetchLotteMartStoresByAreaKeyword(
   });
 
   return stores;
-}
-
-export async function geocodeLotteMartAddress(address: string, options: RequestOptions = {}) {
-  const keyword = address.trim();
-  if (keyword.length === 0) {
-    return null;
-  }
-
-  const cached = geocodeCache.get(keyword);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.value;
-  }
-
-  const apiKey = (options.googleMapsApiKey || '').trim();
-  if (apiKey.length === 0) {
-    return null;
-  }
-
-  const endpoint = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  endpoint.searchParams.set('address', keyword);
-  endpoint.searchParams.set('key', apiKey);
-
-  const body = await fetchJson<GoogleGeocodeResponse>(endpoint.toString(), {
-    method: 'GET',
-    timeout: options.timeout || DEFAULT_LOTTEMART_TIMEOUT_MS,
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (body.status !== 'OK') {
-    geocodeCache.set(keyword, {
-      expiresAt: Date.now() + GEOCODE_CACHE_TTL_MS,
-      value: null,
-    });
-    return null;
-  }
-
-  const latitude = body.results?.[0]?.geometry?.location?.lat;
-  const longitude = body.results?.[0]?.geometry?.location?.lng;
-  const value =
-    typeof latitude === 'number' && typeof longitude === 'number' ? { latitude, longitude } : null;
-
-  geocodeCache.set(keyword, {
-    expiresAt: Date.now() + GEOCODE_CACHE_TTL_MS,
-    value,
-  });
-
-  return value;
 }
 
 export async function fetchLotteMartStores(
@@ -396,145 +290,6 @@ export async function resolveLotteMartStore(
   );
 }
 
-function toZettaProductPrice(product: ZettaProduct): number {
-  const parsed = Number.parseFloat(product.price?.amount || '');
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function toZettaProductBarcode(retailerProductId: string | undefined): string {
-  return (retailerProductId || '').replace(/^OS/i, '').trim();
-}
-
-function mapZettaProduct(
-  area: string,
-  storeCode: string,
-  storeName: string,
-  keyword: string,
-  product: ZettaProduct,
-): LotteMartProduct | null {
-  const productName = (product.name || '').trim();
-  if (productName.length === 0) {
-    return null;
-  }
-
-  return {
-    area,
-    storeCode,
-    storeName,
-    keyword,
-    productName,
-    barcode: toZettaProductBarcode(product.retailerProductId),
-    spec: (product.packSizeDescription || '').trim(),
-    manufacturer: (product.brand || '').trim(),
-    price: toZettaProductPrice(product),
-    stockQuantity: product.available === false ? 0 : 1,
-  };
-}
-
-function createZettaProductSearchUrl(keyword: string, pageToken?: string): string {
-  const endpoint = new URL(ZETTA_PRODUCT_SEARCH_URL);
-  endpoint.searchParams.set('q', keyword);
-  endpoint.searchParams.set('tag', 'web');
-  endpoint.searchParams.set('includeAdditionalPageInfo', pageToken ? 'false' : 'true');
-  endpoint.searchParams.set('maxProductsToDecorate', '50');
-  endpoint.searchParams.set('maxPageSize', '50');
-  if (pageToken) {
-    endpoint.searchParams.set('pageToken', pageToken);
-  }
-  return endpoint.toString();
-}
-
-function createZettaFallbackStore(params: SearchLotteMartProductsParams): LotteMartMarketOption {
-  const storeCode = (params.storeCode || '').trim();
-  const storeName = (params.storeName || '').trim();
-
-  return {
-    area: normalizeArea(params.area || '') || '서울',
-    storeCode: storeCode || 'zetta',
-    storeName: storeName || `롯데마트 ${storeCode}`,
-    brandVariant: 'lottemart',
-  };
-}
-
-async function fetchZettaLotteMartProductsWithPrimaryError(
-  resolvedStore: LotteMartMarketOption,
-  keyword: string,
-  pageLimit: number,
-  timeout: number,
-  error: unknown,
-) {
-  try {
-    return await fetchZettaLotteMartProducts(resolvedStore, keyword, pageLimit, timeout);
-  } catch (fallbackError) {
-    const primaryMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : '알 수 없는 오류가 발생했습니다.';
-    throw new Error(`롯데마트 상품 조회 실패: 기존 경로(${primaryMessage}), 제타 경로(${fallbackMessage})`);
-  }
-}
-
-function clampZettaPageLimit(pageLimit: number): number {
-  if (pageLimit < 1) {
-    return 1;
-  }
-  if (pageLimit > 5) {
-    return 5;
-  }
-  return pageLimit;
-}
-
-async function fetchZettaLotteMartProducts(
-  resolvedStore: LotteMartMarketOption,
-  keyword: string,
-  pageLimit: number,
-  timeout: number,
-): Promise<{
-  area: string;
-  storeCode: string;
-  storeName: string;
-  totalCount: number;
-  totalPages: number;
-  products: LotteMartProduct[];
-}> {
-  const products: LotteMartProduct[] = [];
-  let nextPageToken: string | undefined;
-  let fetchedPages = 0;
-  const maxPage = clampZettaPageLimit(pageLimit);
-
-  do {
-    const response = await fetchJson<ZettaProductPageResponse>(createZettaProductSearchUrl(keyword, nextPageToken), {
-      timeout,
-      headers: {
-        Accept: 'application/json,text/plain,*/*',
-        'Accept-Language': 'ko-KR,ko;q=0.9',
-        Referer: `https://lottemartzetta.com/products/search?q=${encodeURIComponent(keyword)}`,
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36',
-      },
-    });
-
-    fetchedPages += 1;
-    products.push(
-      ...(response.productGroups || [])
-        .flatMap((group) => group.decoratedProducts || [])
-        .map((product) =>
-          mapZettaProduct(resolvedStore.area, resolvedStore.storeCode, resolvedStore.storeName, keyword, product),
-        )
-        .filter((product): product is LotteMartProduct => product !== null),
-    );
-    nextPageToken = response.metadata?.nextPageToken;
-  } while (nextPageToken && fetchedPages < maxPage);
-
-  const dedupedProducts = dedupeProducts(products);
-  return {
-    area: resolvedStore.area,
-    storeCode: resolvedStore.storeCode,
-    storeName: resolvedStore.storeName,
-    totalCount: dedupedProducts.length,
-    totalPages: nextPageToken ? fetchedPages + 1 : fetchedPages,
-    products: dedupedProducts,
-  };
-}
-
 export async function searchLotteMartProducts(
   params: SearchLotteMartProductsParams,
   options: RequestOptions = {},
@@ -653,10 +408,10 @@ export async function searchLotteMartProducts(
   };
 }
 
-export { calculateDistanceM };
+export { calculateDistanceM, geocodeLotteMartAddress };
 
 export function __testOnlyClearLotteMartCaches(): void {
   storeCache.clear();
-  geocodeCache.clear();
+  __testOnlyClearLotteMartGeocodeCache();
   __testOnlyClearLotteMartSessionCache();
 }
