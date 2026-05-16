@@ -3,8 +3,11 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Hono } from 'hono';
 import app from '../../src/index.js';
 import { __testOnlyClearHealthCheckCache } from '../../src/api/healthChecks.js';
+import { registerHealthRoutes } from '../../src/api/routes/healthRoutes.js';
+import type { AppBindings } from '../../src/api/response.js';
 import { setupFetchMock } from './testHelpers.js';
 
 const mockFetch = vi.fn();
@@ -106,11 +109,51 @@ describe('GET /api/health/checks', () => {
       {
         HEALTH_CHECK_SECRET: 'test-secret',
         HEALTH_CHECK_BASE_URL: 'https://daiso-mcp.example.workers.dev',
+        HEALTH_CHECK_TRANSPORT: 'network',
       },
     );
 
     expect(res.status).toBe(200);
     expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/daiso-mcp\.example\.workers\.dev\/api\/lottemart\/products/);
+  });
+
+  it('HEALTH_CHECK_BASE_URL이 있으면 같은 앱으로 내부 체크를 dispatch한다', async () => {
+    const testApp = new Hono<{ Bindings: AppBindings }>();
+    testApp.get('/api/daiso/products', (c) =>
+      c.json({
+        success: true,
+        data: {
+          products: [{ productName: '테이프' }],
+        },
+        meta: { total: 1 },
+      }),
+    );
+    registerHealthRoutes(testApp);
+
+    const res = await testApp.request(
+      '/api/health/checks?check=daiso.products&fresh=true',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+        HEALTH_CHECK_BASE_URL: 'https://daiso-mcp.example.workers.dev',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        checks: [
+          expect.objectContaining({
+            id: 'daiso.products',
+            status: 'ok',
+          }),
+        ],
+      }),
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('service 필터로 여러 체크를 실행하고 실패를 집계한다', async () => {

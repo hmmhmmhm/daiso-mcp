@@ -39,6 +39,10 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
     const mode = c.req.query('mode') === 'deep' ? 'deep' : 'quick';
     const timeoutMs = Number.parseInt(c.req.query('timeoutMs') || '3000', 10);
     const baseUrl = c.env?.HEALTH_CHECK_BASE_URL?.trim() || new URL(c.req.url).origin;
+    const fetchImpl =
+      c.env?.HEALTH_CHECK_BASE_URL && c.env?.HEALTH_CHECK_TRANSPORT !== 'network'
+        ? async (input: RequestInfo | URL, init?: RequestInit) => app.fetch(new Request(input, init), c.env)
+        : undefined;
     const result = await runHealthChecks({
       baseUrl,
       service: c.req.query('service') || undefined,
@@ -47,6 +51,7 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       timeoutMs,
       includeSamples: parseBoolean(c.req.query('includeSamples')),
       fresh: parseBoolean(c.req.query('fresh')),
+      fetchImpl,
     });
 
     return c.json(result);
