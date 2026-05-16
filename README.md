@@ -18,6 +18,8 @@
 [![Coverage](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml)
 [![Better Stack Badge](https://uptime.betterstack.com/status-badges/v2/monitor/2mmhx.svg)](https://aka-page.betteruptime.com/)
 
+**[실시간 서비스 상태 보기](https://aka-page.betteruptime.com/)**
+
 <!-- WORKERS_INVOCATIONS_CHART:START -->
 <h3>Cloudflare Workers 호출량 (2026-03-01 ~ 2026-05-15, 76일)</h3>
 
@@ -223,7 +225,7 @@ npx daiso products 수납박스 --json
 
 ### 운영 헬스 체크
 
-공개 상태 페이지: `https://aka-page.betteruptime.com/`
+공개 상태 페이지: **[Daiso MCP Status](https://aka-page.betteruptime.com/)**
 
 서비스별 API 상태를 즉시 확인할 때는 `GET /api/health/checks`를 사용합니다. 이 엔드포인트는 `HEALTH_CHECK_SECRET` 환경 변수가 설정되어 있어야 하며, 요청에는 `Authorization: Bearer <secret>` 또는 `x-health-check-key: <secret>` 헤더가 필요합니다. 내부 체크 요청의 기준 URL은 `HEALTH_CHECK_BASE_URL`로 지정할 수 있습니다.
 
