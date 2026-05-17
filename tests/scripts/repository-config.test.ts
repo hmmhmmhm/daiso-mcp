@@ -112,6 +112,15 @@ describe('repository maintenance configuration', () => {
 
     expect(skill).toContain('name: daiso-cli');
     expect(skill).toContain('description:');
+    expect(skill).toContain('version: 1.0.5');
+    expect(skill).toContain('metadata:');
+    expect(skill).toContain('openclaw:');
+    expect(skill).toContain('requires:');
+    expect(skill).toContain('bins:');
+    expect(skill).toContain('- npx');
+    expect(skill).toContain('install:');
+    expect(skill).toContain('package: daiso');
+    expect(skill).toContain('homepage: https://github.com/hmmhmmhm/daiso-mcp');
     expect(skill).toContain('npx daiso');
     expect(skill).toContain('--json');
     expect(skill).toContain('https://mcp.aka.page');

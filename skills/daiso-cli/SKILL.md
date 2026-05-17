@@ -1,6 +1,18 @@
 ---
 name: daiso-cli
 description: Use this when a user wants to search Daiso/다이소, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, movies, showtimes, seats, health checks, and raw JSON output.
+version: 1.0.5
+metadata:
+  openclaw:
+    requires:
+      bins:
+        - npx
+    install:
+      - kind: node
+        package: daiso
+        bins:
+          - daiso
+    homepage: https://github.com/hmmhmmhm/daiso-mcp
 ---
 
 # Daiso CLI
