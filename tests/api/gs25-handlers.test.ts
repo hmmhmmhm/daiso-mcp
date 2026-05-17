@@ -307,16 +307,11 @@ describe('handleGs25CheckInventory', () => {
     );
   });
 
-  it('storeKeyword + 지오코딩 성공 분기를 처리한다', async () => {
+  it('storeKeyword를 먼저 직접 지오코딩해 재고 조회 좌표로 사용한다', async () => {
     const ctx = createMockContext({ keyword: '오감자', storeKeyword: '강남' });
     (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
 
     mockFetch
-      // 1. storeKeyword 기준 매장 조회 (지오코딩 주소 획득용)
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
-      )
-      // 2. 지오코딩
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -325,7 +320,6 @@ describe('handleGs25CheckInventory', () => {
           }),
         ),
       )
-      // 3. totalSearch API (keyword → itemCode)
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -335,7 +329,6 @@ describe('handleGs25CheckInventory', () => {
           }),
         ),
       )
-      // 4. store/stock API (itemCode + 좌표 → 재고)
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -351,6 +344,9 @@ describe('handleGs25CheckInventory', () => {
     };
     expect(payload.data.geocodeUsed).toBe(true);
     expect(payload.data.location).toEqual({ latitude: 37.5, longitude: 127 });
+    expect(String(mockFetch.mock.calls[0][0])).toContain('maps.googleapis.com');
+    expect(String(mockFetch.mock.calls[1][0])).toContain('/search/v3/totalSearch');
+    expect(String(mockFetch.mock.calls[2][0])).toContain('myPositionYCoordination=37.5');
   });
 
   it('storeKeyword가 있어도 지오코딩 실패 시 location은 null이다', async () => {

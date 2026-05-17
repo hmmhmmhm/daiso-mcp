@@ -65,7 +65,7 @@ describe('runHealthChecks', () => {
       }),
     );
     expect(fetchImpl).toHaveBeenCalledWith(
-      expect.stringMatching(/^https:\/\/example\.com\/health\?timeoutMs=3000$/),
+      expect.stringMatching(/^https:\/\/example\.com\/health\?timeoutMs=7000$/),
       expect.any(Object),
     );
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -243,6 +243,28 @@ describe('runHealthChecks', () => {
     expect(result.checks[0].message).toBe('1 item(s) returned');
   });
 
+  it('올리브영 상품의 현재 goods 필드를 정상 shape로 인정한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          products: [{ goodsNumber: 'A000000248024', goodsName: '선크림' }],
+        },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'oliveyoung.products',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.checks[0].message).toBe('1 item(s) returned');
+  });
+
   it('대표 컬렉션 필드가 바뀌면 degraded 메시지를 반환한다', async () => {
     const fetchImpl = vi
       .fn()
@@ -324,7 +346,7 @@ describe('runHealthChecks', () => {
       fresh: true,
     });
 
-    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=3000');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=7000');
     expect(String(fetchImpl.mock.calls[1][0])).toContain('timeoutMs=10000');
   });
 
@@ -340,7 +362,7 @@ describe('runHealthChecks', () => {
       fresh: true,
     });
 
-    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=3000');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=7000');
   });
 
   it('샘플 요청에서 data가 객체가 아니면 sample을 생략한다', async () => {

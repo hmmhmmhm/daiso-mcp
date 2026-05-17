@@ -63,7 +63,7 @@ interface HealthCheckCacheKeyParams {
 }
 
 const HEALTH_CHECK_CACHE_TTL_MS = 60_000;
-const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 3000;
+const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 7000;
 const MAX_HEALTH_CHECK_TIMEOUT_MS = 10_000;
 
 const HEALTH_CHECKS: HealthCheckDefinition[] = [
@@ -145,7 +145,7 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     mode: 'quick',
     path: '/api/oliveyoung/products?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&size=1',
     collectionKey: 'products',
-    requiredFields: ['productNo', 'productName', 'name'],
+    requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
   },
   {
     id: 'megabox.theaters',

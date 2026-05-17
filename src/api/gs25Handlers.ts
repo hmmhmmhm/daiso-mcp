@@ -183,28 +183,38 @@ export async function handleGs25CheckInventory(c: ApiContext) {
 
   try {
     if ((typeof latitude !== 'number' || typeof longitude !== 'number') && storeKeyword.trim().length > 0) {
-      const baseStores = await fetchGs25Stores(
-        {
-          serviceCode,
-        },
-        {
-          timeout: 20000,
-        },
-      );
+      const directGeocoded = await geocodeGs25Address(storeKeyword, {
+        timeout: 15000,
+        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+      });
+      if (directGeocoded) {
+        latitude = directGeocoded.latitude;
+        longitude = directGeocoded.longitude;
+        geocodeUsed = true;
+      } else {
+        const baseStores = await fetchGs25Stores(
+          {
+            serviceCode,
+          },
+          {
+            timeout: 20000,
+          },
+        );
 
-      const firstAddress =
-        filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find((store) => store.address.trim().length > 0)
-          ?.address || '';
+        const firstAddress =
+          filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find((store) => store.address.trim().length > 0)
+            ?.address || '';
 
-      if (firstAddress.length > 0) {
-        const geocoded = await geocodeGs25Address(firstAddress, {
-          timeout: 15000,
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
-        });
-        if (geocoded) {
-          latitude = geocoded.latitude;
-          longitude = geocoded.longitude;
-          geocodeUsed = true;
+        if (firstAddress.length > 0) {
+          const geocoded = await geocodeGs25Address(firstAddress, {
+            timeout: 15000,
+            googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          });
+          if (geocoded) {
+            latitude = geocoded.latitude;
+            longitude = geocoded.longitude;
+            geocodeUsed = true;
+          }
         }
       }
     }
