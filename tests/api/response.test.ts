@@ -5,6 +5,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { errorResponse } from '../../src/api/response.js';
 import type { ApiContext } from '../../src/api/response.js';
+import { toStandardErrorDiagnostics } from '../../src/core/errors.js';
 
 function createJsonContext() {
   return {
@@ -37,6 +38,28 @@ describe('errorResponse', () => {
         },
       },
       500,
+    );
+  });
+
+  it('서비스/작업을 추론할 수 없으면 operation을 생략한다', () => {
+    expect(toStandardErrorDiagnostics('FAILED', 'failed')).toEqual(
+      expect.objectContaining({
+        code: 'FAILED',
+        message: 'failed',
+        operation: undefined,
+        service: undefined,
+        retryable: true,
+      }),
+    );
+  });
+
+  it('빈 에러 코드는 서비스와 작업을 추론하지 않는다', () => {
+    expect(toStandardErrorDiagnostics('', 'failed')).toEqual(
+      expect.objectContaining({
+        code: '',
+        operation: undefined,
+        service: undefined,
+      }),
     );
   });
 });

@@ -226,6 +226,40 @@ describe('runHealthChecks', () => {
     expect(result.checks[0].message).toBe('2 item(s) returned');
   });
 
+  it('대표 필드가 숫자로 내려와도 shape를 통과한다', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ id: 123 }] } }));
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'daiso.products',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.checks[0].message).toBe('1 item(s) returned');
+  });
+
+  it('대표 컬렉션 필드가 바뀌면 degraded 메시지를 반환한다', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ unexpected: 'value' }] } }));
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'daiso.products',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0].message).toContain('response missing required fields');
+  });
+
   it('JSON이 아닌 실패 응답은 HTTP 상태 메시지를 반환한다', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(new Response('not-json', { status: 502 }));
 

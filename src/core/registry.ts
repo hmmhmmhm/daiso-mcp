@@ -54,7 +54,7 @@ function normalizeProducts(products: unknown[]): Array<Record<string, unknown>> 
     .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
     .map((item) => ({
       code: firstString(item.itemCode, item.productCode, item.pluCd, item.id, item.productNo),
-      name: firstString(item.itemName, item.shortItemName, item.goodsName, item.productName, item.name),
+      name: firstString(item.itemName, item.shortItemName, item.goodsName, item.productName, item.movieName, item.name),
       price: firstNumber(item.viewPrice, item.salePrice, item.sellPrice, item.price, item.originPrice, item.searchItemSellPrice),
       imageUrl: firstString(item.imageUrl),
       raw: item,

@@ -74,6 +74,20 @@ function createJsonMockTool(name: string): ToolRegistration {
   };
 }
 
+function createJsonTextTool(name: string, payload: unknown): ToolRegistration {
+  return {
+    name,
+    metadata: {
+      title: `${name} Tool`,
+      description: `${name} 도구 설명`,
+      inputSchema: {},
+    },
+    handler: async (): Promise<McpToolResponse> => ({
+      content: [{ type: 'text', text: JSON.stringify(payload) }],
+    }),
+  };
+}
+
 describe('ServiceRegistry', () => {
   let registry: ServiceRegistry;
 
@@ -263,6 +277,155 @@ describe('ServiceRegistry', () => {
       );
     });
 
+    it('영화/극장 컬렉션과 문자열 거리도 공통 결과 모델로 정규화한다', async () => {
+      const tool = createJsonTextTool('media-tool', {
+        movies: [
+          null,
+          {
+            id: 'M1',
+            movieName: '테스트 영화',
+            price: '12000',
+          },
+        ],
+        theaters: [
+          [],
+          {
+            id: 'T1',
+            theaterName: '강남',
+            storeAddress: '서울 강남구',
+            distance: '0.2km',
+          },
+        ],
+      });
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      const result = await registeredHandler({});
+
+      expect(result.structuredContent.standard).toEqual({
+        movies: [
+          expect.objectContaining({
+            code: 'M1',
+            name: '테스트 영화',
+            price: 12000,
+          }),
+        ],
+        theaters: [
+          expect.objectContaining({
+            code: 'T1',
+            name: '강남',
+            address: '서울 강남구',
+            distanceMeters: 200,
+          }),
+        ],
+      });
+    });
+
+    it('컬렉션 없는 JSON 객체는 원본 structuredContent만 반환한다', async () => {
+      const tool = createJsonTextTool('plain-json-tool', { ok: true });
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      await expect(registeredHandler({})).resolves.toEqual(
+        expect.objectContaining({
+          structuredContent: { ok: true },
+        }),
+      );
+    });
+
+    it('숫자로 바꿀 수 없는 가격은 null로 정규화한다', async () => {
+      const tool = createJsonTextTool('invalid-price-tool', {
+        products: [{ itemCode: 'P1', itemName: '상품', viewPrice: 'bad' }],
+      });
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      const result = await registeredHandler({});
+      expect(result.structuredContent.standard.products[0].price).toBeNull();
+    });
+
+    it('JSON 배열 text 응답은 text 필드로 구조화한다', async () => {
+      const tool = createJsonTextTool('array-json-tool', ['not-object']);
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      await expect(registeredHandler({})).resolves.toEqual(
+        expect.objectContaining({
+          structuredContent: { text: '["not-object"]' },
+        }),
+      );
+    });
+
+    it('content가 비어 있으면 빈 text structuredContent를 반환한다', async () => {
+      const tool: ToolRegistration = {
+        ...createMockTool('empty-content-tool'),
+        handler: async () => ({ content: [] }),
+      };
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      await expect(registeredHandler({})).resolves.toEqual(
+        expect.objectContaining({
+          structuredContent: { text: '' },
+        }),
+      );
+    });
+
+    it('핸들러가 isError를 반환하면 MCP 응답에도 유지한다', async () => {
+      const tool: ToolRegistration = {
+        ...createMockTool('handled-error-tool'),
+        handler: async () => ({
+          isError: true,
+          content: [{ type: 'text', text: 'handled' }],
+        }),
+      };
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      await expect(registeredHandler({})).resolves.toEqual(
+        expect.objectContaining({
+          isError: true,
+          structuredContent: { text: 'handled' },
+        }),
+      );
+    });
+
     it('도구 예외를 표준 MCP 에러 구조로 반환한다', async () => {
       const tool: ToolRegistration = {
         ...createMockTool('error-tool'),
@@ -295,6 +458,26 @@ describe('ServiceRegistry', () => {
           },
         }),
       );
+    });
+
+    it('문자열 예외도 표준 MCP 에러 구조로 반환한다', async () => {
+      const tool: ToolRegistration = {
+        ...createMockTool('string-error-tool'),
+        handler: async () => {
+          throw 'boom';
+        },
+      };
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      const result = await registeredHandler({});
+      expect(result.structuredContent.error.message).toBe('알 수 없는 오류가 발생했습니다.');
     });
   });
 
