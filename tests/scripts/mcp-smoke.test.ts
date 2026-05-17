@@ -58,4 +58,29 @@ describe('runMcpSmoke', () => {
     });
     expect(close).toHaveBeenCalledOnce();
   });
+
+  it('대표 도구 검증 실패 시 도구명, 요청 args, 응답 일부를 출력한다', async () => {
+    const errors: string[] = [];
+    const close = vi.fn();
+    const listTools = vi.fn().mockResolvedValue({
+      tools: MCP_SMOKE_TOOL_NAMES.map((name) => ({ name })),
+    });
+    const callTool = vi.fn().mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify({ summary: {} }) }],
+    });
+
+    const exitCode = await runMcpSmoke({
+      createClient: async () => ({ listTools, callTool, close }),
+      writeOut: () => undefined,
+      writeErr: (message) => {
+        errors.push(message);
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    expect(errors.join('\n')).toContain('tool=daiso_find_inventory_by_name');
+    expect(errors.join('\n')).toContain('"query":"수납박스"');
+    expect(errors.join('\n')).toContain('responseExcerpt=');
+    expect(close).toHaveBeenCalledOnce();
+  });
 });

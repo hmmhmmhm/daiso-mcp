@@ -63,6 +63,24 @@ function parseToolPayload(result: ToolCallResult): Record<string, unknown> {
   return parsed;
 }
 
+function createResponseExcerpt(result: ToolCallResult | undefined): string {
+  const text = result?.content?.find((item) => item.type === 'text' && typeof item.text === 'string')?.text;
+  return (text || JSON.stringify(result ?? {})).replace(/\s+/g, ' ').slice(0, 500);
+}
+
+function formatScenarioFailure(
+  scenario: McpSmokeScenario,
+  message: string,
+  result?: ToolCallResult,
+): string {
+  return [
+    `MCP smoke 실패: ${scenario.label} - ${message}`,
+    `tool=${scenario.toolName}`,
+    `args=${JSON.stringify(scenario.args)}`,
+    `responseExcerpt=${createResponseExcerpt(result)}`,
+  ].join(' ');
+}
+
 function expectField(fieldName: string, expected: unknown): (payload: Record<string, unknown>) => string | null {
   return (payload) => (payload[fieldName] === expected ? null : `${fieldName} 값이 ${String(expected)}가 아닙니다`);
 }
@@ -135,14 +153,21 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
 
     for (const scenario of MCP_SMOKE_SCENARIOS) {
       writeOut(`MCP smoke 호출: ${scenario.label}`);
-      const result = await client.callTool({
-        name: scenario.toolName,
-        arguments: scenario.args,
-      });
-      const payload = parseToolPayload(result);
-      const validationError = scenario.validate(payload);
-      if (validationError) {
-        writeErr(`MCP smoke 실패: ${scenario.label} - ${validationError}`);
+      let result: ToolCallResult | undefined;
+      try {
+        result = await client.callTool({
+          name: scenario.toolName,
+          arguments: scenario.args,
+        });
+        const payload = parseToolPayload(result);
+        const validationError = scenario.validate(payload);
+        if (validationError) {
+          writeErr(formatScenarioFailure(scenario, validationError, result));
+          return 1;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '알 수 없는 오류';
+        writeErr(formatScenarioFailure(scenario, message, result));
         return 1;
       }
     }
