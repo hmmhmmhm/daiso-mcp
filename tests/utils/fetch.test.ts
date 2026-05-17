@@ -81,6 +81,39 @@ describe('daisoFetch', () => {
       })
     );
   });
+
+  it('일시적인 5xx 응답은 지정 횟수만큼 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(new Response('OK'));
+
+    const response = await daisoFetch('https://example.com/api', { retries: 1, retryDelayMs: 0 });
+
+    expect(await response.text()).toBe('OK');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('재시도 지연 시간이 있으면 다음 시도 전에 기다린다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('try later', { status: 503, statusText: 'Service Unavailable' }))
+      .mockResolvedValueOnce(new Response('OK'));
+
+    const response = await daisoFetch('https://example.com/api', { retries: 1, retryDelayMs: 1 });
+
+    expect(await response.text()).toBe('OK');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('타임아웃 같은 네트워크 오류도 재시도 후 마지막 오류를 던진다', async () => {
+    const abortError = new Error('aborted');
+    abortError.name = 'AbortError';
+    mockFetch.mockRejectedValue(abortError);
+
+    await expect(
+      daisoFetch('https://example.com/api', { timeout: 10, retries: 2, retryDelayMs: 0 }),
+    ).rejects.toThrow('aborted');
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('fetchJson', () => {
