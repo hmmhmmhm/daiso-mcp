@@ -91,12 +91,19 @@ export class ServiceRegistry {
   private registerTool(server: McpServer, tool: ToolRegistration): void {
     server.registerTool(tool.name, tool.metadata, async (args) => {
       const result = await tool.handler(args);
-      return {
+      const response: {
+        content: Array<{ type: 'text'; text: string }>;
+        structuredContent?: Record<string, unknown>;
+      } = {
         content: result.content.map((item) => ({
           type: item.type as 'text',
           text: item.text,
         })),
       };
+      if (result.structuredContent) {
+        response.structuredContent = result.structuredContent;
+      }
+      return response;
     });
   }
 

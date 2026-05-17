@@ -15,6 +15,7 @@ export interface McpToolResponse {
     type: 'text';
     text: string;
   }>;
+  structuredContent?: Record<string, unknown>;
 }
 
 /**
@@ -27,6 +28,11 @@ export type ToolHandler<TArgs = unknown> = (args: TArgs) => Promise<McpToolRespo
  * Zod 스키마 객체 형태
  */
 export type ToolInputSchema = Record<string, z.ZodType>;
+
+/**
+ * 도구 출력 스키마 타입
+ */
+export type ToolOutputSchema = Record<string, z.ZodType>;
 
 /**
  * 도구 정의
@@ -72,6 +78,7 @@ export interface ToolRegistration {
     title: string;
     description: string;
     inputSchema: ToolInputSchema;
+    outputSchema?: ToolOutputSchema;
   };
   /** 도구 핸들러 */
   handler: ToolHandler;

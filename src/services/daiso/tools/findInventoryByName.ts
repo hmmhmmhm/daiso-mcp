@@ -9,6 +9,7 @@ import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { Product, ProductSummary } from '../types.js';
 import { fetchProducts } from './searchProducts.js';
 import { fetchOnlineStock, fetchStoreInventory } from './checkInventory.js';
+import { fetchStores } from './findStores.js';
 
 interface FindInventoryByNameArgs {
   query: string;
@@ -20,6 +21,21 @@ interface FindInventoryByNameArgs {
   productLimit?: number;
 }
 
+interface ResolvedLocation {
+  latitude: number;
+  longitude: number;
+  source: 'input' | 'storeQuery' | 'default';
+  storeName?: string;
+  storeAddress?: string;
+}
+
+function buildTextResponse(payload: Record<string, unknown>): McpToolResponse {
+  return {
+    content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+    structuredContent: payload,
+  };
+}
+
 function buildEmptySummary(query: string, storeQuery: string): Record<string, string> {
   return {
     headline: `"${query}" 상품 후보를 찾지 못했습니다.`,
@@ -27,6 +43,40 @@ function buildEmptySummary(query: string, storeQuery: string): Record<string, st
     storeQuery: storeQuery || '미지정',
     inventorySummary: '상품 후보가 없어 온라인/매장 재고 조회를 건너뛰었습니다.',
     displayLocationHint: '상품 후보를 먼저 확인한 뒤 daiso_get_display_location을 사용할 수 있습니다.',
+  };
+}
+
+async function resolveInventoryLocation(args: {
+  storeQuery: string;
+  latitude?: number;
+  longitude?: number;
+}): Promise<ResolvedLocation> {
+  if (typeof args.latitude === 'number' && typeof args.longitude === 'number') {
+    return {
+      latitude: args.latitude,
+      longitude: args.longitude,
+      source: 'input',
+    };
+  }
+
+  if (args.storeQuery.trim().length > 0) {
+    const stores = await fetchStores(args.storeQuery);
+    const firstStore = stores[0];
+    if (firstStore) {
+      return {
+        latitude: firstStore.lat,
+        longitude: firstStore.lng,
+        source: 'storeQuery',
+        storeName: firstStore.name,
+        storeAddress: firstStore.address,
+      };
+    }
+  }
+
+  return {
+    latitude: args.latitude ?? 37.5665,
+    longitude: args.longitude ?? 126.978,
+    source: 'default',
   };
 }
 
@@ -63,8 +113,8 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
   const {
     query,
     storeQuery = '',
-    latitude = 37.5665,
-    longitude = 126.978,
+    latitude,
+    longitude,
     page = 1,
     pageSize = 30,
     productLimit = 5,
@@ -79,43 +129,45 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
   const selectedProduct = productCandidates[0] ?? null;
 
   if (!selectedProduct) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(
-            {
-              query,
-              storeQuery,
-              summary: buildEmptySummary(query, storeQuery),
-              productCandidates: [],
-              selectedProduct: null,
-              onlineStock: 0,
-              storeInventory: {
-                totalStores: 0,
-                inStockCount: 0,
-                outOfStockCount: 0,
-                page,
-                pageSize,
-                stores: [],
-              },
-              nextSteps: {
-                productSearchTool: 'daiso_search_products',
-                inventoryTool: 'daiso_check_inventory',
-                note: '상품 후보가 없어서 재고 조회를 진행하지 않았습니다.',
-              },
-            },
-            null,
-            2,
-          ),
-        },
-      ],
-    };
+    return buildTextResponse({
+      query,
+      storeQuery,
+      summary: buildEmptySummary(query, storeQuery),
+      productCandidates: [],
+      selectedProduct: null,
+      onlineStock: 0,
+      storeInventory: {
+        totalStores: 0,
+        inStockCount: 0,
+        outOfStockCount: 0,
+        page,
+        pageSize,
+        stores: [],
+      },
+      nextSteps: {
+        productSearchTool: 'daiso_search_products',
+        inventoryTool: 'daiso_check_inventory',
+        note: '상품 후보가 없어서 재고 조회를 진행하지 않았습니다.',
+      },
+    });
   }
+
+  const resolvedLocation = await resolveInventoryLocation({
+    storeQuery,
+    latitude,
+    longitude,
+  });
 
   const [onlineStock, storeResult] = await Promise.all([
     fetchOnlineStock(selectedProduct.id),
-    fetchStoreInventory(selectedProduct.id, latitude, longitude, page, pageSize, storeQuery),
+    fetchStoreInventory(
+      selectedProduct.id,
+      resolvedLocation.latitude,
+      resolvedLocation.longitude,
+      page,
+      pageSize,
+      storeQuery,
+    ),
   ]);
   const stores = storeResult.stores;
   const inStockCount = stores.filter((store) => store.quantity > 0).length;
@@ -123,7 +175,7 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
   const result = {
     query,
     storeQuery,
-    location: { latitude, longitude },
+    location: resolvedLocation,
     summary: buildInventorySummary({
       query,
       storeQuery,
@@ -151,10 +203,46 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
     },
   };
 
-  return {
-    content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-  };
+  return buildTextResponse(result);
 }
+
+const inventoryByNameOutputSchema = {
+  query: z.string().describe('사용자가 입력한 상품 검색어'),
+  storeQuery: z.string().describe('사용자가 입력한 위치 키워드'),
+  location: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+      source: z.enum(['input', 'storeQuery', 'default']),
+      storeName: z.string().optional(),
+      storeAddress: z.string().optional(),
+    })
+    .optional()
+    .describe('재고 조회에 사용한 위치와 위치 해석 출처'),
+  summary: z
+    .object({
+      headline: z.string(),
+      selectedProduct: z.string(),
+      storeQuery: z.string(),
+      inventorySummary: z.string(),
+      displayLocationHint: z.string(),
+    })
+    .describe('사용자에게 바로 보여줄 요약'),
+  productCandidates: z.array(z.unknown()).describe('검색된 상품 후보 목록'),
+  selectedProduct: z.unknown().nullable().describe('재고 조회 기준으로 선택한 상품'),
+  onlineStock: z.number().describe('온라인 재고 수량'),
+  storeInventory: z
+    .object({
+      totalStores: z.number(),
+      inStockCount: z.number(),
+      outOfStockCount: z.number(),
+      page: z.number(),
+      pageSize: z.number(),
+      stores: z.array(z.unknown()),
+    })
+    .describe('매장별 재고 조회 결과'),
+  nextSteps: z.record(z.string(), z.unknown()).describe('후속 도구 호출 안내'),
+};
 
 export function createFindInventoryByNameTool(): ToolRegistration {
   return {
@@ -166,12 +254,13 @@ export function createFindInventoryByNameTool(): ToolRegistration {
       inputSchema: {
         query: z.string().describe('검색할 상품명 또는 키워드'),
         storeQuery: z.string().optional().describe('역명, 동네, 매장명 같은 대강의 위치'),
-        latitude: z.number().optional().default(37.5665).describe('위도 (기본값: 서울 시청 37.5665)'),
-        longitude: z.number().optional().default(126.978).describe('경도 (기본값: 서울 시청 126.978)'),
+        latitude: z.number().optional().describe('위도 (생략 시 서울 시청 37.5665)'),
+        longitude: z.number().optional().describe('경도 (생략 시 서울 시청 126.978)'),
         page: z.number().optional().default(1).describe('재고 매장 페이지 번호 (기본값: 1)'),
         pageSize: z.number().optional().default(30).describe('재고 매장 페이지 크기 (기본값: 30)'),
         productLimit: z.number().optional().default(5).describe('상품 후보 수 (기본값: 5)'),
       },
+      outputSchema: inventoryByNameOutputSchema,
     },
     handler: findInventoryByName as (args: unknown) => Promise<McpToolResponse>,
   };

@@ -9,6 +9,21 @@ import { createMockProductResponse } from '../api/testHelpers.js';
 
 const mockFetch = vi.fn();
 
+function createMockStoreHtml(): string {
+  return `
+    <div class="bx-store"
+         data-start="0900"
+         data-end="2200"
+         data-lat="37.4979"
+         data-lng="127.0276"
+         data-info='{}'>
+      <h4 class="place">다이소 강남역점</h4>
+      <em class="phone">T.02-1234-5678</em>
+      <p class="addr">서울 강남구 강남대로</p>
+    </div>
+  `;
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   vi.stubGlobal('fetch', mockFetch);
@@ -37,6 +52,7 @@ describe('MCP client smoke', () => {
       .mockResolvedValueOnce(
         new Response(JSON.stringify(createMockProductResponse([{ PD_NO: '1049516', PDNM: '수납박스' }], 1))),
       )
+      .mockResolvedValueOnce(new Response(createMockStoreHtml()))
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { pdNo: '1049516', stck: 4 } })))
       .mockResolvedValueOnce(
         new Response(
@@ -65,7 +81,9 @@ describe('MCP client smoke', () => {
     const client = await createLocalMcpClient();
     try {
       const tools = await client.listTools();
-      expect(tools.tools.map((tool) => tool.name)).toContain('daiso_find_inventory_by_name');
+      const daisoTool = tools.tools.find((tool) => tool.name === 'daiso_find_inventory_by_name');
+      expect(daisoTool).toBeTruthy();
+      expect(daisoTool?.outputSchema?.properties).toHaveProperty('summary');
 
       const result = await client.callTool({
         name: 'daiso_find_inventory_by_name',
@@ -76,6 +94,7 @@ describe('MCP client smoke', () => {
       const payload = JSON.parse(firstText);
 
       expect(payload.summary.headline).toContain('수납박스');
+      expect(payload.location.source).toBe('storeQuery');
       expect(payload.selectedProduct.id).toBe('1049516');
       expect(payload.storeInventory.stores[0].storeCode).toBe('11199');
     } finally {

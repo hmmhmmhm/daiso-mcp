@@ -7,6 +7,21 @@ import { createMockProductResponse } from '../../../api/testHelpers.js';
 
 const mockFetch = vi.fn();
 
+function createMockStoreHtml(): string {
+  return `
+    <div class="bx-store"
+         data-start="0900"
+         data-end="2200"
+         data-lat="37.4979"
+         data-lng="127.0276"
+         data-info='{}'>
+      <h4 class="place">다이소 강남역점</h4>
+      <em class="phone">T.02-1234-5678</em>
+      <p class="addr">서울 강남구 강남대로</p>
+    </div>
+  `;
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   vi.stubGlobal('fetch', mockFetch);
@@ -22,6 +37,7 @@ describe('createFindInventoryByNameTool', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([
         { PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '1000' },
       ], 1))))
+      .mockResolvedValueOnce(new Response(createMockStoreHtml()))
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { pdNo: '1049516', stck: 4 } })))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         data: [
@@ -61,6 +77,12 @@ describe('createFindInventoryByNameTool', () => {
       selectedProduct: '수납박스',
       storeQuery: '강남역',
       displayLocationHint: expect.stringContaining('daiso_get_display_location'),
+    });
+    expect(parsed.location).toMatchObject({
+      latitude: 37.4979,
+      longitude: 127.0276,
+      source: 'storeQuery',
+      storeName: '다이소 강남역점',
     });
     expect(parsed.selectedProduct.id).toBe('1049516');
     expect(parsed.productCandidates).toHaveLength(1);
@@ -116,6 +138,83 @@ describe('createFindInventoryByNameTool', () => {
     expect(parsed.summary.inventorySummary).toContain('기본 위치 주변');
   });
 
+  it('명시 좌표가 있으면 storeQuery보다 좌표를 우선한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([
+        { PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '1000' },
+      ], 1))))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { pdNo: '1049516', stck: 1 } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [
+          {
+            strCd: '11199',
+            strNm: '강남역점',
+            strAddr: '서울 강남구',
+            strTno: '02',
+            opngTime: '0900',
+            clsngTime: '2200',
+            strLttd: 37.5,
+            strLitd: 127,
+            km: '0.2km',
+          },
+        ],
+      })))
+      .mockResolvedValueOnce(new Response('sample-token', { headers: { 'X-DM-UID': 'dm-uid-123' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] })));
+
+    const tool = createFindInventoryByNameTool();
+    const result = await tool.handler({
+      query: '수납박스',
+      storeQuery: '강남역',
+      latitude: 37.1,
+      longitude: 127.2,
+      pageSize: 1,
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.location).toMatchObject({
+      latitude: 37.1,
+      longitude: 127.2,
+      source: 'input',
+    });
+  });
+
+  it('storeQuery로 매장을 찾지 못하면 기본 위치를 사용한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([
+        { PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '1000' },
+      ], 1))))
+      .mockResolvedValueOnce(new Response('<html></html>'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { pdNo: '1049516', stck: 1 } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [
+          {
+            strCd: '11199',
+            strNm: '강남역점',
+            strAddr: '서울 강남구',
+            strTno: '02',
+            opngTime: '0900',
+            clsngTime: '2200',
+            strLttd: 37.5,
+            strLitd: 127,
+            km: '0.2km',
+          },
+        ],
+      })))
+      .mockResolvedValueOnce(new Response('sample-token', { headers: { 'X-DM-UID': 'dm-uid-123' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] })));
+
+    const tool = createFindInventoryByNameTool();
+    const result = await tool.handler({ query: '수납박스', storeQuery: '없는매장', pageSize: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.location).toMatchObject({
+      latitude: 37.5665,
+      longitude: 126.978,
+      source: 'default',
+    });
+  });
+
   it('상품명이 비어 있으면 에러를 던진다', async () => {
     const tool = createFindInventoryByNameTool();
 
@@ -130,5 +229,7 @@ describe('createFindInventoryByNameTool', () => {
     expect(tool.metadata.description).toContain('제품 검색부터 재고 조회까지');
     expect(tool.metadata.inputSchema.query.description).toContain('상품명');
     expect(tool.metadata.inputSchema.storeQuery.description).toContain('역명');
+    expect(tool.metadata.outputSchema?.summary.description).toContain('사용자에게 바로 보여줄 요약');
+    expect(tool.metadata.outputSchema?.storeInventory.description).toContain('매장별 재고');
   });
 });
