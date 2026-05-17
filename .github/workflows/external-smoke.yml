@@ -10,9 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  cli-smoke:
+  external-smoke:
     runs-on: ubuntu-latest
-    name: CLI external smoke
+    name: CLI and MCP external smoke
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -28,3 +28,6 @@ jobs:
 
       - name: Run CLI smoke
         run: npm run cli:smoke
+
+      - name: Run MCP smoke
+        run: npm run mcp:smoke

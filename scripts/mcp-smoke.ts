@@ -33,7 +33,17 @@ export const MCP_SMOKE_TOOL_NAMES = [
   'daiso_search_products',
   'daiso_check_inventory',
   'daiso_find_inventory_by_name',
+  'gs25_search_products',
+  'seveneleven_search_products',
+  'emart24_search_products',
 ];
+
+interface McpSmokeScenario {
+  label: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  validate: (payload: Record<string, unknown>) => string | null;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -52,6 +62,45 @@ function parseToolPayload(result: ToolCallResult): Record<string, unknown> {
 
   return parsed;
 }
+
+function expectField(fieldName: string, expected: unknown): (payload: Record<string, unknown>) => string | null {
+  return (payload) => (payload[fieldName] === expected ? null : `${fieldName} 값이 ${String(expected)}가 아닙니다`);
+}
+
+function validateDaisoInventoryByName(payload: Record<string, unknown>): string | null {
+  if (!isRecord(payload.summary) || typeof payload.summary.headline !== 'string') {
+    return '통합 조회 결과 summary.headline이 없습니다';
+  }
+
+  return null;
+}
+
+export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
+  {
+    label: '다이소 상품명 재고 통합 조회',
+    toolName: 'daiso_find_inventory_by_name',
+    args: { query: '수납박스', storeQuery: '강남역', pageSize: 1, productLimit: 1 },
+    validate: validateDaisoInventoryByName,
+  },
+  {
+    label: 'GS25 상품 검색',
+    toolName: 'gs25_search_products',
+    args: { keyword: '콜라', limit: 1 },
+    validate: expectField('keyword', '콜라'),
+  },
+  {
+    label: '세븐일레븐 상품 검색',
+    toolName: 'seveneleven_search_products',
+    args: { query: '커피', size: 1 },
+    validate: expectField('query', '커피'),
+  },
+  {
+    label: '이마트24 상품 검색',
+    toolName: 'emart24_search_products',
+    args: { keyword: '커피', pageSize: 1 },
+    validate: expectField('keyword', '커피'),
+  },
+];
 
 export async function createSdkMcpSmokeClient(endpoint: string): Promise<McpSmokeClient> {
   const client = new Client({ name: 'daiso-mcp-smoke', version: '1.0.0' });
@@ -84,17 +133,23 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
       return 1;
     }
 
-    const result = await client.callTool({
-      name: 'daiso_find_inventory_by_name',
-      arguments: { query: '수납박스', storeQuery: '강남역', pageSize: 1, productLimit: 1 },
-    });
-    const payload = parseToolPayload(result);
-    if (!isRecord(payload.summary) || typeof payload.summary.headline !== 'string') {
-      writeErr('MCP smoke 실패: 통합 조회 결과 summary.headline이 없습니다');
-      return 1;
+    for (const scenario of MCP_SMOKE_SCENARIOS) {
+      writeOut(`MCP smoke 호출: ${scenario.label}`);
+      const result = await client.callTool({
+        name: scenario.toolName,
+        arguments: scenario.args,
+      });
+      const payload = parseToolPayload(result);
+      const validationError = scenario.validate(payload);
+      if (validationError) {
+        writeErr(`MCP smoke 실패: ${scenario.label} - ${validationError}`);
+        return 1;
+      }
     }
 
-    writeOut(`MCP smoke 통과: ${MCP_SMOKE_TOOL_NAMES.length}개 도구 확인 및 통합 조회 호출 완료`);
+    writeOut(
+      `MCP smoke 통과: ${MCP_SMOKE_TOOL_NAMES.length}개 도구 확인 및 ${MCP_SMOKE_SCENARIOS.length}개 호출 완료`,
+    );
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류';

@@ -41,5 +41,6 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain("cron: '40 15 * * *'");
     expect(workflow).toContain("node-version: '20'");
     expect(workflow).toContain('npm run cli:smoke');
+    expect(workflow).toContain('npm run mcp:smoke');
   });
 });
