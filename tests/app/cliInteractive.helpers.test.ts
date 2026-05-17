@@ -162,6 +162,21 @@ describe('cliInteractiveTestables', () => {
     expect(text).toBe('강남');
   });
 
+  it('자유 입력에서 다이소 상품 키워드와 위치 키워드를 추론한다', () => {
+    expect(cliInteractiveTestables.inferDaisoFreeTextIntent('수납박스 강남역')).toEqual({
+      productQuery: '수납박스',
+      storeKeyword: '강남역',
+    });
+    expect(cliInteractiveTestables.inferDaisoFreeTextIntent('강남역 수납박스')).toEqual({
+      productQuery: '수납박스',
+      storeKeyword: '강남역',
+    });
+    expect(cliInteractiveTestables.inferDaisoFreeTextIntent('수납박스')).toEqual({
+      productQuery: '수납박스',
+      storeKeyword: '수납박스',
+    });
+  });
+
   it('다음 동작 선택 분기를 처리한다', async () => {
     const out: string[] = [];
     const same = await cliInteractiveTestables.askNextAction(createPrompt(['1']), (m) => out.push(m));

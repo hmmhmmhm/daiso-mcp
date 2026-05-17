@@ -82,6 +82,59 @@ describe('runInteractiveCli', () => {
     );
   });
 
+  it('서비스 번호 대신 자유 입력이 오면 다이소 상품/위치 의도로 처리한다', async () => {
+    const output: string[] = [];
+    const errors: string[] = [];
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            stores: [{ name: '다이소 강남역점', address: '서울 강남구', phone: '02-111-2222' }],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            products: [{ id: 'P1', name: '수납박스', price: 2000 }],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        createJsonResponse({
+          success: true,
+          data: {
+            storeInventory: {
+              stores: [{ storeName: '다이소 강남역점', quantity: 5 }],
+            },
+          },
+        }),
+      );
+
+    const exitCode = await runInteractiveCli({
+      fetchImpl,
+      writeOut: (message: string) => {
+        output.push(message);
+      },
+      writeErr: (message: string) => {
+        errors.push(message);
+      },
+      createPrompt: createPrompt(['수납박스 강남역', '1', '3']),
+    });
+
+    expect(exitCode).toBe(0);
+    expect(errors).toEqual([]);
+    expect(output.join('\n')).toContain('자유 입력을 다이소 조회로 처리합니다.');
+    expect(output.join('\n')).toContain('상품 키워드: 수납박스');
+    expect(output.join('\n')).toContain('위치 키워드: 강남역');
+    expect(output.join('\n')).toContain('재고 수량: 5');
+    expect(fetchImpl).toHaveBeenNthCalledWith(1, 'https://mcp.aka.page/api/daiso/stores?keyword=%EA%B0%95%EB%82%A8%EC%97%AD&limit=10');
+    expect(fetchImpl).toHaveBeenNthCalledWith(2, 'https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=10');
+  });
+
   it('매장 검색 결과가 없고 재시도 거부 시 종료한다', async () => {
     const output: string[] = [];
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(

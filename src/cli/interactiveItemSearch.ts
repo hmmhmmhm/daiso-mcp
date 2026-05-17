@@ -145,8 +145,11 @@ export async function runDaisoItemSearch(
   deps: InteractiveCliDeps,
   prompt: InteractivePrompt,
   store: InteractiveStore,
+  initialKeyword?: string,
 ): Promise<void> {
-  const keyword = await askNonEmpty(prompt, '찾을 상품 키워드를 입력하세요: ');
+  const keyword = initialKeyword && initialKeyword.trim().length > 0
+    ? initialKeyword.trim()
+    : await askNonEmpty(prompt, '찾을 상품 키워드를 입력하세요: ');
   const productsPayload = await fetchEnvelope(deps.fetchImpl, '/api/daiso/products', {
     q: keyword,
     pageSize: '10',
@@ -345,4 +348,3 @@ export async function runCuItemSearch(
   deps.writeOut(`- 배달 가능: ${selected.deliveryYn ? '예' : '아니오'}`);
   deps.writeOut(`- 예약 가능: ${selected.reserveYn ? '예' : '아니오'}`);
 }
-

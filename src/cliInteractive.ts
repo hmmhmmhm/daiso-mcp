@@ -22,6 +22,57 @@ import { buildDaisoStoreKeywordVariants, isRecord, parseDaisoProducts, parseStor
 
 export type { InteractiveCliDeps } from './cli/interactiveTypes.js';
 
+interface DaisoFreeTextIntent {
+  productQuery: string;
+  storeKeyword: string;
+}
+
+function isLocationToken(token: string): boolean {
+  return /(?:역|점|동|구|시|군|읍|면|로|길)$/.test(token);
+}
+
+export function inferDaisoFreeTextIntent(input: string): DaisoFreeTextIntent {
+  const tokens = input.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length <= 1) {
+    const value = tokens[0] || input.trim();
+    return { productQuery: value, storeKeyword: value };
+  }
+
+  const locationIndex = tokens.findIndex(isLocationToken);
+  if (locationIndex >= 0) {
+    const storeKeyword = tokens[locationIndex];
+    const productQuery = tokens.filter((_, index) => index !== locationIndex).join(' ').trim() || input.trim();
+    return { productQuery, storeKeyword };
+  }
+
+  const storeKeyword = tokens[tokens.length - 1];
+  const productQuery = tokens.slice(0, -1).join(' ').trim() || input.trim();
+  return { productQuery, storeKeyword };
+}
+
+async function askServiceChoice(
+  prompt: InteractivePrompt,
+  writeOut: (message: string) => void,
+): Promise<number | string> {
+  while (true) {
+    const answer = await prompt.ask('서비스 번호를 선택하세요 (0: 종료): ');
+    const picked = Number.parseInt(answer, 10);
+    if (!Number.isNaN(picked) && String(picked) === answer.trim()) {
+      if (picked >= 0 && picked <= 4) {
+        return picked;
+      }
+      writeOut('번호로 입력하세요. 0부터 4 사이에서 선택할 수 있습니다.');
+      continue;
+    }
+
+    if (answer.trim().length > 0) {
+      return answer.trim();
+    }
+
+    writeOut('번호로 입력하세요. 0부터 4 사이에서 선택할 수 있습니다.');
+  }
+}
+
 function createPrompt(): InteractivePrompt {
   const rl = createInterface({ input, output });
 
@@ -52,6 +103,7 @@ export const cliInteractiveTestables = {
   askNonEmpty,
   askNextAction,
   printStoreDetail,
+  inferDaisoFreeTextIntent,
   runDaisoItemSearch,
   runOliveyoungItemSearch,
   runCuItemSearch,
@@ -73,12 +125,50 @@ export async function runInteractiveCli(deps: InteractiveCliDeps): Promise<numbe
       deps.writeOut('3. CU');
       deps.writeOut('4. 롯데시네마');
 
-      const serviceChoice = await askMenu(prompt, '서비스 번호를 선택하세요 (0: 종료):', [
-        '다이소',
-        '올리브영',
-        'CU',
-        '롯데시네마',
-      ], deps.writeOut);
+      const serviceChoice = await askServiceChoice(prompt, deps.writeOut);
+
+      if (typeof serviceChoice === 'string') {
+        const intent = inferDaisoFreeTextIntent(serviceChoice);
+        deps.writeOut('자유 입력을 다이소 조회로 처리합니다.');
+        deps.writeOut(`- 상품 키워드: ${intent.productQuery}`);
+        deps.writeOut(`- 위치 키워드: ${intent.storeKeyword}`);
+
+        const storeResult = await fetchStoresWithKeywordFallback(deps.fetchImpl, 'daiso', intent.storeKeyword);
+        const stores = storeResult.stores;
+        if (stores.length === 0) {
+          deps.writeOut('검색된 매장이 없습니다.');
+          deps.writeOut('힌트: "안산 중앙역" 대신 "안산중앙" 또는 "고잔"으로 검색해보세요.');
+          keepRunning = await askYesNo(prompt, '다시 시도할까요? (y/n): ');
+          continue;
+        }
+
+        const selectedStore = stores.length === 1
+          ? stores[0]
+          : await pickFromList({
+              prompt,
+              writeOut: deps.writeOut,
+              title: '[매장 선택]',
+              emptyText: '검색된 매장이 없습니다.',
+              cancelText: '매장 검색으로 돌아갑니다.',
+              items: stores,
+              renderItem: (store, index) =>
+                `${index + 1}. ${store.name} | ${store.address || '주소 정보 없음'}`,
+              filterText: (store) => `${store.name} ${store.address} ${store.phone}`,
+              indexText: '입력: 번호 선택 | /키워드 필터 | all 전체보기 | 0 다시 검색',
+            });
+        if (!selectedStore) {
+          continue;
+        }
+
+        printStoreDetail(deps.writeOut, selectedStore);
+        await runDaisoItemSearch(deps, prompt, selectedStore, intent.productQuery);
+
+        const nextAction = await askNextAction(prompt, deps.writeOut);
+        if (nextAction === 'exit') {
+          keepRunning = false;
+        }
+        continue;
+      }
 
       if (serviceChoice === 0) {
         break;
