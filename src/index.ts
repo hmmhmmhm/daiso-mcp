@@ -42,6 +42,7 @@ import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 import { registerGs25Routes } from './api/routes/gs25Routes.js';
 import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
+import { buildConfigStatus } from './api/configStatus.js';
 
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
@@ -254,7 +255,7 @@ app.on(['POST', 'DELETE', 'OPTIONS'], '/', async (c) => {
 });
 
 // 헬스 체크 엔드포인트
-app.get('/health', (c) => c.json({ status: 'ok' }));
+app.get('/health', (c) => c.json({ status: 'ok', config: buildConfigStatus(c.env) }));
 registerHealthRoutes(app);
 
 // 프롬프트 페이지 (MCP 미지원 에이전트용)

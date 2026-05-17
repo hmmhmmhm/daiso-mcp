@@ -38,7 +38,15 @@ jobs:
             const sample = check.sample?.first ? ` sample=${check.sample.first}` : '';
             return `${check.id}:${check.status}:${check.message}${sample}`;
           });
-          fs.writeFileSync('health-check-summary.txt', lines.join('\n'));
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const summary = [
+            `status=${payload.status || 'unknown'}`,
+            `failed=${failedChecks.length}`,
+            `degraded=${degradedChecks.length}`,
+            `run=${runUrl}`,
+            lines.slice(0, 6).join(' | '),
+          ].filter(Boolean).join(' ');
+          fs.writeFileSync('health-check-summary.txt', summary);
           if (failedChecks.length > 0 || degradedChecks.length > 0 || payload.status !== 'ok') {
             process.exitCode = 1;
           }

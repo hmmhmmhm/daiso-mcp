@@ -215,12 +215,21 @@ describe('GET /', () => {
 
 describe('기본 페이지', () => {
   it('GET /health는 헬스 체크 응답을 반환한다', async () => {
-    const res = await app.request('/health');
+    const res = await app.request('/health', undefined, {
+      GOOGLE_MAPS_API_KEY: 'test-google',
+      ZYTE_API_KEY: '',
+      HEALTH_CHECK_SECRET: 'test-secret',
+    });
 
     expect(res.status).toBe(200);
 
     const data = await res.json();
     expect(data.status).toBe('ok');
+    expect(data.config).toEqual({
+      googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
+      zyteApiKey: { configured: false, usedBy: expect.arrayContaining(['oliveyoung', 'cgv']) },
+      healthCheckSecret: { configured: true, usedBy: ['health-checks'] },
+    });
   });
 
   it('GET /prompt는 프롬프트 페이지를 반환한다', async () => {
