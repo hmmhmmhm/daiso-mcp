@@ -184,6 +184,39 @@ describe('GET /api/health/checks', () => {
     expect(data.checks.map((check: { status: string }) => check.status)).toEqual(['ok', 'fail']);
   });
 
+  it('대표 컬렉션 shape가 바뀌면 degraded로 감지한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          products: [{ unexpectedName: '콜라' }],
+        },
+        meta: { total: 1 },
+      }),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=gs25.products&fresh=true',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('degraded');
+    expect(data.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'gs25.products',
+        status: 'degraded',
+        message: expect.stringContaining('required fields'),
+      }),
+    );
+  });
+
   it('fresh가 아니면 동일한 체크 결과를 캐시한다', async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({

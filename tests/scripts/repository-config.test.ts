@@ -46,4 +46,27 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
     expect(workflow).toContain('if: failure()');
   });
+
+  it('health check workflow는 서비스별 실패 요약을 Moshi로 알린다', () => {
+    const workflow = readText('.github/workflows/health-checks.yml');
+
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain("cron: '10 */3 * * *'");
+    expect(workflow).toContain('HEALTH_CHECK_SECRET');
+    expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
+    expect(workflow).toContain('/api/health/checks?mode=quick&fresh=true&includeSamples=true');
+    expect(workflow).toContain('failedChecks');
+    expect(workflow).toContain('degradedChecks');
+    expect(workflow).toContain('Health Checks Failed');
+  });
+
+  it('스크립트 분류 문서는 운영/리서치 스크립트 경계를 설명한다', () => {
+    const readme = readText('scripts/README.md');
+
+    expect(readme).toContain('운영 스크립트');
+    expect(readme).toContain('리서치 스크립트');
+    expect(readme).toContain('mcp-smoke.ts');
+    expect(readme).toContain('gs25-');
+    expect(readme).toContain('frida/');
+  });
 });

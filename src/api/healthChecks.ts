@@ -11,6 +11,8 @@ export interface HealthCheckDefinition {
   mode: 'quick' | 'deep';
   path: string;
   kind?: 'api' | 'cli-contract';
+  collectionKey?: 'products' | 'stores' | 'theaters' | 'movies' | 'showtimes';
+  requiredFields?: string[];
 }
 
 export interface HealthCheckResult {
@@ -79,6 +81,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'products',
     mode: 'quick',
     path: '/api/daiso/products?q=%ED%85%8C%EC%9D%B4%ED%94%84&pageSize=1',
+    collectionKey: 'products',
+    requiredFields: ['id', 'name', 'productName', 'itemName', 'goodsName'],
   },
   {
     id: 'cu.stores',
@@ -86,6 +90,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'stores',
     mode: 'quick',
     path: '/api/cu/stores?keyword=%EA%B0%95%EB%82%A8&limit=1',
+    collectionKey: 'stores',
+    requiredFields: ['storeCode', 'storeName', 'name'],
   },
   {
     id: 'emart24.products',
@@ -93,6 +99,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'products',
     mode: 'quick',
     path: '/api/emart24/products?keyword=%EC%BB%A4%ED%94%BC&pageSize=1',
+    collectionKey: 'products',
+    requiredFields: ['pluCd', 'goodsName', 'itemName', 'name'],
   },
   {
     id: 'gs25.products',
@@ -100,6 +108,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'products',
     mode: 'quick',
     path: '/api/gs25/products?keyword=%EC%BD%9C%EB%9D%BC&limit=1',
+    collectionKey: 'products',
+    requiredFields: ['itemCode', 'itemName', 'name'],
   },
   {
     id: 'gs25.stores',
@@ -107,6 +117,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'stores',
     mode: 'quick',
     path: '/api/gs25/stores?keyword=%EA%B0%95%EB%82%A8&limit=1',
+    collectionKey: 'stores',
+    requiredFields: ['storeCode', 'storeName', 'name'],
   },
   {
     id: 'seveneleven.products',
@@ -114,6 +126,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'products',
     mode: 'quick',
     path: '/api/seveneleven/products?query=%EC%BB%A4%ED%94%BC&size=1',
+    collectionKey: 'products',
+    requiredFields: ['itemCode', 'itemName', 'productNo', 'name'],
   },
   {
     id: 'lottemart.products',
@@ -121,6 +135,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'products',
     mode: 'quick',
     path: '/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeCode=2301&area=%EC%84%9C%EC%9A%B8&pageLimit=1',
+    collectionKey: 'products',
+    requiredFields: ['productCode', 'name', 'productName'],
   },
   {
     id: 'oliveyoung.products',
@@ -128,6 +144,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'products',
     mode: 'quick',
     path: '/api/oliveyoung/products?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&size=1',
+    collectionKey: 'products',
+    requiredFields: ['productNo', 'productName', 'name'],
   },
   {
     id: 'megabox.theaters',
@@ -135,6 +153,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'theaters',
     mode: 'quick',
     path: '/api/megabox/theaters?keyword=%EA%B0%95%EB%82%A8&limit=1',
+    collectionKey: 'theaters',
+    requiredFields: ['theaterCode', 'theaterName', 'name'],
   },
   {
     id: 'lottecinema.theaters',
@@ -142,6 +162,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'theaters',
     mode: 'quick',
     path: '/api/lottecinema/theaters?keyword=%EC%9E%A0%EC%8B%A4&limit=1',
+    collectionKey: 'theaters',
+    requiredFields: ['theaterCode', 'theaterName', 'name'],
   },
   {
     id: 'cgv.theaters',
@@ -149,6 +171,8 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'theaters',
     mode: 'quick',
     path: '/api/cgv/theaters?keyword=%EA%B0%95%EB%82%A8&limit=1',
+    collectionKey: 'theaters',
+    requiredFields: ['theaterCode', 'theaterName', 'name'],
   },
 ];
 
@@ -228,6 +252,51 @@ function toFirstName(data: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+function getCollectionItems(data: unknown, collectionKey?: HealthCheckDefinition['collectionKey']): unknown[] {
+  if (!data || typeof data !== 'object') {
+    return [];
+  }
+
+  const record = data as Record<string, unknown>;
+  if (collectionKey && Array.isArray(record[collectionKey])) {
+    return record[collectionKey];
+  }
+
+  for (const key of ['products', 'stores', 'theaters', 'movies', 'showtimes']) {
+    if (Array.isArray(record[key])) {
+      return record[key];
+    }
+  }
+
+  return [];
+}
+
+function hasRequiredRepresentativeFields(
+  data: unknown,
+  collectionKey: HealthCheckDefinition['collectionKey'],
+  requiredFields: string[] = [],
+): boolean {
+  if (requiredFields.length === 0) {
+    return true;
+  }
+
+  const items = getCollectionItems(data, collectionKey);
+  if (items.length === 0) {
+    return true;
+  }
+
+  const first = items[0];
+  if (!first || typeof first !== 'object' || Array.isArray(first)) {
+    return false;
+  }
+
+  const record = first as Record<string, unknown>;
+  return requiredFields.some((field) => {
+    const value = record[field];
+    return typeof value === 'string' ? value.trim().length > 0 : value !== undefined && value !== null;
+  });
 }
 
 function aggregateStatus(checks: HealthCheckResult[]): HealthCheckStatus {
@@ -365,8 +434,15 @@ async function runSingleCheck(
     }
 
     const count = typeof body.meta?.total === 'number' ? body.meta.total : toCount(body.data);
-    const status: HealthCheckStatus = count === 0 ? 'degraded' : 'ok';
+    const shapeOk = hasRequiredRepresentativeFields(body.data, check.collectionKey, check.requiredFields);
+    const status: HealthCheckStatus = count === 0 || !shapeOk ? 'degraded' : 'ok';
     const first = params.includeSamples ? toFirstName(body.data) : undefined;
+    const message =
+      !shapeOk && count !== 0
+        ? `response missing required fields: ${(check.requiredFields || []).join(', ')}`
+        : count === null
+          ? 'response ok'
+          : `${count} item(s) returned`;
 
     return {
       id: check.id,
@@ -375,7 +451,7 @@ async function runSingleCheck(
       status,
       durationMs,
       httpStatus: response.status,
-      message: count === null ? 'response ok' : `${count} item(s) returned`,
+      message,
       ...(first ? { sample: { first } } : {}),
     };
   } catch (error) {

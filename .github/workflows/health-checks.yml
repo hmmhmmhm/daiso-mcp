@@ -1,0 +1,60 @@
+name: Health Checks
+
+on:
+  schedule:
+    # 3시간마다 실행
+    - cron: '10 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-checks:
+    runs-on: ubuntu-latest
+    name: Service health checks
+    steps:
+      - name: Run health checks
+        env:
+          HEALTH_CHECK_SECRET: ${{ secrets.HEALTH_CHECK_SECRET }}
+          HEALTH_CHECK_URL: ${{ vars.HEALTH_CHECK_URL || 'https://mcp.aka.page' }}
+        run: |
+          if [ -z "${HEALTH_CHECK_SECRET}" ]; then
+            echo "HEALTH_CHECK_SECRET is not set"
+            exit 1
+          fi
+
+          curl -fsS \
+            -H "Authorization: Bearer ${HEALTH_CHECK_SECRET}" \
+            "${HEALTH_CHECK_URL}/api/health/checks?mode=quick&fresh=true&includeSamples=true" \
+            -o health-checks.json
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const payload = JSON.parse(fs.readFileSync('health-checks.json', 'utf8'));
+          const failedChecks = (payload.checks || []).filter((check) => check.status === 'fail');
+          const degradedChecks = (payload.checks || []).filter((check) => check.status === 'degraded');
+          const lines = [...failedChecks, ...degradedChecks].map((check) => {
+            const sample = check.sample?.first ? ` sample=${check.sample.first}` : '';
+            return `${check.id}:${check.status}:${check.message}${sample}`;
+          });
+          fs.writeFileSync('health-check-summary.txt', lines.join('\n'));
+          if (failedChecks.length > 0 || degradedChecks.length > 0 || payload.status !== 'ok') {
+            process.exitCode = 1;
+          }
+          NODE
+
+      - name: Notify health failure
+        if: failure()
+        env:
+          MOSHI_WEBHOOK_TOKEN: ${{ secrets.MOSHI_WEBHOOK_TOKEN }}
+        run: |
+          if [ -z "${MOSHI_WEBHOOK_TOKEN}" ]; then
+            echo "MOSHI_WEBHOOK_TOKEN is not set; skipping failure notification"
+            exit 0
+          fi
+
+          SUMMARY="$(cat health-check-summary.txt 2>/dev/null || echo 'health check command failed')"
+          curl -X POST https://api.getmoshi.app/api/webhook \
+            -H "Content-Type: application/json" \
+            -d "{\"token\":\"${MOSHI_WEBHOOK_TOKEN}\",\"title\":\"Health Checks Failed\",\"message\":\"${GITHUB_REPOSITORY}: ${SUMMARY}\"}"
