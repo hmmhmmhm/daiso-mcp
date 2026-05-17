@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { CLI_SMOKE_COMMANDS, runCliSmoke } from '../../scripts/cli-smoke.ts';
+import { CLI_SMOKE_COMMANDS, runCliSmoke } from '../../scripts/ops/cli-smoke.ts';
 
 describe('runCliSmoke', () => {
   it('최소 정보 사용자 시나리오를 smoke 목록에 포함한다', () => {

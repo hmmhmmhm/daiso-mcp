@@ -6,7 +6,7 @@ import {
   buildDailyWindows,
   fetchDailyWorkerInvocations,
   fetchWorkerInvocationsForWindow,
-} from '../../scripts/workers-chart-data.ts';
+} from '../../scripts/ops/workers-chart-data.ts';
 
 const mockFetch = vi.fn();
 

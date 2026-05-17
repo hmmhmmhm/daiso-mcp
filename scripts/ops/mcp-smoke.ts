@@ -4,7 +4,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { DEFAULT_MCP_URL } from '../src/cli/constants.js';
+import { DEFAULT_MCP_URL } from '../../src/cli/constants.js';
 
 type WriteFn = (message: string) => void;
 

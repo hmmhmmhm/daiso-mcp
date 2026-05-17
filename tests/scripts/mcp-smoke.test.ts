@@ -2,7 +2,7 @@
  * MCP smoke 스크립트 테스트
  */
 import { describe, expect, it, vi } from 'vitest';
-import { MCP_SMOKE_SCENARIOS, MCP_SMOKE_TOOL_NAMES, runMcpSmoke } from '../../scripts/mcp-smoke.js';
+import { MCP_SMOKE_SCENARIOS, MCP_SMOKE_TOOL_NAMES, runMcpSmoke } from '../../scripts/ops/mcp-smoke.js';
 
 describe('runMcpSmoke', () => {
   it('상품명 기반 재고 도구를 필수 smoke 대상으로 포함한다', () => {
