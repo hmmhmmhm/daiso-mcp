@@ -59,6 +59,23 @@ describe('MCP client smoke', () => {
     }
   });
 
+  it('대표 도구의 fallback outputSchema가 실제 결과 필드를 명시한다', async () => {
+    const client = await createLocalMcpClient();
+    try {
+      const tools = await client.listTools();
+      const byName = new Map(tools.tools.map((tool) => [tool.name, tool]));
+
+      expect(byName.get('daiso_search_products')?.outputSchema?.properties).toHaveProperty('products');
+      expect(byName.get('daiso_find_stores')?.outputSchema?.properties).toHaveProperty('stores');
+      expect(byName.get('gs25_check_inventory')?.outputSchema?.properties).toHaveProperty('inventory');
+      expect(byName.get('cgv_find_theaters')?.outputSchema?.properties).toHaveProperty('theaters');
+      expect(byName.get('megabox_list_now_showing')?.outputSchema?.properties).toHaveProperty('movies');
+      expect(byName.get('seveneleven_get_search_popwords')?.outputSchema?.properties).toHaveProperty('keywords');
+    } finally {
+      await client.close();
+    }
+  });
+
   it('SDK 클라이언트가 도구 목록을 조회하고 상품명 기반 다이소 재고 도구를 호출한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

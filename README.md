@@ -223,6 +223,14 @@ npx daiso products 수납박스 --json
 - 전체 개별 엔드포인트 스펙(JSON): `https://mcp.aka.page/openapi-full.json`
 - 전체 개별 엔드포인트 스펙(YAML): `https://mcp.aka.page/openapi-full.yaml`
 
+### MCP 표준 응답 모델
+
+MCP 도구 응답은 각 서비스의 원본 필드를 유지하면서, 클라이언트가 공통 UI를 만들 수 있도록 `standard` 필드를 함께 제공합니다.
+
+- `standard.products`: 상품/영화 목록을 `code`, `name`, `price`, `imageUrl`, `raw` 형태로 정규화합니다.
+- `standard.stores`: 매장 목록을 `code`, `name`, `address`, `distanceMeters`, `raw` 형태로 정규화합니다.
+- `standard.theaters`: 영화관 목록을 `code`, `name`, `address`, `distanceMeters`, `raw` 형태로 정규화합니다.
+
 ### 운영 헬스 체크
 
 공개 상태 페이지: **[Daiso MCP Status](https://aka-page.betteruptime.com/)**
