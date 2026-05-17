@@ -5,9 +5,9 @@
 <br>
 <br>
 
-# Daiso MCP Server
+# Daiso MCP 및 Skill
 
-다이소(제품/매장/재고), 롯데마트(매장/상품), GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표) 조회 기능을 AI에 연결합니다.
+다이소(제품/매장/재고), 롯데마트(매장/상품), GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표) 조회 기능을 MCP, CLI, Codex Skill로 AI에 연결합니다.
 
 <br>
 
@@ -215,6 +215,15 @@ npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056
 # 원본 JSON 필요 시
 npx daiso products 수납박스 --json
 ```
+
+### Codex Skill
+
+이 저장소는 MCP 서버뿐 아니라 에이전트가 `npx daiso` CLI를 직접 고를 수 있게 하는 Codex Skill도 제공합니다.
+
+- 스킬 파일: `skills/daiso-cli/SKILL.md`
+- 명령 맵: `skills/daiso-cli/references/cli-command-map.md`
+- 기본 원칙: 쉘 실행이 가능한 환경에서는 CLI를 우선 사용하고, AI 앱 연결이 필요할 때는 MCP 서버 URL `https://mcp.aka.page`를 사용합니다.
+- 구조화 결과가 필요하면 스킬은 `npx daiso ... --json` 형태를 선택합니다.
 
 ### OpenAPI 스펙
 

@@ -97,4 +97,41 @@ describe('repository maintenance configuration', () => {
     expect(readme).toContain('standard.stores');
     expect(readme).toContain('standard.theaters');
   });
+
+  it('README는 프로젝트를 MCP 및 Skill로 설명한다', () => {
+    const readme = readText('README.md');
+
+    expect(readme).toContain('Daiso MCP 및 Skill');
+    expect(readme).toContain('skills/daiso-cli/SKILL.md');
+    expect(readme).toContain('npx daiso');
+  });
+
+  it('daiso CLI 스킬은 에이전트가 CLI와 MCP를 함께 사용할 수 있게 안내한다', () => {
+    const skill = readText('skills/daiso-cli/SKILL.md');
+    const commandMap = readText('skills/daiso-cli/references/cli-command-map.md');
+
+    expect(skill).toContain('name: daiso-cli');
+    expect(skill).toContain('description:');
+    expect(skill).toContain('npx daiso');
+    expect(skill).toContain('--json');
+    expect(skill).toContain('https://mcp.aka.page');
+    expect(skill).toContain('CLI를 우선 사용');
+    expect(skill).toContain('다이소');
+    expect(skill).toContain('편의점');
+    expect(skill).toContain('올리브영');
+    expect(skill).toContain('references/cli-command-map.md');
+    expect(skill).toContain('Multi-step Korean request patterns');
+    expect(skill).toContain('위치가 없으면');
+    expect(skill).toContain('today in KST');
+    expect(skill).toContain('npx 또는 Node.js를 사용할 수 없으면');
+    expect(commandMap).toContain('gs25-products');
+    expect(commandMap).toContain('seveneleven-products');
+    expect(commandMap).toContain('get /api/cgv/movies');
+    expect(commandMap).toContain('<YYYYMMDD>');
+    expect(commandMap).toContain('quoted Korean strings');
+    expect(commandMap).toContain('theaterId');
+    expect(commandMap).toContain('movieId');
+    expect(commandMap).not.toContain('/api/megabox/seats --theaterCode');
+    expect(commandMap).not.toContain('/api/lottecinema/seats --theaterCode');
+  });
 });
