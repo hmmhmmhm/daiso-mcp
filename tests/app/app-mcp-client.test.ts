@@ -47,6 +47,18 @@ async function createLocalMcpClient(): Promise<Client> {
 }
 
 describe('MCP client smoke', () => {
+  it('SDK 도구 목록의 모든 도구가 outputSchema를 노출한다', async () => {
+    const client = await createLocalMcpClient();
+    try {
+      const tools = await client.listTools();
+      const missing = tools.tools.filter((tool) => !tool.outputSchema).map((tool) => tool.name);
+
+      expect(missing).toEqual([]);
+    } finally {
+      await client.close();
+    }
+  });
+
   it('SDK 클라이언트가 도구 목록을 조회하고 상품명 기반 다이소 재고 도구를 호출한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

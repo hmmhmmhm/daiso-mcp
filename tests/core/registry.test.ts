@@ -52,6 +52,28 @@ function createMockTool(name: string): ToolRegistration {
   };
 }
 
+function createJsonMockTool(name: string): ToolRegistration {
+  return {
+    name,
+    metadata: {
+      title: `${name} Tool`,
+      description: `${name} 도구 설명`,
+      inputSchema: {},
+    },
+    handler: async (): Promise<McpToolResponse> => ({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            products: [{ itemCode: '8801', itemName: '콜라', viewPrice: 1500 }],
+            stores: [{ storeCode: 'S1', storeName: '강남점', distanceM: 120 }],
+          }),
+        },
+      ],
+    }),
+  };
+}
+
 describe('ServiceRegistry', () => {
   let registry: ServiceRegistry;
 
@@ -152,8 +174,16 @@ describe('ServiceRegistry', () => {
       registry.applyToServer(mockServer as never);
 
       expect(mockServer.registerTool).toHaveBeenCalledTimes(2);
-      expect(mockServer.registerTool).toHaveBeenCalledWith('tool1', tool1.metadata, expect.any(Function));
-      expect(mockServer.registerTool).toHaveBeenCalledWith('tool2', tool2.metadata, expect.any(Function));
+      expect(mockServer.registerTool).toHaveBeenCalledWith(
+        'tool1',
+        expect.objectContaining(tool1.metadata),
+        expect.any(Function),
+      );
+      expect(mockServer.registerTool).toHaveBeenCalledWith(
+        'tool2',
+        expect.objectContaining(tool2.metadata),
+        expect.any(Function),
+      );
     });
 
     it('등록된 핸들러가 올바른 형식으로 결과를 반환한다', async () => {
@@ -174,7 +204,97 @@ describe('ServiceRegistry', () => {
 
       expect(result).toEqual({
         content: [{ type: 'text', text: 'test result' }],
+        structuredContent: { text: 'test result' },
       });
+    });
+
+    it('outputSchema가 없는 도구에도 느슨한 기본 스키마를 등록한다', () => {
+      const tool = createMockTool('test-tool');
+      const service = createMockService('test', [tool]);
+
+      registry.register(() => service);
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+
+      const metadata = mockServer.registerTool.mock.calls[0][1];
+      expect(metadata.outputSchema).toBeDefined();
+      expect(typeof metadata.outputSchema.safeParse).toBe('function');
+      expect(metadata.outputSchema.safeParse({ arbitrary: 'value' }).success).toBe(true);
+    });
+
+    it('JSON text 응답을 structuredContent로 승격하고 공통 결과 모델을 덧붙인다', async () => {
+      const tool = createJsonMockTool('json-tool');
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      const result = await registeredHandler({});
+
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          products: expect.any(Array),
+          stores: expect.any(Array),
+          standard: {
+            products: [
+              expect.objectContaining({
+                code: '8801',
+                name: '콜라',
+                price: 1500,
+              }),
+            ],
+            stores: [
+              expect.objectContaining({
+                code: 'S1',
+                name: '강남점',
+                distanceMeters: 120,
+              }),
+            ],
+          },
+        }),
+      );
+    });
+
+    it('도구 예외를 표준 MCP 에러 구조로 반환한다', async () => {
+      const tool: ToolRegistration = {
+        ...createMockTool('error-tool'),
+        handler: async () => {
+          throw new Error('upstream failed');
+        },
+      };
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      const result = await registeredHandler({});
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          isError: true,
+          content: [{ type: 'text', text: 'upstream failed' }],
+          structuredContent: {
+            error: expect.objectContaining({
+              code: 'TOOL_EXECUTION_FAILED',
+              message: 'upstream failed',
+              operation: 'error-tool',
+              retryable: true,
+            }),
+          },
+        }),
+      );
     });
   });
 

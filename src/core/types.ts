@@ -16,6 +16,7 @@ export interface McpToolResponse {
     text: string;
   }>;
   structuredContent?: Record<string, unknown>;
+  isError?: boolean;
 }
 
 /**

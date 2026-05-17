@@ -3,6 +3,7 @@
  */
 
 import type { Context } from 'hono';
+import { toStandardErrorDiagnostics } from '../core/errors.js';
 
 export interface AppBindings {
   ZYTE_API_KEY?: string;
@@ -22,6 +23,7 @@ export interface ApiResponse<T> {
     code: string;
     message: string;
   };
+  diagnostics?: ReturnType<typeof toStandardErrorDiagnostics>;
   meta?: {
     total?: number;
     page?: number;
@@ -53,6 +55,7 @@ export function errorResponse(
     {
       success: false,
       error: { code, message },
+      diagnostics: toStandardErrorDiagnostics(code, message, { status }),
     },
     status,
   );
