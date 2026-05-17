@@ -42,7 +42,17 @@ function formatMeta(meta: unknown): string[] {
 }
 
 function detectName(item: Record<string, unknown>): string {
-  const keys = ['name', 'productName', 'storeName', 'theaterName', 'movieName'];
+  const keys = [
+    'name',
+    'productName',
+    'goodsNm',
+    'goodsName',
+    'itemName',
+    'searchItemName',
+    'storeName',
+    'theaterName',
+    'movieName',
+  ];
   for (const key of keys) {
     if (typeof item[key] === 'string' && item[key].trim().length > 0) {
       return item[key] as string;
@@ -68,8 +78,18 @@ function formatCollection(title: string, items: unknown): string[] {
 
     const name = detectName(entry);
     const id =
-      entry.id ?? entry.productId ?? entry.PD_NO ?? entry.storeCode ?? entry.theaterId ?? entry.movieId;
-    const price = entry.price ?? entry.prc ?? entry.PD_PRC;
+      entry.id ??
+      entry.productId ??
+      entry.PD_NO ??
+      entry.itemCode ??
+      entry.pluCd ??
+      entry.goodsNumber ??
+      entry.productNo ??
+      entry.storeCode ??
+      entry.bizNo ??
+      entry.theaterId ??
+      entry.movieId;
+    const price = entry.price ?? entry.prc ?? entry.PD_PRC ?? entry.viewPrice ?? entry.priceToPay ?? entry.searchItemSellPrice;
 
     let detail = `- ${name}`;
     if (id !== undefined) {
@@ -80,9 +100,17 @@ function formatCollection(title: string, items: unknown): string[] {
     }
 
     const detailParts = [
-      entry.address,
+      entry.address ?? entry.storeAddress,
       entry.distance !== undefined ? `${toText(entry.distance)}km` : undefined,
+      entry.distanceKm !== undefined ? `${toText(entry.distanceKm)}km` : undefined,
+      entry.distanceM !== undefined ? `${toText(entry.distanceM)}m` : undefined,
       entry.quantity !== undefined ? `수량 ${toText(entry.quantity)}` : undefined,
+      entry.stock !== undefined ? `수량 ${toText(entry.stock)}` : undefined,
+      entry.realStockQuantity !== undefined ? `수량 ${toText(entry.realStockQuantity)}` : undefined,
+      entry.bizQty !== undefined ? `수량 ${toText(entry.bizQty)}` : undefined,
+      entry.remainQuantity !== undefined ? `수량 ${toText(entry.remainQuantity)}` : undefined,
+      entry.o2oRemainQuantity !== undefined ? `수량 ${toText(entry.o2oRemainQuantity)}` : undefined,
+      entry.stockLabel,
     ].filter((value): value is string | number | boolean => value !== undefined);
     if (detailParts.length > 0) {
       detail += ` / ${detailParts.map(toText).join(' / ')}`;
@@ -93,6 +121,31 @@ function formatCollection(title: string, items: unknown): string[] {
 
   if (items.length > preview.length) {
     lines.push(`...외 ${items.length - preview.length}건`);
+  }
+
+  return lines;
+}
+
+function formatNestedInventory(data: Record<string, unknown>): string[] {
+  const lines: string[] = [];
+
+  if (isRecord(data.nearbyStores)) {
+    lines.push(...formatCollection('주변 매장', data.nearbyStores.stores));
+  }
+
+  if (isRecord(data.inventory)) {
+    lines.push(...formatCollection('재고 매장', data.inventory.stores));
+    lines.push(...formatCollection('재고 항목', data.inventory.items));
+    lines.push(...formatCollection('재고 상품', data.inventory.products));
+
+    if (Array.isArray(data.inventory.products)) {
+      for (const product of data.inventory.products.slice(0, 3)) {
+        if (!isRecord(product) || !isRecord(product.storeInventory)) {
+          continue;
+        }
+        lines.push(...formatCollection('상품별 매장 재고', product.storeInventory.stores));
+      }
+    }
   }
 
   return lines;
@@ -186,6 +239,8 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
   } else if (command === 'cu-inventory') {
     lines.push(...formatCollection('매장 목록', isRecord(data.nearbyStores) ? data.nearbyStores.stores : undefined));
     lines.push(...formatCollection('재고 항목', isRecord(data.inventory) ? data.inventory.items : undefined));
+  } else if (command.endsWith('-inventory')) {
+    lines.push(...formatNestedInventory(data));
   } else {
     lines.push(...formatCollection('제품 목록', data.products));
     lines.push(...formatCollection('매장 목록', data.stores));

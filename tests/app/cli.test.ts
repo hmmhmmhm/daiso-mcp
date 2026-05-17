@@ -144,6 +144,25 @@ describe('CLI', () => {
     expect(output[0]).toContain('"success": true');
   });
 
+  it('get 명령의 API 파라미터 오류는 다음 CLI 흐름을 안내한다', async () => {
+    const { deps, errors } = createDeps();
+    deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: vi.fn().mockResolvedValue(JSON.stringify({
+        success: false,
+        error: { code: 'MISSING_PRODUCT_ID', message: '제품 ID가 필요합니다.' },
+      })),
+    } as unknown as Response);
+
+    const exitCode = await runCli(['get', '/api/daiso/inventory'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors.join('\n')).toContain('요청 실패: HTTP 400');
+    expect(errors.join('\n')).toContain('제품명만 알면 먼저 daiso products <상품명>');
+    expect(errors.join('\n')).toContain('다음 명령 예시: daiso inventory <productId> --keyword 강남역');
+  });
+
   it('products 명령은 검색어로 제품 API를 호출한다', async () => {
     const { deps, output } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
@@ -332,6 +351,25 @@ describe('CLI', () => {
     expect(exitCode).toBe(0);
     expect(output.join('\n')).toContain('강남역점 [11199]');
     expect(output.join('\n')).toContain('서울 강남구 강남대로');
+  });
+
+  it('다른 서비스 상품 출력은 서비스별 코드와 가격을 보여준다', async () => {
+    const { output, deps } = createDeps();
+    deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          products: [{ goodsNm: '두바이초콜릿', pluCd: '8800244010504', viewPrice: 3000 }],
+        },
+      }),
+    } as unknown as Response);
+
+    const exitCode = await runCli(['emart24-products', '두바이'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(output.join('\n')).toContain('두바이초콜릿 [8800244010504]');
+    expect(output.join('\n')).toContain('3000원');
   });
 
   it('cu-stores 명령은 CU 매장 API를 호출한다', async () => {
@@ -632,6 +670,37 @@ describe('CLI', () => {
     );
   });
 
+  it('다른 서비스 재고 출력은 매장 코드와 주소와 수량을 보여준다', async () => {
+    const { output, deps } = createDeps();
+    deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          itemCode: '8801056038861',
+          inventory: {
+            stores: [
+              {
+                storeName: 'GS25 강남점',
+                storeCode: 'V1',
+                storeAddress: '서울 강남구',
+                realStockQuantity: 3,
+                distance: 0.2,
+              },
+            ],
+          },
+        },
+      }),
+    } as unknown as Response);
+
+    const exitCode = await runCli(['gs25-inventory', '오감자', '--storeKeyword', '강남'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(output.join('\n')).toContain('GS25 강남점 [V1]');
+    expect(output.join('\n')).toContain('서울 강남구');
+    expect(output.join('\n')).toContain('수량 3');
+  });
+
   it('seveneleven-products 명령은 세븐일레븐 상품 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
@@ -776,6 +845,43 @@ describe('CLI', () => {
     expect(exitCode).toBe(1);
     expect(errors.join('\n')).toContain('알 수 없는 옵션: --store');
     expect(errors.join('\n')).toContain('매장명은 --keyword로 전달하세요');
+  });
+
+  it.each([
+    ['version', ['version']],
+    ['url', ['url']],
+    ['health', ['health']],
+    ['claude', ['claude']],
+    ['products', ['products', '수납박스']],
+    ['product', ['product', '1034604']],
+    ['stores', ['stores', '강남역']],
+    ['display-location', ['display-location', '1034604', '04515']],
+    ['cu-stores', ['cu-stores', '강남']],
+    ['cu-inventory', ['cu-inventory', '과자']],
+    ['lottecinema-theaters', ['lottecinema-theaters', '잠실']],
+    ['lottecinema-movies', ['lottecinema-movies', '잠실']],
+    ['lottecinema-seats', ['lottecinema-seats', '잠실']],
+    ['emart24-stores', ['emart24-stores', '강남']],
+    ['emart24-products', ['emart24-products', '두바이']],
+    ['emart24-inventory', ['emart24-inventory', '8800244010504', '--bizNoArr', '28339']],
+    ['lottemart-stores', ['lottemart-stores', '잠실']],
+    ['lottemart-products', ['lottemart-products', '콜라', '--storeName', '강변점']],
+    ['gs25-stores', ['gs25-stores', '강남']],
+    ['gs25-products', ['gs25-products', '오감자']],
+    ['gs25-inventory', ['gs25-inventory', '오감자']],
+    ['seveneleven-products', ['seveneleven-products', '삼각김밥']],
+    ['seveneleven-stores', ['seveneleven-stores', '안산 중앙역']],
+    ['seveneleven-popwords', ['seveneleven-popwords']],
+    ['seveneleven-catalog', ['seveneleven-catalog']],
+  ])('%s 명령은 알 수 없는 옵션을 거부한다', async (_command, args) => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli([...args, '--foo', 'bar'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors.join('\n')).toContain('알 수 없는 옵션: --foo');
+    expect(errors.join('\n')).toContain('도움말: daiso help');
+    expect(deps.fetchImpl).not.toHaveBeenCalled();
   });
 
   it('health 명령은 예외를 처리한다', async () => {

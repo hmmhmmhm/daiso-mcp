@@ -78,3 +78,22 @@ export function findUnknownOption(
 
   return null;
 }
+
+export function writeUnknownOptionError(
+  options: Record<string, string>,
+  allowedOptions: readonly string[],
+  writeErr: (message: string) => void,
+  hint?: string,
+): boolean {
+  const unknownOption = findUnknownOption(options, allowedOptions);
+  if (!unknownOption) {
+    return false;
+  }
+
+  writeErr(`알 수 없는 옵션: --${unknownOption}`);
+  if (hint) {
+    writeErr(hint);
+  }
+  writeErr('도움말: daiso help');
+  return true;
+}

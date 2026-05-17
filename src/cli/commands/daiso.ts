@@ -4,8 +4,10 @@
 
 import { printCommandHelp } from '../../cliHelp.js';
 import type { CliDeps } from '../types.js';
-import { findUnknownOption, parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../args.js';
+import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions, writeUnknownOptionError } from '../args.js';
 import { requestAndPrintResponse, requestAndPrintStoresWithKeywordFallback } from '../http.js';
+
+const COMMON_OPTIONS = ['help', 'json'] as const;
 
 export async function handleGet(options: string[], deps: CliDeps): Promise<number> {
   const parsed = parseCliArgs(options);
@@ -36,6 +38,9 @@ export async function handleProducts(options: string[], deps: CliDeps): Promise<
   if (parsed.options.help === 'true') {
     return printCommandHelp('products', deps.writeOut, deps.writeErr);
   }
+  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'page', 'pageSize'], deps.writeErr)) {
+    return 1;
+  }
 
   const query = parsed.positionals[0];
   if (!query) {
@@ -60,6 +65,9 @@ export async function handleProduct(options: string[], deps: CliDeps): Promise<n
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('product', deps.writeOut, deps.writeErr);
+  }
+  if (writeUnknownOptionError(parsed.options, COMMON_OPTIONS, deps.writeErr)) {
+    return 1;
   }
 
   const productId = parsed.positionals[0];
@@ -90,6 +98,15 @@ export async function handleStores(options: string[], deps: CliDeps): Promise<nu
   if (keyword) {
     parsed.options.keyword = keyword;
   }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'keyword', 'sido', 'gugun', 'dong', 'limit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
+  }
 
   if (!parsed.options.keyword && !parsed.options.sido) {
     deps.writeErr(
@@ -113,7 +130,7 @@ export async function handleInventory(options: string[], deps: CliDeps): Promise
     return printCommandHelp('inventory', deps.writeOut, deps.writeErr);
   }
 
-  const unknownOption = findUnknownOption(parsed.options, [
+  if (writeUnknownOptionError(parsed.options, [
     'help',
     'json',
     'keyword',
@@ -121,10 +138,7 @@ export async function handleInventory(options: string[], deps: CliDeps): Promise
     'lng',
     'page',
     'pageSize',
-  ]);
-  if (unknownOption) {
-    deps.writeErr(`알 수 없는 옵션: --${unknownOption}`);
-    deps.writeErr('매장명은 --keyword로 전달하세요. 예: daiso inventory 1034604 --keyword 강남역');
+  ], deps.writeErr, '매장명은 --keyword로 전달하세요. 예: daiso inventory 1034604 --keyword 강남역')) {
     return 1;
   }
 
@@ -153,6 +167,9 @@ export async function handleDisplayLocation(options: string[], deps: CliDeps): P
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('display-location', deps.writeOut, deps.writeErr);
+  }
+  if (writeUnknownOptionError(parsed.options, COMMON_OPTIONS, deps.writeErr)) {
+    return 1;
   }
 
   const productId = parsed.positionals[0];

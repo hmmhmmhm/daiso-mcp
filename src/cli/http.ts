@@ -7,6 +7,49 @@ import { buildDaisoStoreKeywordVariants } from '../utils/daisoKeyword.js';
 import type { FetchLike, WriteFn } from './types.js';
 import { applyOptionsToQuery, toUrl } from './args.js';
 
+function parseErrorCode(bodyText: string): string {
+  try {
+    const parsed = JSON.parse(bodyText) as { error?: { code?: unknown } };
+    return typeof parsed.error?.code === 'string' ? parsed.error.code : '';
+  } catch {
+    return '';
+  }
+}
+
+function buildCliHint(command: string, url: URL, bodyText: string): string[] {
+  if (command !== 'get') {
+    return [];
+  }
+
+  const code = parseErrorCode(bodyText);
+  if (url.pathname === '/api/daiso/inventory' || code === 'MISSING_PRODUCT_ID') {
+    return [
+      '힌트: 제품명만 알면 먼저 daiso products <상품명> 명령으로 productId를 확인하세요.',
+      '다음 명령 예시: daiso inventory <productId> --keyword 강남역',
+    ];
+  }
+
+  if (url.pathname === '/api/daiso/products') {
+    return ['힌트: 제품 검색은 daiso products <상품명> 명령을 사용할 수 있습니다.'];
+  }
+
+  if (url.pathname === '/api/daiso/display-location' || code === 'MISSING_STORE_CODE') {
+    return [
+      '힌트: storeCode는 daiso inventory <productId> --keyword <매장명> 결과에서 확인하세요.',
+      '다음 명령 예시: daiso display-location <productId> <storeCode>',
+    ];
+  }
+
+  if (url.pathname === '/api/lottemart/products') {
+    return [
+      '힌트: 롯데마트 상품 조회는 매장 정보가 필요합니다.',
+      '다음 명령 예시: daiso lottemart-products <상품명> --storeName <매장명>',
+    ];
+  }
+
+  return [];
+}
+
 export async function requestAndPrintResponse(
   fetchImpl: FetchLike,
   writeOut: WriteFn,
@@ -23,6 +66,9 @@ export async function requestAndPrintResponse(
       writeErr(`요청 실패: HTTP ${response.status}`);
       if (bodyText) {
         writeErr(bodyText);
+        for (const hint of buildCliHint(command, url, bodyText)) {
+          writeErr(hint);
+        }
       }
       return 1;
     }

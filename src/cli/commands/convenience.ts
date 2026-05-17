@@ -5,8 +5,10 @@
 
 import { printCommandHelp } from '../../cliHelp.js';
 import type { CliDeps } from '../types.js';
-import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../args.js';
+import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions, writeUnknownOptionError } from '../args.js';
 import { requestAndPrintResponse } from '../http.js';
+
+const COMMON_OPTIONS = ['help', 'json'] as const;
 
 export async function handleCuStores(options: string[], deps: CliDeps): Promise<number> {
   const parsed = parseCliArgs(options);
@@ -17,6 +19,9 @@ export async function handleCuStores(options: string[], deps: CliDeps): Promise<
   const keyword = parsed.positionals[0];
   if (keyword) {
     parsed.options.keyword = keyword;
+  }
+  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'keyword', 'lat', 'lng', 'limit'], deps.writeErr)) {
+    return 1;
   }
 
   const targetUrl = toUrl('/api/cu/stores');
@@ -31,6 +36,15 @@ export async function handleCuInventory(options: string[], deps: CliDeps): Promi
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('cu-inventory', deps.writeOut, deps.writeErr);
+  }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'storeKeyword', 'lat', 'lng', 'size', 'offset', 'searchSort', 'storeLimit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
   }
 
   const keyword = parsed.positionals[0];
@@ -58,6 +72,15 @@ export async function handleEmart24Stores(options: string[], deps: CliDeps): Pro
   if (keyword) {
     parsed.options.keyword = keyword;
   }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'keyword', 'area1', 'area2', 'lat', 'lng', 'service24h', 'limit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
+  }
 
   const targetUrl = toUrl('/api/emart24/stores');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
@@ -71,6 +94,9 @@ export async function handleEmart24Products(options: string[], deps: CliDeps): P
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('emart24-products', deps.writeOut, deps.writeErr);
+  }
+  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'page', 'pageSize'], deps.writeErr)) {
+    return 1;
   }
 
   const keyword = parsed.positionals[0];
@@ -92,6 +118,15 @@ export async function handleEmart24Inventory(options: string[], deps: CliDeps): 
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('emart24-inventory', deps.writeOut, deps.writeErr);
+  }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'bizNoArr', 'storeKeyword', 'area1', 'area2', 'lat', 'lng', 'storeLimit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
   }
 
   const pluCd = parsed.positionals[0];
@@ -122,6 +157,15 @@ export async function handleLotteMartStores(options: string[], deps: CliDeps): P
   if (keyword) {
     parsed.options.keyword = keyword;
   }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'keyword', 'area', 'brandVariant', 'lat', 'lng', 'limit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
+  }
 
   const targetUrl = toUrl('/api/lottemart/stores');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
@@ -135,6 +179,15 @@ export async function handleLotteMartProducts(options: string[], deps: CliDeps):
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('lottemart-products', deps.writeOut, deps.writeErr);
+  }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'storeCode', 'storeName', 'area', 'brandVariant', 'pageLimit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
   }
 
   const keyword = parsed.positionals[0];
@@ -169,6 +222,15 @@ export async function handleGs25Stores(options: string[], deps: CliDeps): Promis
   if (keyword) {
     parsed.options.keyword = keyword;
   }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'keyword', 'lat', 'lng', 'serviceCode', 'limit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
+  }
 
   const targetUrl = toUrl('/api/gs25/stores');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
@@ -182,6 +244,9 @@ export async function handleGs25Products(options: string[], deps: CliDeps): Prom
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('gs25-products', deps.writeOut, deps.writeErr);
+  }
+  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'serviceCode', 'limit'], deps.writeErr)) {
+    return 1;
   }
 
   const keyword = parsed.positionals[0];
@@ -204,6 +269,15 @@ export async function handleGs25Inventory(options: string[], deps: CliDeps): Pro
   if (parsed.options.help === 'true') {
     return printCommandHelp('gs25-inventory', deps.writeOut, deps.writeErr);
   }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'storeKeyword', 'lat', 'lng', 'serviceCode', 'storeLimit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
+  }
 
   const keyword = parsed.positionals[0];
   if (!keyword) {
@@ -224,6 +298,9 @@ export async function handleSevenElevenProducts(options: string[], deps: CliDeps
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-products', deps.writeOut, deps.writeErr);
+  }
+  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'page', 'size', 'sort'], deps.writeErr)) {
+    return 1;
   }
 
   const query = parsed.positionals[0];
@@ -248,6 +325,9 @@ export async function handleSevenElevenStores(options: string[], deps: CliDeps):
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-stores', deps.writeOut, deps.writeErr);
   }
+  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'limit'], deps.writeErr)) {
+    return 1;
+  }
 
   const keyword = parsed.positionals[0];
   if (!keyword) {
@@ -271,6 +351,9 @@ export async function handleSevenElevenPopwords(options: string[], deps: CliDeps
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-popwords', deps.writeOut, deps.writeErr);
   }
+  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'label'], deps.writeErr)) {
+    return 1;
+  }
 
   const targetUrl = toUrl('/api/seveneleven/popwords');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
@@ -284,6 +367,15 @@ export async function handleSevenElevenCatalog(options: string[], deps: CliDeps)
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-catalog', deps.writeOut, deps.writeErr);
+  }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'includeIssues', 'includeExhibition', 'limit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
   }
 
   const targetUrl = toUrl('/api/seveneleven/catalog');
@@ -304,6 +396,15 @@ export async function handleLottecinemaTheaters(options: string[], deps: CliDeps
   if (keyword) {
     parsed.options.keyword = keyword;
   }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'keyword', 'lat', 'lng', 'playDate', 'limit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
+  }
 
   const targetUrl = toUrl('/api/lottecinema/theaters');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
@@ -323,6 +424,15 @@ export async function handleLottecinemaMovies(options: string[], deps: CliDeps):
   if (keyword) {
     parsed.options.keyword = keyword;
   }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'keyword', 'playDate', 'theaterId', 'movieId', 'lat', 'lng'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
+  }
 
   const targetUrl = toUrl('/api/lottecinema/movies');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
@@ -341,6 +451,15 @@ export async function handleLottecinemaSeats(options: string[], deps: CliDeps): 
   const keyword = parsed.positionals[0];
   if (keyword) {
     parsed.options.keyword = keyword;
+  }
+  if (
+    writeUnknownOptionError(
+      parsed.options,
+      [...COMMON_OPTIONS, 'keyword', 'playDate', 'theaterId', 'movieId', 'lat', 'lng', 'limit'],
+      deps.writeErr,
+    )
+  ) {
+    return 1;
   }
 
   const targetUrl = toUrl('/api/lottecinema/seats');

@@ -12,6 +12,7 @@ import { printHelp, printCommandHelp } from './cliHelp.js';
 import { createDefaultDeps } from './cli/deps.js';
 import type { CliDeps } from './cli/types.js';
 import { DEFAULT_BASE_URL, DEFAULT_MCP_URL } from './cli/constants.js';
+import { parseCliArgs, writeUnknownOptionError } from './cli/args.js';
 import {
   handleGet,
   handleProducts,
@@ -42,6 +43,15 @@ import {
 
 export type { CliDeps } from './cli/types.js';
 export type { InteractiveCliDeps } from './cliInteractive.js';
+
+function rejectTopLevelUnknownOptions(
+  options: string[],
+  allowedOptions: readonly string[],
+  deps: CliDeps,
+): boolean {
+  const parsed = parseCliArgs(options);
+  return writeUnknownOptionError(parsed.options, allowedOptions, deps.writeErr);
+}
 
 export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<number> {
   const resolvedDeps = {
@@ -77,16 +87,25 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   }
 
   if (command === 'version' || command === '--version' || command === '-v') {
+    if (rejectTopLevelUnknownOptions(options, [], resolvedDeps)) {
+      return 1;
+    }
     resolvedDeps.writeOut(resolvedDeps.getVersion());
     return 0;
   }
 
   if (command === 'url') {
+    if (rejectTopLevelUnknownOptions(options, [], resolvedDeps)) {
+      return 1;
+    }
     resolvedDeps.writeOut(DEFAULT_MCP_URL);
     return 0;
   }
 
   if (command === 'health') {
+    if (rejectTopLevelUnknownOptions(options, [], resolvedDeps)) {
+      return 1;
+    }
     try {
       const response = await resolvedDeps.fetchImpl(`${DEFAULT_BASE_URL}/health`);
       if (!response.ok) {
@@ -115,6 +134,9 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   }
 
   if (command === 'claude') {
+    if (rejectTopLevelUnknownOptions(options, ['exec'], resolvedDeps)) {
+      return 1;
+    }
     const cliArgs = ['mcp', 'add', 'daiso', DEFAULT_BASE_URL, '--transport', 'sse'];
 
     if (options.includes('--exec')) {
