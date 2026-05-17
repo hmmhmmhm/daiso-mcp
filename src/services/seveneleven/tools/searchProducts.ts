@@ -14,6 +14,13 @@ interface SearchProductsArgs {
   timeoutMs?: number;
 }
 
+function buildTextResponse(payload: Record<string, unknown>): McpToolResponse {
+  return {
+    content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }],
+    structuredContent: payload,
+  };
+}
+
 async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse> {
   const { query, page = 1, size = 20, sort = 'recommend', timeoutMs = 15000 } = args;
 
@@ -28,29 +35,30 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     timeout: timeoutMs,
   });
 
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(
-          {
-            query: result.query,
-            page,
-            size,
-            sort,
-            totalCount: result.totalCount,
-            count: result.products.length,
-            collectionIds: result.collectionIds,
-            appliedQueries: result.appliedQueries,
-            products: result.products,
-          },
-          null,
-          2,
-        ),
-      },
-    ],
-  };
+  return buildTextResponse({
+    query: result.query,
+    page,
+    size,
+    sort,
+    totalCount: result.totalCount,
+    count: result.products.length,
+    collectionIds: result.collectionIds,
+    appliedQueries: result.appliedQueries,
+    products: result.products,
+  });
 }
+
+const searchProductsOutputSchema = {
+  query: z.string().describe('적용된 검색어'),
+  page: z.number().describe('페이지 번호'),
+  size: z.number().describe('페이지 크기'),
+  sort: z.string().describe('정렬 기준'),
+  totalCount: z.number().describe('검색된 전체 상품 수'),
+  count: z.number().describe('반환된 상품 수'),
+  collectionIds: z.array(z.string()).describe('검색 컬렉션 ID 목록'),
+  appliedQueries: z.array(z.string()).describe('실제로 시도한 검색어 목록'),
+  products: z.array(z.unknown()).describe('세븐일레븐 상품 검색 결과'),
+};
 
 export function createSearchProductsTool(): ToolRegistration {
   return {
@@ -69,6 +77,7 @@ export function createSearchProductsTool(): ToolRegistration {
           .describe('정렬 기준 (기본값: recommend)'),
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
+      outputSchema: searchProductsOutputSchema,
     },
     handler: searchProducts as (args: unknown) => Promise<McpToolResponse>,
   };

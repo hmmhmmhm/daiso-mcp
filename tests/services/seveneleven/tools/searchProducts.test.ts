@@ -22,6 +22,7 @@ describe('createSearchProductsTool', () => {
 
     expect(tool.name).toBe('seveneleven_search_products');
     expect(tool.metadata.title).toBe('세븐일레븐 상품 검색');
+    expect(tool.metadata.outputSchema?.products.description).toContain('세븐일레븐 상품');
   });
 
   it('query가 없으면 에러를 던진다', async () => {
@@ -75,6 +76,7 @@ describe('createSearchProductsTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.totalCount).toBe(2);
+    expect(result.structuredContent).toMatchObject({ query: '삼각김밥', count: 2 });
     expect(parsed.count).toBe(2);
     expect(parsed.products[0].itemCode).toBe('880000000001');
     expect(parsed.products[1].itemCode).toBe('880000000002');

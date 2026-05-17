@@ -22,6 +22,7 @@ describe('createSearchProductsTool', () => {
 
     expect(tool.name).toBe('emart24_search_products');
     expect(tool.metadata.title).toBe('이마트24 상품 검색');
+    expect(tool.metadata.outputSchema?.products.description).toContain('이마트24 상품');
   });
 
   it('검색 결과를 반환한다', async () => {
@@ -39,6 +40,7 @@ describe('createSearchProductsTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.totalCount).toBe(1);
+    expect(result.structuredContent).toMatchObject({ keyword: '두바이', count: 1 });
     expect(parsed.products[0].pluCd).toBe('8800244010504');
   });
 

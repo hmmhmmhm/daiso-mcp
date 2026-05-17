@@ -22,6 +22,7 @@ describe('createSearchProductsTool', () => {
 
     expect(tool.name).toBe('gs25_search_products');
     expect(tool.metadata.title).toBe('GS25 상품 키워드 검색');
+    expect(tool.metadata.outputSchema?.products.description).toContain('GS25 상품');
   });
 
   it('keyword가 없으면 에러를 던진다', async () => {
@@ -73,6 +74,7 @@ describe('createSearchProductsTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.count).toBe(2);
+    expect(result.structuredContent).toMatchObject({ keyword: '핫식스', count: 2 });
     expect(parsed.products[0].itemCode).toBe('8801056038861');
     expect(parsed.products[0].itemName).toBe('롯데)핫식스250ML');
     expect(parsed.products[1].itemCode).toBe('8801056249212');
