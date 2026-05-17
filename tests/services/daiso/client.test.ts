@@ -66,6 +66,31 @@ describe('fetchDaisoJson', () => {
     const result = await fetchDaisoJson<{ ok: boolean }>('https://example.com/api');
     expect(result.ok).toBe(true);
   });
+
+  it('GET 계열 요청은 일시적인 5xx 응답을 기본 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
+
+    const result = await fetchDaisoJson<{ ok: boolean }>('https://example.com/api', { retryDelayMs: 0 });
+
+    expect(result.ok).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('POST 요청은 기본 재시도 대상에서 제외한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true })));
+
+    await expect(
+      fetchDaisoJson<{ ok: boolean }>('https://example.com/api', {
+        method: 'POST',
+        retryDelayMs: 0,
+      }),
+    ).rejects.toThrow('API 요청 실패: 522 Origin Timeout');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('fetchDaisoHtml', () => {

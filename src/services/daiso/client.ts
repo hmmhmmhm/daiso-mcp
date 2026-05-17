@@ -16,6 +16,11 @@ const DAISO_DEFAULT_HEADERS = {
   'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
 } as const;
 
+const DAISO_DEFAULT_FETCH_OPTIONS = {
+  retries: 1,
+  retryDelayMs: 250,
+} as const;
+
 function withDaisoHeaders(headers: HeadersInit = {}): HeadersInit {
   return {
     ...DAISO_DEFAULT_HEADERS,
@@ -25,6 +30,7 @@ function withDaisoHeaders(headers: HeadersInit = {}): HeadersInit {
 
 export async function daisoFetch(url: string, options: FetchOptions = {}): Promise<Response> {
   return fetchWithTimeout(url, {
+    ...DAISO_DEFAULT_FETCH_OPTIONS,
     ...options,
     headers: withDaisoHeaders(options.headers),
   });
@@ -32,6 +38,7 @@ export async function daisoFetch(url: string, options: FetchOptions = {}): Promi
 
 export async function fetchDaisoJson<T>(url: string, options: FetchOptions = {}): Promise<T> {
   return fetchJson<T>(url, {
+    ...DAISO_DEFAULT_FETCH_OPTIONS,
     ...options,
     headers: withDaisoHeaders(options.headers),
   });
@@ -39,6 +46,7 @@ export async function fetchDaisoJson<T>(url: string, options: FetchOptions = {})
 
 export async function fetchDaisoHtml(url: string, options: FetchOptions = {}): Promise<string> {
   return fetchText(url, {
+    ...DAISO_DEFAULT_FETCH_OPTIONS,
     ...options,
     headers: withDaisoHeaders(options.headers),
   });
@@ -121,6 +129,7 @@ export async function fetchDaisoJsonWithAuth<T>(url: string, options: FetchOptio
   const auth = await createDaisoAuthContext();
 
   return fetchJson<T>(url, {
+    ...DAISO_DEFAULT_FETCH_OPTIONS,
     ...options,
     headers: withDaisoHeaders({
       ...options.headers,
