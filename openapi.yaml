@@ -84,7 +84,7 @@ paths:
         - name: productId
           in: query
           required: false
-          description: 제품 ID 또는 상세 조회용 path 파라미터
+          description: 제품 ID 또는 상세 조회용 path 파라미터. 상품명만 알면 먼저 daisoSearchProducts 또는 /api/daiso/products로 productId를 확인하세요.
           schema:
             type: string
         - name: keyword
@@ -206,13 +206,13 @@ paths:
         - name: storeCode
           in: query
           required: false
-          description: 매장 코드
+          description: 매장 코드. 다이소 진열 위치는 /api/daiso/inventory 응답의 storeInventory.stores[].storeCode에서 확인하세요.
           schema:
             type: string
         - name: storeName
           in: query
           required: false
-          description: 매장명
+          description: 매장명. 롯데마트 상품 조회에서 storeCode가 없을 때 사용하며, 모르면 먼저 lottemartFindNearbyStores 또는 /api/lottemart/stores로 확인하세요.
           schema:
             type: string
         - name: storeKeyword
