@@ -31,3 +31,17 @@ jobs:
 
       - name: Run MCP smoke
         run: npm run mcp:smoke
+
+      - name: Notify smoke failure
+        if: failure()
+        env:
+          MOSHI_WEBHOOK_TOKEN: ${{ secrets.MOSHI_WEBHOOK_TOKEN }}
+        run: |
+          if [ -z "${MOSHI_WEBHOOK_TOKEN}" ]; then
+            echo "MOSHI_WEBHOOK_TOKEN is not set; skipping failure notification"
+            exit 0
+          fi
+
+          curl -X POST https://api.getmoshi.app/api/webhook \
+            -H "Content-Type: application/json" \
+            -d "{\"token\":\"${MOSHI_WEBHOOK_TOKEN}\",\"title\":\"External Smoke Failed\",\"message\":\"${GITHUB_REPOSITORY} ${GITHUB_WORKFLOW} failed on ${GITHUB_REF_NAME}: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

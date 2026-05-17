@@ -42,5 +42,8 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain("node-version: '20'");
     expect(workflow).toContain('npm run cli:smoke');
     expect(workflow).toContain('npm run mcp:smoke');
+    expect(workflow).toContain('Notify smoke failure');
+    expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
+    expect(workflow).toContain('if: failure()');
   });
 });
