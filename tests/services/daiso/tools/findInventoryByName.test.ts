@@ -56,6 +56,12 @@ describe('createFindInventoryByNameTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.query).toBe('수납박스');
+    expect(parsed.summary).toMatchObject({
+      headline: expect.stringContaining('수납박스'),
+      selectedProduct: '수납박스',
+      storeQuery: '강남역',
+      displayLocationHint: expect.stringContaining('daiso_get_display_location'),
+    });
     expect(parsed.selectedProduct.id).toBe('1049516');
     expect(parsed.productCandidates).toHaveLength(1);
     expect(parsed.onlineStock).toBe(4);
@@ -76,9 +82,38 @@ describe('createFindInventoryByNameTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.productCandidates).toEqual([]);
+    expect(parsed.summary.headline).toContain('상품 후보를 찾지 못했습니다');
     expect(parsed.selectedProduct).toBeNull();
     expect(parsed.storeInventory.stores).toEqual([]);
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('위치 키워드가 없으면 summary에서 미지정으로 표시한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([], 0))));
+
+    const tool = createFindInventoryByNameTool();
+    const result = await tool.handler({ query: '없는상품' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.summary.storeQuery).toBe('미지정');
+  });
+
+  it('위치 키워드 없이 조회하면 기본 위치 주변 summary를 만든다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([
+        { PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '1000' },
+      ], 1))))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { pdNo: '1049516', stck: 0 } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] })))
+      .mockResolvedValueOnce(new Response('sample-token', { headers: { 'X-DM-UID': 'dm-uid-123' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] })));
+
+    const tool = createFindInventoryByNameTool();
+    const result = await tool.handler({ query: '수납박스', pageSize: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.summary.storeQuery).toBe('미지정');
+    expect(parsed.summary.inventorySummary).toContain('기본 위치 주변');
   });
 
   it('상품명이 비어 있으면 에러를 던진다', async () => {

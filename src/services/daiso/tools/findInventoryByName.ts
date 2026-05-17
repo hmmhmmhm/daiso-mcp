@@ -20,6 +20,34 @@ interface FindInventoryByNameArgs {
   productLimit?: number;
 }
 
+function buildEmptySummary(query: string, storeQuery: string): Record<string, string> {
+  return {
+    headline: `"${query}" 상품 후보를 찾지 못했습니다.`,
+    selectedProduct: '',
+    storeQuery: storeQuery || '미지정',
+    inventorySummary: '상품 후보가 없어 온라인/매장 재고 조회를 건너뛰었습니다.',
+    displayLocationHint: '상품 후보를 먼저 확인한 뒤 daiso_get_display_location을 사용할 수 있습니다.',
+  };
+}
+
+function buildInventorySummary(args: {
+  query: string;
+  storeQuery: string;
+  selectedProductName: string;
+  onlineStock: number;
+  inStockCount: number;
+  totalStores: number;
+}): Record<string, string> {
+  const storeScope = args.storeQuery || '기본 위치 주변';
+  return {
+    headline: `"${args.query}" 조회 결과, "${args.selectedProductName}" 상품을 기준으로 재고를 확인했습니다.`,
+    selectedProduct: args.selectedProductName,
+    storeQuery: args.storeQuery || '미지정',
+    inventorySummary: `${storeScope} 매장 ${args.totalStores}곳 중 ${args.inStockCount}곳에서 재고가 확인되었습니다. 온라인 재고는 ${args.onlineStock}개입니다.`,
+    displayLocationHint: '진열 위치가 필요하면 storeInventory.stores[].storeCode로 daiso_get_display_location을 호출하세요.',
+  };
+}
+
 function toSummary(product: Product): ProductSummary {
   return {
     id: product.id,
@@ -59,6 +87,7 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
             {
               query,
               storeQuery,
+              summary: buildEmptySummary(query, storeQuery),
               productCandidates: [],
               selectedProduct: null,
               onlineStock: 0,
@@ -89,17 +118,26 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
     fetchStoreInventory(selectedProduct.id, latitude, longitude, page, pageSize, storeQuery),
   ]);
   const stores = storeResult.stores;
+  const inStockCount = stores.filter((store) => store.quantity > 0).length;
 
   const result = {
     query,
     storeQuery,
     location: { latitude, longitude },
+    summary: buildInventorySummary({
+      query,
+      storeQuery,
+      selectedProductName: selectedProduct.name,
+      onlineStock,
+      inStockCount,
+      totalStores: storeResult.totalCount,
+    }),
     productCandidates,
     selectedProduct,
     onlineStock,
     storeInventory: {
       totalStores: storeResult.totalCount,
-      inStockCount: stores.filter((store) => store.quantity > 0).length,
+      inStockCount,
       outOfStockCount: stores.filter((store) => store.quantity === 0).length,
       page,
       pageSize,
