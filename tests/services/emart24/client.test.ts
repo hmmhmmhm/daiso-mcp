@@ -23,6 +23,25 @@ afterEach(() => {
 });
 
 describe('fetchEmart24Stores', () => {
+  it('일시적 GET 실패는 기본 재시도로 복구한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 0,
+            count: 1,
+            data: [{ CODE: '28339', TITLE: '강남스퀘어점' }],
+          }),
+        ),
+      );
+
+    const result = await fetchEmart24Stores({ keyword: '강남' });
+
+    expect(result.stores[0].storeCode).toBe('28339');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
   it('매장 목록을 정규화해서 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
@@ -145,6 +164,13 @@ describe('fetchEmart24Stores', () => {
 });
 
 describe('searchEmart24Products', () => {
+  it('POST 상품 검색은 기본 재시도하지 않는다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }));
+
+    await expect(searchEmart24Products({ keyword: '두바이' })).rejects.toThrow('API 요청 실패: 522');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('상품 검색 결과를 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(

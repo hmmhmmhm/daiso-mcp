@@ -63,6 +63,10 @@ const SEVENELEVEN_DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
   'User-Agent': 'Mozilla/5.0 (Linux; Android 15)',
 } as const;
+const SEVENELEVEN_DEFAULT_FETCH_OPTIONS = {
+  retries: 1,
+  retryDelayMs: 250,
+} as const;
 
 function toNumber(value: unknown): number {
   if (typeof value === 'number') {
@@ -184,6 +188,7 @@ async function requestSevenElevenJson<T>(
   const url = `${SEVENELEVEN_API.BASE_URL}${path}`;
 
   return fetchJson<SevenElevenApiEnvelope<T>>(url, {
+    ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
     method,
     timeout,
     headers: SEVENELEVEN_DEFAULT_HEADERS,
@@ -338,6 +343,7 @@ export async function fetchSevenElevenStockProductMeta(
   const url = `${SEVENELEVEN_API.BASE_URL}${SEVENELEVEN_API.PRODUCT_SEARCH_STOCK_PATH}?itemCd=${encodedItemCode}`;
 
   const response = await fetchJson<StockProductData>(url, {
+    ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
     method: 'GET',
     timeout,
     headers: {

@@ -94,6 +94,10 @@ interface CacheEntry {
 const GS25_DEFAULT_HEADERS = {
   Accept: 'application/json, text/plain, */*',
 } as const;
+const GS25_DEFAULT_FETCH_OPTIONS = {
+  retries: 1,
+  retryDelayMs: 250,
+} as const;
 
 const GS25_STORES_CACHE_TTL_MS = 60 * 5 * 1000;
 const gs25StoresCache = new Map<string, CacheEntry>();
@@ -128,6 +132,7 @@ export async function geocodeGs25Address(address: string, options: RequestOption
   endpoint.searchParams.set('key', apiKey);
 
   const body = await fetchJson<GoogleGeocodeResponse>(endpoint.toString(), {
+    ...GS25_DEFAULT_FETCH_OPTIONS,
     method: 'GET',
     timeout,
     headers: {
@@ -226,6 +231,7 @@ export async function fetchGs25Stores(
   }
 
   const body = await fetchJson<Gs25StoreStockResponse>(endpoint.toString(), {
+    ...GS25_DEFAULT_FETCH_OPTIONS,
     method: 'GET',
     timeout,
     headers: GS25_DEFAULT_HEADERS,
@@ -260,6 +266,7 @@ export async function fetchGs25NormalizedKeyword(
   const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
 
   const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
+    ...GS25_DEFAULT_FETCH_OPTIONS,
     method: 'POST',
     timeout,
     headers: {
@@ -298,6 +305,7 @@ export async function fetchGs25SearchProducts(
   const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
 
   const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
+    ...GS25_DEFAULT_FETCH_OPTIONS,
     method: 'POST',
     timeout,
     headers: {

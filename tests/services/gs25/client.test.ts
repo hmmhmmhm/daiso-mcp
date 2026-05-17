@@ -28,6 +28,17 @@ afterEach(() => {
 });
 
 describe('fetchGs25Stores', () => {
+  it('일시적 GET 실패는 기본 재시도로 복구한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [{ storeCode: 'VE463', storeName: '강남역점' }] })));
+
+    const result = await fetchGs25Stores({ useCache: false });
+
+    expect(result.stores[0].storeCode).toBe('VE463');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
   it('GS25 매장 목록을 정규화해 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(

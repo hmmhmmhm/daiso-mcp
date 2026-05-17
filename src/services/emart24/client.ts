@@ -48,6 +48,10 @@ const EMART24_FORM_HEADERS = {
   Accept: 'application/json, text/javascript, */*; q=0.01',
   'X-Requested-With': 'XMLHttpRequest',
 } as const;
+const EMART24_DEFAULT_FETCH_OPTIONS = {
+  retries: 1,
+  retryDelayMs: 250,
+} as const;
 
 function buildKeywordVariants(keyword: string): string[] {
   const trimmed = keyword.trim();
@@ -155,6 +159,7 @@ export async function fetchEmart24Stores(
     }
 
     const body = await fetchJson<Emart24WebStoreResponse>(endpoint.toString(), {
+      ...EMART24_DEFAULT_FETCH_OPTIONS,
       method: 'GET',
       timeout,
       headers: EMART24_JSON_HEADERS,
@@ -202,6 +207,7 @@ export async function searchEmart24Products(
   const body = await fetchJson<Emart24ProductSearchResponse>(
     `${EMART24_API.EVERSE_BASE_URL}${EMART24_API.PRODUCT_SEARCH_PATH}`,
     {
+      ...EMART24_DEFAULT_FETCH_OPTIONS,
       method: 'POST',
       timeout,
       headers: EMART24_FORM_HEADERS,
@@ -239,6 +245,7 @@ export async function searchEmart24StockByStores(
   endpoint.searchParams.set('bizNoArr', filteredBizNos.join(','));
 
   return fetchJson<Emart24StockByStoreResponse>(endpoint.toString(), {
+    ...EMART24_DEFAULT_FETCH_OPTIONS,
     method: 'GET',
     timeout,
     headers: EMART24_JSON_HEADERS,
@@ -254,6 +261,7 @@ export async function fetchEmart24StoreDetail(
   return fetchJson<Emart24StoreDetailResponse>(
     `${EMART24_API.EVERSE_BASE_URL}${EMART24_API.STORE_DETAIL_PATH_PREFIX}${encodeURIComponent(bizNo)}`,
     {
+      ...EMART24_DEFAULT_FETCH_OPTIONS,
       method: 'GET',
       timeout,
       headers: EMART24_JSON_HEADERS,
