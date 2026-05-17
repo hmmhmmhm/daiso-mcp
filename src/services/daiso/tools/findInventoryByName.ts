@@ -109,6 +109,31 @@ function toSummary(product: Product): ProductSummary {
   };
 }
 
+function normalizeProductName(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, '');
+}
+
+function scoreProductCandidate(query: string, candidate: ProductSummary, index: number): number {
+  const normalizedQuery = normalizeProductName(query);
+  const normalizedName = normalizeProductName(candidate.name);
+  const exactMatchScore = normalizedName === normalizedQuery ? 100 : 0;
+  const availabilityScore = candidate.soldOut ? 0 : 20;
+  const startsWithScore = normalizedName.startsWith(normalizedQuery) ? 10 : 0;
+  const containsScore = normalizedName.includes(normalizedQuery) ? 5 : 0;
+  return exactMatchScore + availabilityScore + startsWithScore + containsScore - index / 1000;
+}
+
+function selectProductCandidate(query: string, candidates: ProductSummary[]): ProductSummary | null {
+  return (
+    candidates
+      .map((candidate, index) => ({
+        candidate,
+        score: scoreProductCandidate(query, candidate, index),
+      }))
+      .sort((a, b) => b.score - a.score)[0]?.candidate ?? null
+  );
+}
+
 async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpToolResponse> {
   const {
     query,
@@ -126,7 +151,7 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
 
   const productResult = await fetchProducts(query, 1, productLimit);
   const productCandidates = productResult.products.map(toSummary);
-  const selectedProduct = productCandidates[0] ?? null;
+  const selectedProduct = selectProductCandidate(query, productCandidates);
 
   if (!selectedProduct) {
     return buildTextResponse({

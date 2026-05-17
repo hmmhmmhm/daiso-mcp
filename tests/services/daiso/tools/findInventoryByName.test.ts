@@ -96,6 +96,31 @@ describe('createFindInventoryByNameTool', () => {
     expect(parsed.nextSteps.storeCodeSource).toContain('storeInventory.stores[].storeCode');
   });
 
+  it('정확히 일치하는 비품절 상품 후보를 우선 선택한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([
+        { PD_NO: '1000000', PDNM: '정리함', PD_PRC: '1000', SOLD_OUT_YN: 'N' },
+        { PD_NO: '1000001', PDNM: '수납박스 커버', PD_PRC: '1000', SOLD_OUT_YN: 'N' },
+        { PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '2000', SOLD_OUT_YN: 'N' },
+        { PD_NO: '1000003', PDNM: '수납박스', PD_PRC: '3000', SOLD_OUT_YN: 'Y' },
+      ], 4))))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { pdNo: '1049516', stck: 4 } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [] })))
+      .mockResolvedValueOnce(new Response('sample-token', { headers: { 'X-DM-UID': 'dm-uid-123' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] })));
+
+    const tool = createFindInventoryByNameTool();
+    const result = await tool.handler({ query: '수납박스', productLimit: 4, pageSize: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.selectedProduct).toMatchObject({
+      id: '1049516',
+      name: '수납박스',
+      soldOut: false,
+    });
+    expect(parsed.summary.selectedProduct).toBe('수납박스');
+  });
+
   it('상품 후보가 없으면 재고 조회 없이 빈 결과를 반환한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([], 0))));
 
