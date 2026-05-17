@@ -5,10 +5,9 @@
 
 import { printCommandHelp } from '../../cliHelp.js';
 import type { CliDeps } from '../types.js';
-import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions, writeUnknownOptionError } from '../args.js';
+import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../args.js';
+import { validateCommandOptions } from '../commandOptions.js';
 import { requestAndPrintResponse } from '../http.js';
-
-const COMMON_OPTIONS = ['help', 'json'] as const;
 
 export async function handleCuStores(options: string[], deps: CliDeps): Promise<number> {
   const parsed = parseCliArgs(options);
@@ -20,7 +19,7 @@ export async function handleCuStores(options: string[], deps: CliDeps): Promise<
   if (keyword) {
     parsed.options.keyword = keyword;
   }
-  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'keyword', 'lat', 'lng', 'limit'], deps.writeErr)) {
+  if (validateCommandOptions('cu-stores', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -38,11 +37,7 @@ export async function handleCuInventory(options: string[], deps: CliDeps): Promi
     return printCommandHelp('cu-inventory', deps.writeOut, deps.writeErr);
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'storeKeyword', 'lat', 'lng', 'size', 'offset', 'searchSort', 'storeLimit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('cu-inventory', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -73,11 +68,7 @@ export async function handleEmart24Stores(options: string[], deps: CliDeps): Pro
     parsed.options.keyword = keyword;
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'keyword', 'area1', 'area2', 'lat', 'lng', 'service24h', 'limit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('emart24-stores', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -95,7 +86,7 @@ export async function handleEmart24Products(options: string[], deps: CliDeps): P
   if (parsed.options.help === 'true') {
     return printCommandHelp('emart24-products', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'page', 'pageSize'], deps.writeErr)) {
+  if (validateCommandOptions('emart24-products', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -120,11 +111,7 @@ export async function handleEmart24Inventory(options: string[], deps: CliDeps): 
     return printCommandHelp('emart24-inventory', deps.writeOut, deps.writeErr);
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'bizNoArr', 'storeKeyword', 'area1', 'area2', 'lat', 'lng', 'storeLimit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('emart24-inventory', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -158,11 +145,7 @@ export async function handleLotteMartStores(options: string[], deps: CliDeps): P
     parsed.options.keyword = keyword;
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'keyword', 'area', 'brandVariant', 'lat', 'lng', 'limit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('lottemart-stores', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -181,11 +164,7 @@ export async function handleLotteMartProducts(options: string[], deps: CliDeps):
     return printCommandHelp('lottemart-products', deps.writeOut, deps.writeErr);
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'storeCode', 'storeName', 'area', 'brandVariant', 'pageLimit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('lottemart-products', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -223,11 +202,7 @@ export async function handleGs25Stores(options: string[], deps: CliDeps): Promis
     parsed.options.keyword = keyword;
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'keyword', 'lat', 'lng', 'serviceCode', 'limit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('gs25-stores', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -245,7 +220,7 @@ export async function handleGs25Products(options: string[], deps: CliDeps): Prom
   if (parsed.options.help === 'true') {
     return printCommandHelp('gs25-products', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'serviceCode', 'limit'], deps.writeErr)) {
+  if (validateCommandOptions('gs25-products', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -270,11 +245,7 @@ export async function handleGs25Inventory(options: string[], deps: CliDeps): Pro
     return printCommandHelp('gs25-inventory', deps.writeOut, deps.writeErr);
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'storeKeyword', 'lat', 'lng', 'serviceCode', 'storeLimit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('gs25-inventory', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -299,7 +270,7 @@ export async function handleSevenElevenProducts(options: string[], deps: CliDeps
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-products', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'page', 'size', 'sort'], deps.writeErr)) {
+  if (validateCommandOptions('seveneleven-products', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -325,7 +296,7 @@ export async function handleSevenElevenStores(options: string[], deps: CliDeps):
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-stores', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'limit'], deps.writeErr)) {
+  if (validateCommandOptions('seveneleven-stores', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -351,7 +322,7 @@ export async function handleSevenElevenPopwords(options: string[], deps: CliDeps
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-popwords', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'label'], deps.writeErr)) {
+  if (validateCommandOptions('seveneleven-popwords', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -369,11 +340,7 @@ export async function handleSevenElevenCatalog(options: string[], deps: CliDeps)
     return printCommandHelp('seveneleven-catalog', deps.writeOut, deps.writeErr);
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'includeIssues', 'includeExhibition', 'limit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('seveneleven-catalog', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -397,11 +364,7 @@ export async function handleLottecinemaTheaters(options: string[], deps: CliDeps
     parsed.options.keyword = keyword;
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'keyword', 'lat', 'lng', 'playDate', 'limit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('lottecinema-theaters', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -425,11 +388,7 @@ export async function handleLottecinemaMovies(options: string[], deps: CliDeps):
     parsed.options.keyword = keyword;
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'keyword', 'playDate', 'theaterId', 'movieId', 'lat', 'lng'],
-      deps.writeErr,
-    )
+    validateCommandOptions('lottecinema-movies', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -453,11 +412,7 @@ export async function handleLottecinemaSeats(options: string[], deps: CliDeps): 
     parsed.options.keyword = keyword;
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'keyword', 'playDate', 'theaterId', 'movieId', 'lat', 'lng', 'limit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('lottecinema-seats', parsed.options, deps.writeErr)
   ) {
     return 1;
   }

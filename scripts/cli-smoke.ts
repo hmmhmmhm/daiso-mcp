@@ -13,7 +13,7 @@ interface CommandResult {
 
 type RunCommand = (command: string, args: string[]) => Promise<CommandResult>;
 type WriteFn = (message: string) => void;
-type Validator = (stdout: string) => string | null;
+type Validator = (stdout: string, stderr: string) => string | null;
 
 interface CliSmokeDeps {
   runCommand?: RunCommand;
@@ -26,7 +26,9 @@ interface CliSmokeDeps {
 const DEFAULT_CLI_PATH = path.resolve('dist/bin.js');
 
 interface CliSmokeCommand {
+  scenario: string;
   args: string[];
+  expectedExitCode?: number;
   validate: Validator;
 }
 
@@ -56,7 +58,7 @@ function validateApiEnvelope(
     return 'API 응답이 success=true envelope가 아닙니다';
   }
 
-  return check?.(payload.data) || null;
+  return typeof check === 'function' ? check(payload.data) : null;
 }
 
 function expectDataField(key: string, expected: string): (data: Record<string, unknown>) => string | null {
@@ -69,43 +71,71 @@ function expectDataField(key: string, expected: string): (data: Record<string, u
   };
 }
 
-const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
-  { args: ['health'], validate: validateHealth },
-  { args: ['products', '수납박스', '--pageSize', '1', '--json'], validate: validateApiEnvelope },
-  { args: ['stores', '강남역', '--pageSize', '1', '--json'], validate: validateApiEnvelope },
+function validateStderrContains(expected: string): Validator {
+  return (_stdout, stderr) => (stderr.includes(expected) ? null : `stderr에 "${expected}"가 없습니다`);
+}
+
+export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
+  { scenario: 'health', args: ['health'], validate: validateHealth },
   {
+    scenario: '상품명만 아는 사용자',
+    args: ['products', '수납박스', '--pageSize', '1', '--json'],
+    validate: validateApiEnvelope,
+  },
+  { scenario: '기본 위치 검색', args: ['stores', '강남역', '--limit', '1', '--json'], validate: validateApiEnvelope },
+  {
+    scenario: '위치를 대강 말하는 사용자',
+    args: ['stores', '안산 중앙역', '--limit', '1', '--json'],
+    validate: validateApiEnvelope,
+  },
+  {
+    scenario: '잘못된 옵션을 입력한 사용자',
+    args: ['inventory', '1034604', '--store', '강남역점'],
+    expectedExitCode: 1,
+    validate: validateStderrContains('알 수 없는 옵션: --store'),
+  },
+  {
+    scenario: 'GS25 상품명 검색',
     args: ['gs25-products', '콜라', '--limit', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '콜라')),
   },
   {
+    scenario: 'GS25 위치 검색',
     args: ['gs25-stores', '강남', '--limit', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '강남')),
   },
   {
+    scenario: '세븐일레븐 상품명 검색',
     args: ['seveneleven-products', '커피', '--size', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('query', '커피')),
   },
   {
+    scenario: '이마트24 상품명 검색',
     args: ['emart24-products', '커피', '--pageSize', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '커피')),
   },
   {
+    scenario: '롯데마트 매장 포함 상품 검색',
     args: ['lottemart-products', '콜라', '--storeCode', '2301', '--area', '서울', '--pageLimit', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '콜라')),
   },
   {
+    scenario: '올리브영 get 상품 검색',
     args: ['get', '/api/oliveyoung/products', '--keyword', '선크림', '--size', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '선크림')),
   },
   {
+    scenario: '메가박스 get 위치 검색',
     args: ['get', '/api/megabox/theaters', '--keyword', '강남', '--limit', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '강남')),
   },
   {
+    scenario: '롯데시네마 위치 검색',
     args: ['lottecinema-theaters', '잠실', '--limit', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '잠실')),
   },
   {
+    scenario: 'CGV get 위치 검색',
     args: ['get', '/api/cgv/theaters', '--keyword', '강남', '--limit', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '강남')),
   },
@@ -143,11 +173,11 @@ export async function runCliSmoke(deps: CliSmokeDeps = {}): Promise<number> {
   const command = deps.command || process.execPath;
   const cliPath = deps.cliPath || DEFAULT_CLI_PATH;
 
-  for (const { args, validate } of CLI_SMOKE_COMMANDS) {
+  for (const { args, expectedExitCode = 0, validate } of CLI_SMOKE_COMMANDS) {
     const fullArgs = [cliPath, ...args];
     writeOut(`CLI smoke 실행: ${command} ${fullArgs.join(' ')}`);
     const result = await runCommand(command, fullArgs);
-    if (result.exitCode !== 0) {
+    if (result.exitCode !== expectedExitCode) {
       writeErr(`CLI smoke 실패: ${args.join(' ')} exited with ${result.exitCode}`);
       if (result.stdout) {
         writeErr(result.stdout.trim());
@@ -159,7 +189,7 @@ export async function runCliSmoke(deps: CliSmokeDeps = {}): Promise<number> {
     }
 
     try {
-      const validationError = validate(result.stdout);
+      const validationError = validate(result.stdout, result.stderr);
       if (validationError) {
         writeErr(`CLI smoke 검증 실패: ${args.join(' ')} - ${validationError}`);
         writeErr(result.stdout.trim());

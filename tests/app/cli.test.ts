@@ -163,6 +163,43 @@ describe('CLI', () => {
     expect(errors.join('\n')).toContain('다음 명령 예시: daiso inventory <productId> --keyword 강남역');
   });
 
+  it.each([
+    [
+      '/api/gs25/inventory',
+      'MISSING_KEYWORD',
+      'GS25 상품명만 알면 daiso gs25-inventory <상품명>',
+      'itemCode만 알면 daiso gs25-inventory <itemCode>',
+    ],
+    [
+      '/api/emart24/inventory',
+      'MISSING_PLU_CD',
+      '이마트24 상품명만 알면 daiso emart24-products <상품명>',
+      '다음 명령 예시: daiso emart24-inventory <pluCd> --storeKeyword 강남',
+    ],
+    [
+      '/api/seveneleven/inventory',
+      'MISSING_STORE_KEYWORD',
+      '세븐일레븐 재고는 매장 키워드가 필요합니다.',
+      '다음 명령 예시: daiso get /api/seveneleven/inventory --keyword <상품명> --storeKeyword 강남',
+    ],
+  ])('get %s 오류는 서비스별 CLI 힌트를 출력한다', async (path, code, firstHint, secondHint) => {
+    const { deps, errors } = createDeps();
+    deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: vi.fn().mockResolvedValue(JSON.stringify({
+        success: false,
+        error: { code, message: '필수 파라미터가 없습니다.' },
+      })),
+    } as unknown as Response);
+
+    const exitCode = await runCli(['get', path], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors.join('\n')).toContain(firstHint);
+    expect(errors.join('\n')).toContain(secondHint);
+  });
+
   it('products 명령은 검색어로 제품 API를 호출한다', async () => {
     const { deps, output } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({

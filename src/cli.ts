@@ -12,7 +12,8 @@ import { printHelp, printCommandHelp } from './cliHelp.js';
 import { createDefaultDeps } from './cli/deps.js';
 import type { CliDeps } from './cli/types.js';
 import { DEFAULT_BASE_URL, DEFAULT_MCP_URL } from './cli/constants.js';
-import { parseCliArgs, writeUnknownOptionError } from './cli/args.js';
+import { parseCliArgs } from './cli/args.js';
+import { validateCommandOptions, type CliOptionCommand } from './cli/commandOptions.js';
 import {
   handleGet,
   handleProducts,
@@ -46,11 +47,11 @@ export type { InteractiveCliDeps } from './cliInteractive.js';
 
 function rejectTopLevelUnknownOptions(
   options: string[],
-  allowedOptions: readonly string[],
+  command: CliOptionCommand,
   deps: CliDeps,
 ): boolean {
   const parsed = parseCliArgs(options);
-  return writeUnknownOptionError(parsed.options, allowedOptions, deps.writeErr);
+  return validateCommandOptions(command, parsed.options, deps.writeErr);
 }
 
 export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<number> {
@@ -87,7 +88,7 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   }
 
   if (command === 'version' || command === '--version' || command === '-v') {
-    if (rejectTopLevelUnknownOptions(options, [], resolvedDeps)) {
+    if (rejectTopLevelUnknownOptions(options, 'version', resolvedDeps)) {
       return 1;
     }
     resolvedDeps.writeOut(resolvedDeps.getVersion());
@@ -95,7 +96,7 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   }
 
   if (command === 'url') {
-    if (rejectTopLevelUnknownOptions(options, [], resolvedDeps)) {
+    if (rejectTopLevelUnknownOptions(options, 'url', resolvedDeps)) {
       return 1;
     }
     resolvedDeps.writeOut(DEFAULT_MCP_URL);
@@ -103,7 +104,7 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   }
 
   if (command === 'health') {
-    if (rejectTopLevelUnknownOptions(options, [], resolvedDeps)) {
+    if (rejectTopLevelUnknownOptions(options, 'health', resolvedDeps)) {
       return 1;
     }
     try {
@@ -134,7 +135,7 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   }
 
   if (command === 'claude') {
-    if (rejectTopLevelUnknownOptions(options, ['exec'], resolvedDeps)) {
+    if (rejectTopLevelUnknownOptions(options, 'claude', resolvedDeps)) {
       return 1;
     }
     const cliArgs = ['mcp', 'add', 'daiso', DEFAULT_BASE_URL, '--transport', 'sse'];

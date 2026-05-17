@@ -47,6 +47,27 @@ function buildCliHint(command: string, url: URL, bodyText: string): string[] {
     ];
   }
 
+  if (url.pathname === '/api/gs25/inventory') {
+    return [
+      '힌트: GS25 상품명만 알면 daiso gs25-inventory <상품명> --storeKeyword <매장명> 명령을 사용하세요.',
+      'itemCode만 알면 daiso gs25-inventory <itemCode> 형식 대신 daiso get /api/gs25/inventory --itemCode <itemCode> --storeKeyword <매장명> 을 사용하세요.',
+    ];
+  }
+
+  if (url.pathname === '/api/emart24/inventory') {
+    return [
+      '힌트: 이마트24 상품명만 알면 daiso emart24-products <상품명> 명령으로 pluCd를 확인하세요.',
+      '다음 명령 예시: daiso emart24-inventory <pluCd> --storeKeyword 강남',
+    ];
+  }
+
+  if (url.pathname === '/api/seveneleven/inventory') {
+    return [
+      '힌트: 세븐일레븐 재고는 매장 키워드가 필요합니다.',
+      '다음 명령 예시: daiso get /api/seveneleven/inventory --keyword <상품명> --storeKeyword 강남',
+    ];
+  }
+
   return [];
 }
 

@@ -4,10 +4,9 @@
 
 import { printCommandHelp } from '../../cliHelp.js';
 import type { CliDeps } from '../types.js';
-import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions, writeUnknownOptionError } from '../args.js';
+import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../args.js';
+import { validateCommandOptions } from '../commandOptions.js';
 import { requestAndPrintResponse, requestAndPrintStoresWithKeywordFallback } from '../http.js';
-
-const COMMON_OPTIONS = ['help', 'json'] as const;
 
 export async function handleGet(options: string[], deps: CliDeps): Promise<number> {
   const parsed = parseCliArgs(options);
@@ -38,7 +37,7 @@ export async function handleProducts(options: string[], deps: CliDeps): Promise<
   if (parsed.options.help === 'true') {
     return printCommandHelp('products', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, [...COMMON_OPTIONS, 'page', 'pageSize'], deps.writeErr)) {
+  if (validateCommandOptions('products', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -66,7 +65,7 @@ export async function handleProduct(options: string[], deps: CliDeps): Promise<n
   if (parsed.options.help === 'true') {
     return printCommandHelp('product', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, COMMON_OPTIONS, deps.writeErr)) {
+  if (validateCommandOptions('product', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -99,11 +98,7 @@ export async function handleStores(options: string[], deps: CliDeps): Promise<nu
     parsed.options.keyword = keyword;
   }
   if (
-    writeUnknownOptionError(
-      parsed.options,
-      [...COMMON_OPTIONS, 'keyword', 'sido', 'gugun', 'dong', 'limit'],
-      deps.writeErr,
-    )
+    validateCommandOptions('stores', parsed.options, deps.writeErr)
   ) {
     return 1;
   }
@@ -130,15 +125,7 @@ export async function handleInventory(options: string[], deps: CliDeps): Promise
     return printCommandHelp('inventory', deps.writeOut, deps.writeErr);
   }
 
-  if (writeUnknownOptionError(parsed.options, [
-    'help',
-    'json',
-    'keyword',
-    'lat',
-    'lng',
-    'page',
-    'pageSize',
-  ], deps.writeErr, '매장명은 --keyword로 전달하세요. 예: daiso inventory 1034604 --keyword 강남역')) {
+  if (validateCommandOptions('inventory', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -168,7 +155,7 @@ export async function handleDisplayLocation(options: string[], deps: CliDeps): P
   if (parsed.options.help === 'true') {
     return printCommandHelp('display-location', deps.writeOut, deps.writeErr);
   }
-  if (writeUnknownOptionError(parsed.options, COMMON_OPTIONS, deps.writeErr)) {
+  if (validateCommandOptions('display-location', parsed.options, deps.writeErr)) {
     return 1;
   }
 

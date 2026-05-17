@@ -3,9 +3,19 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { runCliSmoke } from '../../scripts/cli-smoke.ts';
+import { CLI_SMOKE_COMMANDS, runCliSmoke } from '../../scripts/cli-smoke.ts';
 
 describe('runCliSmoke', () => {
+  it('최소 정보 사용자 시나리오를 smoke 목록에 포함한다', () => {
+    expect(CLI_SMOKE_COMMANDS.map((command) => command.scenario)).toEqual(
+      expect.arrayContaining([
+        '상품명만 아는 사용자',
+        '위치를 대강 말하는 사용자',
+        '잘못된 옵션을 입력한 사용자',
+      ]),
+    );
+  });
+
   it('필수 CLI 명령이 모두 성공하면 0을 반환한다', async () => {
     const runCommand = vi.fn((_command: string, args: string[]) => {
       const command = args[1];
@@ -14,6 +24,7 @@ describe('runCliSmoke', () => {
       }
 
       const stdoutByCommand: Record<string, unknown> = {
+        stores: { success: true, data: { stores: [] } },
         'gs25-products': { success: true, data: { keyword: '콜라' } },
         'gs25-stores': { success: true, data: { keyword: '강남' } },
         'seveneleven-products': { success: true, data: { query: '커피' } },
@@ -29,7 +40,12 @@ describe('runCliSmoke', () => {
             ? { success: true, data: { keyword: '강남' } }
             : undefined;
       const payload = stdoutByCommand[command] || getPayload || { success: true, data: {} };
-      return Promise.resolve({ exitCode: 0, stdout: JSON.stringify(payload), stderr: '' });
+      const stderr = args.includes('--store') ? '알 수 없는 옵션: --store\n매장명은 --keyword로 전달하세요' : '';
+      return Promise.resolve({
+        exitCode: args.includes('--store') ? 1 : 0,
+        stdout: args.includes('--store') ? '' : JSON.stringify(payload),
+        stderr,
+      });
     });
     const writeOut = vi.fn();
     const writeErr = vi.fn();
@@ -45,6 +61,14 @@ describe('runCliSmoke', () => {
     expect(exitCode).toBe(0);
     expect(runCommand).toHaveBeenCalledWith('node', ['dist/bin.js', 'health']);
     expect(runCommand).toHaveBeenCalledWith('node', ['dist/bin.js', 'products', '수납박스', '--pageSize', '1', '--json']);
+    expect(runCommand).toHaveBeenCalledWith('node', ['dist/bin.js', 'stores', '안산 중앙역', '--limit', '1', '--json']);
+    expect(runCommand).toHaveBeenCalledWith('node', [
+      'dist/bin.js',
+      'inventory',
+      '1034604',
+      '--store',
+      '강남역점',
+    ]);
     expect(runCommand).toHaveBeenCalledWith('node', [
       'dist/bin.js',
       'lottemart-products',
@@ -86,6 +110,7 @@ describe('runCliSmoke', () => {
       const command = args[1];
       const payloadByCommand: Record<string, unknown> = {
         health: { status: 'ok' },
+        stores: { success: true, data: { stores: [] } },
         'gs25-products': { success: true, data: { keyword: '콜라' } },
         'gs25-stores': { success: true, data: { keyword: '강남' } },
         'seveneleven-products': { success: true, data: { query: '커피' } },
@@ -102,7 +127,11 @@ describe('runCliSmoke', () => {
             : undefined;
       const payload = payloadByCommand[command] || getPayload || { success: true, data: {} };
 
-      return Promise.resolve({ exitCode: 0, stdout: JSON.stringify(payload), stderr: '' });
+      return Promise.resolve({
+        exitCode: args.includes('--store') ? 1 : 0,
+        stdout: args.includes('--store') ? '' : JSON.stringify(payload),
+        stderr: args.includes('--store') ? '알 수 없는 옵션: --store' : '',
+      });
     });
     const writeOut = vi.fn();
     const writeErr = vi.fn();
