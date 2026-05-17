@@ -22,15 +22,16 @@ describe('createDaisoService', () => {
     expect(service.metadata.description).toBeDefined();
   });
 
-  it('5개의 도구를 반환한다', () => {
+  it('6개의 도구를 반환한다', () => {
     const service = createDaisoService();
     const tools = service.getTools();
 
-    expect(tools).toHaveLength(5);
+    expect(tools).toHaveLength(6);
     expect(tools.map((t) => t.name)).toEqual([
       'daiso_search_products',
       'daiso_find_stores',
       'daiso_check_inventory',
+      'daiso_find_inventory_by_name',
       'daiso_get_price_info',
       'daiso_get_display_location',
     ]);

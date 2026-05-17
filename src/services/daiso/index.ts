@@ -9,6 +9,7 @@ import type { ServiceMetadata, ToolRegistration } from '../../core/types.js';
 import { createSearchProductsTool } from './tools/searchProducts.js';
 import { createFindStoresTool } from './tools/findStores.js';
 import { createCheckInventoryTool } from './tools/checkInventory.js';
+import { createFindInventoryByNameTool } from './tools/findInventoryByName.js';
 import { createGetPriceInfoTool } from './tools/getPriceInfo.js';
 import { createGetDisplayLocationTool } from './tools/getDisplayLocation.js';
 
@@ -33,6 +34,7 @@ class DaisoService implements ServiceProvider {
       createSearchProductsTool(),
       createFindStoresTool(),
       createCheckInventoryTool(),
+      createFindInventoryByNameTool(),
       createGetPriceInfoTool(),
       createGetDisplayLocationTool(),
     ];
