@@ -7,6 +7,20 @@ export interface FetchOptions extends RequestInit {
   retries?: number;
   retryDelayMs?: number;
   retryStatusCodes?: number[];
+  retryUnsafeMethods?: boolean;
+  retryMethods?: string[];
+  onRetry?: (event: FetchRetryEvent) => void;
+}
+
+export interface FetchRetryEvent {
+  attempt: number;
+  maxAttempts: number;
+  delayMs: number;
+  reason: 'status' | 'error';
+  status?: number;
+  error?: unknown;
+  method: string;
+  url: string;
 }
 
 export class HttpError extends Error {
@@ -34,6 +48,7 @@ export function createTimeoutController(
 }
 
 const DEFAULT_RETRY_STATUS_CODES = [408, 429, 500, 502, 503, 504, 522, 524];
+const DEFAULT_RETRY_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
 function isRetryableStatus(status: number, retryStatusCodes: number[]): boolean {
   return retryStatusCodes.includes(status);
@@ -49,15 +64,47 @@ function wait(ms: number): Promise<void> {
   });
 }
 
+function normalizeMethod(method: string | undefined): string {
+  return (method || 'GET').toUpperCase();
+}
+
+function canRetryMethod(method: string, retryMethods: string[], retryUnsafeMethods: boolean): boolean {
+  return retryUnsafeMethods || retryMethods.map((item) => item.toUpperCase()).includes(method);
+}
+
+function parseRetryAfterDelayMs(response: Response): number | null {
+  const retryAfter = response.headers.get('retry-after');
+  if (!retryAfter) {
+    return null;
+  }
+
+  const seconds = Number.parseFloat(retryAfter);
+  if (Number.isFinite(seconds)) {
+    return Math.max(0, Math.trunc(seconds * 1000));
+  }
+
+  const retryDate = Date.parse(retryAfter);
+  if (Number.isFinite(retryDate)) {
+    return Math.max(0, retryDate - Date.now());
+  }
+
+  return null;
+}
+
 export async function fetchWithTimeout(url: string, options: FetchOptions = {}): Promise<Response> {
   const {
     timeout = 10000,
     retries = 0,
     retryDelayMs = 250,
     retryStatusCodes = DEFAULT_RETRY_STATUS_CODES,
+    retryUnsafeMethods = false,
+    retryMethods = DEFAULT_RETRY_METHODS,
+    onRetry,
     ...restOptions
   } = options;
   const maxAttempts = Math.max(1, Math.trunc(retries) + 1);
+  const method = normalizeMethod(restOptions.method);
+  const retryAllowed = canRetryMethod(method, retryMethods, retryUnsafeMethods);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const { controller, timeoutId } = createTimeoutController(timeout);
@@ -68,18 +115,37 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}):
         signal: controller.signal,
       });
 
-      if (attempt < maxAttempts && isRetryableStatus(response.status, retryStatusCodes)) {
+      if (retryAllowed && attempt < maxAttempts && isRetryableStatus(response.status, retryStatusCodes)) {
+        const delayMs = parseRetryAfterDelayMs(response) ?? retryDelayMs;
+        onRetry?.({
+          attempt,
+          maxAttempts,
+          delayMs,
+          reason: 'status',
+          status: response.status,
+          method,
+          url,
+        });
         await response.body?.cancel();
-        await wait(retryDelayMs);
+        await wait(delayMs);
         continue;
       }
 
       return response;
     } catch (error) {
-      if (attempt >= maxAttempts) {
+      if (!retryAllowed || attempt >= maxAttempts) {
         throw error;
       }
 
+      onRetry?.({
+        attempt,
+        maxAttempts,
+        delayMs: retryDelayMs,
+        reason: 'error',
+        error,
+        method,
+        url,
+      });
       await wait(retryDelayMs);
     } finally {
       clearTimeout(timeoutId);

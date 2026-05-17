@@ -114,6 +114,98 @@ describe('daisoFetch', () => {
     ).rejects.toThrow('aborted');
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
+
+  it('POST 요청은 기본적으로 재시도하지 않는다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(new Response('OK'));
+
+    const response = await daisoFetch('https://example.com/api', {
+      method: 'POST',
+      retries: 1,
+      retryDelayMs: 0,
+    });
+
+    expect(await response.text()).toBe('origin timeout');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('허용된 POST 요청은 Retry-After와 onRetry 메타데이터를 사용해 재시도한다', async () => {
+    const onRetry = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response('rate limited', {
+          status: 429,
+          statusText: 'Too Many Requests',
+          headers: { 'Retry-After': '0' },
+        }),
+      )
+      .mockResolvedValueOnce(new Response('OK'));
+
+    const response = await daisoFetch('https://example.com/api', {
+      method: 'POST',
+      retries: 1,
+      retryUnsafeMethods: true,
+      retryDelayMs: 500,
+      onRetry,
+    });
+
+    expect(await response.text()).toBe('OK');
+    expect(onRetry).toHaveBeenCalledWith({
+      attempt: 1,
+      maxAttempts: 2,
+      delayMs: 0,
+      reason: 'status',
+      status: 429,
+      method: 'POST',
+      url: 'https://example.com/api',
+    });
+  });
+
+  it('Retry-After HTTP 날짜를 재시도 지연 시간으로 사용한다', async () => {
+    const onRetry = vi.fn();
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response('try later', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Retry-After': new Date(3_000).toUTCString() },
+        }),
+      )
+      .mockResolvedValueOnce(new Response('OK'));
+
+    const response = await daisoFetch('https://example.com/api', {
+      retries: 1,
+      onRetry,
+      retryDelayMs: 0,
+    });
+
+    expect(await response.text()).toBe('OK');
+    expect(onRetry).toHaveBeenCalledWith(expect.objectContaining({ delayMs: 2000 }));
+  });
+
+  it('Retry-After가 해석되지 않으면 기본 지연 시간을 사용한다', async () => {
+    const onRetry = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response('try later', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Retry-After': 'invalid-date' },
+        }),
+      )
+      .mockResolvedValueOnce(new Response('OK'));
+
+    const response = await daisoFetch('https://example.com/api', {
+      retries: 1,
+      onRetry,
+      retryDelayMs: 0,
+    });
+
+    expect(await response.text()).toBe('OK');
+    expect(onRetry).toHaveBeenCalledWith(expect.objectContaining({ delayMs: 0 }));
+  });
 });
 
 describe('fetchJson', () => {
