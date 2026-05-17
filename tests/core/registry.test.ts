@@ -2,6 +2,7 @@
  * ServiceRegistry 테스트
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as z from 'zod';
 import { ServiceRegistry } from '../../src/core/registry.js';
 import type { ServiceProvider } from '../../src/core/interfaces.js';
 import type { ToolRegistration, McpToolResponse } from '../../src/core/types.js';
@@ -238,6 +239,30 @@ describe('ServiceRegistry', () => {
       expect(metadata.outputSchema).toBeDefined();
       expect(typeof metadata.outputSchema.safeParse).toBe('function');
       expect(metadata.outputSchema.safeParse({ arbitrary: 'value' }).success).toBe(true);
+    });
+
+    it('명시적 outputSchema도 standard 확장 필드를 허용한다', () => {
+      const tool: ToolRegistration = {
+        ...createMockTool('schema-tool'),
+        metadata: {
+          title: 'schema Tool',
+          description: 'schema 도구 설명',
+          inputSchema: {},
+          outputSchema: {
+            keyword: z.string(),
+          },
+        },
+      };
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+
+      const metadata = mockServer.registerTool.mock.calls[0][1];
+      expect(metadata.outputSchema.safeParse({ keyword: '콜라', standard: { products: [] } }).success).toBe(true);
     });
 
     it('JSON text 응답을 structuredContent로 승격하고 공통 결과 모델을 덧붙인다', async () => {

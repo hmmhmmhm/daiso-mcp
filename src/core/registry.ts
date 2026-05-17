@@ -7,10 +7,23 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as z from 'zod';
 import type { ServiceProvider, ServiceFactory } from './interfaces.js';
-import type { ServiceInfo, ToolRegistration } from './types.js';
+import type { ServiceInfo, ToolOutputSchema, ToolRegistration } from './types.js';
 import { getErrorMessage, toStandardErrorDiagnostics } from './errors.js';
 
 const DEFAULT_OUTPUT_SCHEMA = z.object({}).loose().describe('도구 실행 결과(JSON 객체)');
+
+function createToolOutputSchema(outputSchema?: ToolOutputSchema) {
+  if (!outputSchema) {
+    return DEFAULT_OUTPUT_SCHEMA;
+  }
+
+  return z
+    .object({
+      ...outputSchema,
+      standard: z.unknown().optional().describe('서비스 공통 상품/매장/영화관 정규화 결과'),
+    })
+    .loose();
+}
 
 function parseJsonText(text: string): Record<string, unknown> | null {
   try {
@@ -195,7 +208,7 @@ export class ServiceRegistry {
   private registerTool(server: McpServer, tool: ToolRegistration): void {
     const metadata = {
       ...tool.metadata,
-      outputSchema: tool.metadata.outputSchema || DEFAULT_OUTPUT_SCHEMA,
+      outputSchema: createToolOutputSchema(tool.metadata.outputSchema),
     };
 
     server.registerTool(tool.name, metadata as never, async (args) => {
