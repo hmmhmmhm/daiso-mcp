@@ -190,6 +190,7 @@ async function requestSevenElevenJson<T>(
   return fetchJson<SevenElevenApiEnvelope<T>>(url, {
     ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
     method,
+    retryUnsafeMethods: method === 'POST',
     timeout,
     headers: SEVENELEVEN_DEFAULT_HEADERS,
     body: method === 'POST' ? JSON.stringify(body || {}) : undefined,

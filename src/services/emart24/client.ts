@@ -209,6 +209,7 @@ export async function searchEmart24Products(
     {
       ...EMART24_DEFAULT_FETCH_OPTIONS,
       method: 'POST',
+      retryUnsafeMethods: true,
       timeout,
       headers: EMART24_FORM_HEADERS,
       body: form.toString(),

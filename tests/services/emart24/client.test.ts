@@ -164,11 +164,22 @@ describe('fetchEmart24Stores', () => {
 });
 
 describe('searchEmart24Products', () => {
-  it('POST 상품 검색은 기본 재시도하지 않는다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }));
+  it('읽기성 POST 상품 검색은 allowlist로 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            totalCnt: 1,
+            productList: [{ pluCd: '8800244010504', goodsNm: '두바이초콜릿', viewPrice: 3000 }],
+          }),
+        ),
+      );
 
-    await expect(searchEmart24Products({ keyword: '두바이' })).rejects.toThrow('API 요청 실패: 522');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const result = await searchEmart24Products({ keyword: '두바이' });
+
+    expect(result.products[0].pluCd).toBe('8800244010504');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('상품 검색 결과를 반환한다', async () => {

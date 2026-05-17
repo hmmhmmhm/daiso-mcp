@@ -9,6 +9,7 @@ import {
   clearGs25StoresCache,
   extractGs25ProductCandidates,
   fetchGs25Stores,
+  fetchGs25SearchProducts,
   filterGs25StoresByKeyword,
   geocodeGs25Address,
   sortGs25Stores,
@@ -129,6 +130,33 @@ describe('fetchGs25Stores', () => {
 
     const calledUrl = String(mockFetch.mock.calls[0][0]);
     expect(calledUrl).toContain('storeCode=VE463');
+  });
+});
+
+describe('fetchGs25SearchProducts', () => {
+  it('읽기성 POST 상품 검색은 allowlist로 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            SearchQueryResult: {
+              Collection: [
+                {
+                  Documentset: {
+                    Document: [{ field: { itemCode: '8801', itemName: '콜라', stockCheckYn: 'Y' } }],
+                  },
+                },
+              ],
+            },
+          }),
+        ),
+      );
+
+    const result = await fetchGs25SearchProducts('콜라');
+
+    expect(result[0].itemCode).toBe('8801');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
 

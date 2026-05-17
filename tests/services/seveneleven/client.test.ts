@@ -41,10 +41,32 @@ describe('seveneleven client retry defaults', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('POST 상품 검색은 기본 재시도하지 않는다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }));
+  it('읽기성 POST 상품 검색은 allowlist로 재시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              SearchQueryResult: {
+                Collection: [
+                  {
+                    Documentset: {
+                      totalCount: 1,
+                      Document: [{ field: { itemCd: '8801', itemOnm: '커피' } }],
+                    },
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      );
 
-    await expect(searchSevenElevenProducts({ query: '커피' })).rejects.toThrow('API 요청 실패: 522');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const result = await searchSevenElevenProducts({ query: '커피' });
+
+    expect(result.products[0].itemCode).toBe('8801');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

@@ -268,6 +268,7 @@ export async function fetchGs25NormalizedKeyword(
   const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
     ...GS25_DEFAULT_FETCH_OPTIONS,
     method: 'POST',
+    retryUnsafeMethods: true,
     timeout,
     headers: {
       Accept: 'application/json, text/plain, */*',
@@ -307,6 +308,7 @@ export async function fetchGs25SearchProducts(
   const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
     ...GS25_DEFAULT_FETCH_OPTIONS,
     method: 'POST',
+    retryUnsafeMethods: true,
     timeout,
     headers: {
       Accept: 'application/json, text/plain, */*',
