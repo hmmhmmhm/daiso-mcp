@@ -124,9 +124,10 @@ describe('pickFromList', () => {
   });
 
   it('잘못된 번호 입력 후 재입력으로 선택한다', async () => {
+    const out: string[] = [];
     const selected = await pickFromList({
       prompt: createPrompt(['x', '9', '1']),
-      writeOut: () => {},
+      writeOut: (message) => out.push(message),
       title: '제목',
       emptyText: '비어있음',
       cancelText: '취소',
@@ -135,6 +136,8 @@ describe('pickFromList', () => {
     });
 
     expect(selected).toBe('강남점');
+    expect(out.join('\n')).toContain('번호로 입력하세요');
+    expect(out.join('\n')).toContain('1부터 1 사이');
   });
 
   it('filterText 미지정 시 객체를 JSON 문자열로 필터링한다', async () => {

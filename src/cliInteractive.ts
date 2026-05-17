@@ -78,7 +78,7 @@ export async function runInteractiveCli(deps: InteractiveCliDeps): Promise<numbe
         '올리브영',
         'CU',
         '롯데시네마',
-      ]);
+      ], deps.writeOut);
 
       if (serviceChoice === 0) {
         break;

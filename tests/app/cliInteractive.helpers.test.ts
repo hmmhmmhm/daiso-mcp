@@ -142,8 +142,16 @@ describe('cliInteractiveTestables', () => {
   });
 
   it('입력 헬퍼가 반복 입력을 처리한다', async () => {
-    const menu = await cliInteractiveTestables.askMenu(createPrompt(['a', '-1', '3']), '번호:', ['a', 'b', 'c']);
+    const out: string[] = [];
+    const menu = await cliInteractiveTestables.askMenu(
+      createPrompt(['a', '-1', '3']),
+      '번호:',
+      ['a', 'b', 'c'],
+      (message) => out.push(message),
+    );
     expect(menu).toBe(3);
+    expect(out.join('\n')).toContain('번호로 입력하세요');
+    expect(out.join('\n')).toContain('0부터 3 사이');
 
     const yes = await cliInteractiveTestables.askYesNo(createPrompt(['maybe', 'yes']), '계속?');
     expect(yes).toBe(true);

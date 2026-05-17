@@ -88,6 +88,7 @@ export async function pickFromList<T>(options: PickerOptions<T>): Promise<T | nu
 
     const picked = Number.parseInt(answer, 10);
     if (Number.isNaN(picked) || picked < 1 || picked > visibleItems.length) {
+      writeOut(`번호로 입력하세요. 1부터 ${visibleItems.length} 사이에서 선택하거나 0으로 취소하세요.`);
       continue;
     }
 
