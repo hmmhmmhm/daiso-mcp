@@ -698,6 +698,39 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
     expect(result.products).toEqual(products);
   });
 
+  it('goods info 조회 실패는 해당 상품만 원본 상태로 유지한다', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('goods info timeout'));
+
+    const products = [
+      {
+        goodsNumber: 'A1',
+        goodsName: '팩 A',
+        priceToPay: 10000,
+        originalPrice: 12000,
+        discountRate: 16,
+        o2oStockFlag: true,
+        o2oRemainQuantity: 1,
+        inStock: true,
+        stockStatus: 'in_stock' as const,
+        stockSource: 'global_search' as const,
+      },
+    ];
+
+    const result = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      products,
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 1,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.checkedCount).toBe(0);
+    expect(result.products).toEqual(products);
+  });
+
   it('상품별 매장 재고 보강 실패는 해당 상품만 원본 상태로 유지하고 나머지 상품 조회를 계속한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
