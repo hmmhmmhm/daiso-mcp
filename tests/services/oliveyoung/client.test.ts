@@ -32,6 +32,17 @@ function createZyteResponse(body: unknown, status = 200) {
   );
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
+}
+
 describe('fetchOliveyoungStores', () => {
   it('매장 목록을 반환한다', async () => {
     mockFetch.mockResolvedValue(
@@ -545,6 +556,12 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
       .mockResolvedValueOnce(
         createZyteResponse({
           status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8802' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
           data: {
             totalCount: 2,
             storeList: [
@@ -552,12 +569,6 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
               { storeCode: 'B041', storeName: '안산중앙점', salesStoreYn: false, remainQuantity: 0 },
             ],
           },
-        })
-      )
-      .mockResolvedValueOnce(
-        createZyteResponse({
-          status: 'SUCCESS',
-          data: { goodsInfo: { masterGoodsNumber: '8802' } },
         })
       )
       .mockResolvedValueOnce(
@@ -614,6 +625,90 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
     expect(result.products[0].storeInventory?.stores[0].stockLabel).toBe('재고 4개');
     expect(result.products[0].storeInventory?.stores[1].stockStatus).toBe('not_sold');
     expect(result.products[1].stockStatus).toBe('out_of_stock');
+  });
+
+  it('여러 상품의 재고 보강을 병렬로 시작한다', async () => {
+    const firstGoodsInfo = createDeferred<Response>();
+    const requestedPaths: string[] = [];
+
+    mockFetch.mockImplementation((_: string, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body || '{}')) as { url?: string };
+      const path = payload.url ? new URL(payload.url).pathname : '';
+      requestedPaths.push(path);
+
+      if (path.endsWith('/stock-goods-info-v3')) {
+        const goodsInfoRequestCount = requestedPaths.filter((item) => item.endsWith('/stock-goods-info-v3')).length;
+
+        if (goodsInfoRequestCount === 1) {
+          return firstGoodsInfo.promise;
+        }
+
+        return Promise.resolve(
+          createZyteResponse({
+            status: 'SUCCESS',
+            data: { goodsInfo: { masterGoodsNumber: '8802' } },
+          })
+        );
+      }
+
+      return Promise.resolve(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 0, storeList: [] },
+        })
+      );
+    });
+
+    const pendingResult = enrichOliveyoungProductsWithNearbyStoreInventory(
+      [
+        {
+          goodsNumber: 'A1',
+          goodsName: '팩 A',
+          priceToPay: 10000,
+          originalPrice: 12000,
+          discountRate: 16,
+          o2oStockFlag: true,
+          o2oRemainQuantity: 0,
+          inStock: true,
+          stockStatus: 'in_stock',
+          stockSource: 'global_search',
+        },
+        {
+          goodsNumber: 'A2',
+          goodsName: '팩 B',
+          priceToPay: 11000,
+          originalPrice: 13000,
+          discountRate: 15,
+          o2oStockFlag: true,
+          o2oRemainQuantity: 0,
+          inStock: true,
+          stockStatus: 'in_stock',
+          stockSource: 'global_search',
+        },
+      ],
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 2,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    await Promise.resolve();
+
+    expect(requestedPaths.filter((item) => item.endsWith('/stock-goods-info-v3'))).toHaveLength(2);
+
+    firstGoodsInfo.resolve(
+      createZyteResponse({
+        status: 'SUCCESS',
+        data: { goodsInfo: { masterGoodsNumber: '8801' } },
+      })
+    );
+
+    const result = await pendingResult;
+
+    expect(result.checkedCount).toBe(2);
   });
 
   it('maxProducts가 0이면 원본 상품을 그대로 반환한다', async () => {
@@ -739,13 +834,13 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
           data: { goodsInfo: { masterGoodsNumber: '8801' } },
         })
       )
-      .mockRejectedValueOnce(new Error('stock timeout'))
       .mockResolvedValueOnce(
         createZyteResponse({
           status: 'SUCCESS',
           data: { goodsInfo: { masterGoodsNumber: '8802' } },
         })
       )
+      .mockRejectedValueOnce(new Error('stock timeout'))
       .mockResolvedValueOnce(
         createZyteResponse({
           status: 'SUCCESS',

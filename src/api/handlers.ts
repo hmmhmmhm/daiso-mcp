@@ -117,6 +117,8 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
   const sort = c.req.query('sort') || '01';
   const includeSoldOut = c.req.query('includeSoldOut') === 'true';
   const storeLimit = parseInt(c.req.query('storeLimit') || '10');
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
 
   if (!keyword || keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
@@ -133,6 +135,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
         },
         {
           apiKey: c.env.ZYTE_API_KEY,
+          timeout: timeoutMs,
         }
       ),
       fetchOliveyoungProducts(
@@ -145,6 +148,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
         },
         {
           apiKey: c.env.ZYTE_API_KEY,
+          timeout: timeoutMs,
         }
       ),
     ]);
@@ -158,6 +162,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
       },
       {
         apiKey: c.env.ZYTE_API_KEY,
+        timeout: timeoutMs,
       }
     );
     const inStockCount = enrichedInventory.products.filter((product) => product.inStock).length;

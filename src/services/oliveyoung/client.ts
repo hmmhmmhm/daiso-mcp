@@ -305,58 +305,58 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
     return { checkedCount: 0, products };
   }
 
-  const enrichedProducts: OliveyoungProduct[] = [];
-  let checkedCount = 0;
+  const checkedProducts = await Promise.all(
+    products.slice(0, maxProducts).map(async (product) => {
+      let productId = '';
+      try {
+        productId = await fetchOliveyoungProductId(product.goodsNumber, options);
+      } catch {
+        return { checked: false, product };
+      }
 
-  for (const [index, product] of products.entries()) {
-    if (index >= maxProducts) {
-      enrichedProducts.push(product);
-      continue;
-    }
+      if (!productId) {
+        return { checked: false, product };
+      }
 
-    let productId = '';
-    try {
-      productId = await fetchOliveyoungProductId(product.goodsNumber, options);
-    } catch {
-      enrichedProducts.push(product);
-      continue;
-    }
+      let storeInventory: OliveyoungProductStoreInventory;
+      try {
+        storeInventory = await fetchOliveyoungStockStores(
+          {
+            productId,
+            latitude: params.latitude,
+            longitude: params.longitude,
+            pageIdx: 1,
+            searchWords: params.storeKeyword,
+          },
+          options
+        );
+      } catch {
+        return { checked: false, product };
+      }
 
-    if (!productId) {
-      enrichedProducts.push(product);
-      continue;
-    }
+      const inStock = storeInventory.inStockCount > 0;
+      const stockStatus: OliveyoungProduct['stockStatus'] = inStock ? 'in_stock' : 'out_of_stock';
+      const stockSource: OliveyoungProduct['stockSource'] = 'nearby_store';
 
-    let storeInventory: OliveyoungProductStoreInventory;
-    try {
-      storeInventory = await fetchOliveyoungStockStores(
-        {
-          productId,
-          latitude: params.latitude,
-          longitude: params.longitude,
-          pageIdx: 1,
-          searchWords: params.storeKeyword,
+      return {
+        checked: true,
+        product: {
+          ...product,
+          inStock,
+          stockStatus,
+          stockSource,
+          storeInventory,
         },
-        options
-      );
-    } catch {
-      enrichedProducts.push(product);
-      continue;
-    }
+      };
+    })
+  );
 
-    checkedCount += 1;
-    const inStock = storeInventory.inStockCount > 0;
-    const stockStatus: OliveyoungProduct['stockStatus'] = inStock ? 'in_stock' : 'out_of_stock';
-    const stockSource: OliveyoungProduct['stockSource'] = 'nearby_store';
+  const enrichedProducts = [
+    ...checkedProducts.map((result) => result.product),
+    ...products.slice(maxProducts),
+  ];
 
-    enrichedProducts.push({
-      ...product,
-      inStock,
-      stockStatus,
-      stockSource,
-      storeInventory,
-    });
-  }
+  const checkedCount = checkedProducts.filter((result) => result.checked).length;
 
   return {
     checkedCount,

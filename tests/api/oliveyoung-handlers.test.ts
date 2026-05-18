@@ -306,6 +306,54 @@ describe('handleOliveyoungCheckInventory', () => {
     );
   });
 
+  it('timeoutMs 쿼리를 올리브영 재고 요청에 전달한다', async () => {
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    mockFetch
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', storeName: '올리브영 명동 타운' }] },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            nextPage: false,
+            serachList: [{ goodsNumber: 'A1', goodsName: '선크림 A' }],
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', salesStoreYn: true, remainQuantity: 2 }] },
+        })
+      );
+
+    const ctx = createMockContext({ keyword: '선크림', timeoutMs: '1234' });
+    await handleOliveyoungCheckInventory(ctx);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 1234);
+  });
+
+  it('timeoutMs 쿼리가 0 이하이면 기본 제한 시간을 사용한다', async () => {
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    mockFetch.mockRejectedValue(new Error('inventory fail'));
+
+    const ctx = createMockContext({ keyword: '선크림', timeoutMs: '0' });
+    await handleOliveyoungCheckInventory(ctx);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 15000);
+  });
+
   it('keyword가 없으면 에러를 반환한다', async () => {
     const ctx = createMockContext({});
     await handleOliveyoungCheckInventory(ctx);

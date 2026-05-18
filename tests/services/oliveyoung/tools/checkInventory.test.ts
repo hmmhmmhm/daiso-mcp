@@ -100,6 +100,12 @@ describe('createCheckInventoryTool', () => {
       .mockResolvedValueOnce(
         createZyteResponse({
           status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8802' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
           data: {
             totalCount: 1,
             storeList: [
@@ -111,12 +117,6 @@ describe('createCheckInventoryTool', () => {
               },
             ],
           },
-        })
-      )
-      .mockResolvedValueOnce(
-        createZyteResponse({
-          status: 'SUCCESS',
-          data: { goodsInfo: { masterGoodsNumber: '8802' } },
         })
       )
       .mockResolvedValueOnce(
