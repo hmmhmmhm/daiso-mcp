@@ -314,23 +314,35 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
       continue;
     }
 
-    const productId = await fetchOliveyoungProductId(product.goodsNumber, options);
+    let productId = '';
+    try {
+      productId = await fetchOliveyoungProductId(product.goodsNumber, options);
+    } catch {
+      enrichedProducts.push(product);
+      continue;
+    }
 
     if (!productId) {
       enrichedProducts.push(product);
       continue;
     }
 
-    const storeInventory = await fetchOliveyoungStockStores(
-      {
-        productId,
-        latitude: params.latitude,
-        longitude: params.longitude,
-        pageIdx: 1,
-        searchWords: params.storeKeyword,
-      },
-      options
-    );
+    let storeInventory: OliveyoungProductStoreInventory;
+    try {
+      storeInventory = await fetchOliveyoungStockStores(
+        {
+          productId,
+          latitude: params.latitude,
+          longitude: params.longitude,
+          pageIdx: 1,
+          searchWords: params.storeKeyword,
+        },
+        options
+      );
+    } catch {
+      enrichedProducts.push(product);
+      continue;
+    }
 
     checkedCount += 1;
     const inStock = storeInventory.inStockCount > 0;

@@ -698,6 +698,84 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
     expect(result.products).toEqual(products);
   });
 
+  it('상품별 매장 재고 보강 실패는 해당 상품만 원본 상태로 유지하고 나머지 상품 조회를 계속한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockRejectedValueOnce(new Error('stock timeout'))
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8802' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [{ storeCode: 'B042', storeName: '안산고잔점', salesStoreYn: true, remainQuantity: 5 }],
+          },
+        })
+      );
+
+    const result = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      [
+        {
+          goodsNumber: 'A1',
+          goodsName: '팩 A',
+          priceToPay: 10000,
+          originalPrice: 12000,
+          discountRate: 16,
+          o2oStockFlag: true,
+          o2oRemainQuantity: 0,
+          inStock: true,
+          stockStatus: 'in_stock',
+          stockSource: 'global_search',
+        },
+        {
+          goodsNumber: 'A2',
+          goodsName: '팩 B',
+          priceToPay: 11000,
+          originalPrice: 13000,
+          discountRate: 15,
+          o2oStockFlag: true,
+          o2oRemainQuantity: 0,
+          inStock: true,
+          stockStatus: 'in_stock',
+          stockSource: 'global_search',
+        },
+      ],
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 2,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(result.checkedCount).toBe(1);
+    expect(result.products[0]).toEqual(
+      expect.objectContaining({
+        goodsName: '팩 B',
+        stockSource: 'nearby_store',
+        stockStatus: 'in_stock',
+      })
+    );
+    expect(result.products[1]).toEqual(
+      expect.objectContaining({
+        goodsName: '팩 A',
+        stockSource: 'global_search',
+        stockStatus: 'in_stock',
+      })
+    );
+  });
+
   it('stock-stores 응답에 빈 데이터가 오면 주변 매장 재고를 품절로 처리한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
