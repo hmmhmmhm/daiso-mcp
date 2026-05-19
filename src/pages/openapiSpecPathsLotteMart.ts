@@ -112,6 +112,20 @@ export const OPENAPI_PATHS_LOTTEMART = {
           description: '추가 조회할 최대 페이지 수',
           schema: { type: 'integer', default: 3, minimum: 1, maximum: 20 },
         },
+        {
+          name: 'source',
+          in: 'query',
+          required: false,
+          description: '상품 검색 경로',
+          schema: { type: 'string', enum: ['auto', 'legacy', 'zetta'], default: 'auto' },
+        },
+        {
+          name: 'timeoutMs',
+          in: 'query',
+          required: false,
+          description: '요청 제한 시간(ms)',
+          schema: { type: 'integer', default: 45000, minimum: 1 },
+        },
       ],
       responses: {
         '200': {

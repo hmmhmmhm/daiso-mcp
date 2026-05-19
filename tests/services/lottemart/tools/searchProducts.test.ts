@@ -106,4 +106,37 @@ describe('createSearchProductsTool', () => {
     expect(parsed.storeCode).toBe('2301');
     expect(String(mockFetch.mock.calls[1]?.[0])).toBe('https://api.zyte.com/v1/extract');
   });
+
+  it('source 옵션을 제타 상품 API 경로로 전달한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          productGroups: [
+            {
+              decoratedProducts: [
+                {
+                  retailerProductId: 'OS8801094011307',
+                  name: '코카콜라 (1.2L)',
+                  price: { amount: '3790' },
+                  available: true,
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const tool = createSearchProductsTool();
+    const result = await tool.handler({
+      area: '서울',
+      storeCode: '2301',
+      keyword: '콜라',
+      source: 'zetta',
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.products[0].productName).toBe('코카콜라 (1.2L)');
+    expect(String(mockFetch.mock.calls[0]?.[0])).toContain('lottemartzetta.com/api/webproductpagews');
+  });
 });

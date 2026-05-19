@@ -8,11 +8,13 @@ import {
   handleOliveyoungFindStores,
   handleOliveyoungCheckInventory,
 } from '../../src/api/handlers.js';
+import { __testOnlyClearOliveyoungCaches } from '../../src/services/oliveyoung/client.js';
 
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   mockFetch.mockReset();
+  __testOnlyClearOliveyoungCaches();
   vi.stubGlobal('fetch', mockFetch);
 });
 

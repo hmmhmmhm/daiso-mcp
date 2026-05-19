@@ -5,7 +5,18 @@
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 import { fetchLotteMartStores, searchLotteMartProducts } from '../services/lottemart/client.js';
 import { DEFAULT_LOTTEMART_TIMEOUT_MS } from '../services/lottemart/config.js';
+import type { LotteMartProductSource } from '../services/lottemart/clientTypes.js';
 import { probeLotteMartUpstream, type LotteMartDebugTarget } from '../services/lottemart/debug.js';
+
+function parseLotteMartProductSource(value: string | undefined): LotteMartProductSource | null {
+  if (!value || value === 'auto') {
+    return 'auto';
+  }
+  if (value === 'legacy' || value === 'zetta') {
+    return value;
+  }
+  return null;
+}
 
 /**
  * 롯데마트 매장 검색 API 핸들러
@@ -73,9 +84,16 @@ export async function handleLotteMartSearchProducts(c: ApiContext) {
   const storeCode = c.req.query('storeCode') || '';
   const storeName = c.req.query('storeName') || '';
   const pageLimit = parseInt(c.req.query('pageLimit') || '3', 10);
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || String(DEFAULT_LOTTEMART_TIMEOUT_MS), 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : DEFAULT_LOTTEMART_TIMEOUT_MS;
+  const source = parseLotteMartProductSource(c.req.query('source'));
 
   if (keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
+  }
+
+  if (!source) {
+    return errorResponse(c, 'INVALID_LOTTEMART_SOURCE', 'source는 auto, legacy, zetta 중 하나여야 합니다.');
   }
 
   if (storeCode.trim().length === 0 && storeName.trim().length === 0) {
@@ -90,9 +108,10 @@ export async function handleLotteMartSearchProducts(c: ApiContext) {
         storeName,
         keyword,
         pageLimit,
+        source,
       },
       {
-        timeout: DEFAULT_LOTTEMART_TIMEOUT_MS,
+        timeout: timeoutMs,
         zyteApiKey: c.env?.ZYTE_API_KEY,
       },
     );

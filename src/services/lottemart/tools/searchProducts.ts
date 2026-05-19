@@ -13,6 +13,7 @@ interface SearchProductsArgs {
   storeName?: string;
   keyword: string;
   pageLimit?: number;
+  source?: 'auto' | 'legacy' | 'zetta';
   timeoutMs?: number;
   zyteApiKey?: string;
 }
@@ -24,6 +25,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     storeName,
     keyword,
     pageLimit = 3,
+    source = 'auto',
     timeoutMs = DEFAULT_LOTTEMART_TIMEOUT_MS,
     zyteApiKey,
   } = args;
@@ -35,6 +37,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
       storeName,
       keyword,
       pageLimit,
+      source,
     },
     {
       timeout: timeoutMs,
@@ -53,6 +56,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
             storeName: result.storeName,
             keyword,
             pageLimit,
+            source,
             totalCount: result.totalCount,
             totalPages: result.totalPages,
             count: result.products.length,
@@ -78,6 +82,11 @@ export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration 
         storeName: z.string().optional().describe('매장명 (예: 강변점)'),
         keyword: z.string().describe('상품 검색어 (예: 콜라, 우유, 과자)'),
         pageLimit: z.number().optional().default(3).describe('추가 조회할 최대 페이지 수 (기본값: 3)'),
+        source: z
+          .enum(['auto', 'legacy', 'zetta'])
+          .optional()
+          .default('auto')
+          .describe('상품 검색 경로 (auto: 구형 경로 후 제타 대체, zetta: 빠른 제타 API 우선, legacy: 구형 경로만 사용)'),
         timeoutMs: z
           .number()
           .optional()

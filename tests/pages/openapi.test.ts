@@ -110,6 +110,13 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/emart24/inventory']).toBeDefined();
     expect(spec.paths['/api/lottemart/stores']).toBeDefined();
     expect(spec.paths['/api/lottemart/products']).toBeDefined();
+    expect(
+      (
+        spec.paths['/api/lottemart/products'] as {
+          get: { parameters: Array<{ name: string }> };
+        }
+      ).get.parameters.map((parameter) => parameter.name),
+    ).toEqual(expect.arrayContaining(['source', 'timeoutMs']));
     expect(spec.paths['/api/gs25/stores']).toBeDefined();
     expect(spec.paths['/api/gs25/products']).toBeDefined();
     expect(spec.paths['/api/gs25/inventory']).toBeDefined();

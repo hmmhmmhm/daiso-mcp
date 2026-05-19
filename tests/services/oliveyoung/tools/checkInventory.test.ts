@@ -3,12 +3,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { __testOnlyClearOliveyoungCaches } from '../../../../src/services/oliveyoung/client.js';
 import { createCheckInventoryTool } from '../../../../src/services/oliveyoung/tools/checkInventory.js';
 
 const mockFetch = vi.fn();
 
 beforeEach(() => {
   mockFetch.mockReset();
+  __testOnlyClearOliveyoungCaches();
   vi.stubGlobal('fetch', mockFetch);
 });
 

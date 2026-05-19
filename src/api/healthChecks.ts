@@ -69,7 +69,8 @@ interface HealthCheckCacheKeyParams {
 
 const HEALTH_CHECK_CACHE_TTL_MS = 60_000;
 const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 7000;
-const MAX_HEALTH_CHECK_TIMEOUT_MS = 10_000;
+const MAX_HEALTH_CHECK_TIMEOUT_MS = 20_000;
+const DEFAULT_HEALTH_CHECK_CONCURRENCY = 6;
 const DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS = 0;
 
 const HEALTH_CHECKS: HealthCheckDefinition[] = [
@@ -140,7 +141,7 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     service: 'lottemart',
     target: 'products',
     mode: 'quick',
-    path: '/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeCode=2301&area=%EC%84%9C%EC%9A%B8&pageLimit=1',
+    path: '/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeCode=2301&area=%EC%84%9C%EC%9A%B8&pageLimit=1&source=zetta',
     collectionKey: 'products',
     requiredFields: ['productCode', 'name', 'productName'],
   },
@@ -221,7 +222,7 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     service: 'oliveyoung',
     target: 'inventory',
     mode: 'deep',
-    path: '/api/oliveyoung/inventory?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&storeKeyword=%EB%AA%85%EB%8F%99&size=3&stockCheckLimit=1',
+    path: '/api/oliveyoung/inventory?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&storeKeyword=%EB%AA%85%EB%8F%99&size=1&storeLimit=1&stockCheckLimit=0',
     collectionKey: 'inventoryProducts',
     requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
   },
@@ -263,6 +264,28 @@ function selectChecks(params: Pick<RunHealthChecksParams, 'service' | 'check' | 
     }
     return true;
   });
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await mapper(items[currentIndex]);
+      }
+    }),
+  );
+
+  return results;
 }
 
 function toCount(data: unknown): number | null {
@@ -587,8 +610,7 @@ export async function runHealthChecks(params: RunHealthChecksParams): Promise<He
     };
   }
 
-  const checks = await Promise.all(
-    selectChecks(params).map((check) =>
+  const checks = await mapWithConcurrency(selectChecks(params), DEFAULT_HEALTH_CHECK_CONCURRENCY, (check) =>
       runSingleCheck(check, {
         baseUrl: params.baseUrl,
         fetchImpl,
@@ -598,7 +620,6 @@ export async function runHealthChecks(params: RunHealthChecksParams): Promise<He
         includeSamples: params.includeSamples,
         cacheBust: params.cacheBust,
       }),
-    ),
   );
   const summary: HealthCheckSummary = {
     status: aggregateStatus(checks),

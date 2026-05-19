@@ -107,6 +107,31 @@ describe('runHealthChecks', () => {
     expect(result.checks.map((check) => check.id)).toContain('cli.contract');
   });
 
+  it('full 모드 체크를 제한된 동시성으로 실행한다', async () => {
+    let activeRequests = 0;
+    let maxActiveRequests = 0;
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      activeRequests += 1;
+      maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+      await Promise.resolve();
+      activeRequests -= 1;
+
+      return String(input).includes('/health')
+        ? jsonResponse({ status: 'ok' })
+        : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } });
+    });
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      mode: 'full',
+      fetchImpl,
+      fresh: true,
+    });
+
+    expect(result.checks.length).toBeGreaterThan(10);
+    expect(maxActiveRequests).toBeLessThanOrEqual(6);
+  });
+
   it('deep 모드에서 주요 inventory 체크를 실행한다', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
@@ -138,6 +163,7 @@ describe('runHealthChecks', () => {
       }),
     );
     expect(String(fetchImpl.mock.calls[0][0])).toContain('/api/oliveyoung/inventory?');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('stockCheckLimit=0');
   });
 
   it('inventory products 응답에서 개수와 샘플 이름을 읽는다', async () => {
@@ -536,7 +562,7 @@ describe('runHealthChecks', () => {
     });
 
     expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=7000');
-    expect(String(fetchImpl.mock.calls[1][0])).toContain('timeoutMs=10000');
+    expect(String(fetchImpl.mock.calls[1][0])).toContain('timeoutMs=20000');
   });
 
   it('timeoutMs가 1보다 작으면 기본값으로 보정한다', async () => {

@@ -9,6 +9,8 @@ export interface RequestOptions {
   sessionCookie?: string;
 }
 
+export type LotteMartProductSource = 'auto' | 'legacy' | 'zetta';
+
 export interface FetchLotteMartStoresParams {
   area?: string;
   keyword?: string;
@@ -24,4 +26,5 @@ export interface SearchLotteMartProductsParams {
   storeName?: string;
   keyword: string;
   pageLimit?: number;
+  source?: LotteMartProductSource;
 }

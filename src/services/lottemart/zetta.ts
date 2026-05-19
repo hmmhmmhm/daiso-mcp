@@ -116,7 +116,7 @@ function clampZettaPageLimit(pageLimit: number): number {
   return pageLimit;
 }
 
-async function fetchZettaLotteMartProducts(
+export async function fetchZettaLotteMartProducts(
   resolvedStore: LotteMartMarketOption,
   keyword: string,
   pageLimit: number,

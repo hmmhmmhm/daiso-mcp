@@ -31,7 +31,7 @@ import {
   parseStores,
   sortStores,
 } from './parser.js';
-import { createZettaFallbackStore, fetchZettaLotteMartProductsWithPrimaryError } from './zetta.js';
+import { createZettaFallbackStore, fetchZettaLotteMartProducts, fetchZettaLotteMartProductsWithPrimaryError } from './zetta.js';
 import type { LotteMartMarketOption, LotteMartProduct, LotteMartStore } from './types.js';
 
 const STORE_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -307,6 +307,10 @@ export async function searchLotteMartProducts(
   }
 
   const timeout = options.timeout || DEFAULT_LOTTEMART_TIMEOUT_MS;
+  if (params.source === 'zetta') {
+    return fetchZettaLotteMartProducts(createZettaFallbackStore(params), normalizedKeyword, params.pageLimit || 3, timeout);
+  }
+
   const sessionCookie = await getLotteMartSessionCookie({ timeout: LOTTEMART_PRODUCT_LEGACY_TIMEOUT_MS });
 
   let resolvedStore: LotteMartMarketOption | null;
@@ -317,6 +321,9 @@ export async function searchLotteMartProducts(
       zyteApiKey: options.zyteApiKey,
     });
   } catch (error) {
+    if (params.source === 'legacy') {
+      throw error;
+    }
     const fallbackStore = createZettaFallbackStore(params);
     return fetchZettaLotteMartProductsWithPrimaryError(
       fallbackStore,
@@ -351,6 +358,9 @@ export async function searchLotteMartProducts(
       options.zyteApiKey,
     );
   } catch (error) {
+    if (params.source === 'legacy') {
+      throw error;
+    }
     return fetchZettaLotteMartProductsWithPrimaryError(
       resolvedStore,
       normalizedKeyword,

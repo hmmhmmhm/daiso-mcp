@@ -227,6 +227,75 @@ describe('handleLotteMartSearchProducts', () => {
     );
   });
 
+  it('timeoutMs와 source 쿼리를 상품 검색 요청에 전달한다', async () => {
+    const searchSpy = vi.spyOn(lotteMartClient, 'searchLotteMartProducts').mockResolvedValueOnce({
+      area: '서울',
+      storeCode: '2301',
+      storeName: '강변점',
+      totalCount: 0,
+      totalPages: 1,
+      products: [],
+    });
+
+    const ctx = createMockContext({
+      area: '서울',
+      storeCode: '2301',
+      keyword: '콜라',
+      timeoutMs: '1234',
+      source: 'zetta',
+    });
+    await handleLotteMartSearchProducts(ctx);
+
+    expect(searchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        area: '서울',
+        storeCode: '2301',
+        keyword: '콜라',
+        source: 'zetta',
+      }),
+      expect.objectContaining({
+        timeout: 1234,
+      }),
+    );
+  });
+
+  it('지원하지 않는 source는 400을 반환한다', async () => {
+    const ctx = createMockContext({ area: '서울', storeCode: '2301', keyword: '콜라', source: 'bad' });
+    await handleLotteMartSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'INVALID_LOTTEMART_SOURCE',
+          message: 'source는 auto, legacy, zetta 중 하나여야 합니다.',
+        },
+      }),
+      400,
+    );
+  });
+
+  it('timeoutMs 쿼리가 유효하지 않으면 기본 제한 시간을 사용한다', async () => {
+    const searchSpy = vi.spyOn(lotteMartClient, 'searchLotteMartProducts').mockResolvedValueOnce({
+      area: '서울',
+      storeCode: '2301',
+      storeName: '강변점',
+      totalCount: 0,
+      totalPages: 1,
+      products: [],
+    });
+
+    const ctx = createMockContext({ area: '서울', storeCode: '2301', keyword: '콜라', timeoutMs: '0' });
+    await handleLotteMartSearchProducts(ctx);
+
+    expect(searchSpy).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        timeout: 45000,
+      }),
+    );
+  });
+
   it('알 수 없는 예외는 기본 메시지로 감싼다', async () => {
     vi.spyOn(lotteMartClient, 'searchLotteMartProducts').mockRejectedValueOnce(undefined);
 

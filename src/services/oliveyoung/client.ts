@@ -50,6 +50,8 @@ interface EnrichProductsParams {
 }
 
 const OLIVEYOUNG_IMAGE_HOST = 'https://image.oliveyoung.co.kr';
+const OLIVEYOUNG_PRODUCT_ID_CACHE_TTL_MS = 10 * 60 * 1000;
+const oliveyoungProductIdCache = new Map<string, { expiresAt: number; productId: string }>();
 const OLIVEYOUNG_IMAGE_PATH_PREFIX = '/uploads/images/goods';
 
 function resolveOliveyoungInStock(o2oStockFlag: boolean, o2oRemainQuantity: number): boolean {
@@ -242,13 +244,32 @@ async function fetchOliveyoungProductId(
   goodsNumber: string,
   options: RequestOptions = {}
 ): Promise<string> {
+  const normalizedGoodsNumber = goodsNumber.trim();
+  if (!normalizedGoodsNumber) {
+    return '';
+  }
+
+  const cached = oliveyoungProductIdCache.get(normalizedGoodsNumber);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.productId;
+  }
+
   const body = await zyteExtract(
     OLIVEYOUNG_API.STOCK_GOODS_INFO_PATH,
-    { goodsNo: goodsNumber },
+    { goodsNo: normalizedGoodsNumber },
     options
   );
 
-  return body.data?.goodsInfo?.masterGoodsNumber || '';
+  const productId = body.data?.goodsInfo?.masterGoodsNumber || '';
+  if (productId) {
+    oliveyoungProductIdCache.set(normalizedGoodsNumber, {
+      expiresAt: now + OLIVEYOUNG_PRODUCT_ID_CACHE_TTL_MS,
+      productId,
+    });
+  }
+
+  return productId;
 }
 
 async function fetchOliveyoungStockStores(
@@ -362,4 +383,8 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
     checkedCount,
     products: sortOliveyoungProducts(enrichedProducts),
   };
+}
+
+export function __testOnlyClearOliveyoungCaches(): void {
+  oliveyoungProductIdCache.clear();
 }

@@ -370,6 +370,41 @@ describe('resolveLotteMartStore', () => {
 });
 
 describe('searchLotteMartProducts', () => {
+  it('source가 zetta이면 구형 롯데마트 경로를 건너뛰고 제타 상품 API를 바로 호출한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          productGroups: [
+            {
+              decoratedProducts: [
+                {
+                  retailerProductId: 'OS8801094011307',
+                  name: '코카콜라 (1.2L)',
+                  brand: '코카콜라',
+                  packSizeDescription: '1200ml',
+                  price: { amount: '3790', currency: 'KRW' },
+                  available: true,
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await searchLotteMartProducts({
+      area: '서울',
+      storeCode: '2301',
+      keyword: '콜라',
+      source: 'zetta',
+    });
+
+    expect(result.storeCode).toBe('2301');
+    expect(result.products[0].productName).toBe('코카콜라 (1.2L)');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(String(mockFetch.mock.calls[0][0])).toContain('lottemartzetta.com/api/webproductpagews');
+  });
+
   it('초기 페이지와 추가 페이지를 합쳐 상품을 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(createSessionResponse())
@@ -540,6 +575,41 @@ describe('searchLotteMartProducts', () => {
       }),
     );
     expect(String(mockFetch.mock.calls[2][0])).toContain('lottemartzetta.com/api/webproductpagews');
+  });
+
+  it('source가 legacy이면 매장 옵션 실패 시 제타로 대체하지 않고 실패한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }));
+
+    await expect(
+      searchLotteMartProducts({
+        area: '서울',
+        storeCode: '2301',
+        keyword: '콜라',
+        source: 'legacy',
+      }),
+    ).rejects.toThrow('API 요청 실패: 522 Origin timeout - error code: 522');
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('source가 legacy이면 상품 검색 실패 시 제타로 대체하지 않고 실패한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(createSessionResponse())
+      .mockResolvedValueOnce(new Response('<option value="2301">강변점</option>'))
+      .mockResolvedValueOnce(new Response('error code: 522', { status: 522, statusText: 'Origin timeout' }));
+
+    await expect(
+      searchLotteMartProducts({
+        area: '서울',
+        storeName: '강변점',
+        keyword: '콜라',
+        source: 'legacy',
+      }),
+    ).rejects.toThrow('API 요청 실패: 522 Origin timeout - error code: 522');
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
   it('제타 대체 조회가 실패하면 기존 경로와 제타 경로 오류를 함께 반환한다', async () => {
