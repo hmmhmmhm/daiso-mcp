@@ -79,6 +79,36 @@ describe('handleOliveyoungFindStores', () => {
     );
   });
 
+  it('timeoutMs 쿼리를 올리브영 매장 검색 요청에 전달한다', async () => {
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    mockFetch.mockResolvedValue(
+      createMockZyteResponse({
+        status: 'SUCCESS',
+        data: { totalCount: 0, storeList: [] },
+      })
+    );
+
+    const ctx = createMockContext({ timeoutMs: '1234' });
+    await handleOliveyoungFindStores(ctx);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 1234);
+  });
+
+  it('매장 검색 timeoutMs 쿼리가 유효하지 않으면 기본 제한 시간을 사용한다', async () => {
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    mockFetch.mockResolvedValue(
+      createMockZyteResponse({
+        status: 'SUCCESS',
+        data: { totalCount: 0, storeList: [] },
+      })
+    );
+
+    const ctx = createMockContext({ timeoutMs: 'bad' });
+    await handleOliveyoungFindStores(ctx);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 15000);
+  });
+
   it('올리브영 매장 검색 에러를 처리한다', async () => {
     mockFetch.mockRejectedValue(new Error('zyte fail'));
 
@@ -170,6 +200,36 @@ describe('handleOliveyoungSearchProducts', () => {
         }),
       })
     );
+  });
+
+  it('timeoutMs 쿼리를 올리브영 상품 검색 요청에 전달한다', async () => {
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    mockFetch.mockResolvedValue(
+      createMockZyteResponse({
+        status: 'SUCCESS',
+        data: { totalCount: 0, nextPage: false, serachList: [] },
+      })
+    );
+
+    const ctx = createMockContext({ keyword: '마스크팩', timeoutMs: '1234' });
+    await handleOliveyoungSearchProducts(ctx);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 1234);
+  });
+
+  it('상품 검색 timeoutMs 쿼리가 0 이하이면 기본 제한 시간을 사용한다', async () => {
+    const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    mockFetch.mockResolvedValue(
+      createMockZyteResponse({
+        status: 'SUCCESS',
+        data: { totalCount: 0, nextPage: false, serachList: [] },
+      })
+    );
+
+    const ctx = createMockContext({ keyword: '마스크팩', timeoutMs: '0' });
+    await handleOliveyoungSearchProducts(ctx);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 15000);
   });
 
   it('keyword가 없으면 에러를 반환한다', async () => {
@@ -352,6 +412,120 @@ describe('handleOliveyoungCheckInventory', () => {
     await handleOliveyoungCheckInventory(ctx);
 
     expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), 15000);
+  });
+
+  it('stockCheckLimit 쿼리로 주변 매장 재고 보강 상품 수를 제한한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', storeName: '올리브영 명동 타운' }] },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 2,
+            nextPage: false,
+            serachList: [
+              { goodsNumber: 'A1', goodsName: '선크림 A', o2oStockFlag: true, o2oRemainQuantity: 0 },
+              { goodsNumber: 'A2', goodsName: '선크림 B', o2oStockFlag: true, o2oRemainQuantity: 0 },
+            ],
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', salesStoreYn: true, remainQuantity: 2 }] },
+        })
+      );
+
+    const ctx = createMockContext({ keyword: '선크림', stockCheckLimit: '1' });
+    await handleOliveyoungCheckInventory(ctx);
+
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          inventory: expect.objectContaining({
+            stockCheckedCount: 1,
+            stockUncheckedCount: 1,
+          }),
+        }),
+      })
+    );
+  });
+
+  it('stockCheckLimit 쿼리가 유효하지 않으면 기본 보강 상품 수를 사용한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', storeName: '올리브영 명동 타운' }] },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 2,
+            nextPage: false,
+            serachList: [
+              { goodsNumber: 'A1', goodsName: '선크림 A', o2oStockFlag: true, o2oRemainQuantity: 0 },
+              { goodsNumber: 'A2', goodsName: '선크림 B', o2oStockFlag: true, o2oRemainQuantity: 0 },
+            ],
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8802' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', salesStoreYn: true, remainQuantity: 2 }] },
+        })
+      )
+      .mockResolvedValueOnce(
+        createMockZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D177', salesStoreYn: true, remainQuantity: 1 }] },
+        })
+      );
+
+    const ctx = createMockContext({ keyword: '선크림', stockCheckLimit: 'bad' });
+    await handleOliveyoungCheckInventory(ctx);
+
+    expect(mockFetch).toHaveBeenCalledTimes(6);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          inventory: expect.objectContaining({
+            stockCheckedCount: 2,
+            stockUncheckedCount: 0,
+          }),
+        }),
+      })
+    );
   });
 
   it('keyword가 없으면 에러를 반환한다', async () => {

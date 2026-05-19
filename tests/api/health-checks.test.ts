@@ -78,6 +78,195 @@ describe('runHealthChecks', () => {
     );
   });
 
+  it('full 모드에서 quick과 deep 체크를 함께 실행한다', async () => {
+    const fetchImpl = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).includes('/health')
+          ? jsonResponse({ status: 'ok' })
+          : String(input).includes('/inventory')
+            ? jsonResponse({
+                success: true,
+                data: { inventory: { products: [{ name: '상품' }], items: [{ name: '상품' }] } },
+                meta: { total: 1 },
+              })
+            : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+      ),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      mode: 'full' as never,
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.filters.mode).toBe('full');
+    expect(result.checks.map((check) => check.id)).toContain('daiso.products');
+    expect(result.checks.map((check) => check.id)).toContain('cli.contract');
+  });
+
+  it('deep 모드에서 주요 inventory 체크를 실행한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          inventory: {
+            products: [{ goodsNumber: 'A1', goodsName: '선크림' }],
+          },
+        },
+        meta: { total: 1 },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'oliveyoung.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'oliveyoung.inventory',
+        status: 'ok',
+        message: '1 item(s) returned',
+      }),
+    );
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('/api/oliveyoung/inventory?');
+  });
+
+  it('inventory products 응답에서 개수와 샘플 이름을 읽는다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          inventory: {
+            products: [{ goodsNumber: 'A1', goodsName: '선크림' }],
+          },
+        },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'oliveyoung.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+      includeSamples: true,
+    });
+
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        message: '1 item(s) returned',
+        sample: { first: '선크림' },
+      }),
+    );
+  });
+
+  it('inventory items 응답에서 개수와 샘플 이름을 읽는다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          inventory: {
+            items: [{ itemCode: 'C1', itemName: '커피' }],
+          },
+        },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cu.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+      includeSamples: true,
+    });
+
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        message: '1 item(s) returned',
+        sample: { first: '커피' },
+      }),
+    );
+  });
+
+  it('inventory 컬렉션 값이 배열이 아니면 빈 컬렉션으로 처리한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          inventory: {
+            products: {},
+          },
+        },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'oliveyoung.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        message: 'response ok',
+      }),
+    );
+  });
+
+  it('느린 성공 응답은 degraded로 표시한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+    const timestamps = [0, 1000, 7000, 7000];
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'daiso.products',
+      fetchImpl,
+      now: () => timestamps.shift() ?? 7000,
+      fresh: true,
+      slowThresholdMs: 5000,
+    } as never);
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'degraded',
+        durationMs: 6000,
+        message: expect.stringContaining('slow response'),
+      }),
+    );
+  });
+
+  it('cacheBust가 켜지면 체크 URL에 캐시 우회 파라미터를 붙인다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+
+    await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'daiso.products',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+      cacheBust: true,
+    } as never);
+
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('_healthCheck=');
+  });
+
   it('CLI 계약 체크는 API envelope가 아니면 fail을 반환한다', async () => {
     const fetchImpl = vi
       .fn()

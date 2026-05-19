@@ -3,6 +3,7 @@
  */
 
 export type HealthCheckStatus = 'ok' | 'degraded' | 'fail' | 'skipped';
+export type HealthCheckMode = 'quick' | 'deep' | 'full';
 
 export interface HealthCheckDefinition {
   id: string;
@@ -11,7 +12,7 @@ export interface HealthCheckDefinition {
   mode: 'quick' | 'deep';
   path: string;
   kind?: 'api' | 'cli-contract';
-  collectionKey?: 'products' | 'stores' | 'theaters' | 'movies' | 'showtimes';
+  collectionKey?: 'products' | 'stores' | 'theaters' | 'movies' | 'showtimes' | 'inventoryProducts' | 'inventoryItems';
   requiredFields?: string[];
 }
 
@@ -36,7 +37,7 @@ export interface HealthCheckSummary {
   filters: {
     service: string | null;
     check: string | null;
-    mode: 'quick' | 'deep';
+    mode: HealthCheckMode;
   };
   checks: HealthCheckResult[];
 }
@@ -45,10 +46,12 @@ interface RunHealthChecksParams {
   baseUrl: string;
   service?: string;
   check?: string;
-  mode?: 'quick' | 'deep';
+  mode?: HealthCheckMode;
   timeoutMs?: number;
+  slowThresholdMs?: number;
   includeSamples?: boolean;
   fresh?: boolean;
+  cacheBust?: boolean;
   fetchImpl?: typeof fetch;
   now?: () => number;
 }
@@ -57,14 +60,17 @@ interface HealthCheckCacheKeyParams {
   baseUrl: string;
   service?: string;
   check?: string;
-  mode: 'quick' | 'deep';
+  mode: HealthCheckMode;
   timeoutMs: number;
+  slowThresholdMs?: number;
   includeSamples?: boolean;
+  cacheBust?: boolean;
 }
 
 const HEALTH_CHECK_CACHE_TTL_MS = 60_000;
 const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 7000;
 const MAX_HEALTH_CHECK_TIMEOUT_MS = 10_000;
+const DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS = 0;
 
 const HEALTH_CHECKS: HealthCheckDefinition[] = [
   {
@@ -174,6 +180,51 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     collectionKey: 'theaters',
     requiredFields: ['theaterCode', 'theaterName', 'name'],
   },
+  {
+    id: 'cu.inventory',
+    service: 'cu',
+    target: 'inventory',
+    mode: 'deep',
+    path: '/api/cu/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&size=1',
+    collectionKey: 'inventoryItems',
+    requiredFields: ['itemCode', 'itemName', 'name'],
+  },
+  {
+    id: 'emart24.inventory',
+    service: 'emart24',
+    target: 'inventory',
+    mode: 'deep',
+    path: '/api/emart24/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
+    collectionKey: 'inventoryItems',
+    requiredFields: ['pluCd', 'goodsName', 'itemName', 'name'],
+  },
+  {
+    id: 'gs25.inventory',
+    service: 'gs25',
+    target: 'inventory',
+    mode: 'deep',
+    path: '/api/gs25/inventory?keyword=%EC%BD%9C%EB%9D%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
+    collectionKey: 'inventoryItems',
+    requiredFields: ['itemCode', 'itemName', 'name'],
+  },
+  {
+    id: 'seveneleven.inventory',
+    service: 'seveneleven',
+    target: 'inventory',
+    mode: 'deep',
+    path: '/api/seveneleven/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&size=1',
+    collectionKey: 'inventoryItems',
+    requiredFields: ['itemCode', 'itemName', 'productNo', 'name'],
+  },
+  {
+    id: 'oliveyoung.inventory',
+    service: 'oliveyoung',
+    target: 'inventory',
+    mode: 'deep',
+    path: '/api/oliveyoung/inventory?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&storeKeyword=%EB%AA%85%EB%8F%99&size=3&stockCheckLimit=1',
+    collectionKey: 'inventoryProducts',
+    requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
+  },
 ];
 
 const healthCheckCache = new Map<string, { expiresAt: number; summary: HealthCheckSummary }>();
@@ -192,6 +243,8 @@ function createCacheKey(params: HealthCheckCacheKeyParams): string {
     params.check || '',
     params.mode,
     params.timeoutMs,
+    params.slowThresholdMs || 0,
+    params.cacheBust ? 'cache-bust' : 'cache',
     params.includeSamples ? 'samples' : 'no-samples',
   ].join('|');
 }
@@ -199,7 +252,7 @@ function createCacheKey(params: HealthCheckCacheKeyParams): string {
 function selectChecks(params: Pick<RunHealthChecksParams, 'service' | 'check' | 'mode'>): HealthCheckDefinition[] {
   const mode = params.mode || 'quick';
   return HEALTH_CHECKS.filter((check) => {
-    if (check.mode !== mode) {
+    if (mode !== 'full' && check.mode !== mode) {
       return false;
     }
     if (params.service && check.service !== params.service) {
@@ -229,6 +282,16 @@ function toCount(data: unknown): number | null {
     }
   }
 
+  if (record.inventory && typeof record.inventory === 'object') {
+    const inventory = record.inventory as Record<string, unknown>;
+    for (const key of ['products', 'items']) {
+      const value = inventory[key];
+      if (Array.isArray(value)) {
+        return value.length;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -251,6 +314,22 @@ function toFirstName(data: unknown): string | undefined {
     }
   }
 
+  if (record.inventory && typeof record.inventory === 'object') {
+    const inventory = record.inventory as Record<string, unknown>;
+    for (const key of ['products', 'items']) {
+      const value = inventory[key];
+      if (!Array.isArray(value) || !value[0] || typeof value[0] !== 'object') {
+        continue;
+      }
+      const item = value[0] as Record<string, unknown>;
+      for (const nameKey of ['productName', 'itemName', 'goodsName', 'name']) {
+        if (typeof item[nameKey] === 'string' && item[nameKey].trim().length > 0) {
+          return item[nameKey].trim();
+        }
+      }
+    }
+  }
+
   return undefined;
 }
 
@@ -260,6 +339,16 @@ function getCollectionItems(data: unknown, collectionKey?: HealthCheckDefinition
   }
 
   const record = data as Record<string, unknown>;
+  if (collectionKey === 'inventoryProducts' || collectionKey === 'inventoryItems') {
+    const inventory = record.inventory;
+    if (!inventory || typeof inventory !== 'object') {
+      return [];
+    }
+    const key = collectionKey === 'inventoryProducts' ? 'products' : 'items';
+    const value = (inventory as Record<string, unknown>)[key];
+    return Array.isArray(value) ? value : [];
+  }
+
   if (collectionKey && Array.isArray(record[collectionKey])) {
     return record[collectionKey];
   }
@@ -314,9 +403,12 @@ function aggregateStatus(checks: HealthCheckResult[]): HealthCheckStatus {
   return 'ok';
 }
 
-function buildCheckUrl(baseUrl: string, check: HealthCheckDefinition, timeoutMs: number): string {
+function buildCheckUrl(baseUrl: string, check: HealthCheckDefinition, timeoutMs: number, cacheBustValue?: number): string {
   const url = new URL(check.path, baseUrl);
   url.searchParams.set('timeoutMs', String(timeoutMs));
+  if (typeof cacheBustValue === 'number') {
+    url.searchParams.set('_healthCheck', String(cacheBustValue));
+  }
   return url.toString();
 }
 
@@ -350,14 +442,16 @@ function isCliCompatibleEnvelope(path: string, body: unknown): boolean {
 
 async function runCliContractCheck(
   check: HealthCheckDefinition,
-  params: Required<Pick<RunHealthChecksParams, 'baseUrl' | 'fetchImpl' | 'now' | 'timeoutMs'>>,
+  params: Required<Pick<RunHealthChecksParams, 'baseUrl' | 'fetchImpl' | 'now' | 'timeoutMs'>> &
+    Pick<RunHealthChecksParams, 'cacheBust'>,
 ): Promise<HealthCheckResult> {
   const startedAt = params.now();
+  const cacheBustValue = params.cacheBust ? startedAt : undefined;
 
   for (const path of CLI_CONTRACT_PATHS) {
     const syntheticCheck = { ...check, path };
     try {
-      const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, syntheticCheck, params.timeoutMs), {
+      const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, syntheticCheck, params.timeoutMs, cacheBustValue), {
         signal: AbortSignal.timeout(params.timeoutMs),
       });
       const body = (await response.json().catch(() => ({}))) as {
@@ -402,7 +496,7 @@ async function runCliContractCheck(
 async function runSingleCheck(
   check: HealthCheckDefinition,
   params: Required<Pick<RunHealthChecksParams, 'baseUrl' | 'fetchImpl' | 'now' | 'timeoutMs'>> &
-    Pick<RunHealthChecksParams, 'includeSamples'>,
+    Pick<RunHealthChecksParams, 'includeSamples' | 'slowThresholdMs' | 'cacheBust'>,
 ): Promise<HealthCheckResult> {
   if (check.kind === 'cli-contract') {
     return runCliContractCheck(check, params);
@@ -410,9 +504,10 @@ async function runSingleCheck(
 
   const timeoutMs = params.timeoutMs;
   const startedAt = params.now();
+  const cacheBustValue = params.cacheBust ? startedAt : undefined;
 
   try {
-    const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, check, timeoutMs), {
+    const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, check, timeoutMs, cacheBustValue), {
       signal: AbortSignal.timeout(timeoutMs),
     });
     const body = (await response.json().catch(() => ({}))) as {
@@ -437,10 +532,14 @@ async function runSingleCheck(
 
     const count = typeof body.meta?.total === 'number' ? body.meta.total : toCount(body.data);
     const shapeOk = hasRequiredRepresentativeFields(body.data, check.collectionKey, check.requiredFields);
-    const status: HealthCheckStatus = count === 0 || !shapeOk ? 'degraded' : 'ok';
+    const slowThresholdMs = params.slowThresholdMs || DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS;
+    const slow = slowThresholdMs > 0 && durationMs > slowThresholdMs;
+    const status: HealthCheckStatus = count === 0 || !shapeOk || slow ? 'degraded' : 'ok';
     const first = params.includeSamples ? toFirstName(body.data) : undefined;
     const message =
-      !shapeOk && count !== 0
+      slow
+        ? `slow response: ${durationMs}ms > ${slowThresholdMs}ms`
+        : !shapeOk && count !== 0
         ? `response missing required fields: ${check.requiredFields!.join(', ')}`
         : count === null
           ? 'response ok'
@@ -473,7 +572,11 @@ export async function runHealthChecks(params: RunHealthChecksParams): Promise<He
   const fetchImpl = params.fetchImpl || ((input, init) => globalThis.fetch(input, init));
   const mode = params.mode || 'quick';
   const timeoutMs = clampTimeout(params.timeoutMs ?? DEFAULT_HEALTH_CHECK_TIMEOUT_MS);
-  const cacheKey = createCacheKey({ ...params, mode, timeoutMs, baseUrl: params.baseUrl });
+  const slowThresholdMs =
+    Number.isFinite(params.slowThresholdMs) && params.slowThresholdMs && params.slowThresholdMs > 0
+      ? Math.trunc(params.slowThresholdMs)
+      : DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS;
+  const cacheKey = createCacheKey({ ...params, mode, timeoutMs, slowThresholdMs, baseUrl: params.baseUrl });
   const cached = healthCheckCache.get(cacheKey);
   const startedAt = now();
 
@@ -491,7 +594,9 @@ export async function runHealthChecks(params: RunHealthChecksParams): Promise<He
         fetchImpl,
         now,
         timeoutMs,
+        slowThresholdMs,
         includeSamples: params.includeSamples,
+        cacheBust: params.cacheBust,
       }),
     ),
   );

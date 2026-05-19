@@ -263,11 +263,61 @@ describe('GET /api/health/checks', () => {
     const data = await res.json();
     expect(data.status).toBe('ok');
     expect(data.filters.mode).toBe('deep');
-    expect(data.checks).toEqual([
-      expect.objectContaining({
-        id: 'cli.contract',
-        status: 'ok',
-      }),
-    ]);
+    expect(data.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'cli.contract',
+          status: 'ok',
+        }),
+        expect.objectContaining({
+          id: 'oliveyoung.inventory',
+          status: 'ok',
+        }),
+      ]),
+    );
+  });
+
+  it('full 모드를 파싱하고 network transport에서는 외부 fetch와 cache bust를 사용한다', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).includes('/health')
+          ? jsonResponse({ status: 'ok' })
+          : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+      ),
+    );
+
+    const res = await app.request(
+      'https://mcp.aka.page/api/health/checks?mode=full&transport=network&fresh=true',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+        HEALTH_CHECK_BASE_URL: 'https://daiso-mcp.example.workers.dev',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.filters.mode).toBe('full');
+    expect(mockFetch).toHaveBeenCalled();
+    expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/daiso-mcp\.example\.workers\.dev\//);
+    expect(String(mockFetch.mock.calls[0][0])).toContain('_healthCheck=');
+  });
+
+  it('지원하지 않는 mode는 400을 반환한다', async () => {
+    const res = await app.request(
+      '/api/health/checks?mode=bad',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error.code).toBe('INVALID_HEALTH_CHECK_MODE');
   });
 });

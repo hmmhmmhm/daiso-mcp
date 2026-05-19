@@ -11,6 +11,7 @@ export interface AppBindings {
   HEALTH_CHECK_SECRET?: string;
   HEALTH_CHECK_BASE_URL?: string;
   HEALTH_CHECK_TRANSPORT?: string;
+  HEALTH_CHECK_SLOW_THRESHOLD_MS?: string;
 }
 
 export type ApiContext = Context<{ Bindings: AppBindings }>;

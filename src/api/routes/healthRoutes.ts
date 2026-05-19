@@ -4,7 +4,7 @@
 
 import type { Hono } from 'hono';
 import { errorResponse, type AppBindings } from '../response.js';
-import { runHealthChecks } from '../healthChecks.js';
+import { runHealthChecks, type HealthCheckMode } from '../healthChecks.js';
 
 function parseBoolean(value: string | undefined): boolean {
   const normalized = (value || '').trim().toLowerCase();
@@ -18,6 +18,16 @@ function readHealthCheckToken(headers: Headers): string {
   }
 
   return (headers.get('x-health-check-key') || '').trim();
+}
+
+function parseMode(value: string | undefined): HealthCheckMode | null {
+  if (!value || value === 'quick') {
+    return 'quick';
+  }
+  if (value === 'deep' || value === 'full') {
+    return value;
+  }
+  return null;
 }
 
 export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void {
@@ -36,11 +46,21 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       return errorResponse(c, 'UNAUTHORIZED_HEALTH_CHECK', '유효한 헬스 체크 시크릿 키가 필요합니다.', 401);
     }
 
-    const mode = c.req.query('mode') === 'deep' ? 'deep' : 'quick';
+    const mode = parseMode(c.req.query('mode'));
+    if (!mode) {
+      return errorResponse(c, 'INVALID_HEALTH_CHECK_MODE', 'mode는 quick, deep, full 중 하나여야 합니다.', 400);
+    }
+
     const timeoutMs = Number.parseInt(c.req.query('timeoutMs') || '3000', 10);
+    const slowThresholdMs = Number.parseInt(
+      c.req.query('slowThresholdMs') || c.env?.HEALTH_CHECK_SLOW_THRESHOLD_MS || '0',
+      10,
+    );
     const baseUrl = c.env?.HEALTH_CHECK_BASE_URL?.trim() || new URL(c.req.url).origin;
+    const transport = c.req.query('transport') || c.env?.HEALTH_CHECK_TRANSPORT || 'internal';
+    const cacheBust = parseBoolean(c.req.query('cacheBust')) || transport === 'network';
     const fetchImpl =
-      c.env?.HEALTH_CHECK_BASE_URL && c.env?.HEALTH_CHECK_TRANSPORT !== 'network'
+      c.env?.HEALTH_CHECK_BASE_URL && transport !== 'network'
         ? async (input: RequestInfo | URL, init?: RequestInit) => app.fetch(new Request(input, init), c.env)
         : undefined;
     const result = await runHealthChecks({
@@ -49,8 +69,10 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       check: c.req.query('check') || undefined,
       mode,
       timeoutMs,
+      slowThresholdMs,
       includeSamples: parseBoolean(c.req.query('includeSamples')),
       fresh: parseBoolean(c.req.query('fresh')),
+      cacheBust,
       fetchImpl,
     });
 

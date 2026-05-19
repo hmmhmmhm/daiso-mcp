@@ -20,6 +20,7 @@ interface CheckInventoryArgs {
   sort?: string;
   includeSoldOut?: boolean;
   storeLimit?: number;
+  stockCheckLimit?: number;
   timeoutMs?: number;
   zyteApiKey?: string;
 }
@@ -35,6 +36,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     sort = '01',
     includeSoldOut = false,
     storeLimit = 10,
+    stockCheckLimit = 5,
     timeoutMs = 15000,
     zyteApiKey,
   } = args;
@@ -76,7 +78,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       latitude,
       longitude,
       storeKeyword,
-      maxProducts: Math.min(productResult.products.length, 5),
+      maxProducts: Math.min(productResult.products.length, Math.max(0, stockCheckLimit)),
     },
     {
       timeout: timeoutMs,
@@ -140,6 +142,11 @@ export function createCheckInventoryTool(apiKey?: string): ToolRegistration {
         sort: z.string().optional().default('01').describe('정렬 코드 (기본값: 01)'),
         includeSoldOut: z.boolean().optional().default(false).describe('품절 상품 포함 여부 (기본값: false)'),
         storeLimit: z.number().optional().default(10).describe('반환할 주변 매장 최대 수 (기본값: 10)'),
+        stockCheckLimit: z
+          .number()
+          .optional()
+          .default(5)
+          .describe('주변 매장별 재고를 보강할 상품 수 (기본값: 5, 낮출수록 빠름)'),
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },

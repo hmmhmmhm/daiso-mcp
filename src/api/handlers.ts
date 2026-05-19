@@ -30,6 +30,8 @@ export async function handleOliveyoungSearchProducts(c: ApiContext) {
   const size = parseInt(c.req.query('size') || '20');
   const sort = c.req.query('sort') || '01';
   const includeSoldOut = c.req.query('includeSoldOut') === 'true';
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
 
   if (keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
@@ -46,6 +48,7 @@ export async function handleOliveyoungSearchProducts(c: ApiContext) {
       },
       {
         apiKey: c.env?.ZYTE_API_KEY,
+        timeout: timeoutMs,
       },
     );
 
@@ -76,6 +79,8 @@ export async function handleOliveyoungFindStores(c: ApiContext) {
   const lng = parseFloat(c.req.query('lng') || '126.978');
   const pageIdx = parseInt(c.req.query('pageIdx') || '1');
   const limit = parseInt(c.req.query('limit') || '20');
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
 
   try {
     const result = await fetchOliveyoungStores(
@@ -87,6 +92,7 @@ export async function handleOliveyoungFindStores(c: ApiContext) {
       },
       {
         apiKey: c.env?.ZYTE_API_KEY,
+        timeout: timeoutMs,
       }
     );
 
@@ -119,6 +125,9 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
   const storeLimit = parseInt(c.req.query('storeLimit') || '10');
   const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
   const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
+  const parsedStockCheckLimit = parseInt(c.req.query('stockCheckLimit') || '5', 10);
+  const stockCheckLimit =
+    Number.isFinite(parsedStockCheckLimit) && parsedStockCheckLimit >= 0 ? parsedStockCheckLimit : 5;
 
   if (!keyword || keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
@@ -158,7 +167,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
         latitude: lat,
         longitude: lng,
         storeKeyword,
-        maxProducts: Math.min(productResult.products.length, 5),
+        maxProducts: Math.min(productResult.products.length, stockCheckLimit),
       },
       {
         apiKey: c.env.ZYTE_API_KEY,

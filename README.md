@@ -332,6 +332,7 @@ daiso 인터랙티브 모드
 
 - [@thecats1105](https://github.com/thecats1105): 다이소 진열 위치 조회 도구(`daiso_get_display_location`) 구현 및 API/테스트 연동
 - [@betterthanhajin](https://github.com/betterthanhajin): CGV 서비스 프로바이더 구현(극장/영화/시간표 도구, 라우트·스펙·테스트 추가)
+- [@LLagoon3](https://github.com/LLagoon3): 다이소 매장 재고 조회 신규 인증 흐름 전환 및 관련 테스트 보강
 - [제로초님](https://youtube.com/shorts/ZgIqA1NCEp0?si=UW0pKsSpqmEi7lXG): 프로젝트 홍보 도움
 
 <br>

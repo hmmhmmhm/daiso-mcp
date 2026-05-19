@@ -46,6 +46,13 @@ export const OPENAPI_PATHS_OLIVEYOUNG = {
               description: '품절 포함 여부 (true/false)',
               schema: { type: 'boolean', default: false },
             },
+            {
+              name: 'timeoutMs',
+              in: 'query',
+              required: false,
+              description: '요청 제한 시간(ms)',
+              schema: { type: 'integer', default: 15000, minimum: 1 },
+            },
           ],
           responses: {
             '200': {
@@ -116,6 +123,13 @@ export const OPENAPI_PATHS_OLIVEYOUNG = {
               required: false,
               description: '최대 결과 수',
               schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
+            },
+            {
+              name: 'timeoutMs',
+              in: 'query',
+              required: false,
+              description: '요청 제한 시간(ms)',
+              schema: { type: 'integer', default: 15000, minimum: 1 },
             },
           ],
           responses: {
@@ -201,6 +215,27 @@ export const OPENAPI_PATHS_OLIVEYOUNG = {
               required: false,
               description: '품절 포함 여부 (true/false)',
               schema: { type: 'boolean', default: false },
+            },
+            {
+              name: 'storeLimit',
+              in: 'query',
+              required: false,
+              description: '반환할 주변 매장 최대 수',
+              schema: { type: 'integer', default: 10, minimum: 1, maximum: 100 },
+            },
+            {
+              name: 'stockCheckLimit',
+              in: 'query',
+              required: false,
+              description: '주변 매장별 재고를 보강할 상품 수. 낮출수록 빠르게 응답합니다.',
+              schema: { type: 'integer', default: 5, minimum: 0, maximum: 20 },
+            },
+            {
+              name: 'timeoutMs',
+              in: 'query',
+              required: false,
+              description: '요청 제한 시간(ms)',
+              schema: { type: 'integer', default: 15000, minimum: 1 },
             },
           ],
           responses: {

@@ -153,6 +153,49 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.inventory.products[0].storeInventory.stores[0].stockLabel).toBe('재고 3개');
   });
 
+  it('stockCheckLimit으로 주변 매장 재고 보강 상품 수를 제한한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', storeName: '올리브영 명동 타운' }] },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 2,
+            nextPage: false,
+            serachList: [
+              { goodsNumber: 'A1', goodsName: '선크림 A', o2oStockFlag: true, o2oRemainQuantity: 0 },
+              { goodsNumber: 'A2', goodsName: '선크림 B', o2oStockFlag: true, o2oRemainQuantity: 0 },
+            ],
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { totalCount: 1, storeList: [{ storeCode: 'D176', salesStoreYn: true, remainQuantity: 2 }] },
+        })
+      );
+
+    const tool = createCheckInventoryTool('test-key');
+    const result = await tool.handler({ keyword: '선크림', stockCheckLimit: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(parsed.inventory.stockCheckedCount).toBe(1);
+    expect(parsed.inventory.stockUncheckedCount).toBe(1);
+  });
+
   it('상품 API의 searchList 오타 보정 필드를 처리한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
