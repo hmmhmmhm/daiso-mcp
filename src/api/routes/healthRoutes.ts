@@ -56,7 +56,7 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       c.req.query('slowThresholdMs') || c.env?.HEALTH_CHECK_SLOW_THRESHOLD_MS || '0',
       10,
     );
-    const baseUrl = c.env?.HEALTH_CHECK_BASE_URL?.trim() || new URL(c.req.url).origin;
+    const baseUrl = c.req.query('baseUrl')?.trim() || c.env?.HEALTH_CHECK_BASE_URL?.trim() || new URL(c.req.url).origin;
     const transport = c.req.query('transport') || c.env?.HEALTH_CHECK_TRANSPORT || 'internal';
     const cacheBust = parseBoolean(c.req.query('cacheBust')) || transport === 'network';
     const fetchImpl =

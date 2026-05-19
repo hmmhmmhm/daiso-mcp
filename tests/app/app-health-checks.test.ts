@@ -305,6 +305,32 @@ describe('GET /api/health/checks', () => {
     expect(String(mockFetch.mock.calls[0][0])).toContain('_healthCheck=');
   });
 
+  it('baseUrl 쿼리가 있으면 헬스 체크 기준 URL로 우선 사용한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          products: [{ productName: '테이프' }],
+        },
+        meta: { total: 1 },
+      }),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=daiso.products&transport=network&baseUrl=https%3A%2F%2Fprobe.example.com&fresh=true',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+        HEALTH_CHECK_BASE_URL: 'https://daiso-mcp.example.workers.dev',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/probe\.example\.com\/api\/daiso\/products/);
+  });
+
   it('지원하지 않는 mode는 400을 반환한다', async () => {
     const res = await app.request(
       '/api/health/checks?mode=bad',
