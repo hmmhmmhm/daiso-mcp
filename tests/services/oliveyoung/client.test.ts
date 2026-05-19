@@ -449,6 +449,56 @@ describe('fetchOliveyoungProducts', () => {
     expect(result.products).toEqual([]);
   });
 
+  it('상품 검색 실패 시 같은 조건의 직전 성공 결과를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            nextPage: false,
+            serachList: [{ goodsNumber: 'A1', goodsName: '립밤' }],
+          },
+        })
+      )
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'))
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+
+    const params = { keyword: '립밤', page: 1, size: 20, sort: '01', includeSoldOut: false };
+    const first = await fetchOliveyoungProducts(params, { apiKey: 'test-key' });
+    const fallback = await fetchOliveyoungProducts(params, { apiKey: 'test-key' });
+
+    expect(first.products[0].goodsName).toBe('립밤');
+    expect(fallback).toEqual(first);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('상품 검색 실패 시 만료된 직전 결과는 사용하지 않는다', async () => {
+    let now = 1000;
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            nextPage: false,
+            serachList: [{ goodsNumber: 'A1', goodsName: '립밤' }],
+          },
+        })
+      )
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'))
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+
+    const params = { keyword: '립밤', page: 1, size: 20, sort: '01', includeSoldOut: false };
+    await fetchOliveyoungProducts(params, { apiKey: 'test-key' });
+    now = 31 * 60 * 1000;
+
+    await expect(fetchOliveyoungProducts(params, { apiKey: 'test-key' })).rejects.toThrow(
+      '올리브영 API 요청 시간 초과',
+    );
+  });
+
   it('httpResponseBody 누락 오류를 처리한다', async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ statusCode: 200 })));
 
