@@ -15,6 +15,8 @@ export interface ZyteExtractOptions {
   apiKey?: string;
   url: string;
   timeout?: number;
+  retries?: number;
+  retryDelayMs?: number;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: Array<{ name: string; value: string }>;
   bodyText?: string;
@@ -64,39 +66,72 @@ export function decodeBase64(value: string): string {
   throw new Error('Base64 디코딩을 지원하지 않는 런타임입니다.');
 }
 
-export async function requestByZyte(options: ZyteExtractOptions): Promise<ZyteExtractResponse> {
-  const { timeout = 15000, url, method = 'GET', headers = [], bodyText, apiKey } = options;
-  const auth = encodeBasicAuth(resolveZyteApiKey(apiKey));
-  const { controller, timeoutId } = createTimeoutController(timeout);
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
 
-  try {
-    const response = await fetch('https://api.zyte.com/v1/extract', {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        url,
-        httpRequestMethod: method,
-        customHttpRequestHeaders: headers,
-        httpRequestText: bodyText,
-        httpResponseBody: true,
-      }),
-      signal: controller.signal,
-    });
-
-    const result = (await response.json()) as ZyteExtractResponse;
-
-    if (!response.ok) {
-      throw new Error(`Zyte API 호출 실패: ${response.status} ${result.detail || result.title || ''}`.trim());
-    }
-
-    return result;
-  } finally {
-    clearTimeout(timeoutId);
+function wait(ms: number): Promise<void> {
+  if (ms <= 0) {
+    return Promise.resolve();
   }
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+export async function requestByZyte(options: ZyteExtractOptions): Promise<ZyteExtractResponse> {
+  const {
+    timeout = 15000,
+    retries = 1,
+    retryDelayMs = 250,
+    url,
+    method = 'GET',
+    headers = [],
+    bodyText,
+    apiKey,
+  } = options;
+  const auth = encodeBasicAuth(resolveZyteApiKey(apiKey));
+  const maxAttempts = Math.max(1, Math.trunc(retries) + 1);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const { controller, timeoutId } = createTimeoutController(timeout);
+
+    try {
+      const response = await fetch('https://api.zyte.com/v1/extract', {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          url,
+          httpRequestMethod: method,
+          customHttpRequestHeaders: headers,
+          httpRequestText: bodyText,
+          httpResponseBody: true,
+        }),
+        signal: controller.signal,
+      });
+
+      const result = (await response.json()) as ZyteExtractResponse;
+
+      if (!response.ok) {
+        throw new Error(`Zyte API 호출 실패: ${response.status} ${result.detail || result.title || ''}`.trim());
+      }
+
+      return result;
+    } catch (error) {
+      if (!isAbortError(error) || attempt >= maxAttempts) {
+        throw error;
+      }
+      await wait(retryDelayMs);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  throw new Error('Zyte API 호출 실패');
 }
 
 export function decodeZyteHttpBody<TResponse>(result: ZyteExtractResponse): TResponse {
