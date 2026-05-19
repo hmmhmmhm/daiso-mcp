@@ -19,12 +19,13 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - limit: 최대 결과 수 (기본값: 20)
 - storeCode 또는 storeName: 상품 검색 대상 매장
 - pageLimit: 추가 조회할 최대 페이지 수 (기본값: 3)
+- source: 상품 검색 경로 (auto, legacy, zetta). 빠른 검색이나 헬스체크에는 zetta 권장
 
 **예시**:
 - ${baseUrl}/api/lottemart/stores?keyword=잠실&area=서울&limit=10
 - ${baseUrl}/api/lottemart/stores?area=경기&brandVariant=lottemart&limit=10
 - ${baseUrl}/api/lottemart/products?keyword=콜라&storeName=강변점&area=서울
-- ${baseUrl}/api/lottemart/products?keyword=우유&storeCode=2301&pageLimit=2
+- ${baseUrl}/api/lottemart/products?keyword=우유&storeCode=2301&pageLimit=2&source=zetta
 
 ---
 

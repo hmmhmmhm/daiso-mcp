@@ -115,6 +115,13 @@ export const OPENAPI_PATHS_CU = {
           description: '재고 정렬 방식',
           schema: { type: 'string', default: 'recom' },
         },
+        {
+          name: 'storeCheck',
+          in: 'query',
+          required: false,
+          description: 'false이면 주변 매장 조회를 생략하고 재고 상품 검색만 수행',
+          schema: { type: 'boolean', default: true },
+        },
       ],
       responses: {
         '200': {

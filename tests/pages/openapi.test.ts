@@ -105,6 +105,13 @@ describe('OpenAPI 페이지', () => {
     ).toEqual(expect.arrayContaining(['timeoutMs', 'stockCheckLimit']));
     expect(spec.paths['/api/cu/stores']).toBeDefined();
     expect(spec.paths['/api/cu/inventory']).toBeDefined();
+    expect(
+      (
+        spec.paths['/api/cu/inventory'] as {
+          get: { parameters: Array<{ name: string }> };
+        }
+      ).get.parameters.map((parameter) => parameter.name),
+    ).toContain('storeCheck');
     expect(spec.paths['/api/emart24/stores']).toBeDefined();
     expect(spec.paths['/api/emart24/products']).toBeDefined();
     expect(spec.paths['/api/emart24/inventory']).toBeDefined();

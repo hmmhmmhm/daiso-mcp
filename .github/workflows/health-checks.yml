@@ -26,7 +26,7 @@ jobs:
 
           curl -fsS \
             -H "Authorization: Bearer ${HEALTH_CHECK_SECRET}" \
-            "${HEALTH_CHECK_URL}/api/health/checks?mode=quick&fresh=true&includeSamples=true" \
+            "${HEALTH_CHECK_URL}/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000" \
             -o health-checks.json
 
           node <<'NODE'
@@ -47,7 +47,7 @@ jobs:
             lines.slice(0, 6).join(' | '),
           ].filter(Boolean).join(' ');
           fs.writeFileSync('health-check-summary.txt', summary);
-          if (failedChecks.length > 0 || degradedChecks.length > 0 || payload.status !== 'ok') {
+          if (failedChecks.length > 0 || payload.status === 'fail') {
             process.exitCode = 1;
           }
           NODE

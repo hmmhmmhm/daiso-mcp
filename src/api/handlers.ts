@@ -20,6 +20,20 @@ export {
   handleSearchProducts,
 } from './daisoHandlers.js';
 
+function parseBooleanQuery(value: string | undefined, defaultValue = false): boolean {
+  if (!value) {
+    return defaultValue;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1' || normalized === 'y') {
+    return true;
+  }
+  if (normalized === 'false' || normalized === '0' || normalized === 'n') {
+    return false;
+  }
+  return defaultValue;
+}
+
 /**
  * 올리브영 상품 검색 API 핸들러
  * GET /api/oliveyoung/products?keyword={검색어}
@@ -263,6 +277,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
   const offset = parseInt(c.req.query('offset') || '0');
   const searchSort = c.req.query('searchSort') || 'recom';
   const storeLimit = parseInt(c.req.query('storeLimit') || '10');
+  const storeCheck = parseBooleanQuery(c.req.query('storeCheck'), true);
 
   if (!keyword || keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
@@ -285,10 +300,12 @@ export async function handleCuCheckInventory(c: ApiContext) {
     const hasInputLocation = typeof lat === 'number' && typeof lng === 'number';
     const resolvedLat = hasInputLocation ? lat : undefined;
     const resolvedLng = hasInputLocation ? lng : undefined;
-    let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null = null;
+    let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null = storeCheck
+      ? null
+      : { totalCount: 0, stores: [] };
 
     // 좌표 미입력 + 매장 키워드 입력 시, 키워드 기반 매장 검색 결과를 우선 사용합니다.
-    if (!hasInputLocation && storeKeyword.trim().length > 0) {
+    if (storeCheck && !hasInputLocation && storeKeyword.trim().length > 0) {
       const keywordStoreResult = await fetchCuStores(
         {
           searchWord: storeKeyword,

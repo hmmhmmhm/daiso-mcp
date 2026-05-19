@@ -54,7 +54,9 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain("cron: '10 */3 * * *'");
     expect(workflow).toContain('HEALTH_CHECK_SECRET');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
-    expect(workflow).toContain('/api/health/checks?mode=quick&fresh=true&includeSamples=true');
+    expect(workflow).toContain(
+      '/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000',
+    );
     expect(workflow).toContain('failedChecks');
     expect(workflow).toContain('degradedChecks');
     expect(workflow).toContain('GITHUB_SERVER_URL');
@@ -62,6 +64,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('failed=');
     expect(workflow).toContain('degraded=');
     expect(workflow).toContain('run=');
+    expect(workflow).toContain("payload.status === 'fail'");
     expect(workflow).toContain('Health Checks Failed');
   });
 

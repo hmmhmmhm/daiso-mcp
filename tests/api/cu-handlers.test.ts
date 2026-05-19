@@ -217,6 +217,112 @@ describe('handleCuCheckInventory', () => {
     );
   });
 
+  it('storeCheck=false이면 매장 조회 없이 재고 상품만 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            areaList: [],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            spellModifyYn: 'N',
+            data: {
+              stockResult: {
+                result: {
+                  total_count: 1,
+                  rows: [
+                    {
+                      fields: {
+                        item_cd: '8801',
+                        item_nm: '감자칩',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ keyword: '과자', storeCheck: 'false' });
+    await handleCuCheckInventory(ctx);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          nearbyStores: {
+            totalCount: 0,
+            stockItemCode: '8801',
+            stockItemName: '감자칩',
+            stores: [],
+          },
+          inventory: expect.objectContaining({ totalCount: 1 }),
+        }),
+      }),
+    );
+  });
+
+  it('storeCheck=1이면 매장 조회를 수행한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            spellModifyYn: 'N',
+            data: { stockResult: { result: { total_count: 0, rows: [] } } },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 1, storeList: [] })));
+
+    const ctx = createMockContext({ keyword: '과자', storeCheck: '1' });
+    await handleCuCheckInventory(ctx);
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          nearbyStores: expect.objectContaining({ totalCount: 1 }),
+        }),
+      }),
+    );
+  });
+
+  it('storeCheck 값이 유효하지 않으면 기본값으로 매장 조회를 수행한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            spellModifyYn: 'N',
+            data: { stockResult: { result: { total_count: 0, rows: [] } } },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 1, storeList: [] })));
+
+    const ctx = createMockContext({ keyword: '과자', storeCheck: 'maybe' });
+    await handleCuCheckInventory(ctx);
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          nearbyStores: expect.objectContaining({ totalCount: 1 }),
+        }),
+      }),
+    );
+  });
+
   it('storeKeyword만 있으면 위치를 null로 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))

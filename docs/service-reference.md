@@ -510,6 +510,7 @@ GET /api/cu/inventory?keyword={검색어}&lat={위도}&lng={경도}
 | `offset`       |      | 검색 시작 오프셋 (기본값: 0)   |
 | `searchSort`   |      | 정렬 방식 (기본값: `recom`)    |
 | `storeLimit`   |      | 매장 결과 수 (기본값: 10)      |
+| `storeCheck`   |      | `false`이면 주변 매장 조회 생략 |
 
 ### 올리브영 재고 확인
 

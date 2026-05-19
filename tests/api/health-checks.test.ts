@@ -224,6 +224,7 @@ describe('runHealthChecks', () => {
         sample: { first: '커피' },
       }),
     );
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('storeCheck=false');
   });
 
   it('inventory 컬렉션 값이 배열이 아니면 빈 컬렉션으로 처리한다', async () => {
