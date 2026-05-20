@@ -3,13 +3,11 @@
  */
 /* c8 ignore start */
 
-import { fetchJson } from '../../utils/http.js';
+import { fetchJson, HttpError } from '../../utils/http.js';
+import { decodeZyteHttpBody, requestByZyte } from '../../utils/zyte.js';
 import { GS25_API } from './api.js';
 import { normalizeStore, toNumber } from './storeUtils.js';
-import type {
-  Gs25Store,
-  Gs25StoreStockResponse,
-} from './types.js';
+import type { Gs25Store, Gs25StoreStockResponse } from './types.js';
 
 export {
   attachDistanceToGs25Stores,
@@ -23,6 +21,7 @@ export {
 interface RequestOptions {
   timeout?: number;
   googleMapsApiKey?: string;
+  zyteApiKey?: string;
 }
 
 interface FetchGs25StoresParams {
@@ -101,6 +100,35 @@ const GS25_DEFAULT_FETCH_OPTIONS = {
 
 const GS25_STORES_CACHE_TTL_MS = 60 * 5 * 1000;
 const gs25StoresCache = new Map<string, CacheEntry>();
+
+async function fetchGs25StoreStock(
+  url: string,
+  options: RequestOptions,
+): Promise<Gs25StoreStockResponse> {
+  try {
+    return await fetchJson<Gs25StoreStockResponse>(url, {
+      ...GS25_DEFAULT_FETCH_OPTIONS,
+      method: 'GET',
+      timeout: options.timeout,
+      headers: GS25_DEFAULT_HEADERS,
+    });
+  } catch (error) {
+    const zyteApiKey = options.zyteApiKey?.trim();
+    if (!(error instanceof HttpError) || error.status !== 403 || !zyteApiKey) {
+      throw error;
+    }
+
+    const result = await requestByZyte({
+      apiKey: zyteApiKey,
+      url,
+      method: 'GET',
+      timeout: options.timeout,
+      retries: 1,
+      headers: Object.entries(GS25_DEFAULT_HEADERS).map(([name, value]) => ({ name, value })),
+    });
+    return decodeZyteHttpBody<Gs25StoreStockResponse>(result);
+  }
+}
 
 function buildCacheKey(
   params: Required<Pick<FetchGs25StoresParams, 'serviceCode' | 'keyword' | 'storeCode'>> &
@@ -230,14 +258,14 @@ export async function fetchGs25Stores(
     endpoint.searchParams.set('isGs25DlvyStoreSelected', 'N');
   }
 
-  const body = await fetchJson<Gs25StoreStockResponse>(endpoint.toString(), {
-    ...GS25_DEFAULT_FETCH_OPTIONS,
-    method: 'GET',
+  const body = await fetchGs25StoreStock(endpoint.toString(), {
     timeout,
-    headers: GS25_DEFAULT_HEADERS,
+    zyteApiKey: options.zyteApiKey,
   });
 
-  const stores = (body.stores || []).map(normalizeStore).filter((store) => store.storeCode.length > 0);
+  const stores = (body.stores || [])
+    .map(normalizeStore)
+    .filter((store) => store.storeCode.length > 0);
 
   if (useCache) {
     gs25StoresCache.set(cacheKey, {

@@ -15,6 +15,10 @@ import {
   sortGs25Stores,
 } from '../client.js';
 
+function getProcessEnvValue(name: string): string | undefined {
+  return typeof process !== 'undefined' ? process.env[name] : undefined;
+}
+
 interface CheckInventoryArgs {
   keyword: string;
   itemCode?: string;
@@ -24,6 +28,8 @@ interface CheckInventoryArgs {
   serviceCode?: string;
   storeLimit?: number;
   timeoutMs?: number;
+  googleMapsApiKey?: string;
+  zyteApiKey?: string;
 }
 
 async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
@@ -36,6 +42,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     serviceCode = '01',
     storeLimit = 20,
     timeoutMs = 20000,
+    googleMapsApiKey = getProcessEnvValue('GOOGLE_MAPS_API_KEY'),
+    zyteApiKey = getProcessEnvValue('ZYTE_API_KEY'),
   } = args;
 
   if (!keyword || keyword.trim().length === 0) {
@@ -59,16 +67,18 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       },
       {
         timeout: timeoutMs,
+        zyteApiKey,
       },
     );
     const firstAddress =
-      filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find((store) => store.address.trim().length > 0)
-        ?.address || '';
+      filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find(
+        (store) => store.address.trim().length > 0,
+      )?.address || '';
 
     if (firstAddress.length > 0) {
       const geocoded = await geocodeGs25Address(firstAddress, {
         timeout: timeoutMs,
-        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+        googleMapsApiKey,
       });
       if (geocoded) {
         resolvedLatitude = geocoded.latitude;
@@ -85,7 +95,10 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     resolvedLongitude = 127.0276;
   }
 
-  let stockResult: { totalCount: number; stores: Awaited<ReturnType<typeof fetchGs25Stores>>['stores'] };
+  let stockResult: {
+    totalCount: number;
+    stores: Awaited<ReturnType<typeof fetchGs25Stores>>['stores'];
+  };
   let firstProduct: Awaited<ReturnType<typeof fetchGs25SearchProducts>>[number] | undefined;
 
   // itemCode가 직접 제공된 경우 totalSearch 단계 건너뛰기
@@ -104,6 +117,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       },
       {
         timeout: timeoutMs,
+        zyteApiKey,
       },
     );
   } else {
@@ -126,6 +140,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         },
         {
           timeout: timeoutMs,
+          zyteApiKey,
         },
       );
     } else {
@@ -141,6 +156,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         },
         {
           timeout: timeoutMs,
+          zyteApiKey,
         },
       );
     }
@@ -150,16 +166,26 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     relaxWhenEmpty: typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number',
   });
   const filteredByStoreKeyword = selectedByStoreKeyword.stores;
-  const withDistance = attachDistanceToGs25Stores(filteredByStoreKeyword, resolvedLatitude, resolvedLongitude);
+  const withDistance = attachDistanceToGs25Stores(
+    filteredByStoreKeyword,
+    resolvedLatitude,
+    resolvedLongitude,
+  );
   const stores = sortGs25Stores(withDistance).slice(0, storeLimit);
 
-  const totalInStockCount = filteredByStoreKeyword.filter((item) => item.realStockQuantity > 0).length;
-  const totalStockQuantity = filteredByStoreKeyword.reduce((sum, item) => sum + Math.max(item.realStockQuantity, 0), 0);
+  const totalInStockCount = filteredByStoreKeyword.filter(
+    (item) => item.realStockQuantity > 0,
+  ).length;
+  const totalStockQuantity = filteredByStoreKeyword.reduce(
+    (sum, item) => sum + Math.max(item.realStockQuantity, 0),
+    0,
+  );
 
   // searchProducts에서 상품 정보 사용
   const firstProductName = firstProduct?.itemName || firstProduct?.shortItemName || null;
   const firstProductPrice =
-    filteredByStoreKeyword.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ?? null;
+    filteredByStoreKeyword.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ??
+    null;
 
   return {
     content: [
@@ -201,7 +227,10 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   };
 }
 
-export function createCheckInventoryTool(): ToolRegistration {
+export function createCheckInventoryTool(
+  googleMapsApiKey?: string,
+  zyteApiKey?: string,
+): ToolRegistration {
   return {
     name: 'gs25_check_inventory',
     metadata: {
@@ -212,16 +241,36 @@ export function createCheckInventoryTool(): ToolRegistration {
         itemCode: z
           .string()
           .optional()
-          .describe('상품 코드 (gs25_search_products로 조회한 정확한 코드, 제공 시 keyword 검색 건너뜀)'),
-        latitude: z.number().optional().describe('위도 (선택, 미입력 시 storeKeyword 지오코딩 시도)'),
-        longitude: z.number().optional().describe('경도 (선택, 미입력 시 storeKeyword 지오코딩 시도)'),
-        storeKeyword: z.string().optional().describe('매장명/주소 키워드 필터 (예: 강남, 안산 중앙역)'),
+          .describe(
+            '상품 코드 (gs25_search_products로 조회한 정확한 코드, 제공 시 keyword 검색 건너뜀)',
+          ),
+        latitude: z
+          .number()
+          .optional()
+          .describe('위도 (선택, 미입력 시 storeKeyword 지오코딩 시도)'),
+        longitude: z
+          .number()
+          .optional()
+          .describe('경도 (선택, 미입력 시 storeKeyword 지오코딩 시도)'),
+        storeKeyword: z
+          .string()
+          .optional()
+          .describe('매장명/주소 키워드 필터 (예: 강남, 안산 중앙역)'),
         serviceCode: z.string().optional().default('01').describe('서비스 코드 (기본값: 01=GS25)'),
         storeLimit: z.number().optional().default(20).describe('반환할 매장 수 (기본값: 20)'),
-        timeoutMs: z.number().optional().default(20000).describe('요청 제한 시간(ms, 기본값: 20000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(20000)
+          .describe('요청 제한 시간(ms, 기본값: 20000)'),
       },
     },
-    handler: checkInventory as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args: CheckInventoryArgs) =>
+      checkInventory({
+        ...args,
+        googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
+        zyteApiKey: args.zyteApiKey || zyteApiKey,
+      })) as (args: unknown) => Promise<McpToolResponse>,
   };
 }
 /* c8 ignore stop */

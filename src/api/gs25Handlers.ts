@@ -30,12 +30,17 @@ export async function handleGs25FindStores(c: ApiContext) {
   const parsedLat = rawLat ? parseFloat(rawLat) : undefined;
   const parsedLng = rawLng ? parseFloat(rawLng) : undefined;
 
-  let latitude = typeof parsedLat === 'number' && Number.isFinite(parsedLat) ? parsedLat : undefined;
-  let longitude = typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
+  let latitude =
+    typeof parsedLat === 'number' && Number.isFinite(parsedLat) ? parsedLat : undefined;
+  let longitude =
+    typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
   let geocodeUsed = false;
 
   try {
-    if ((typeof latitude !== 'number' || typeof longitude !== 'number') && keyword.trim().length > 0) {
+    if (
+      (typeof latitude !== 'number' || typeof longitude !== 'number') &&
+      keyword.trim().length > 0
+    ) {
       const geocoded = await geocodeGs25Address(keyword, {
         timeout: 15000,
         googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
@@ -55,11 +60,16 @@ export async function handleGs25FindStores(c: ApiContext) {
       },
       {
         timeout: 20000,
+        zyteApiKey: c.env?.ZYTE_API_KEY,
       },
     );
     let fallbackUsed = false;
 
-    if (storeResult.stores.length === 0 && typeof latitude === 'number' && typeof longitude === 'number') {
+    if (
+      storeResult.stores.length === 0 &&
+      typeof latitude === 'number' &&
+      typeof longitude === 'number'
+    ) {
       try {
         const fallbackResult = await fetchGs25Stores(
           {
@@ -72,6 +82,7 @@ export async function handleGs25FindStores(c: ApiContext) {
           },
           {
             timeout: 20000,
+            zyteApiKey: c.env?.ZYTE_API_KEY,
           },
         );
 
@@ -173,16 +184,25 @@ export async function handleGs25CheckInventory(c: ApiContext) {
   const parsedLat = rawLat ? parseFloat(rawLat) : undefined;
   const parsedLng = rawLng ? parseFloat(rawLng) : undefined;
 
-  let latitude = typeof parsedLat === 'number' && Number.isFinite(parsedLat) ? parsedLat : undefined;
-  let longitude = typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
+  let latitude =
+    typeof parsedLat === 'number' && Number.isFinite(parsedLat) ? parsedLat : undefined;
+  let longitude =
+    typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
   let geocodeUsed = false;
 
   if (keyword.trim().length === 0 && itemCode.trim().length === 0) {
-    return errorResponse(c, 'MISSING_QUERY', '검색어(keyword) 또는 상품 코드(itemCode)를 입력해주세요.');
+    return errorResponse(
+      c,
+      'MISSING_QUERY',
+      '검색어(keyword) 또는 상품 코드(itemCode)를 입력해주세요.',
+    );
   }
 
   try {
-    if ((typeof latitude !== 'number' || typeof longitude !== 'number') && storeKeyword.trim().length > 0) {
+    if (
+      (typeof latitude !== 'number' || typeof longitude !== 'number') &&
+      storeKeyword.trim().length > 0
+    ) {
       const directGeocoded = await geocodeGs25Address(storeKeyword, {
         timeout: 15000,
         googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
@@ -198,12 +218,14 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           },
           {
             timeout: 20000,
+            zyteApiKey: c.env?.ZYTE_API_KEY,
           },
         );
 
         const firstAddress =
-          filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find((store) => store.address.trim().length > 0)
-            ?.address || '';
+          filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find(
+            (store) => store.address.trim().length > 0,
+          )?.address || '';
 
         if (firstAddress.length > 0) {
           const geocoded = await geocodeGs25Address(firstAddress, {
@@ -238,6 +260,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         },
         {
           timeout: 20000,
+          zyteApiKey: c.env?.ZYTE_API_KEY,
         },
       );
     } else {
@@ -259,6 +282,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           },
           {
             timeout: 20000,
+            zyteApiKey: c.env?.ZYTE_API_KEY,
           },
         );
       } else {
@@ -273,6 +297,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           },
           {
             timeout: 20000,
+            zyteApiKey: c.env?.ZYTE_API_KEY,
           },
         );
       }
@@ -286,11 +311,18 @@ export async function handleGs25CheckInventory(c: ApiContext) {
     const stores = sortGs25Stores(withDistance).slice(0, storeLimit);
 
     // 상품 정보: searchProducts에서 먼저 가져오고, 없으면 stores에서
-    const productName = firstProduct?.itemName || firstProduct?.shortItemName ||
-      filtered.find((item) => item.searchItemName.length > 0)?.searchItemName || null;
-    const productPrice = filtered.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ?? null;
+    const productName =
+      firstProduct?.itemName ||
+      firstProduct?.shortItemName ||
+      filtered.find((item) => item.searchItemName.length > 0)?.searchItemName ||
+      null;
+    const productPrice =
+      filtered.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ?? null;
     const inStockStoreCount = filtered.filter((item) => item.realStockQuantity > 0).length;
-    const totalStockQuantity = filtered.reduce((sum, item) => sum + Math.max(item.realStockQuantity, 0), 0);
+    const totalStockQuantity = filtered.reduce(
+      (sum, item) => sum + Math.max(item.realStockQuantity, 0),
+      0,
+    );
 
     return successResponse(c, {
       serviceCode,

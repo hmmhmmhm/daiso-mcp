@@ -14,6 +14,10 @@ import {
 
 const FALLBACK_STORE_LOOKUP_ITEM_CODE = '8801117752804';
 
+function getProcessEnvValue(name: string): string | undefined {
+  return typeof process !== 'undefined' ? process.env[name] : undefined;
+}
+
 interface FindNearbyStoresArgs {
   latitude?: number;
   longitude?: number;
@@ -21,6 +25,8 @@ interface FindNearbyStoresArgs {
   serviceCode?: string;
   limit?: number;
   timeoutMs?: number;
+  googleMapsApiKey?: string;
+  zyteApiKey?: string;
 }
 
 async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResponse> {
@@ -31,6 +37,8 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     serviceCode = '01',
     limit = 20,
     timeoutMs = 20000,
+    googleMapsApiKey = getProcessEnvValue('GOOGLE_MAPS_API_KEY'),
+    zyteApiKey = getProcessEnvValue('ZYTE_API_KEY'),
   } = args;
 
   let resolvedLatitude = latitude;
@@ -43,7 +51,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   ) {
     const geocoded = await geocodeGs25Address(keyword, {
       timeout: timeoutMs,
-      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+      googleMapsApiKey,
     });
     if (geocoded) {
       resolvedLatitude = geocoded.latitude;
@@ -60,6 +68,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     },
     {
       timeout: timeoutMs,
+      zyteApiKey,
     },
   );
   let fallbackUsed = false;
@@ -81,6 +90,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
         },
         {
           timeout: timeoutMs,
+          zyteApiKey,
         },
       );
 
@@ -96,7 +106,11 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   const selected = selectGs25StoresForKeyword(result.stores, keyword, {
     relaxWhenEmpty: typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number',
   });
-  const withDistance = attachDistanceToGs25Stores(selected.stores, resolvedLatitude, resolvedLongitude);
+  const withDistance = attachDistanceToGs25Stores(
+    selected.stores,
+    resolvedLatitude,
+    resolvedLongitude,
+  );
   const stores = sortGs25Stores(withDistance).slice(0, limit);
 
   return {
@@ -131,7 +145,10 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   };
 }
 
-export function createFindNearbyStoresTool(): ToolRegistration {
+export function createFindNearbyStoresTool(
+  googleMapsApiKey?: string,
+  zyteApiKey?: string,
+): ToolRegistration {
   return {
     name: 'gs25_find_nearby_stores',
     metadata: {
@@ -143,9 +160,18 @@ export function createFindNearbyStoresTool(): ToolRegistration {
         keyword: z.string().optional().describe('매장명/주소 키워드 (예: 강남, 안산 중앙역)'),
         serviceCode: z.string().optional().default('01').describe('서비스 코드 (기본값: 01=GS25)'),
         limit: z.number().optional().default(20).describe('반환할 최대 매장 수 (기본값: 20)'),
-        timeoutMs: z.number().optional().default(20000).describe('요청 제한 시간(ms, 기본값: 20000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(20000)
+          .describe('요청 제한 시간(ms, 기본값: 20000)'),
       },
     },
-    handler: findNearbyStores as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args: FindNearbyStoresArgs) =>
+      findNearbyStores({
+        ...args,
+        googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
+        zyteApiKey: args.zyteApiKey || zyteApiKey,
+      })) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

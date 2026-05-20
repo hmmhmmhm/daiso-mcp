@@ -66,7 +66,11 @@ const createRegistry = (bindings?: AppBindings) => {
 
   registry.registerAll([
     createDaisoService,
-    createGs25Service,
+    () =>
+      createGs25Service({
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+        zyteApiKey: bindings?.ZYTE_API_KEY,
+      }),
     createSevenElevenService,
     createCuService,
     createEmart24Service,
@@ -115,11 +119,18 @@ const createMcpServer = (bindings?: AppBindings) => {
 const isInitializeRequest = (body: unknown): boolean => {
   if (Array.isArray(body)) {
     return body.some(
-      (item) => typeof item === 'object' && item !== null && (item as { method?: unknown }).method === 'initialize'
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        (item as { method?: unknown }).method === 'initialize',
     );
   }
 
-  return typeof body === 'object' && body !== null && (body as { method?: unknown }).method === 'initialize';
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    (body as { method?: unknown }).method === 'initialize'
+  );
 };
 
 /**
@@ -163,7 +174,7 @@ const handleMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
           error: 'Session not found',
           message: '유효하지 않은 mcp-session-id 입니다. initialize 요청부터 다시 시작해주세요.',
         },
-        404
+        404,
       );
     }
 
@@ -182,7 +193,7 @@ const handleMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
           error: 'Bad Request',
           message: '세션이 없습니다. 먼저 initialize 요청으로 세션을 생성해주세요.',
         },
-        400
+        400,
       );
     }
 
@@ -196,7 +207,7 @@ const handleMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
       error: 'Bad Request',
       message: `세션이 없습니다. 먼저 POST /mcp initialize 요청 후 ${SESSION_HEADER} 헤더를 사용해주세요.`,
     },
-    400
+    400,
   );
 };
 
@@ -218,7 +229,7 @@ app.use(
       'mcp-protocol-version',
     ],
     exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
-  })
+  }),
 );
 
 // 기본 정보 엔드포인트 (GET 요청만)

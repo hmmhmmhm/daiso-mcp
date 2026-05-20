@@ -31,13 +31,56 @@ afterEach(() => {
 describe('fetchGs25Stores', () => {
   it('일시적 GET 실패는 기본 재시도로 복구한다', async () => {
     mockFetch
-      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [{ storeCode: 'VE463', storeName: '강남역점' }] })));
+      .mockResolvedValueOnce(
+        new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ stores: [{ storeCode: 'VE463', storeName: '강남역점' }] })),
+      );
 
     const result = await fetchGs25Stores({ useCache: false });
 
     expect(result.stores[0].storeCode).toBe('VE463');
     expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('store/stock 403이면 Zyte fallback으로 매장을 조회한다', async () => {
+    const zyteBody = Buffer.from(
+      JSON.stringify({
+        stores: [{ storeCode: 'VE463', storeName: '강남역점' }],
+      }),
+      'utf8',
+    ).toString('base64');
+
+    mockFetch
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403, statusText: 'Forbidden' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: zyteBody,
+          }),
+        ),
+      );
+
+    const result = await fetchGs25Stores({ useCache: false }, { zyteApiKey: 'test-zyte-key' });
+
+    expect(result.stores[0].storeCode).toBe('VE463');
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.zyte.com/v1/extract',
+      expect.any(Object),
+    );
+  });
+
+  it('store/stock 403이어도 Zyte 키가 없으면 원본 에러를 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response('forbidden', { status: 403, statusText: 'Forbidden' }),
+    );
+
+    await expect(fetchGs25Stores({ useCache: false })).rejects.toThrow(
+      'API 요청 실패: 403 Forbidden - forbidden',
+    );
   });
 
   it('GS25 매장 목록을 정규화해 반환한다', async () => {
@@ -114,7 +157,9 @@ describe('fetchGs25Stores', () => {
   });
 
   it('캐시가 있으면 재요청하지 않는다', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: 'A' }] })));
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: 'A' }] })),
+    );
 
     await fetchGs25Stores();
     const cached = await fetchGs25Stores();
@@ -124,7 +169,9 @@ describe('fetchGs25Stores', () => {
   });
 
   it('storeCode 파라미터를 포함해 요청할 수 있다', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ stores: [{ storeCode: 'VE463', storeName: 'A' }] })));
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ stores: [{ storeCode: 'VE463', storeName: 'A' }] })),
+    );
 
     await fetchGs25Stores({ storeCode: 'VE463', useCache: false });
 
@@ -136,7 +183,9 @@ describe('fetchGs25Stores', () => {
 describe('fetchGs25SearchProducts', () => {
   it('읽기성 POST 상품 검색은 allowlist로 재시도한다', async () => {
     mockFetch
-      .mockResolvedValueOnce(new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }))
+      .mockResolvedValueOnce(
+        new Response('origin timeout', { status: 522, statusText: 'Origin Timeout' }),
+      )
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -144,7 +193,9 @@ describe('fetchGs25SearchProducts', () => {
               Collection: [
                 {
                   Documentset: {
-                    Document: [{ field: { itemCode: '8801', itemName: '콜라', stockCheckYn: 'Y' } }],
+                    Document: [
+                      { field: { itemCode: '8801', itemName: '콜라', stockCheckYn: 'Y' } },
+                    ],
                   },
                 },
               ],
@@ -473,7 +524,9 @@ describe('geocodeGs25Address', () => {
   });
 
   it('status가 OK가 아니면 null을 반환한다', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ status: 'ZERO_RESULTS', results: [] })));
+    mockFetch.mockResolvedValue(
+      new Response(JSON.stringify({ status: 'ZERO_RESULTS', results: [] })),
+    );
 
     const result = await geocodeGs25Address('없는 주소', {
       googleMapsApiKey: 'test-key',

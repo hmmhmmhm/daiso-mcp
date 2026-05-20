@@ -15,16 +15,27 @@ const GS25_METADATA: ServiceMetadata = {
   description: 'GS25 매장 탐색, 상품 키워드 검색, 재고 조회 서비스',
 };
 
+interface Gs25ServiceOptions {
+  googleMapsApiKey?: string;
+  zyteApiKey?: string;
+}
+
 class Gs25Service implements ServiceProvider {
   readonly metadata = GS25_METADATA;
 
+  constructor(private readonly options: Gs25ServiceOptions = {}) {}
+
   getTools(): ToolRegistration[] {
-    return [createFindNearbyStoresTool(), createSearchProductsTool(), createCheckInventoryTool()];
+    return [
+      createFindNearbyStoresTool(this.options.googleMapsApiKey, this.options.zyteApiKey),
+      createSearchProductsTool(),
+      createCheckInventoryTool(this.options.googleMapsApiKey, this.options.zyteApiKey),
+    ];
   }
 }
 
-export function createGs25Service(): ServiceProvider {
-  return new Gs25Service();
+export function createGs25Service(options: Gs25ServiceOptions = {}): ServiceProvider {
+  return new Gs25Service(options);
 }
 
 export * from './types.js';
