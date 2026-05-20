@@ -189,6 +189,27 @@ describe('fetchGs25Stores', () => {
     const calledUrl = String(mockFetch.mock.calls[0][0]);
     expect(calledUrl).toContain('storeCode=VE463');
   });
+
+  it('기본 store/stock 요청에는 차단되는 페이지 파라미터를 넣지 않는다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ stores: [] })));
+
+    await fetchGs25Stores({ itemCode: '8801056038861', latitude: 37.5, longitude: 127, useCache: false });
+
+    const calledUrl = new URL(String(mockFetch.mock.calls[0][0]));
+    expect(calledUrl.searchParams.has('pageNumber')).toBe(false);
+    expect(calledUrl.searchParams.has('pageCount')).toBe(false);
+    expect(calledUrl.searchParams.get('itemCode')).toBe('8801056038861');
+  });
+
+  it('명시한 경우에만 pageNumber와 pageCount를 전달한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ stores: [] })));
+
+    await fetchGs25Stores({ pageNumber: 2, pageCount: 50, useCache: false });
+
+    const calledUrl = new URL(String(mockFetch.mock.calls[0][0]));
+    expect(calledUrl.searchParams.get('pageNumber')).toBe('2');
+    expect(calledUrl.searchParams.get('pageCount')).toBe('50');
+  });
 });
 
 describe('fetchGs25SearchProducts', () => {

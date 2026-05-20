@@ -203,8 +203,8 @@ export async function fetchGs25Stores(
     realTimeStockYn = 'Y',
     latitude,
     longitude,
-    pageNumber = 0,
-    pageCount = 20000,
+    pageNumber,
+    pageCount,
     useCache = true,
   } = params;
   const { timeout = 20000 } = options;
@@ -231,9 +231,13 @@ export async function fetchGs25Stores(
 
   const endpoint = new URL(GS25_API.STORE_STOCK_PATH, GS25_API.BFF_BASE_URL);
   endpoint.searchParams.set('serviceCode', serviceCode);
-  endpoint.searchParams.set('pageNumber', String(pageNumber));
-  endpoint.searchParams.set('pageCount', String(pageCount));
   endpoint.searchParams.set('realTimeStockYn', realTimeStockYn);
+  if (typeof pageNumber === 'number' && Number.isFinite(pageNumber)) {
+    endpoint.searchParams.set('pageNumber', String(Math.trunc(pageNumber)));
+  }
+  if (typeof pageCount === 'number' && Number.isFinite(pageCount)) {
+    endpoint.searchParams.set('pageCount', String(Math.trunc(pageCount)));
+  }
 
   // itemCode가 있으면 itemCode 사용, 없으면 keyword 사용
   // 주의: itemCode 사용 시 좌표도 필수
