@@ -15,6 +15,7 @@ import {
 const FALLBACK_STORE_LOOKUP_ITEM_CODE = '8801117752804';
 
 function getProcessEnvValue(name: string): string | undefined {
+  /* c8 ignore next -- Node 테스트와 CLI 런타임은 process를 제공하며, Worker에는 API에서 키를 주입합니다. */
   return typeof process !== 'undefined' ? process.env[name] : undefined;
 }
 
