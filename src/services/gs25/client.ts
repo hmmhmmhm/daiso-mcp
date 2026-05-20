@@ -92,6 +92,11 @@ interface CacheEntry {
 
 const GS25_DEFAULT_HEADERS = {
   Accept: 'application/json, text/plain, */*',
+  'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+  'User-Agent':
+    'Mozilla/5.0 (Linux; Android 15; SM-S928N) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/124.0 Mobile Safari/537.36',
+  Origin: 'https://woodongs.com',
+  Referer: 'https://woodongs.com/',
 } as const;
 const GS25_DEFAULT_FETCH_OPTIONS = {
   retries: 1,

@@ -112,6 +112,17 @@ describe('fetchGs25Stores', () => {
 
     expect(result.totalCount).toBe(1);
     expect(result.cacheHit).toBe(false);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Accept-Language': expect.stringContaining('ko-KR'),
+          'User-Agent': expect.stringContaining('Android'),
+          Origin: 'https://woodongs.com',
+          Referer: 'https://woodongs.com/',
+        }),
+      }),
+    );
     expect(result.stores[0]).toEqual(
       expect.objectContaining({
         storeCode: 'VE463',
