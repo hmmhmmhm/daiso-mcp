@@ -14,6 +14,7 @@ export interface HealthCheckDefinition {
   kind?: 'api' | 'cli-contract';
   collectionKey?: 'products' | 'stores' | 'theaters' | 'movies' | 'showtimes' | 'inventoryProducts' | 'inventoryItems';
   requiredFields?: string[];
+  timeoutMs?: number;
 }
 
 export interface HealthCheckResult {
@@ -153,6 +154,7 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/oliveyoung/products?keyword=%EB%A6%BD%EB%B0%A4&size=1',
     collectionKey: 'products',
     requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
+    timeoutMs: 5000,
   },
   {
     id: 'megabox.theaters',
@@ -225,6 +227,7 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/oliveyoung/inventory?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&storeKeyword=%EB%AA%85%EB%8F%99&size=1&storeLimit=1&stockCheckLimit=0',
     collectionKey: 'inventoryProducts',
     requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
+    timeoutMs: 5000,
   },
 ];
 
@@ -426,6 +429,20 @@ function aggregateStatus(checks: HealthCheckResult[]): HealthCheckStatus {
   return 'ok';
 }
 
+function resolveCheckTimeoutMs(check: Pick<HealthCheckDefinition, 'timeoutMs'>, timeoutMs: number): number {
+  if (check.timeoutMs === undefined) {
+    return timeoutMs;
+  }
+  return Math.min(timeoutMs, Math.trunc(check.timeoutMs));
+}
+
+function resolveCliContractTimeoutMs(path: string, timeoutMs: number): number {
+  if (path.startsWith('/api/oliveyoung/')) {
+    return Math.min(timeoutMs, 5000);
+  }
+  return timeoutMs;
+}
+
 function buildCheckUrl(baseUrl: string, check: HealthCheckDefinition, timeoutMs: number, cacheBustValue?: number): string {
   const url = new URL(check.path, baseUrl);
   url.searchParams.set('timeoutMs', String(timeoutMs));
@@ -472,10 +489,11 @@ async function runCliContractCheck(
   const cacheBustValue = params.cacheBust ? startedAt : undefined;
 
   for (const path of CLI_CONTRACT_PATHS) {
+    const checkTimeoutMs = resolveCliContractTimeoutMs(path, params.timeoutMs);
     const syntheticCheck = { ...check, path };
     try {
-      const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, syntheticCheck, params.timeoutMs, cacheBustValue), {
-        signal: AbortSignal.timeout(params.timeoutMs),
+      const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, syntheticCheck, checkTimeoutMs, cacheBustValue), {
+        signal: AbortSignal.timeout(checkTimeoutMs),
       });
       const body = (await response.json().catch(() => ({}))) as {
         success?: boolean;
@@ -525,7 +543,7 @@ async function runSingleCheck(
     return runCliContractCheck(check, params);
   }
 
-  const timeoutMs = params.timeoutMs;
+  const timeoutMs = resolveCheckTimeoutMs(check, params.timeoutMs);
   const startedAt = params.now();
   const cacheBustValue = params.cacheBust ? startedAt : undefined;
 

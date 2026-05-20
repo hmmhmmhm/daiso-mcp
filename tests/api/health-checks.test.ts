@@ -76,6 +76,8 @@ describe('runHealthChecks', () => {
       expect.stringContaining('/api/lottemart/products?'),
       expect.any(Object),
     );
+    const oliveyoungCall = fetchImpl.mock.calls.find((call) => String(call[0]).includes('/api/oliveyoung/products?'));
+    expect(String(oliveyoungCall?.[0])).toContain('timeoutMs=5000');
   });
 
   it('full 모드에서 quick과 deep 체크를 함께 실행한다', async () => {
@@ -164,6 +166,36 @@ describe('runHealthChecks', () => {
     );
     expect(String(fetchImpl.mock.calls[0][0])).toContain('/api/oliveyoung/inventory?');
     expect(String(fetchImpl.mock.calls[0][0])).toContain('stockCheckLimit=0');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=5000');
+  });
+
+  it('올리브영 체크는 전역 timeout이 커도 짧은 서비스 timeout을 사용한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          products: [{ goodsNumber: 'A000000248024', goodsName: '선크림' }],
+        },
+        meta: { total: 1 },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'oliveyoung.products',
+      timeoutMs: 20000,
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('ok');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=5000');
+    expect(fetchImpl.mock.calls[0][1]).toEqual(
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    );
   });
 
   it('inventory products 응답에서 개수와 샘플 이름을 읽는다', async () => {
