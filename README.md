@@ -19,6 +19,37 @@
 
 <br>
 
+<h3>지원 서비스</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>분류</th>
+      <th>서비스</th>
+      <th>조회 기능</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>리테일</td>
+      <td>다이소, 올리브영, 롯데마트</td>
+      <td>상품, 매장, 재고</td>
+    </tr>
+    <tr>
+      <td>편의점</td>
+      <td>GS25, 세븐일레븐, CU, 이마트24</td>
+      <td>상품, 매장, 재고, 인기검색어, 카탈로그</td>
+    </tr>
+    <tr>
+      <td>영화관</td>
+      <td>CGV, 메가박스, 롯데시네마</td>
+      <td>극장, 영화, 시간표, 잔여 좌석</td>
+    </tr>
+  </tbody>
+</table>
+
+<br>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020.svg)](https://workers.cloudflare.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-8B5CF6.svg)](https://modelcontextprotocol.io/)
