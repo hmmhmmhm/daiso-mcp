@@ -1,6 +1,6 @@
 {
   "name": "daiso",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Korean retail and cinema MCP server, CLI, and Codex Skill for Daiso, convenience stores, marts, Olive Young, and theaters",
   "main": "dist/index.js",
   "bin": {
