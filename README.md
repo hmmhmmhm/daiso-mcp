@@ -11,6 +11,14 @@
 
 <br>
 
+**MCP:** `https://mcp.aka.page` · **CLI:** `npx daiso` · **Skill:** `clawhub install daiso-cli`
+
+**ClawHub:** [clawhub.ai/hmmhmmhm/daiso-cli](https://clawhub.ai/hmmhmmhm/daiso-cli)
+
+한국 로컬 리테일과 영화관 조회를 MCP, CLI, Codex Skill로 연결하는 도구입니다.
+
+<br>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020.svg)](https://workers.cloudflare.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-8B5CF6.svg)](https://modelcontextprotocol.io/)
@@ -220,6 +228,8 @@ npx daiso products 수납박스 --json
 
 이 저장소는 MCP 서버뿐 아니라 에이전트가 `npx daiso` CLI를 직접 고를 수 있게 하는 Codex Skill도 제공합니다.
 
+- ClawHub: `clawhub install daiso-cli`
+- 공개 페이지: `https://clawhub.ai/hmmhmmhm/daiso-cli`
 - 스킬 파일: `skills/daiso-cli/SKILL.md`
 - 명령 맵: `skills/daiso-cli/references/cli-command-map.md`
 - 기본 원칙: 쉘 실행이 가능한 환경에서는 CLI를 우선 사용하고, AI 앱 연결이 필요할 때는 MCP 서버 URL `https://mcp.aka.page`를 사용합니다.

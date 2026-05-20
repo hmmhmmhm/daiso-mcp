@@ -1,7 +1,7 @@
 {
   "name": "daiso",
   "version": "1.0.5",
-  "description": "Daiso MCP Server for mobile access via Cloudflare Workers",
+  "description": "Korean retail and cinema MCP server, CLI, and Codex Skill for Daiso, convenience stores, marts, Olive Young, and theaters",
   "main": "dist/index.js",
   "bin": {
     "daiso": "dist/bin.js"
@@ -43,7 +43,24 @@
   },
   "keywords": [
     "mcp",
+    "mcp-server",
     "daiso",
+    "korea",
+    "korean-retail",
+    "retail",
+    "inventory",
+    "cli",
+    "codex-skill",
+    "clawhub",
+    "oliveyoung",
+    "gs25",
+    "cu",
+    "seveneleven",
+    "emart24",
+    "lottemart",
+    "cgv",
+    "megabox",
+    "lottecinema",
     "cloudflare-workers",
     "serverless"
   ],
