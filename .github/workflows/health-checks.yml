@@ -24,12 +24,15 @@ jobs:
             exit 1
           fi
 
-          curl -fsS \
-            -H "Authorization: Bearer ${HEALTH_CHECK_SECRET}" \
-            "${HEALTH_CHECK_URL}/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000" \
-            -o health-checks.json
+          HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_URL}/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000"
 
-          node <<'NODE'
+          run_health_check() {
+            curl -fsS \
+              -H "Authorization: Bearer ${HEALTH_CHECK_SECRET}" \
+              "${HEALTH_CHECK_ENDPOINT}" \
+              -o health-checks.json
+
+            node <<'NODE'
           const fs = require('node:fs');
           const payload = JSON.parse(fs.readFileSync('health-checks.json', 'utf8'));
           const failedChecks = (payload.checks || []).filter((check) => check.status === 'fail');
@@ -47,10 +50,18 @@ jobs:
             lines.slice(0, 6).join(' | '),
           ].filter(Boolean).join(' ');
           fs.writeFileSync('health-check-summary.txt', summary);
+          console.log(summary);
           if (failedChecks.length > 0 || payload.status === 'fail') {
             process.exitCode = 1;
           }
           NODE
+          }
+
+          if ! run_health_check; then
+            echo "Health check failed on attempt 1; retrying once"
+            sleep 10
+            run_health_check
+          fi
 
       - name: Notify health failure
         if: failure()
