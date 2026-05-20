@@ -64,7 +64,7 @@ describe('GET /api/health/checks', () => {
     );
 
     const res = await app.request(
-      '/api/health/checks?check=lottemart.products&includeSamples=true&timeoutMs=1234&fresh=true',
+      '/api/health/checks?check=lottemart.products&includeSamples=true&timeoutMs=1234&fresh=true&transport=network',
       {
         headers: { Authorization: 'Bearer test-secret' },
       },
@@ -117,7 +117,7 @@ describe('GET /api/health/checks', () => {
     expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/daiso-mcp\.example\.workers\.dev\/api\/lottemart\/products/);
   });
 
-  it('HEALTH_CHECK_BASE_URL이 있으면 같은 앱으로 내부 체크를 dispatch한다', async () => {
+  it('기본 internal transport는 같은 앱으로 내부 체크를 dispatch한다', async () => {
     const testApp = new Hono<{ Bindings: AppBindings }>();
     testApp.get('/api/daiso/products', (c) =>
       c.json({
@@ -131,13 +131,12 @@ describe('GET /api/health/checks', () => {
     registerHealthRoutes(testApp);
 
     const res = await testApp.request(
-      '/api/health/checks?check=daiso.products&fresh=true',
+      'https://mcp.aka.page/api/health/checks?check=daiso.products&fresh=true',
       {
         headers: { Authorization: 'Bearer test-secret' },
       },
       {
         HEALTH_CHECK_SECRET: 'test-secret',
-        HEALTH_CHECK_BASE_URL: 'https://daiso-mcp.example.workers.dev',
       },
     );
 
@@ -168,7 +167,7 @@ describe('GET /api/health/checks', () => {
       .mockResolvedValueOnce(jsonResponse({ success: false, error: { message: 'upstream fail' } }, 500));
 
     const res = await app.request(
-      '/api/health/checks?service=gs25&fresh=true',
+      '/api/health/checks?service=gs25&fresh=true&transport=network',
       {
         headers: { 'x-health-check-key': 'test-secret' },
       },
@@ -196,7 +195,7 @@ describe('GET /api/health/checks', () => {
     );
 
     const res = await app.request(
-      '/api/health/checks?check=gs25.products&fresh=true',
+      '/api/health/checks?check=gs25.products&fresh=true&transport=network',
       {
         headers: { Authorization: 'Bearer test-secret' },
       },
@@ -250,7 +249,7 @@ describe('GET /api/health/checks', () => {
     );
 
     const res = await app.request(
-      '/api/health/checks?mode=deep&includeSamples=y',
+      '/api/health/checks?mode=deep&includeSamples=y&transport=network',
       {
         headers: { Authorization: 'Bearer test-secret' },
       },

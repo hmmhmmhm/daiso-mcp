@@ -60,7 +60,7 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
     const transport = c.req.query('transport') || c.env?.HEALTH_CHECK_TRANSPORT || 'internal';
     const cacheBust = parseBoolean(c.req.query('cacheBust')) || transport === 'network';
     const fetchImpl =
-      c.env?.HEALTH_CHECK_BASE_URL && transport !== 'network'
+      transport !== 'network'
         ? async (input: RequestInfo | URL, init?: RequestInit) => app.fetch(new Request(input, init), c.env)
         : undefined;
     const result = await runHealthChecks({
