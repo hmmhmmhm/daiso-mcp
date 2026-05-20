@@ -131,7 +131,7 @@ describe('runHealthChecks', () => {
     });
 
     expect(result.checks.length).toBeGreaterThan(10);
-    expect(maxActiveRequests).toBeLessThanOrEqual(6);
+    expect(maxActiveRequests).toBeLessThanOrEqual(3);
   });
 
   it('deep 모드에서 주요 inventory 체크를 실행한다', async () => {
