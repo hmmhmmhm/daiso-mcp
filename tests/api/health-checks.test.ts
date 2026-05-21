@@ -550,6 +550,40 @@ describe('runHealthChecks', () => {
     );
   });
 
+  it('GS25 재고 upstream 인증 실패는 degraded로 처리한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: {
+            message:
+              'API 요청 실패: 401 Unauthorized - {"error":{"code":"unauthorized","message":"인증키가 제공되지 않음"}}',
+          },
+        },
+        500,
+      ),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'gs25.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'gs25.inventory',
+        status: 'degraded',
+        httpStatus: 500,
+        message: expect.stringContaining('401 Unauthorized'),
+      }),
+    );
+  });
+
   it('fetch 예외와 문자열 예외를 fail로 처리한다', async () => {
     const errorFetch = vi.fn().mockRejectedValueOnce(new Error('network down'));
     const stringFetch = vi.fn().mockRejectedValueOnce('network down');

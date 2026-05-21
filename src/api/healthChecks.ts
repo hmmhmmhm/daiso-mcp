@@ -15,6 +15,7 @@ export interface HealthCheckDefinition {
   collectionKey?: 'products' | 'stores' | 'theaters' | 'movies' | 'showtimes' | 'inventoryProducts' | 'inventoryItems';
   requiredFields?: string[];
   timeoutMs?: number;
+  degradedFailurePatterns?: string[];
 }
 
 export interface HealthCheckResult {
@@ -209,6 +210,7 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/gs25/inventory?keyword=%EC%BD%9C%EB%9D%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
     collectionKey: 'inventoryItems',
     requiredFields: ['itemCode', 'itemName', 'name'],
+    degradedFailurePatterns: ['401 Unauthorized', '인증키가 제공되지 않음'],
   },
   {
     id: 'seveneleven.inventory',
@@ -429,6 +431,10 @@ function aggregateStatus(checks: HealthCheckResult[]): HealthCheckStatus {
   return 'ok';
 }
 
+function shouldDegradeFailedResponse(check: HealthCheckDefinition, message: string): boolean {
+  return check.degradedFailurePatterns?.some((pattern) => message.includes(pattern)) ?? false;
+}
+
 function resolveCheckTimeoutMs(check: Pick<HealthCheckDefinition, 'timeoutMs'>, timeoutMs: number): number {
   if (check.timeoutMs === undefined) {
     return timeoutMs;
@@ -560,14 +566,15 @@ async function runSingleCheck(
     const durationMs = params.now() - startedAt;
 
     if (!response.ok || body.success === false) {
+      const message = body.error?.message || `HTTP ${response.status}`;
       return {
         id: check.id,
         service: check.service,
         target: check.target,
-        status: 'fail',
+        status: shouldDegradeFailedResponse(check, message) ? 'degraded' : 'fail',
         durationMs,
         httpStatus: response.status,
-        message: body.error?.message || `HTTP ${response.status}`,
+        message,
       };
     }
 
