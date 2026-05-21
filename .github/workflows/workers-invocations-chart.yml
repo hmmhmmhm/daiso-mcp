@@ -35,6 +35,9 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Sync latest main
+        run: git pull --ff-only origin main
+
       - name: Install Korean fonts
         run: |
           sudo apt-get update
@@ -53,7 +56,16 @@ jobs:
         run: npm run update:workers-chart
 
       - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: 'chore: 워커 호출량 그래프 자동 갱신'
-          file_pattern: 'README.md assets/analytics/workers-invocations.*'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png
+
+          if git diff --cached --quiet; then
+            echo "No chart changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: 워커 호출량 그래프 자동 갱신"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main

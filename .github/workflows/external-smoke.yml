@@ -27,10 +27,20 @@ jobs:
         run: npm ci
 
       - name: Run CLI smoke
-        run: npm run cli:smoke
+        run: |
+          npm run cli:smoke || {
+            echo "CLI smoke failed; retrying after 15 seconds"
+            sleep 15
+            npm run cli:smoke
+          }
 
       - name: Run MCP smoke
-        run: npm run mcp:smoke
+        run: |
+          npm run mcp:smoke || {
+            echo "MCP smoke failed; retrying after 15 seconds"
+            sleep 15
+            npm run mcp:smoke
+          }
 
       - name: Notify smoke failure
         if: failure()

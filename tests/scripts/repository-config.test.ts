@@ -42,9 +42,23 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain("node-version: '20'");
     expect(workflow).toContain('npm run cli:smoke');
     expect(workflow).toContain('npm run mcp:smoke');
+    expect(workflow).toContain('CLI smoke failed; retrying after 15 seconds');
+    expect(workflow).toContain('MCP smoke failed; retrying after 15 seconds');
     expect(workflow).toContain('Notify smoke failure');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
     expect(workflow).toContain('if: failure()');
+  });
+
+  it('workers chart workflow는 최신 main 기준으로 자동 커밋을 푸시한다', () => {
+    const workflow = readText('.github/workflows/workers-invocations-chart.yml');
+
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain("cron: '20 15 * * *'");
+    expect(workflow).toContain('git pull --ff-only origin main');
+    expect(workflow).toContain('npm run update:workers-chart');
+    expect(workflow).toContain('git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png');
+    expect(workflow).toContain('git pull --rebase --autostash origin main');
+    expect(workflow).toContain('git push origin HEAD:main');
   });
 
   it('health check workflow는 서비스별 실패 요약을 Moshi로 알린다', () => {
