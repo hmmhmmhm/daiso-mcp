@@ -16,6 +16,12 @@ describe('repository maintenance configuration', () => {
     expect(pkg.engines?.node).toBe('>=20');
   });
 
+  it('npm audit 경고가 난 ws 전이 의존성은 안전 버전으로 고정한다', () => {
+    const pkg = JSON.parse(readText('package.json')) as { overrides?: Record<string, string> };
+
+    expect(pkg.overrides?.ws).toBe('8.20.1');
+  });
+
   it('release 문서는 git 기록을 npm publish보다 먼저 남기도록 안내한다', () => {
     const agents = readText('AGENTS.md');
 
@@ -42,6 +48,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain("cron: '40 15 * * *'");
     expect(workflow).toContain('group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}');
     expect(workflow).toContain('fail-fast: false');
+    expect(workflow).toContain('max-parallel: 4');
     expect(workflow).toContain('service: daiso');
     expect(workflow).toContain('service: oliveyoung');
     expect(workflow).toContain('suite: mcp');
@@ -51,6 +58,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('CLI smoke failed; retrying after 15 seconds');
     expect(workflow).toContain('MCP smoke failed; retrying after 15 seconds');
     expect(workflow).toContain('external-smoke-summary.txt');
+    expect(workflow).toContain('failure=');
     expect(workflow).toContain('SUMMARY="$(cat external-smoke-summary.txt');
     expect(workflow).toContain('Notify smoke failure');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
@@ -93,6 +101,19 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('console.log(summary)');
     expect(workflow).toContain("payload.status === 'fail'");
     expect(workflow).toContain('Health Checks Failed');
+  });
+
+  it('차트 자동 커밋은 불필요한 push workflow를 다시 실행하지 않는다', () => {
+    const ci = readText('.github/workflows/ci.yml');
+    const coverage = readText('.github/workflows/coverage.yml');
+    const deploy = readText('.github/workflows/deploy.yml');
+    const codeql = readText('.github/workflows/codeql.yml');
+
+    for (const workflow of [ci, coverage, deploy, codeql]) {
+      expect(workflow).toContain('paths-ignore:');
+      expect(workflow).toContain("'README.md'");
+      expect(workflow).toContain("'assets/analytics/**'");
+    }
   });
 
   it('운영 스크립트는 ops 디렉터리로 분리되어 있다', () => {

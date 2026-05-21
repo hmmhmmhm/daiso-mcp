@@ -18,6 +18,7 @@ jobs:
       cancel-in-progress: false
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
         include:
           - suite: cli
@@ -77,11 +78,21 @@ jobs:
             .slice(-8)
             .join(' | ')
             .slice(0, 1000);
+          const failure =
+            output
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .find((line) =>
+                /(?:CLI smoke 실패|CLI smoke 검증 실패|MCP smoke 실패|HTTP \d{3}|error code: \d+)/.test(
+                  line,
+                ),
+              ) || 'unknown';
           const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
           const summary = [
             `status=${process.env.SMOKE_STATUS || 'failed'}`,
             `suite=${process.env.SMOKE_SUITE}`,
             `service=${process.env.SMOKE_SERVICE}`,
+            `failure=${failure.slice(0, 300)}`,
             `run=${runUrl}`,
             excerpt,
           ].filter(Boolean).join(' ');
