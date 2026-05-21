@@ -32,6 +32,7 @@ describe('repository maintenance configuration', () => {
     expect(agents).toContain('open PR');
     expect(agents).toContain('450줄');
     expect(agents).toContain('npm `daiso`');
+    expect(agents).toContain('수정 전 커밋의 과거 실패');
   });
 
   it('external smoke workflow는 수동 및 야간 실행으로 CLI smoke를 수행한다', () => {
@@ -39,11 +40,18 @@ describe('repository maintenance configuration', () => {
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain("cron: '40 15 * * *'");
+    expect(workflow).toContain('group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}');
+    expect(workflow).toContain('fail-fast: false');
+    expect(workflow).toContain('service: daiso');
+    expect(workflow).toContain('service: oliveyoung');
+    expect(workflow).toContain('suite: mcp');
     expect(workflow).toContain("node-version: '20'");
-    expect(workflow).toContain('npm run cli:smoke');
-    expect(workflow).toContain('npm run mcp:smoke');
+    expect(workflow).toContain('npm run cli:smoke -- --service "${SMOKE_SERVICE}"');
+    expect(workflow).toContain('npm run mcp:smoke -- --service "${SMOKE_SERVICE}"');
     expect(workflow).toContain('CLI smoke failed; retrying after 15 seconds');
     expect(workflow).toContain('MCP smoke failed; retrying after 15 seconds');
+    expect(workflow).toContain('external-smoke-summary.txt');
+    expect(workflow).toContain('SUMMARY="$(cat external-smoke-summary.txt');
     expect(workflow).toContain('Notify smoke failure');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
     expect(workflow).toContain('if: failure()');
@@ -54,8 +62,10 @@ describe('repository maintenance configuration', () => {
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain("cron: '20 15 * * *'");
+    expect(workflow).toContain('group: workers-invocations-chart-${{ github.ref }}');
     expect(workflow).toContain('git pull --ff-only origin main');
     expect(workflow).toContain('npm run update:workers-chart');
+    expect(workflow).toContain('WORKERS_CHART_CONCURRENCY');
     expect(workflow).toContain('git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png');
     expect(workflow).toContain('git pull --rebase --autostash origin main');
     expect(workflow).toContain('git push origin HEAD:main');
@@ -66,6 +76,7 @@ describe('repository maintenance configuration', () => {
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain("cron: '10 */3 * * *'");
+    expect(workflow).toContain('group: health-checks-${{ github.ref }}');
     expect(workflow).toContain('HEALTH_CHECK_SECRET');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
     expect(workflow).toContain(

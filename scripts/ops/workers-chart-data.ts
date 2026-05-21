@@ -108,6 +108,7 @@ export async function fetchWorkerInvocationsForWindow({
  * @param {string} params.scriptName
  * @param {string} params.startDateText
  * @param {string} params.endDateText
+ * @param {number} [params.concurrency]
  * @param {typeof fetch} [params.fetchImpl]
  * @returns {Promise<Array<{date: string, requests: number}>>}
  */
@@ -117,24 +118,34 @@ export async function fetchDailyWorkerInvocations({
   scriptName,
   startDateText,
   endDateText,
+  concurrency = 4,
   fetchImpl = fetch,
 }) {
-  const points = [];
+  const windows = buildDailyWindows(startDateText, endDateText);
+  const limit = Math.max(1, Math.min(Math.trunc(concurrency) || 1, windows.length || 1));
+  const points = new Array(windows.length);
+  let nextIndex = 0;
 
-  for (const window of buildDailyWindows(startDateText, endDateText)) {
-    const requests = await fetchWorkerInvocationsForWindow({
-      accountId,
-      apiToken,
-      scriptName,
-      start: window.start,
-      end: window.end,
-      fetchImpl,
-    });
-    points.push({
-      date: window.date,
-      requests,
-    });
+  async function worker() {
+    while (nextIndex < windows.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      const window = windows[index];
+      const requests = await fetchWorkerInvocationsForWindow({
+        accountId,
+        apiToken,
+        scriptName,
+        start: window.start,
+        end: window.end,
+        fetchImpl,
+      });
+      points[index] = {
+        date: window.date,
+        requests,
+      };
+    }
   }
 
+  await Promise.all(Array.from({ length: limit }, () => worker()));
   return points;
 }

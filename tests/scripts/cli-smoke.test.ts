@@ -16,6 +16,22 @@ describe('runCliSmoke', () => {
     );
   });
 
+  it('서비스별 matrix 실행을 위해 각 명령에 service를 지정한다', () => {
+    expect(CLI_SMOKE_COMMANDS.map((command) => command.service)).toEqual(
+      expect.arrayContaining([
+        'daiso',
+        'gs25',
+        'seveneleven',
+        'emart24',
+        'lottemart',
+        'oliveyoung',
+        'megabox',
+        'lottecinema',
+        'cgv',
+      ]),
+    );
+  });
+
   it('필수 CLI 명령이 모두 성공하면 0을 반환한다', async () => {
     const runCommand = vi.fn((_command: string, args: string[]) => {
       const command = args[1];
@@ -82,6 +98,35 @@ describe('runCliSmoke', () => {
       '--json',
     ]);
     expect(writeErr).not.toHaveBeenCalled();
+  });
+
+  it('service가 지정되면 해당 서비스 명령만 실행한다', async () => {
+    const runCommand = vi.fn((_command: string, args: string[]) => {
+      const command = args[1];
+      const payloadByCommand: Record<string, unknown> = {
+        'gs25-products': { success: true, data: { keyword: '콜라' } },
+        'gs25-stores': { success: true, data: { keyword: '강남' } },
+      };
+
+      return Promise.resolve({
+        exitCode: 0,
+        stdout: JSON.stringify(payloadByCommand[command]),
+        stderr: '',
+      });
+    });
+
+    const exitCode = await runCliSmoke({
+      runCommand,
+      writeOut: vi.fn(),
+      writeErr: vi.fn(),
+      command: 'node',
+      cliPath: 'dist/bin.js',
+      service: 'gs25',
+    });
+
+    expect(exitCode).toBe(0);
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(runCommand.mock.calls.map(([, args]) => args[1])).toEqual(['gs25-products', 'gs25-stores']);
   });
 
   it('하나라도 실패하면 즉시 non-zero를 반환한다', async () => {

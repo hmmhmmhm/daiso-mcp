@@ -172,4 +172,48 @@ describe('fetchDailyWorkerInvocations', () => {
       end: '2026-03-10T15:00:00.000Z',
     });
   });
+
+  it('지정한 동시성 안에서 날짜별 조회를 병렬 실행하고 원래 날짜 순서를 유지한다', async () => {
+    let active = 0;
+    let maxActive = 0;
+    mockFetch.mockImplementation(async (_input: string, init: RequestInit) => {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+
+      const body = JSON.parse(String(init.body));
+      const day = String(body.variables.start).slice(8, 10);
+      return new Response(
+        JSON.stringify({
+          data: {
+            viewer: {
+              accounts: [
+                {
+                  workersInvocationsAdaptive: [{ sum: { requests: Number(day) } }],
+                },
+              ],
+            },
+          },
+        }),
+      );
+    });
+
+    const points = await fetchDailyWorkerInvocations({
+      accountId: 'account-id',
+      apiToken: 'api-token',
+      scriptName: 'daiso-mcp',
+      startDateText: '2026-03-09',
+      endDateText: '2026-03-11',
+      fetchImpl: mockFetch,
+      concurrency: 2,
+    });
+
+    expect(maxActive).toBe(2);
+    expect(points).toEqual([
+      { date: '2026-03-09', requests: 8 },
+      { date: '2026-03-10', requests: 9 },
+      { date: '2026-03-11', requests: 10 },
+    ]);
+  });
 });

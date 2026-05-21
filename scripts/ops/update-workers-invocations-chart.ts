@@ -42,6 +42,7 @@ const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const SCRIPT_NAME = process.env.CF_WORKER_SCRIPT_NAME ?? 'daiso-mcp';
 const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE ?? '2026-03-01';
+const CHART_CONCURRENCY = Number.parseInt(process.env.WORKERS_CHART_CONCURRENCY ?? '4', 10);
 
 if (!ACCOUNT_ID || !API_TOKEN) {
   throw new Error(
@@ -296,6 +297,7 @@ async function main() {
     scriptName: SCRIPT_NAME,
     startDateText: CHART_START_DATE,
     endDateText: endDateInclusive,
+    concurrency: Number.isFinite(CHART_CONCURRENCY) && CHART_CONCURRENCY > 0 ? CHART_CONCURRENCY : 4,
   });
   const summary = calculateSummary(points);
   const chartBuffer = await renderChart(points, summary);

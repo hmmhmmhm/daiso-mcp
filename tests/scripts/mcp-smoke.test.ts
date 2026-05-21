@@ -21,6 +21,15 @@ describe('runMcpSmoke', () => {
     ]);
   });
 
+  it('서비스별 matrix 실행을 위해 각 대표 호출에 service를 지정한다', () => {
+    expect(MCP_SMOKE_SCENARIOS.map((scenario) => scenario.service)).toEqual([
+      'daiso',
+      'gs25',
+      'seveneleven',
+      'emart24',
+    ]);
+  });
+
   it('MCP 클라이언트로 도구 목록과 대표 도구 호출을 검증한다', async () => {
     const close = vi.fn();
     const listTools = vi.fn().mockResolvedValue({
@@ -52,6 +61,31 @@ describe('runMcpSmoke', () => {
     expect(exitCode).toBe(0);
     expect(listTools).toHaveBeenCalledOnce();
     expect(callTool).toHaveBeenCalledTimes(MCP_SMOKE_SCENARIOS.length);
+    expect(callTool).toHaveBeenCalledWith({
+      name: 'gs25_search_products',
+      arguments: expect.objectContaining({ keyword: '콜라' }),
+    });
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('service가 지정되면 해당 서비스 도구만 호출한다', async () => {
+    const close = vi.fn();
+    const listTools = vi.fn().mockResolvedValue({
+      tools: MCP_SMOKE_TOOL_NAMES.map((name) => ({ name })),
+    });
+    const callTool = vi.fn().mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify({ keyword: '콜라', products: [{}] }) }],
+    });
+
+    const exitCode = await runMcpSmoke({
+      service: 'gs25',
+      createClient: async () => ({ listTools, callTool, close }),
+      writeOut: () => undefined,
+      writeErr: () => undefined,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(callTool).toHaveBeenCalledOnce();
     expect(callTool).toHaveBeenCalledWith({
       name: 'gs25_search_products',
       arguments: expect.objectContaining({ keyword: '콜라' }),

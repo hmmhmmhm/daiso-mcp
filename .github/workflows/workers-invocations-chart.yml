@@ -22,6 +22,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: workers-invocations-chart-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   update-chart:
     runs-on: ubuntu-latest
@@ -53,6 +57,7 @@ jobs:
           CF_WORKER_SCRIPT_NAME: ${{ inputs.worker_script_name || vars.CF_WORKER_SCRIPT_NAME || 'daiso-mcp' }}
           WORKERS_CHART_DAYS: ${{ inputs.days || '30' }}
           WORKERS_CHART_START_DATE: ${{ inputs.start_date || vars.WORKERS_CHART_START_DATE || '2026-03-01' }}
+          WORKERS_CHART_CONCURRENCY: ${{ vars.WORKERS_CHART_CONCURRENCY || '4' }}
         run: npm run update:workers-chart
 
       - name: Commit changes

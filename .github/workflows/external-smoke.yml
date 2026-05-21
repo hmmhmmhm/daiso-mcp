@@ -12,7 +12,40 @@ permissions:
 jobs:
   external-smoke:
     runs-on: ubuntu-latest
-    name: CLI and MCP external smoke
+    name: ${{ matrix.suite }} smoke (${{ matrix.service }})
+    concurrency:
+      group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: cli
+            service: daiso
+          - suite: cli
+            service: gs25
+          - suite: cli
+            service: seveneleven
+          - suite: cli
+            service: emart24
+          - suite: cli
+            service: lottemart
+          - suite: cli
+            service: oliveyoung
+          - suite: cli
+            service: megabox
+          - suite: cli
+            service: lottecinema
+          - suite: cli
+            service: cgv
+          - suite: mcp
+            service: daiso
+          - suite: mcp
+            service: gs25
+          - suite: mcp
+            service: seveneleven
+          - suite: mcp
+            service: emart24
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -26,21 +59,59 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run CLI smoke
+      - name: Run external smoke
+        env:
+          SMOKE_SUITE: ${{ matrix.suite }}
+          SMOKE_SERVICE: ${{ matrix.service }}
         run: |
-          npm run cli:smoke || {
-            echo "CLI smoke failed; retrying after 15 seconds"
-            sleep 15
-            npm run cli:smoke
+          write_summary() {
+            SMOKE_STATUS="$1" node <<'NODE'
+          const fs = require('node:fs');
+          const output = fs.existsSync('external-smoke-output.txt')
+            ? fs.readFileSync('external-smoke-output.txt', 'utf8')
+            : '';
+          const excerpt = output
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .slice(-8)
+            .join(' | ')
+            .slice(0, 1000);
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const summary = [
+            `status=${process.env.SMOKE_STATUS || 'failed'}`,
+            `suite=${process.env.SMOKE_SUITE}`,
+            `service=${process.env.SMOKE_SERVICE}`,
+            `run=${runUrl}`,
+            excerpt,
+          ].filter(Boolean).join(' ');
+          fs.writeFileSync('external-smoke-summary.txt', summary);
+          console.log(summary);
+          NODE
           }
 
-      - name: Run MCP smoke
-        run: |
-          npm run mcp:smoke || {
-            echo "MCP smoke failed; retrying after 15 seconds"
-            sleep 15
-            npm run mcp:smoke
+          run_smoke() {
+            if [ "${SMOKE_SUITE}" = "cli" ]; then
+              npm run cli:smoke -- --service "${SMOKE_SERVICE}" 2>&1 | tee external-smoke-output.txt
+              return "${PIPESTATUS[0]}"
+            fi
+
+            npm run mcp:smoke -- --service "${SMOKE_SERVICE}" 2>&1 | tee external-smoke-output.txt
+            return "${PIPESTATUS[0]}"
           }
+
+          if ! run_smoke; then
+            if [ "${SMOKE_SUITE}" = "cli" ]; then
+              echo "CLI smoke failed; retrying after 15 seconds"
+            else
+              echo "MCP smoke failed; retrying after 15 seconds"
+            fi
+            sleep 15
+            if ! run_smoke; then
+              write_summary "failed"
+              exit 1
+            fi
+          fi
 
       - name: Notify smoke failure
         if: failure()
@@ -52,6 +123,7 @@ jobs:
             exit 0
           fi
 
+          SUMMARY="$(cat external-smoke-summary.txt 2>/dev/null || echo 'external smoke command failed')"
           curl -X POST https://api.getmoshi.app/api/webhook \
             -H "Content-Type: application/json" \
-            -d "{\"token\":\"${MOSHI_WEBHOOK_TOKEN}\",\"title\":\"External Smoke Failed\",\"message\":\"${GITHUB_REPOSITORY} ${GITHUB_WORKFLOW} failed on ${GITHUB_REF_NAME}: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
+            -d "{\"token\":\"${MOSHI_WEBHOOK_TOKEN}\",\"title\":\"External Smoke Failed\",\"message\":\"${GITHUB_REPOSITORY}: ${SUMMARY}\"}"

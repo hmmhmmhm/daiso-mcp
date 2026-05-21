@@ -7,6 +7,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { DEFAULT_MCP_URL } from '../../src/cli/constants.js';
 
 type WriteFn = (message: string) => void;
+type SmokeService = 'daiso' | 'gs25' | 'seveneleven' | 'emart24';
 
 interface ToolListResult {
   tools: Array<{ name: string }>;
@@ -27,18 +28,22 @@ interface McpSmokeDeps {
   createClient?: (endpoint: string) => Promise<McpSmokeClient>;
   writeOut?: WriteFn;
   writeErr?: WriteFn;
+  service?: string;
 }
 
-export const MCP_SMOKE_TOOL_NAMES = [
-  'daiso_search_products',
-  'daiso_check_inventory',
-  'daiso_find_inventory_by_name',
-  'gs25_search_products',
-  'seveneleven_search_products',
-  'emart24_search_products',
+export const MCP_SMOKE_TOOLS: Array<{ service: SmokeService; name: string }> = [
+  { service: 'daiso', name: 'daiso_search_products' },
+  { service: 'daiso', name: 'daiso_check_inventory' },
+  { service: 'daiso', name: 'daiso_find_inventory_by_name' },
+  { service: 'gs25', name: 'gs25_search_products' },
+  { service: 'seveneleven', name: 'seveneleven_search_products' },
+  { service: 'emart24', name: 'emart24_search_products' },
 ];
 
+export const MCP_SMOKE_TOOL_NAMES = MCP_SMOKE_TOOLS.map((tool) => tool.name);
+
 interface McpSmokeScenario {
+  service: SmokeService;
   label: string;
   toolName: string;
   args: Record<string, unknown>;
@@ -95,30 +100,42 @@ function validateDaisoInventoryByName(payload: Record<string, unknown>): string 
 
 export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
   {
+    service: 'daiso',
     label: '다이소 상품명 재고 통합 조회',
     toolName: 'daiso_find_inventory_by_name',
     args: { query: '수납박스', storeQuery: '강남역', pageSize: 1, productLimit: 1 },
     validate: validateDaisoInventoryByName,
   },
   {
+    service: 'gs25',
     label: 'GS25 상품 검색',
     toolName: 'gs25_search_products',
     args: { keyword: '콜라', limit: 1 },
     validate: expectField('keyword', '콜라'),
   },
   {
+    service: 'seveneleven',
     label: '세븐일레븐 상품 검색',
     toolName: 'seveneleven_search_products',
     args: { query: '커피', size: 1 },
     validate: expectField('query', '커피'),
   },
   {
+    service: 'emart24',
     label: '이마트24 상품 검색',
     toolName: 'emart24_search_products',
     args: { keyword: '커피', pageSize: 1 },
     validate: expectField('keyword', '커피'),
   },
 ];
+
+function parseServiceArg(argv: string[]): string | undefined {
+  const serviceIndex = argv.indexOf('--service');
+  if (serviceIndex >= 0) {
+    return argv[serviceIndex + 1];
+  }
+  return process.env.MCP_SMOKE_SERVICE;
+}
 
 export async function createSdkMcpSmokeClient(endpoint: string): Promise<McpSmokeClient> {
   const client = new Client({ name: 'daiso-mcp-smoke', version: '1.0.0' });
@@ -137,6 +154,16 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
   const createClient = deps.createClient || createSdkMcpSmokeClient;
   const writeOut = deps.writeOut || ((message: string) => process.stdout.write(`${message}\n`));
   const writeErr = deps.writeErr || ((message: string) => process.stderr.write(`${message}\n`));
+  const service = deps.service || parseServiceArg(process.argv.slice(2));
+  const smokeTools = service ? MCP_SMOKE_TOOLS.filter((tool) => tool.service === service) : MCP_SMOKE_TOOLS;
+  const scenarios = service
+    ? MCP_SMOKE_SCENARIOS.filter((scenario) => scenario.service === service)
+    : MCP_SMOKE_SCENARIOS;
+
+  if (smokeTools.length === 0 || scenarios.length === 0) {
+    writeErr(`MCP smoke 실패: 지원하지 않는 service=${service}`);
+    return 1;
+  }
 
   let client: McpSmokeClient | undefined;
   try {
@@ -145,13 +172,13 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
 
     const tools = await client.listTools();
     const toolNames = new Set(tools.tools.map((tool) => tool.name));
-    const missingTools = MCP_SMOKE_TOOL_NAMES.filter((name) => !toolNames.has(name));
+    const missingTools = smokeTools.map((tool) => tool.name).filter((name) => !toolNames.has(name));
     if (missingTools.length > 0) {
       writeErr(`MCP smoke 실패: 필수 도구 누락 - ${missingTools.join(', ')}`);
       return 1;
     }
 
-    for (const scenario of MCP_SMOKE_SCENARIOS) {
+    for (const scenario of scenarios) {
       writeOut(`MCP smoke 호출: ${scenario.label}`);
       let result: ToolCallResult | undefined;
       try {
@@ -173,7 +200,7 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
     }
 
     writeOut(
-      `MCP smoke 통과: ${MCP_SMOKE_TOOL_NAMES.length}개 도구 확인 및 ${MCP_SMOKE_SCENARIOS.length}개 호출 완료`,
+      `MCP smoke 통과: ${smokeTools.length}개 도구 확인 및 ${scenarios.length}개 호출 완료`,
     );
     return 0;
   } catch (error) {

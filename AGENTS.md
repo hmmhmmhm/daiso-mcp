@@ -690,7 +690,8 @@ npm view daiso version
 - 이 저장소의 기본 작업 브랜치는 `main`이며, open PR 또는 open issue가 있으면 먼저 triage합니다.
 - 모든 `src/**/*.ts` 파일은 450줄 이하를 유지합니다.
 - npm `daiso` 배포 전에는 `npm run check`, `npm run test:coverage`, `npm audit`를 확인합니다.
-- 외부 사이트 응답 회귀는 `.github/workflows/external-smoke.yml`의 `npm run cli:smoke`로 야간 및 수동 확인합니다.
+- 외부 사이트 응답 회귀는 `.github/workflows/external-smoke.yml`의 서비스별 CLI/MCP matrix로 야간 및 수동 확인합니다.
+- Actions 목록에서 수정 전 커밋의 과거 실패가 보일 수 있으므로, 최신 `main` 커밋의 실행 결과를 기준으로 판단합니다.
 - 개인 작업 메모는 `/Users/hm/Documents/personal-agent/projects/daiso-mcp/PROJECT.md`에 둘 수 있지만, 여러 에이전트가 알아야 하는 규칙은 이 파일에 반영합니다.
 
 ---

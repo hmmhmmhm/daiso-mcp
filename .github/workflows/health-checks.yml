@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: health-checks-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   health-checks:
     runs-on: ubuntu-latest
