@@ -1,27 +1,27 @@
 {
   "scriptName": "daiso-mcp",
   "timezone": "Asia/Seoul",
-  "days": 81,
+  "days": 82,
   "startDate": "2026-03-01",
-  "endDate": "2026-05-20",
-  "updatedAt": "2026-05-21T04:39:03.644Z",
-  "total": 22423195,
-  "average": 276830,
+  "endDate": "2026-05-21",
+  "updatedAt": "2026-05-21T16:24:24.230Z",
+  "total": 22774062,
+  "average": 277732,
   "peak": {
     "date": "2026-05-15",
     "requests": 1887901
   },
-  "recent7Total": 4800128,
+  "recent7Total": 4007572,
   "latest": {
+    "date": "2026-05-21",
+    "requests": 350877
+  },
+  "previous": {
     "date": "2026-05-20",
     "requests": 384885
   },
-  "previous": {
-    "date": "2026-05-19",
-    "requests": 361073
-  },
-  "dayOverDayDiff": 23812,
-  "dayOverDayPercent": 6.594788311504876,
+  "dayOverDayDiff": -34008,
+  "dayOverDayPercent": -8.835886043883239,
   "points": [
     {
       "date": "2026-03-01",
@@ -117,7 +117,7 @@
     },
     {
       "date": "2026-03-24",
-      "requests": 127220
+      "requests": 127210
     },
     {
       "date": "2026-03-25",
@@ -346,6 +346,10 @@
     {
       "date": "2026-05-20",
       "requests": 384885
+    },
+    {
+      "date": "2026-05-21",
+      "requests": 350877
     }
   ]
 }
