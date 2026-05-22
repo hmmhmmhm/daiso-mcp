@@ -122,7 +122,10 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     );
   } else {
     // itemCode가 없으면 totalSearch API로 키워드 → itemCode 변환
-    const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: timeoutMs });
+    const searchProducts = await fetchGs25SearchProducts(keyword, {
+      timeout: timeoutMs,
+      zyteApiKey,
+    });
     firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
 
     if (firstProduct) {

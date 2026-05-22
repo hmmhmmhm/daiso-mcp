@@ -28,7 +28,7 @@ class Gs25Service implements ServiceProvider {
   getTools(): ToolRegistration[] {
     return [
       createFindNearbyStoresTool(this.options.googleMapsApiKey, this.options.zyteApiKey),
-      createSearchProductsTool(),
+      createSearchProductsTool(this.options.zyteApiKey),
       createCheckInventoryTool(this.options.googleMapsApiKey, this.options.zyteApiKey),
     ];
   }

@@ -10,6 +10,16 @@ interface SearchProductsArgs {
   keyword: string;
   limit?: number;
   timeoutMs?: number;
+  zyteApiKey?: string;
+}
+
+function getProcessEnvValue(name: string): string | undefined {
+  if (typeof process !== 'undefined') {
+    return process.env[name];
+  }
+
+  /* c8 ignore next -- process가 없는 런타임 방어 분기 */
+  return undefined;
 }
 
 function buildTextResponse(payload: Record<string, unknown>): McpToolResponse {
@@ -20,13 +30,18 @@ function buildTextResponse(payload: Record<string, unknown>): McpToolResponse {
 }
 
 async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse> {
-  const { keyword, limit = 20, timeoutMs = 20000 } = args;
+  const {
+    keyword,
+    limit = 20,
+    timeoutMs = 20000,
+    zyteApiKey = getProcessEnvValue('ZYTE_API_KEY'),
+  } = args;
 
   if (!keyword || keyword.trim().length === 0) {
     throw new Error('상품 검색어(keyword)를 입력해주세요.');
   }
 
-  const products = await fetchGs25SearchProducts(keyword, { timeout: timeoutMs });
+  const products = await fetchGs25SearchProducts(keyword, { timeout: timeoutMs, zyteApiKey });
   const limitedProducts = products.slice(0, limit);
   const payload = {
     keyword,
@@ -55,7 +70,7 @@ const searchProductsOutputSchema = {
   note: z.string().describe('후속 재고 조회 안내'),
 };
 
-export function createSearchProductsTool(): ToolRegistration {
+export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'gs25_search_products',
     metadata: {
@@ -69,6 +84,9 @@ export function createSearchProductsTool(): ToolRegistration {
       },
       outputSchema: searchProductsOutputSchema,
     },
-    handler: searchProducts as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args: SearchProductsArgs) =>
+      searchProducts({ ...args, zyteApiKey: zyteApiKey ?? args.zyteApiKey })) as (
+      args: unknown,
+    ) => Promise<McpToolResponse>,
   };
 }

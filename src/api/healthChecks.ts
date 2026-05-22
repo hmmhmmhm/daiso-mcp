@@ -74,6 +74,11 @@ const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 7000;
 const MAX_HEALTH_CHECK_TIMEOUT_MS = 20_000;
 const DEFAULT_HEALTH_CHECK_CONCURRENCY = 1;
 const DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS = 0;
+const GS25_CLOUDFRONT_403_PATTERNS = [
+  '403 Forbidden',
+  'The request could not be satisfied',
+  '403 ERROR',
+];
 
 const HEALTH_CHECKS: HealthCheckDefinition[] = [
   {
@@ -119,6 +124,7 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/gs25/products?keyword=%EC%BD%9C%EB%9D%BC&limit=1',
     collectionKey: 'products',
     requiredFields: ['itemCode', 'itemName', 'name'],
+    degradedFailurePatterns: GS25_CLOUDFRONT_403_PATTERNS,
   },
   {
     id: 'gs25.stores',
@@ -210,7 +216,11 @@ const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/gs25/inventory?keyword=%EC%BD%9C%EB%9D%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
     collectionKey: 'inventoryItems',
     requiredFields: ['itemCode', 'itemName', 'name'],
-    degradedFailurePatterns: ['401 Unauthorized', '인증키가 제공되지 않음'],
+    degradedFailurePatterns: [
+      '401 Unauthorized',
+      '인증키가 제공되지 않음',
+      ...GS25_CLOUDFRONT_403_PATTERNS,
+    ],
   },
   {
     id: 'seveneleven.inventory',
@@ -435,6 +445,10 @@ function shouldDegradeFailedResponse(check: HealthCheckDefinition, message: stri
   return check.degradedFailurePatterns?.some((pattern) => message.includes(pattern)) ?? false;
 }
 
+function shouldDegradeCliContractPath(path: string, message: string): boolean {
+  return path.startsWith('/api/gs25/') && GS25_CLOUDFRONT_403_PATTERNS.some((pattern) => message.includes(pattern));
+}
+
 function resolveCheckTimeoutMs(check: Pick<HealthCheckDefinition, 'timeoutMs'>, timeoutMs: number): number {
   if (check.timeoutMs === undefined) {
     return timeoutMs;
@@ -493,6 +507,7 @@ async function runCliContractCheck(
 ): Promise<HealthCheckResult> {
   const startedAt = params.now();
   const cacheBustValue = params.cacheBust ? startedAt : undefined;
+  const degradedMessages: string[] = [];
 
   for (const path of CLI_CONTRACT_PATHS) {
     const checkTimeoutMs = resolveCliContractTimeoutMs(path, params.timeoutMs);
@@ -508,6 +523,12 @@ async function runCliContractCheck(
       };
 
       if (!response.ok || !isCliCompatibleEnvelope(path, body)) {
+        const message = body.error?.message || `${path} CLI 계약 응답이 올바르지 않습니다.`;
+        if (shouldDegradeCliContractPath(path, message)) {
+          degradedMessages.push(`${path}: ${message}`);
+          continue;
+        }
+
         return {
           id: check.id,
           service: check.service,
@@ -515,7 +536,7 @@ async function runCliContractCheck(
           status: 'fail',
           durationMs: params.now() - startedAt,
           httpStatus: response.status,
-          message: body.error?.message || `${path} CLI 계약 응답이 올바르지 않습니다.`,
+          message,
         };
       }
     } catch (error) {
@@ -534,9 +555,12 @@ async function runCliContractCheck(
     id: check.id,
     service: check.service,
     target: check.target,
-    status: 'ok',
+    status: degradedMessages.length > 0 ? 'degraded' : 'ok',
     durationMs: params.now() - startedAt,
-    message: `${CLI_CONTRACT_PATHS.length} CLI contract endpoint(s) passed`,
+    message:
+      degradedMessages.length > 0
+        ? `known upstream issue: ${degradedMessages[0]}`
+        : `${CLI_CONTRACT_PATHS.length} CLI contract endpoint(s) passed`,
   };
 }
 

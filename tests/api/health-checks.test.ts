@@ -584,6 +584,85 @@ describe('runHealthChecks', () => {
     );
   });
 
+  it('GS25 상품 검색 CloudFront 403은 degraded로 처리한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: {
+            message:
+              'API 요청 실패: 403 Forbidden - <TITLE>ERROR: The request could not be satisfied</TITLE> <H1>403 ERROR</H1>',
+          },
+        },
+        500,
+      ),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'gs25.products',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'gs25.products',
+        status: 'degraded',
+        httpStatus: 500,
+        message: expect.stringContaining('403 Forbidden'),
+      }),
+    );
+  });
+
+  it('CLI 계약 체크에서 GS25 CloudFront 403만 실패하면 degraded로 계속 진행한다', async () => {
+    const fetchImpl = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/health')) {
+        return Promise.resolve(jsonResponse({ status: 'ok' }));
+      }
+      if (url.includes('/api/gs25/products?')) {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              success: false,
+              error: {
+                message:
+                  'API 요청 실패: 403 Forbidden - <TITLE>ERROR: The request could not be satisfied</TITLE> <H1>403 ERROR</H1>',
+              },
+            },
+            500,
+          ),
+        );
+      }
+      return Promise.resolve(jsonResponse({ success: true, data: { ok: true } }));
+    });
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'cli.contract',
+        status: 'degraded',
+        message: expect.stringContaining('/api/gs25/products'),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining('/api/cgv/theaters?'),
+      expect.any(Object),
+    );
+  });
+
   it('fetch 예외와 문자열 예외를 fail로 처리한다', async () => {
     const errorFetch = vi.fn().mockRejectedValueOnce(new Error('network down'));
     const stringFetch = vi.fn().mockRejectedValueOnce('network down');

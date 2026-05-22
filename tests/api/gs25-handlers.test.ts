@@ -159,6 +159,46 @@ describe('handleGs25SearchProducts', () => {
     );
   });
 
+  it('상품 검색에서 Worker 403이 발생하면 env Zyte 키로 fallback한다', async () => {
+    const zyteBody = Buffer.from(
+      JSON.stringify({
+        SearchQueryResult: {
+          Collection: [
+            {
+              Documentset: {
+                Document: [{ field: { itemCode: '123', itemName: '오감자', stockCheckYn: 'Y' } }],
+              },
+            },
+          ],
+        },
+      }),
+      'utf8',
+    ).toString('base64');
+
+    mockFetch
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403, statusText: 'Forbidden' }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ statusCode: 200, httpResponseBody: zyteBody })),
+      );
+
+    const ctx = createMockContext({ keyword: '오감자' });
+    (ctx as { env: Record<string, string> }).env = { ZYTE_API_KEY: 'test-zyte-key' };
+    await handleGs25SearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          count: 1,
+          products: [expect.objectContaining({ itemCode: '123' })],
+        }),
+      }),
+    );
+    expect(String((mockFetch.mock.calls[1][1] as RequestInit).body)).toContain(
+      '"url":"https://b2c-apigw.woodongs.com/search/v3/totalSearch"',
+    );
+  });
+
   it('상품 검색 중 예외 발생 시 에러를 반환한다', async () => {
     mockFetch.mockRejectedValue(new Error('product fail'));
 
@@ -301,6 +341,51 @@ describe('handleGs25CheckInventory', () => {
       expect.objectContaining({
         success: true,
         data: expect.objectContaining({
+          inventory: expect.objectContaining({ inStockStoreCount: 1 }),
+        }),
+      }),
+    );
+  });
+
+  it('keyword 기반 재고 조회도 상품 검색 403을 env Zyte 키로 fallback한다', async () => {
+    const zyteBody = Buffer.from(
+      JSON.stringify({
+        SearchQueryResult: {
+          Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+        },
+      }),
+      'utf8',
+    ).toString('base64');
+
+    mockFetch
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403, statusText: 'Forbidden' }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ statusCode: 200, httpResponseBody: zyteBody })),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            stores: [
+              {
+                storeCode: '1',
+                storeName: '강남역점',
+                searchItemName: '오감자',
+                realStockQuantity: 1,
+              },
+            ],
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ keyword: '오감자' });
+    (ctx as { env: Record<string, string> }).env = { ZYTE_API_KEY: 'test-zyte-key' };
+    await handleGs25CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          itemCode: '123',
           inventory: expect.objectContaining({ inStockStoreCount: 1 }),
         }),
       }),

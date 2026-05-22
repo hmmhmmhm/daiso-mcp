@@ -140,7 +140,10 @@ export async function handleGs25SearchProducts(c: ApiContext) {
   }
 
   try {
-    const products = await fetchGs25SearchProducts(keyword, { timeout: 20000 });
+    const products = await fetchGs25SearchProducts(keyword, {
+      timeout: 20000,
+      zyteApiKey: c.env?.ZYTE_API_KEY,
+    });
     const limitedProducts = products.slice(0, limit);
 
     return successResponse(
@@ -264,7 +267,10 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         },
       );
     } else {
-      const searchProducts = await fetchGs25SearchProducts(keyword, { timeout: 20000 });
+      const searchProducts = await fetchGs25SearchProducts(keyword, {
+        timeout: 20000,
+        zyteApiKey: c.env?.ZYTE_API_KEY,
+      });
       firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
 
       if (firstProduct) {

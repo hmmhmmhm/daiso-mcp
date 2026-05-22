@@ -98,6 +98,10 @@ const GS25_DEFAULT_HEADERS = {
   Origin: 'https://woodongs.com',
   Referer: 'https://woodongs.com/',
 } as const;
+const GS25_TOTAL_SEARCH_HEADERS = {
+  ...GS25_DEFAULT_HEADERS,
+  'Content-Type': 'application/json',
+} as const;
 const GS25_DEFAULT_FETCH_OPTIONS = {
   retries: 1,
   retryDelayMs: 250,
@@ -132,6 +136,45 @@ async function fetchGs25StoreStock(
       headers: Object.entries(GS25_DEFAULT_HEADERS).map(([name, value]) => ({ name, value })),
     });
     return decodeZyteHttpBody<Gs25StoreStockResponse>(result);
+  }
+}
+
+async function fetchGs25TotalSearchResponse(
+  query: string,
+  options: RequestOptions,
+): Promise<Gs25TotalSearchResponse> {
+  const { timeout = 20000 } = options;
+  const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
+  const bodyText = JSON.stringify({ query });
+
+  try {
+    return await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
+      ...GS25_DEFAULT_FETCH_OPTIONS,
+      method: 'POST',
+      retryUnsafeMethods: true,
+      timeout,
+      headers: GS25_TOTAL_SEARCH_HEADERS,
+      body: bodyText,
+    });
+  } catch (error) {
+    const zyteApiKey = options.zyteApiKey?.trim();
+    if (!(error instanceof HttpError) || error.status !== 403 || !zyteApiKey) {
+      throw error;
+    }
+
+    const result = await requestByZyte({
+      apiKey: zyteApiKey,
+      url: endpoint.toString(),
+      method: 'POST',
+      timeout,
+      retries: 1,
+      headers: Object.entries(GS25_TOTAL_SEARCH_HEADERS).map(([name, value]) => ({
+        name,
+        value,
+      })),
+      bodyText,
+    });
+    return decodeZyteHttpBody<Gs25TotalSearchResponse>(result);
   }
 }
 
@@ -299,20 +342,7 @@ export async function fetchGs25NormalizedKeyword(
     return null;
   }
 
-  const { timeout = 20000 } = options;
-  const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
-
-  const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
-    ...GS25_DEFAULT_FETCH_OPTIONS,
-    method: 'POST',
-    retryUnsafeMethods: true,
-    timeout,
-    headers: {
-      Accept: 'application/json, text/plain, */*',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query }),
-  });
+  const body = await fetchGs25TotalSearchResponse(query, options);
 
   const normalizedKeyword = body.SearchQueryResult?.keywordInfo?.keyword?.trim() || '';
   const normalizedSearchKeyword = body.SearchQueryResult?.keywordInfo?.searchKeyword?.trim() || '';
@@ -339,20 +369,7 @@ export async function fetchGs25SearchProducts(
     return [];
   }
 
-  const { timeout = 20000 } = options;
-  const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
-
-  const body = await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
-    ...GS25_DEFAULT_FETCH_OPTIONS,
-    method: 'POST',
-    retryUnsafeMethods: true,
-    timeout,
-    headers: {
-      Accept: 'application/json, text/plain, */*',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query }),
-  });
+  const body = await fetchGs25TotalSearchResponse(query, options);
 
   const products: Gs25SearchProduct[] = [];
   const collections = body.SearchQueryResult?.Collection || [];

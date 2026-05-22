@@ -13,6 +13,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -98,5 +99,34 @@ describe('createSearchProductsTool', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.count).toBe(0);
     expect(parsed.note).toContain('검색 결과가 없습니다');
+  });
+
+  it('process가 없는 런타임에서도 env fallback 없이 동작한다', async () => {
+    vi.stubGlobal('process', undefined);
+    try {
+      mockFetch.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            SearchQueryResult: {
+              Collection: [
+                {
+                  Documentset: {
+                    Document: [{ field: { itemCode: '8801', itemName: '콜라' } }],
+                  },
+                },
+              ],
+            },
+          }),
+        ),
+      );
+
+      const tool = createSearchProductsTool();
+      const result = await tool.handler({ keyword: '콜라', limit: 1 });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.products[0].itemCode).toBe('8801');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
