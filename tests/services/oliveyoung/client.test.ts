@@ -167,6 +167,28 @@ describe('fetchOliveyoungStores', () => {
     expect(result.stores[0].storeName).toBe('');
   });
 
+  it('매장 검색 실패 시 같은 조건의 직전 성공 결과를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [{ storeCode: 'D176', storeName: '올리브영 명동 타운' }],
+          },
+        })
+      )
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'))
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+
+    const params = { latitude: 37.5, longitude: 127.0, pageIdx: 1, searchWords: '명동' };
+    const first = await fetchOliveyoungStores(params, { apiKey: 'test-key' });
+    const fallback = await fetchOliveyoungStores(params, { apiKey: 'test-key' });
+
+    expect(fallback).toEqual(first);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
   it('올리브영 API 상태 오류를 처리한다', async () => {
     mockFetch.mockResolvedValue(
       createZyteResponse({ status: 'FAIL', data: {} })
@@ -968,6 +990,67 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
 
     expect(result.checkedCount).toBe(0);
     expect(result.products).toEqual(products);
+  });
+
+  it('매장 재고 조회 실패 시 같은 조건의 직전 성공 결과를 재사용한다', async () => {
+    const products = [
+      {
+        goodsNumber: 'A1',
+        goodsName: '팩 A',
+        priceToPay: 10000,
+        originalPrice: 12000,
+        discountRate: 16,
+        o2oStockFlag: true,
+        o2oRemainQuantity: 0,
+        inStock: true,
+        stockStatus: 'in_stock' as const,
+        stockSource: 'global_search' as const,
+      },
+    ];
+    mockFetch
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: { goodsInfo: { masterGoodsNumber: '8801' } },
+        })
+      )
+      .mockResolvedValueOnce(
+        createZyteResponse({
+          status: 'SUCCESS',
+          data: {
+            totalCount: 1,
+            storeList: [{ storeCode: 'B042', storeName: '안산고잔점', salesStoreYn: true, remainQuantity: 5 }],
+          },
+        })
+      )
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'))
+      .mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+
+    const first = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      products,
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 1,
+      },
+      { apiKey: 'test-key' }
+    );
+    const fallback = await enrichOliveyoungProductsWithNearbyStoreInventory(
+      products,
+      {
+        latitude: 37.3171,
+        longitude: 126.8389,
+        storeKeyword: '안산중앙역',
+        maxProducts: 1,
+      },
+      { apiKey: 'test-key' }
+    );
+
+    expect(first.checkedCount).toBe(1);
+    expect(fallback.checkedCount).toBe(1);
+    expect(fallback.products[0]).toEqual(first.products[0]);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
   });
 
   it('상품별 매장 재고 보강 실패는 해당 상품만 원본 상태로 유지하고 나머지 상품 조회를 계속한다', async () => {

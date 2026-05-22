@@ -50,6 +50,7 @@ interface EnrichProductsParams {
 }
 
 type OliveyoungProductSearchResult = { totalCount: number; nextPage: boolean; products: OliveyoungProduct[] };
+type OliveyoungStoreSearchResult = { totalCount: number; stores: OliveyoungStore[] };
 
 const OLIVEYOUNG_IMAGE_HOST = 'https://image.oliveyoung.co.kr';
 const OLIVEYOUNG_PRODUCT_ID_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -59,6 +60,8 @@ const oliveyoungProductSearchCache = new Map<
   string,
   { expiresAt: number; result: OliveyoungProductSearchResult }
 >();
+const oliveyoungStoreSearchCache = new Map<string, { expiresAt: number; result: OliveyoungStoreSearchResult }>();
+const oliveyoungStockStoresCache = new Map<string, { expiresAt: number; result: OliveyoungProductStoreInventory }>();
 const OLIVEYOUNG_IMAGE_PATH_PREFIX = '/uploads/images/goods';
 
 function resolveOliveyoungInStock(o2oStockFlag: boolean, o2oRemainQuantity: number): boolean {
@@ -133,6 +136,14 @@ function createOliveyoungProductSearchCacheKey(params: SearchProductsParams): st
   return JSON.stringify([params.keyword, params.page, params.size, params.sort, params.includeSoldOut]);
 }
 
+function createOliveyoungStoreSearchCacheKey(params: FindStoresParams): string {
+  return JSON.stringify([params.latitude, params.longitude, params.pageIdx, params.searchWords]);
+}
+
+function createOliveyoungStockStoresCacheKey(params: StockStoresParams): string {
+  return JSON.stringify([params.productId, params.latitude, params.longitude, params.pageIdx, params.searchWords]);
+}
+
 function cloneOliveyoungProductSearchResult(result: OliveyoungProductSearchResult): OliveyoungProductSearchResult {
   return {
     totalCount: result.totalCount,
@@ -141,18 +152,44 @@ function cloneOliveyoungProductSearchResult(result: OliveyoungProductSearchResul
   };
 }
 
-function readStaleOliveyoungProductSearchResult(cacheKey: string): OliveyoungProductSearchResult | null {
-  const cached = oliveyoungProductSearchCache.get(cacheKey);
+function cloneOliveyoungStoreSearchResult(result: OliveyoungStoreSearchResult): OliveyoungStoreSearchResult {
+  return {
+    totalCount: result.totalCount,
+    stores: result.stores.map((store) => ({ ...store })),
+  };
+}
+
+function cloneOliveyoungStockStoresResult(result: OliveyoungProductStoreInventory): OliveyoungProductStoreInventory {
+  return {
+    totalCount: result.totalCount,
+    inStockCount: result.inStockCount,
+    outOfStockCount: result.outOfStockCount,
+    notSoldCount: result.notSoldCount,
+    stores: result.stores.map((store) => ({ ...store })),
+  };
+}
+
+function readStaleResult<TResult>(
+  cache: Map<string, { expiresAt: number; result: TResult }>,
+  cacheKey: string,
+  cloneResult: (result: TResult) => TResult
+): TResult | null {
+  const cached = cache.get(cacheKey);
   if (!cached || cached.expiresAt <= Date.now()) {
     return null;
   }
-  return cloneOliveyoungProductSearchResult(cached.result);
+  return cloneResult(cached.result);
 }
 
-function writeStaleOliveyoungProductSearchResult(cacheKey: string, result: OliveyoungProductSearchResult): void {
-  oliveyoungProductSearchCache.set(cacheKey, {
+function writeStaleResult<TResult>(
+  cache: Map<string, { expiresAt: number; result: TResult }>,
+  cacheKey: string,
+  result: TResult,
+  cloneResult: (result: TResult) => TResult
+): void {
+  cache.set(cacheKey, {
     expiresAt: Date.now() + OLIVEYOUNG_PRODUCT_SEARCH_STALE_CACHE_TTL_MS,
-    result: cloneOliveyoungProductSearchResult(result),
+    result: cloneResult(result),
   });
 }
 
@@ -200,7 +237,7 @@ async function zyteExtract(
 export async function fetchOliveyoungStores(
   params: FindStoresParams,
   options: RequestOptions = {}
-): Promise<{ totalCount: number; stores: OliveyoungStore[] }> {
+): Promise<OliveyoungStoreSearchResult> {
   const payload = {
     lat: params.latitude,
     lon: params.longitude,
@@ -211,23 +248,34 @@ export async function fetchOliveyoungStores(
     mapLat: params.latitude,
     mapLon: params.longitude,
   };
+  const cacheKey = createOliveyoungStoreSearchCacheKey(params);
 
-  const body = await zyteExtract(OLIVEYOUNG_API.STORE_FINDER_PATH, payload, options);
+  try {
+    const body = await zyteExtract(OLIVEYOUNG_API.STORE_FINDER_PATH, payload, options);
 
-  const stores = (body.data?.storeList || []).map((store) => ({
-    storeCode: store.storeCode || '',
-    storeName: store.storeName || '',
-    address: store.address || '',
-    latitude: store.latitude || 0,
-    longitude: store.longitude || 0,
-    pickupYn: Boolean(store.pickupYn),
-    o2oRemainQuantity: store.o2oRemainQuantity || 0,
-  }));
+    const stores = (body.data?.storeList || []).map((store) => ({
+      storeCode: store.storeCode || '',
+      storeName: store.storeName || '',
+      address: store.address || '',
+      latitude: store.latitude || 0,
+      longitude: store.longitude || 0,
+      pickupYn: Boolean(store.pickupYn),
+      o2oRemainQuantity: store.o2oRemainQuantity || 0,
+    }));
 
-  return {
-    totalCount: body.data?.totalCount || 0,
-    stores,
-  };
+    const result = {
+      totalCount: body.data?.totalCount || 0,
+      stores,
+    };
+    writeStaleResult(oliveyoungStoreSearchCache, cacheKey, result, cloneOliveyoungStoreSearchResult);
+    return result;
+  } catch (error) {
+    const staleResult = readStaleResult(oliveyoungStoreSearchCache, cacheKey, cloneOliveyoungStoreSearchResult);
+    if (staleResult) {
+      return staleResult;
+    }
+    throw error;
+  }
 }
 
 export async function fetchOliveyoungProducts(
@@ -274,10 +322,10 @@ export async function fetchOliveyoungProducts(
       nextPage: Boolean(body.data?.nextPage),
       products,
     };
-    writeStaleOliveyoungProductSearchResult(cacheKey, result);
+    writeStaleResult(oliveyoungProductSearchCache, cacheKey, result, cloneOliveyoungProductSearchResult);
     return result;
   } catch (error) {
-    const staleResult = readStaleOliveyoungProductSearchResult(cacheKey);
+    const staleResult = readStaleResult(oliveyoungProductSearchCache, cacheKey, cloneOliveyoungProductSearchResult);
     if (staleResult) {
       return staleResult;
     }
@@ -321,31 +369,43 @@ async function fetchOliveyoungStockStores(
   params: StockStoresParams,
   options: RequestOptions = {}
 ): Promise<OliveyoungProductStoreInventory> {
-  const body = await zyteExtract(
-    OLIVEYOUNG_API.STOCK_STORES_PATH,
-    {
-      productId: params.productId,
-      lat: params.latitude,
-      lon: params.longitude,
-      pageIdx: params.pageIdx,
-      searchWords: params.searchWords,
-      mapLat: params.latitude,
-      mapLon: params.longitude,
-    },
-    options
-  );
+  const cacheKey = createOliveyoungStockStoresCacheKey(params);
 
-  const stores = (body.data?.storeList || []).map((store) => resolveOliveyoungStoreStock(store));
-  const inStockCount = stores.filter((store) => store.stockStatus === 'in_stock').length;
-  const notSoldCount = stores.filter((store) => store.stockStatus === 'not_sold').length;
+  try {
+    const body = await zyteExtract(
+      OLIVEYOUNG_API.STOCK_STORES_PATH,
+      {
+        productId: params.productId,
+        lat: params.latitude,
+        lon: params.longitude,
+        pageIdx: params.pageIdx,
+        searchWords: params.searchWords,
+        mapLat: params.latitude,
+        mapLon: params.longitude,
+      },
+      options
+    );
 
-  return {
-    totalCount: body.data?.totalCount || 0,
-    inStockCount,
-    outOfStockCount: stores.length - inStockCount - notSoldCount,
-    notSoldCount,
-    stores,
-  };
+    const stores = (body.data?.storeList || []).map((store) => resolveOliveyoungStoreStock(store));
+    const inStockCount = stores.filter((store) => store.stockStatus === 'in_stock').length;
+    const notSoldCount = stores.filter((store) => store.stockStatus === 'not_sold').length;
+
+    const result = {
+      totalCount: body.data?.totalCount || 0,
+      inStockCount,
+      outOfStockCount: stores.length - inStockCount - notSoldCount,
+      notSoldCount,
+      stores,
+    };
+    writeStaleResult(oliveyoungStockStoresCache, cacheKey, result, cloneOliveyoungStockStoresResult);
+    return result;
+  } catch (error) {
+    const staleResult = readStaleResult(oliveyoungStockStoresCache, cacheKey, cloneOliveyoungStockStoresResult);
+    if (staleResult) {
+      return staleResult;
+    }
+    throw error;
+  }
 }
 
 function sortOliveyoungProducts(products: OliveyoungProduct[]): OliveyoungProduct[] {
@@ -433,4 +493,6 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
 export function __testOnlyClearOliveyoungCaches(): void {
   oliveyoungProductIdCache.clear();
   oliveyoungProductSearchCache.clear();
+  oliveyoungStoreSearchCache.clear();
+  oliveyoungStockStoresCache.clear();
 }

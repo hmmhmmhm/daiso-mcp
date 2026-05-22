@@ -70,6 +70,20 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
+class RetryableZyteError extends Error {}
+
+function isRetryableZyteStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function isRetryableTargetStatus(statusCode?: number): boolean {
+  return typeof statusCode === 'number' && statusCode >= 500;
+}
+
+function isRetryableError(error: unknown): boolean {
+  return isAbortError(error) || error instanceof RetryableZyteError;
+}
+
 function wait(ms: number): Promise<void> {
   if (ms <= 0) {
     return Promise.resolve();
@@ -97,32 +111,48 @@ export async function requestByZyte(options: ZyteExtractOptions): Promise<ZyteEx
     const { controller, timeoutId } = createTimeoutController(timeout);
 
     try {
-      const response = await fetch('https://api.zyte.com/v1/extract', {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          url,
-          httpRequestMethod: method,
-          customHttpRequestHeaders: headers,
-          httpRequestText: bodyText,
-          httpResponseBody: true,
-        }),
-        signal: controller.signal,
-      });
+      let response: Response;
+      try {
+        response = await fetch('https://api.zyte.com/v1/extract', {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            url,
+            httpRequestMethod: method,
+            customHttpRequestHeaders: headers,
+            httpRequestText: bodyText,
+            httpResponseBody: true,
+          }),
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if (error instanceof TypeError) {
+          throw new RetryableZyteError(error.message);
+        }
+        throw error;
+      }
 
       const result = (await response.json()) as ZyteExtractResponse;
 
       if (!response.ok) {
-        throw new Error(`Zyte API 호출 실패: ${response.status} ${result.detail || result.title || ''}`.trim());
+        const message = `Zyte API 호출 실패: ${response.status} ${result.detail || result.title || ''}`.trim();
+        if (isRetryableZyteStatus(response.status)) {
+          throw new RetryableZyteError(message);
+        }
+        throw new Error(message);
+      }
+
+      if (isRetryableTargetStatus(result.statusCode) && attempt < maxAttempts) {
+        throw new RetryableZyteError(`Zyte target response failed: ${result.statusCode}`);
       }
 
       return result;
     } catch (error) {
-      if (!isAbortError(error) || attempt >= maxAttempts) {
+      if (!isRetryableError(error) || attempt >= maxAttempts) {
         throw error;
       }
       await wait(retryDelayMs);
