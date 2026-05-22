@@ -8,6 +8,7 @@ import {
   attachDistanceToGs25Stores,
   fetchGs25SearchProducts,
   fetchGs25Stores,
+  fetchGs25WebStores,
   filterGs25StoresByKeyword,
   geocodeGs25Address,
   selectGs25StoresForKeyword,
@@ -88,6 +89,25 @@ export async function handleGs25FindStores(c: ApiContext) {
 
         if (fallbackResult.stores.length > 0) {
           storeResult = fallbackResult;
+          fallbackUsed = true;
+        }
+      } catch {
+        fallbackUsed = false;
+      }
+    }
+
+    if (storeResult.stores.length === 0 && keyword.trim().length > 0) {
+      try {
+        const webStoreResult = await fetchGs25WebStores(keyword, {
+          timeout: 20000,
+        });
+
+        if (webStoreResult.stores.length > 0) {
+          storeResult = {
+            totalCount: webStoreResult.totalCount,
+            stores: webStoreResult.stores,
+            cacheHit: false,
+          };
           fallbackUsed = true;
         }
       } catch {

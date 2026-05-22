@@ -8,6 +8,7 @@ import {
   calculateDistanceM,
   clearGs25StoresCache,
   extractGs25ProductCandidates,
+  fetchGs25WebStores,
   fetchGs25Stores,
   fetchGs25SearchProducts,
   filterGs25StoresByKeyword,
@@ -209,6 +210,67 @@ describe('fetchGs25Stores', () => {
     const calledUrl = new URL(String(mockFetch.mock.calls[0][0]));
     expect(calledUrl.searchParams.get('pageNumber')).toBe('2');
     expect(calledUrl.searchParams.get('pageCount')).toBe('50');
+  });
+});
+
+describe('fetchGs25WebStores', () => {
+  it('GS25 웹 매장 검색 응답을 정규화한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          '<form><input type="hidden" name="CSRFToken" value="csrf-token" /></form>',
+          {
+            headers: {
+              'Set-Cookie': 'JSESSIONID=session-id; Path=/; HttpOnly',
+            },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify(
+            JSON.stringify({
+              results: [
+                {
+                  shopCode: 'VY010',
+                  shopName: 'GS25S강남역1호점',
+                  address: '서울 강남구 강남대로390',
+                  longs: '37.4978492897333',
+                  lat: '127.028648954517',
+                  offeringService: ['cafe25', 'parcel_service'],
+                },
+              ],
+              pagination: { totalNumberOfResults: 1 },
+            }),
+          ),
+        ),
+      );
+
+    const result = await fetchGs25WebStores('강남', { timeout: 20000 });
+
+    expect(result.totalCount).toBe(1);
+    expect(result.stores[0]).toEqual(
+      expect.objectContaining({
+        storeCode: 'VY010',
+        storeName: 'GS25S강남역1호점',
+        address: '서울 강남구 강남대로390',
+        latitude: 37.4978492897333,
+        longitude: 127.028648954517,
+        propertyNames: ['cafe25', 'parcel_service'],
+      }),
+    );
+    expect(String((mockFetch.mock.calls[1][1] as RequestInit).body)).toContain(
+      'searchShopName=%EA%B0%95%EB%82%A8',
+    );
+    expect(mockFetch.mock.calls[1][1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Cookie: 'JSESSIONID=session-id',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        }),
+      }),
+    );
   });
 });
 

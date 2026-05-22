@@ -3,7 +3,7 @@
  */
 /* c8 ignore start */
 
-import { fetchJson, HttpError } from '../../utils/http.js';
+import { fetchJson, fetchWithTimeout, HttpError } from '../../utils/http.js';
 import { decodeZyteHttpBody, requestByZyte } from '../../utils/zyte.js';
 import { GS25_API } from './api.js';
 import { normalizeStore, toNumber } from './storeUtils.js';
@@ -64,6 +64,22 @@ interface Gs25TotalSearchResponse {
   };
 }
 
+interface Gs25WebLocationStore {
+  shopCode?: string;
+  shopName?: string;
+  address?: string;
+  longs?: string | number;
+  lat?: string | number;
+  offeringService?: string[];
+}
+
+interface Gs25WebLocationResponse {
+  results?: Gs25WebLocationStore[];
+  pagination?: {
+    totalNumberOfResults?: number;
+  };
+}
+
 export interface Gs25SearchProduct {
   itemCode: string;
   itemName: string;
@@ -109,6 +125,57 @@ const GS25_DEFAULT_FETCH_OPTIONS = {
 
 const GS25_STORES_CACHE_TTL_MS = 60 * 5 * 1000;
 const gs25StoresCache = new Map<string, CacheEntry>();
+
+function extractGs25WebCsrfToken(html: string): string | null {
+  return (
+    html.match(/name="CSRFToken"\s+value="([^"]+)"/)?.[1] ||
+    html.match(/ACC\.config\.CSRFToken\s*=\s*"([^"]+)"/)?.[1] ||
+    null
+  );
+}
+
+function extractGs25WebCookieHeader(headers: Headers): string | undefined {
+  const setCookie = headers.get('set-cookie') || '';
+  const jsessionId = setCookie.match(/JSESSIONID=[^;,\s]+/)?.[0];
+  return jsessionId;
+}
+
+function parseGs25WebLocationResponse(
+  body: string | Gs25WebLocationResponse,
+): Gs25WebLocationResponse {
+  if (typeof body === 'string') {
+    return JSON.parse(body) as Gs25WebLocationResponse;
+  }
+  return body;
+}
+
+function normalizeGs25WebStore(raw: Gs25WebLocationStore): Gs25Store {
+  const propertyNames = (raw.offeringService || []).filter((item) => item.trim().length > 0);
+
+  return {
+    storeCode: raw.shopCode || '',
+    storeName: raw.shopName || '',
+    address: raw.address || '',
+    phone: '',
+    latitude: toNumber(raw.longs),
+    longitude: toNumber(raw.lat),
+    serviceCode: '01',
+    realStockQuantity: 0,
+    pickupStockQuantity: 0,
+    deliveryStockQuantity: 0,
+    isSoldOut: false,
+    searchItemName: '',
+    searchItemSellPrice: null,
+    propertyNames,
+    properties: propertyNames.map((name) => ({
+      code: name,
+      name,
+      type: 'service',
+      imageUrl: '',
+    })),
+    distanceM: null,
+  };
+}
 
 async function fetchGs25StoreStock(
   url: string,
@@ -232,6 +299,109 @@ export async function geocodeGs25Address(address: string, options: RequestOption
   }
 
   return { latitude, longitude };
+}
+
+export async function fetchGs25WebStores(
+  keyword: string,
+  options: RequestOptions = {},
+): Promise<{ totalCount: number; stores: Gs25Store[] }> {
+  const query = keyword.trim();
+  if (query.length === 0) {
+    return { totalCount: 0, stores: [] };
+  }
+
+  const { timeout = 20000 } = options;
+  const locationsUrl = new URL(GS25_API.WEB_LOCATIONS_PATH, GS25_API.WEB_BASE_URL);
+  const locationsResponse = await fetchWithTimeout(locationsUrl.toString(), {
+    ...GS25_DEFAULT_FETCH_OPTIONS,
+    method: 'GET',
+    timeout,
+    headers: {
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': GS25_DEFAULT_HEADERS['Accept-Language'],
+      'User-Agent': GS25_DEFAULT_HEADERS['User-Agent'],
+    },
+  });
+
+  if (!locationsResponse.ok) {
+    throw new HttpError(
+      locationsResponse.status,
+      locationsResponse.statusText,
+      await locationsResponse.text(),
+    );
+  }
+
+  const html = await locationsResponse.text();
+  const csrfToken = extractGs25WebCsrfToken(html);
+  if (!csrfToken) {
+    throw new Error('GS25 웹 매장 검색 CSRF 토큰을 찾을 수 없습니다.');
+  }
+
+  const form = new URLSearchParams({
+    pageNum: '1',
+    pageSize: '50',
+    searchShopName: query,
+    searchSido: '',
+    searchGugun: '',
+    searchDong: '',
+    searchType: '',
+    searchTypeService: '0',
+    searchTypeToto: '0',
+    searchTypeCafe25: '0',
+    searchTypeInstant: '0',
+    searchTypeDrug: '0',
+    searchTypeSelf25: '0',
+    searchTypePost: '0',
+    searchTypeATM: '0',
+    searchTypeWithdrawal: '0',
+    searchTypeTaxrefund: '0',
+    searchTypeSmartAtm: '0',
+    searchTypeSelfCookingUtensils: '0',
+    searchTypeDeliveryService: '0',
+    searchTypeParcelService: '0',
+    searchTypePotatoes: '0',
+    searchTypeCardiacDefi: '0',
+    searchTypeFishShapedBun: '0',
+    searchTypeWine25: '0',
+    searchTypeGoPizza: '0',
+    searchTypeSpiritWine: '0',
+    searchTypeFreshGanghw: '0',
+    searchTypeMusinsa: '0',
+    searchTypePosa: '0',
+  });
+  const locationListUrl = new URL(GS25_API.WEB_LOCATION_LIST_PATH, GS25_API.WEB_BASE_URL);
+  locationListUrl.searchParams.set('CSRFToken', csrfToken);
+  const cookieHeader = extractGs25WebCookieHeader(locationsResponse.headers);
+
+  const body = parseGs25WebLocationResponse(
+    await fetchJson<string | Gs25WebLocationResponse>(locationListUrl.toString(), {
+      ...GS25_DEFAULT_FETCH_OPTIONS,
+      method: 'POST',
+      retryUnsafeMethods: true,
+      timeout,
+      headers: {
+        Accept: 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': GS25_DEFAULT_HEADERS['Accept-Language'],
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        Referer: locationsUrl.toString(),
+        'User-Agent': GS25_DEFAULT_HEADERS['User-Agent'],
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+      },
+      body: form.toString(),
+    }),
+  );
+  const stores = (body.results || [])
+    .map(normalizeGs25WebStore)
+    .filter((store) => store.storeCode.length > 0);
+
+  return {
+    totalCount:
+      typeof body.pagination?.totalNumberOfResults === 'number'
+        ? body.pagination.totalNumberOfResults
+        : stores.length,
+    stores,
+  };
 }
 
 export async function fetchGs25Stores(

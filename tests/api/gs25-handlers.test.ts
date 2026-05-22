@@ -57,6 +57,52 @@ describe('handleGs25FindStores', () => {
     );
   });
 
+  it('store/stock 매장 조회가 0건이면 GS25 웹 매장 검색으로 fallback한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
+      .mockResolvedValueOnce(
+        new Response(
+          '<form><input type="hidden" name="CSRFToken" value="csrf-token" /></form>',
+          {
+            headers: {
+              'Set-Cookie': 'JSESSIONID=session-id; Path=/; HttpOnly',
+            },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify(
+            JSON.stringify({
+              results: [
+                {
+                  shopCode: 'VY010',
+                  shopName: 'GS25S강남역1호점',
+                  address: '서울 강남구 강남대로390',
+                  longs: '37.4978492897333',
+                  lat: '127.028648954517',
+                },
+              ],
+            }),
+          ),
+        ),
+      );
+
+    const ctx = createMockContext({ keyword: '강남', limit: '1' });
+    await handleGs25FindStores(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          fallbackUsed: true,
+          stores: [expect.objectContaining({ storeCode: 'VY010' })],
+        }),
+        meta: expect.objectContaining({ total: 1 }),
+      }),
+    );
+  });
+
   it('좌표가 없고 keyword가 있으면 지오코딩을 시도한다', async () => {
     const ctx = createMockContext({ keyword: '강남' });
     (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
