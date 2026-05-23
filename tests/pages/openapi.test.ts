@@ -32,9 +32,9 @@ describe('OpenAPI 페이지', () => {
     expect(spec.servers[0].url).toBe('https://example.com');
     expect(spec.paths['/api/actions/query']).toBeDefined();
     expect(spec.paths['/api/daiso/products']).toBeUndefined();
-    expect(
-      (spec as { info: { description: string } }).info.description,
-    ).toContain('브랜드명이 요청 앞부분에 나오면 뒤의 상품/재고 요청까지 같은 브랜드로 해석');
+    expect((spec as { info: { description: string } }).info.description).toContain(
+      '브랜드명이 요청 앞부분에 나오면 뒤의 상품/재고 요청까지 같은 브랜드로 해석',
+    );
     expect(
       spec.paths['/api/actions/query'].get.parameters.find(
         (parameter) => parameter.name === 'action',
@@ -60,6 +60,11 @@ describe('OpenAPI 페이지', () => {
         (parameter) => parameter.name === 'storeName',
       )?.description,
     ).toContain('모르면 먼저 lottemartFindNearbyStores');
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.some(
+        (parameter) => parameter.name === 'location',
+      ),
+    ).toBe(true);
   });
 
   it('전체 OpenAPI 스펙 객체를 생성한다', () => {
@@ -128,27 +133,28 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/gs25/products']).toBeDefined();
     expect(spec.paths['/api/gs25/inventory']).toBeDefined();
     expect(
-      ((spec.paths['/api/emart24/inventory'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
-        (parameter) => parameter.name === 'storeKeyword',
-      ),
+      (
+        spec.paths['/api/emart24/inventory'] as { get: { parameters: Array<{ name: string }> } }
+      ).get.parameters.some((parameter) => parameter.name === 'storeKeyword'),
     ).toBe(true);
     expect(
-      ((spec.paths['/api/gs25/inventory'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
-        (parameter) => parameter.name === 'itemCode',
-      ),
+      (
+        spec.paths['/api/gs25/inventory'] as { get: { parameters: Array<{ name: string }> } }
+      ).get.parameters.some((parameter) => parameter.name === 'itemCode'),
     ).toBe(true);
     expect(spec.paths['/api/seveneleven/products']).toBeDefined();
     expect(spec.paths['/api/seveneleven/stores']).toBeDefined();
     expect(spec.paths['/api/seveneleven/inventory']).toBeDefined();
     expect(spec.paths['/api/seveneleven/popwords']).toBeDefined();
     expect(spec.paths['/api/seveneleven/catalog']).toBeDefined();
+    expect(spec.paths['/api/places/search']).toBeDefined();
     expect(spec.paths['/api/megabox/theaters']).toBeDefined();
     expect(spec.paths['/api/megabox/movies']).toBeDefined();
     expect(spec.paths['/api/megabox/seats']).toBeDefined();
     expect(
-      ((spec.paths['/api/megabox/theaters'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
-        (parameter) => parameter.name === 'keyword',
-      ),
+      (
+        spec.paths['/api/megabox/theaters'] as { get: { parameters: Array<{ name: string }> } }
+      ).get.parameters.some((parameter) => parameter.name === 'keyword'),
     ).toBe(true);
     expect(
       (
@@ -178,9 +184,9 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/cgv/movies']).toBeDefined();
     expect(spec.paths['/api/cgv/timetable']).toBeDefined();
     expect(
-      ((spec.paths['/api/cgv/theaters'] as { get: { parameters: Array<{ name: string }> } }).get.parameters).some(
-        (parameter) => parameter.name === 'keyword',
-      ),
+      (
+        spec.paths['/api/cgv/theaters'] as { get: { parameters: Array<{ name: string }> } }
+      ).get.parameters.some((parameter) => parameter.name === 'keyword'),
     ).toBe(true);
     expect(
       (

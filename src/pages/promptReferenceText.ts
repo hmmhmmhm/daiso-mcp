@@ -58,6 +58,7 @@ export function buildPromptReferenceText(baseUrl: string): string {
 | LOTTEMART_STORE_SEARCH_FAILED | 롯데마트 매장 조회 실패 |
 | LOTTEMART_PRODUCT_SEARCH_FAILED | 롯데마트 상품 조회 실패 |
 | SEVENELEVEN_INVENTORY_CHECK_FAILED | 세븐일레븐 재고 조회 실패 |
+| PLACES_SEARCH_FAILED | 주변 장소 검색 실패 |
 
 ---
 
@@ -98,6 +99,7 @@ export function buildPromptReferenceText(baseUrl: string): string {
 11. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
 12. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
 13. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
+14. **주변 음식점/카페 검색**: 음식점이나 카페만 물으면 \`places_search_nearby\` 또는 /api/places/search를 먼저 사용합니다. 이 기능은 네이버 지역 검색 기반 키워드 검색이므로 좌표 반경 검색처럼 단정하지 말고, \`searchMode: "keyword"\`임을 필요할 때 짧게 밝혀주세요.
 
 ---
 
@@ -122,6 +124,7 @@ MCP 연결 정보: ${baseUrl}/mcp
 - seveneleven_check_inventory: 세븐일레븐 재고 조회
 - seveneleven_get_search_popwords: 세븐일레븐 인기 검색어 조회
 - seveneleven_get_catalog_snapshot: 세븐일레븐 카탈로그 조회
+- places_search_nearby: 음식점/카페 등 주변 장소 검색
 - oliveyoung_search_products: 올리브영 상품 검색
 - oliveyoung_find_nearby_stores: 올리브영 주변 매장 탐색
 - oliveyoung_check_inventory: 올리브영 재고 파악

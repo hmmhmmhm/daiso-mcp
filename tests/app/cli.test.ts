@@ -117,14 +117,18 @@ describe('CLI', () => {
     const { deps, output } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ success: true, data: { products: [] }, meta: { total: 0 } }),
+      json: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: { products: [] }, meta: { total: 0 } }),
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
     const exitCode = await runCli(['get', '/api/daiso/products', '--q', '수납박스'], deps);
 
     expect(exitCode).toBe(0);
-    expect(fetchImpl).toHaveBeenCalledWith('https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4',
+    );
     expect(output.join('\n')).toContain('요청 성공');
     expect(output.join('\n')).toContain('원본 JSON은 --json 옵션으로 확인하세요.');
   });
@@ -137,10 +141,15 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['get', '/api/daiso/products', '--q', '수납박스', '--json'], deps);
+    const exitCode = await runCli(
+      ['get', '/api/daiso/products', '--q', '수납박스', '--json'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
-    expect(fetchImpl).toHaveBeenCalledWith('https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4',
+    );
     expect(output[0]).toContain('"success": true');
   });
 
@@ -149,10 +158,12 @@ describe('CLI', () => {
     deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: false,
       status: 400,
-      text: vi.fn().mockResolvedValue(JSON.stringify({
-        success: false,
-        error: { code: 'MISSING_PRODUCT_ID', message: '제품 ID가 필요합니다.' },
-      })),
+      text: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          success: false,
+          error: { code: 'MISSING_PRODUCT_ID', message: '제품 ID가 필요합니다.' },
+        }),
+      ),
     } as unknown as Response);
 
     const exitCode = await runCli(['get', '/api/daiso/inventory'], deps);
@@ -160,7 +171,9 @@ describe('CLI', () => {
     expect(exitCode).toBe(1);
     expect(errors.join('\n')).toContain('요청 실패: HTTP 400');
     expect(errors.join('\n')).toContain('제품명만 알면 먼저 daiso products <상품명>');
-    expect(errors.join('\n')).toContain('다음 명령 예시: daiso inventory <productId> --keyword 강남역');
+    expect(errors.join('\n')).toContain(
+      '다음 명령 예시: daiso inventory <productId> --keyword 강남역',
+    );
   });
 
   it.each([
@@ -187,10 +200,12 @@ describe('CLI', () => {
     deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: false,
       status: 400,
-      text: vi.fn().mockResolvedValue(JSON.stringify({
-        success: false,
-        error: { code, message: '필수 파라미터가 없습니다.' },
-      })),
+      text: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          success: false,
+          error: { code, message: '필수 파라미터가 없습니다.' },
+        }),
+      ),
     } as unknown as Response);
 
     const exitCode = await runCli(['get', path], deps);
@@ -211,7 +226,10 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['products', '수납박스', '--page', '2', '--pageSize', '10'], deps);
+    const exitCode = await runCli(
+      ['products', '수납박스', '--page', '2', '--pageSize', '10'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -228,7 +246,10 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['products', '수납박스', '--non-interactive', '--page', '1'], deps);
+    const exitCode = await runCli(
+      ['products', '수납박스', '--non-interactive', '--page', '1'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -303,7 +324,9 @@ describe('CLI', () => {
       2,
       'https://mcp.aka.page/api/daiso/stores?keyword=%EC%95%88%EC%82%B0%EC%A4%91%EC%95%99%EC%97%AD',
     );
-    expect(output.join('\n')).toContain('입력 키워드 "안산 중앙역" 대신 "안산중앙역"로 매장을 찾았습니다.');
+    expect(output.join('\n')).toContain(
+      '입력 키워드 "안산 중앙역" 대신 "안산중앙역"로 매장을 찾았습니다.',
+    );
   });
 
   it('inventory 명령은 productId로 재고 API를 호출한다', async () => {
@@ -420,7 +443,9 @@ describe('CLI', () => {
     const exitCode = await runCli(['cu-stores', '강남', '--limit', '5'], deps);
 
     expect(exitCode).toBe(0);
-    expect(fetchImpl).toHaveBeenCalledWith('https://mcp.aka.page/api/cu/stores?limit=5&keyword=%EA%B0%95%EB%82%A8');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/cu/stores?limit=5&keyword=%EA%B0%95%EB%82%A8',
+    );
   });
 
   it('cu-inventory 명령은 CU 재고 API를 호출한다', async () => {
@@ -448,11 +473,38 @@ describe('CLI', () => {
     expect(errors[0]).toContain('검색어가 필요합니다');
   });
 
+  it('places 명령은 주변 장소 검색 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { places: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['places', '강남역', '--category', 'cafe', '--limit', '5'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/places/search?location=%EA%B0%95%EB%82%A8%EC%97%AD&category=cafe&limit=5',
+    );
+  });
+
+  it('places 명령은 위치나 키워드가 없으면 실패한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['places', '--category', 'restaurant'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors[0]).toContain('위치나 검색어가 필요합니다');
+  });
+
   it('lottecinema-theaters 명령은 롯데시네마 주변 지점 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
+      json: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
@@ -471,7 +523,9 @@ describe('CLI', () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
+      json: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
@@ -487,11 +541,20 @@ describe('CLI', () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ success: true, data: { movies: [], showtimes: [] }, meta: { total: 0 } }),
+      json: vi
+        .fn()
+        .mockResolvedValue({
+          success: true,
+          data: { movies: [], showtimes: [] },
+          meta: { total: 0 },
+        }),
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['lottecinema-movies', '--playDate', '20260310', '--theaterId', '3012'], deps);
+    const exitCode = await runCli(
+      ['lottecinema-movies', '--playDate', '20260310', '--theaterId', '3012'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -503,7 +566,13 @@ describe('CLI', () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ success: true, data: { movies: [], showtimes: [] }, meta: { total: 0 } }),
+      json: vi
+        .fn()
+        .mockResolvedValue({
+          success: true,
+          data: { movies: [], showtimes: [] },
+          meta: { total: 0 },
+        }),
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
@@ -524,7 +593,17 @@ describe('CLI', () => {
     deps.fetchImpl = fetchImpl;
 
     const exitCode = await runCli(
-      ['lottecinema-seats', '--playDate', '20260310', '--theaterId', '3012', '--movieId', '23816', '--limit', '10'],
+      [
+        'lottecinema-seats',
+        '--playDate',
+        '20260310',
+        '--theaterId',
+        '3012',
+        '--movieId',
+        '23816',
+        '--limit',
+        '10',
+      ],
       deps,
     );
 
@@ -542,7 +621,10 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['lottecinema-seats', '잠실', '--movieId', '23816', '--limit', '10'], deps);
+    const exitCode = await runCli(
+      ['lottecinema-seats', '잠실', '--movieId', '23816', '--limit', '10'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -558,7 +640,10 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['emart24-stores', '강남', '--service24h', 'true', '--limit', '5'], deps);
+    const exitCode = await runCli(
+      ['emart24-stores', '강남', '--service24h', 'true', '--limit', '5'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -574,7 +659,10 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['emart24-products', '두바이', '--page', '2', '--pageSize', '20'], deps);
+    const exitCode = await runCli(
+      ['emart24-products', '두바이', '--page', '2', '--pageSize', '20'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -627,7 +715,10 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['lottemart-stores', '잠실', '--area', '서울', '--limit', '5'], deps);
+    const exitCode = await runCli(
+      ['lottemart-stores', '잠실', '--area', '서울', '--limit', '5'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -643,7 +734,10 @@ describe('CLI', () => {
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
-    const exitCode = await runCli(['lottemart-products', '콜라', '--storeName', '강변점', '--area', '서울'], deps);
+    const exitCode = await runCli(
+      ['lottemart-products', '콜라', '--storeName', '강변점', '--area', '서울'],
+      deps,
+    );
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -672,7 +766,9 @@ describe('CLI', () => {
     const exitCode = await runCli(['gs25-stores', '강남', '--limit', '5'], deps);
 
     expect(exitCode).toBe(0);
-    expect(fetchImpl).toHaveBeenCalledWith('https://mcp.aka.page/api/gs25/stores?limit=5&keyword=%EA%B0%95%EB%82%A8');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/gs25/stores?limit=5&keyword=%EA%B0%95%EB%82%A8',
+    );
   });
 
   it('gs25-products 명령은 GS25 상품 API를 호출한다', async () => {
@@ -781,7 +877,9 @@ describe('CLI', () => {
     const exitCode = await runCli(['seveneleven-popwords', '--label', 'home'], deps);
 
     expect(exitCode).toBe(0);
-    expect(fetchImpl).toHaveBeenCalledWith('https://mcp.aka.page/api/seveneleven/popwords?label=home');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/seveneleven/popwords?label=home',
+    );
   });
 
   it('seveneleven-catalog 명령은 세븐일레븐 카탈로그 API를 호출한다', async () => {
@@ -793,7 +891,15 @@ describe('CLI', () => {
     deps.fetchImpl = fetchImpl;
 
     const exitCode = await runCli(
-      ['seveneleven-catalog', '--includeIssues', 'true', '--includeExhibition', 'true', '--limit', '10'],
+      [
+        'seveneleven-catalog',
+        '--includeIssues',
+        'true',
+        '--includeExhibition',
+        'true',
+        '--limit',
+        '10',
+      ],
       deps,
     );
 

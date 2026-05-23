@@ -8,6 +8,7 @@ interface ConfigStatusItem {
 export interface ConfigStatus {
   googleMapsApiKey: ConfigStatusItem;
   zyteApiKey: ConfigStatusItem;
+  naverLocalSearch: ConfigStatusItem;
   healthCheckSecret: ConfigStatusItem;
 }
 
@@ -24,6 +25,11 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
     zyteApiKey: {
       configured: isConfigured(bindings?.ZYTE_API_KEY),
       usedBy: ['oliveyoung', 'gs25', 'lottemart', 'cgv'],
+    },
+    naverLocalSearch: {
+      configured:
+        isConfigured(bindings?.NAVER_CLIENT_ID) && isConfigured(bindings?.NAVER_CLIENT_SECRET),
+      usedBy: ['places'],
     },
     healthCheckSecret: {
       configured: isConfigured(bindings?.HEALTH_CHECK_SECRET),

@@ -88,8 +88,15 @@ function formatCollection(title: string, items: unknown): string[] {
       entry.storeCode ??
       entry.bizNo ??
       entry.theaterId ??
-      entry.movieId;
-    const price = entry.price ?? entry.prc ?? entry.PD_PRC ?? entry.viewPrice ?? entry.priceToPay ?? entry.searchItemSellPrice;
+      entry.movieId ??
+      entry.link;
+    const price =
+      entry.price ??
+      entry.prc ??
+      entry.PD_PRC ??
+      entry.viewPrice ??
+      entry.priceToPay ??
+      entry.searchItemSellPrice;
 
     let detail = `- ${name}`;
     if (id !== undefined) {
@@ -166,7 +173,8 @@ function formatDisplayLocation(data: Record<string, unknown>): string[] {
 
     const zoneNo = toText(location.zoneNo);
     const stairNo = toText(location.stairNo);
-    const storeErp = location.storeErp !== undefined ? ` / storeErp ${toText(location.storeErp)}` : '';
+    const storeErp =
+      location.storeErp !== undefined ? ` / storeErp ${toText(location.storeErp)}` : '';
     lines.push(`- 구역 ${zoneNo} / 층 ${stairNo}${storeErp}`);
   }
 
@@ -237,14 +245,22 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
   } else if (command === 'display-location') {
     lines.push(...formatDisplayLocation(data));
   } else if (command === 'cu-inventory') {
-    lines.push(...formatCollection('매장 목록', isRecord(data.nearbyStores) ? data.nearbyStores.stores : undefined));
-    lines.push(...formatCollection('재고 항목', isRecord(data.inventory) ? data.inventory.items : undefined));
+    lines.push(
+      ...formatCollection(
+        '매장 목록',
+        isRecord(data.nearbyStores) ? data.nearbyStores.stores : undefined,
+      ),
+    );
+    lines.push(
+      ...formatCollection('재고 항목', isRecord(data.inventory) ? data.inventory.items : undefined),
+    );
   } else if (command.endsWith('-inventory')) {
     lines.push(...formatNestedInventory(data));
   } else {
     lines.push(...formatCollection('제품 목록', data.products));
     lines.push(...formatCollection('매장 목록', data.stores));
     lines.push(...formatCollection('극장 목록', data.theaters));
+    lines.push(...formatCollection('장소 목록', data.places));
     lines.push(...formatCollection('영화 목록', data.movies));
     lines.push(...formatCollection('시간표', data.timetable));
     lines.push(...formatCollection('좌석 목록', data.seats));
@@ -252,7 +268,10 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
 
     if (lines.length <= 2) {
       const summaryEntries = Object.entries(data)
-        .filter(([, value]) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+        .filter(
+          ([, value]) =>
+            typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean',
+        )
         .slice(0, 8);
 
       for (const [key, value] of summaryEntries) {

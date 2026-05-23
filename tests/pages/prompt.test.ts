@@ -41,6 +41,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('/api/gs25/products');
     expect(text).toContain('/api/gs25/inventory');
     expect(text).toContain('/api/seveneleven/inventory');
+    expect(text).toContain('/api/places/search');
 
     // 메가박스 API
     expect(text).toContain('/api/megabox/theaters');
@@ -133,6 +134,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('cgv_find_theaters');
     expect(text).toContain('cgv_search_movies');
     expect(text).toContain('cgv_get_timetable');
+    expect(text).toContain('places_search_nearby');
   });
 
   it('사용 팁을 포함한다', () => {
@@ -166,7 +168,9 @@ describe('generatePromptText', () => {
     expect(text).toContain('재고 확인 워크플로우');
     expect(text).toContain('최소 정보 요청 처리');
     expect(text).toContain('사용자가 상품명만 주면 먼저 상품 검색 도구로 후보를 찾고');
-    expect(text).toContain('사용자가 위치를 대강 말하면 keyword/storeKeyword에 그대로 넣어 먼저 조회');
+    expect(text).toContain(
+      '사용자가 위치를 대강 말하면 keyword/storeKeyword에 그대로 넣어 먼저 조회',
+    );
     expect(text).toContain('도구가 productId, itemCode, storeCode 같은 내부 ID를 요구하면');
     expect(text).toContain('사용자에게 바로 ID를 요구하지 말고');
     expect(text).toContain('다이소 재고 조회는 storeCode가 필요하지 않습니다.');

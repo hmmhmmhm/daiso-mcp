@@ -114,6 +114,15 @@ describe('GET /', () => {
     expect(sevenElevenService.name).toBe('세븐일레븐');
   });
 
+  it('장소 검색 서비스가 등록되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    const placesService = data.services.find((s: { id: string }) => s.id === 'places');
+    expect(placesService).toBeDefined();
+    expect(placesService.name).toBe('장소 검색');
+  });
+
   it('다이소 도구들이 포함되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -203,6 +212,13 @@ describe('GET /', () => {
     expect(data.tools).toContain('seveneleven_get_catalog_snapshot');
   });
 
+  it('장소 검색 도구가 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('places_search_nearby');
+  });
+
   it('엔드포인트 정보를 포함한다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -228,7 +244,22 @@ describe('기본 페이지', () => {
     expect(data.config).toEqual({
       googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
       zyteApiKey: { configured: false, usedBy: expect.arrayContaining(['oliveyoung', 'cgv']) },
+      naverLocalSearch: { configured: false, usedBy: ['places'] },
       healthCheckSecret: { configured: true, usedBy: ['health-checks'] },
+    });
+  });
+
+  it('GET /health는 네이버 지역 검색 키 설정 상태를 반환한다', async () => {
+    const res = await app.request('/health', undefined, {
+      NAVER_CLIENT_ID: 'client-id',
+      NAVER_CLIENT_SECRET: 'client-secret',
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.config.naverLocalSearch).toEqual({
+      configured: true,
+      usedBy: ['places'],
     });
   });
 

@@ -3,7 +3,28 @@
  */
 
 export function buildPromptRetailCinemaText(baseUrl: string): string {
-  return `### 6-1. 롯데마트 매장/상품 조회
+  return `### 6-0. 주변 음식점/카페 검색
+
+**설명**: 네이버 지역 검색으로 특정 지역의 음식점, 카페, 디저트 가게 등 주변 장소를 조회합니다. 좌표 반경 검색이 아니라 \`강남역 카페\` 같은 키워드 기반 검색입니다.
+
+**URL**:
+- ${baseUrl}/api/places/search?location={지역}&category={카테고리}
+- ${baseUrl}/api/places/search?location={지역}&keyword={검색어}
+
+**선택 파라미터**:
+- location: 지역/역/주소 키워드 (예: 강남역, 성수동)
+- category: restaurant, cafe, food, dessert, all
+- keyword: 직접 검색어 (예: 라멘, 브런치, 조용한 카페)
+- limit: 최대 결과 수 (기본값: 5, 네이버 지역 검색 최대 5)
+- sort: random 또는 comment
+
+**예시**:
+- ${baseUrl}/api/places/search?location=강남역&category=cafe&limit=5
+- ${baseUrl}/api/places/search?location=성수동&keyword=브런치&limit=5
+
+---
+
+### 6-1. 롯데마트 매장/상품 조회
 
 **설명**: 롯데마트 계열 매장 검색과 특정 매장 기준 상품 가격/재고 조회를 제공합니다.
 

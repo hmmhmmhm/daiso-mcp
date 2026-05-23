@@ -24,7 +24,7 @@ function createMockService(id: string, tools: ToolRegistration[] = []): ServiceP
 function createMockServiceWithLifecycle(
   id: string,
   initialize?: () => Promise<void>,
-  cleanup?: () => Promise<void>
+  cleanup?: () => Promise<void>,
 ): ServiceProvider {
   return {
     metadata: {
@@ -108,9 +108,7 @@ describe('ServiceRegistry', () => {
       const factory = () => createMockService('test');
       registry.register(factory);
 
-      expect(() => registry.register(factory)).toThrow(
-        "서비스 'test'가 이미 등록되어 있습니다."
-      );
+      expect(() => registry.register(factory)).toThrow("서비스 'test'가 이미 등록되어 있습니다.");
     });
   });
 
@@ -144,7 +142,9 @@ describe('ServiceRegistry', () => {
 
     it('initialize가 없는 서비스는 건너뛴다', async () => {
       registry.register(() => createMockService('no-init'));
-      registry.register(() => createMockServiceWithLifecycle('with-init', vi.fn().mockResolvedValue(undefined)));
+      registry.register(() =>
+        createMockServiceWithLifecycle('with-init', vi.fn().mockResolvedValue(undefined)),
+      );
 
       // 에러 없이 완료되어야 함
       await expect(registry.initializeAll()).resolves.not.toThrow();
@@ -167,7 +167,13 @@ describe('ServiceRegistry', () => {
 
     it('cleanup이 없는 서비스는 건너뛴다', async () => {
       registry.register(() => createMockService('no-cleanup'));
-      registry.register(() => createMockServiceWithLifecycle('with-cleanup', undefined, vi.fn().mockResolvedValue(undefined)));
+      registry.register(() =>
+        createMockServiceWithLifecycle(
+          'with-cleanup',
+          undefined,
+          vi.fn().mockResolvedValue(undefined),
+        ),
+      );
 
       await expect(registry.cleanupAll()).resolves.not.toThrow();
     });
@@ -262,7 +268,9 @@ describe('ServiceRegistry', () => {
       registry.applyToServer(mockServer as never);
 
       const metadata = mockServer.registerTool.mock.calls[0][1];
-      expect(metadata.outputSchema.safeParse({ keyword: '콜라', standard: { products: [] } }).success).toBe(true);
+      expect(
+        metadata.outputSchema.safeParse({ keyword: '콜라', standard: { products: [] } }).success,
+      ).toBe(true);
     });
 
     it('JSON text 응답을 structuredContent로 승격하고 공통 결과 모델을 덧붙인다', async () => {
@@ -350,6 +358,34 @@ describe('ServiceRegistry', () => {
           }),
         ],
       });
+    });
+
+    it('장소 컬렉션도 공통 결과 모델로 정규화한다', async () => {
+      const tool = createJsonTextTool('places-tool', {
+        places: [
+          {
+            name: '강남 카페',
+            address: '서울 강남구',
+          },
+        ],
+      });
+      registry.register(() => createMockService('test', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+      const registeredHandler = mockServer.registerTool.mock.calls[0][2];
+
+      const result = await registeredHandler({});
+
+      expect(result.structuredContent.standard.places).toEqual([
+        expect.objectContaining({
+          name: '강남 카페',
+          address: '서울 강남구',
+        }),
+      ]);
     });
 
     it('컬렉션 없는 JSON 객체는 원본 structuredContent만 반환한다', async () => {
@@ -534,7 +570,9 @@ describe('ServiceRegistry', () => {
 
   describe('getAllToolNames', () => {
     it('모든 도구 이름을 반환한다', () => {
-      registry.register(() => createMockService('svc1', [createMockTool('tool1'), createMockTool('tool2')]));
+      registry.register(() =>
+        createMockService('svc1', [createMockTool('tool1'), createMockTool('tool2')]),
+      );
       registry.register(() => createMockService('svc2', [createMockTool('tool3')]));
 
       const toolNames = registry.getAllToolNames();

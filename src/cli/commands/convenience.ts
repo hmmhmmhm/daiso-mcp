@@ -9,6 +9,39 @@ import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../arg
 import { validateCommandOptions } from '../commandOptions.js';
 import { requestAndPrintResponse } from '../http.js';
 
+export async function handlePlaces(options: string[], deps: CliDeps): Promise<number> {
+  const parsed = parseCliArgs(options);
+  if (parsed.options.help === 'true') {
+    return printCommandHelp('places', deps.writeOut, deps.writeErr);
+  }
+
+  const location = parsed.positionals[0];
+  if (location) {
+    parsed.options = { location, ...parsed.options };
+  }
+  if (validateCommandOptions('places', parsed.options, deps.writeErr)) {
+    return 1;
+  }
+
+  if (!parsed.options.location && !parsed.options.keyword) {
+    deps.writeErr(
+      'places 명령은 위치나 검색어가 필요합니다. 예: daiso places 강남역 --category cafe',
+    );
+    return 1;
+  }
+
+  const targetUrl = toUrl('/api/places/search');
+  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+  return await requestAndPrintResponse(
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'places',
+    parsed.options.json === 'true',
+  );
+}
+
 export async function handleCuStores(options: string[], deps: CliDeps): Promise<number> {
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {
@@ -26,8 +59,12 @@ export async function handleCuStores(options: string[], deps: CliDeps): Promise<
   const targetUrl = toUrl('/api/cu/stores');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'cu-stores', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'cu-stores',
+    parsed.options.json === 'true',
   );
 }
 
@@ -36,9 +73,7 @@ export async function handleCuInventory(options: string[], deps: CliDeps): Promi
   if (parsed.options.help === 'true') {
     return printCommandHelp('cu-inventory', deps.writeOut, deps.writeErr);
   }
-  if (
-    validateCommandOptions('cu-inventory', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('cu-inventory', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -52,8 +87,12 @@ export async function handleCuInventory(options: string[], deps: CliDeps): Promi
   targetUrl.searchParams.set('keyword', keyword);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'cu-inventory', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'cu-inventory',
+    parsed.options.json === 'true',
   );
 }
 
@@ -67,17 +106,19 @@ export async function handleEmart24Stores(options: string[], deps: CliDeps): Pro
   if (keyword) {
     parsed.options.keyword = keyword;
   }
-  if (
-    validateCommandOptions('emart24-stores', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('emart24-stores', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const targetUrl = toUrl('/api/emart24/stores');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'emart24-stores', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'emart24-stores',
+    parsed.options.json === 'true',
   );
 }
 
@@ -100,8 +141,12 @@ export async function handleEmart24Products(options: string[], deps: CliDeps): P
   targetUrl.searchParams.set('keyword', keyword);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'emart24-products', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'emart24-products',
+    parsed.options.json === 'true',
   );
 }
 
@@ -110,9 +155,7 @@ export async function handleEmart24Inventory(options: string[], deps: CliDeps): 
   if (parsed.options.help === 'true') {
     return printCommandHelp('emart24-inventory', deps.writeOut, deps.writeErr);
   }
-  if (
-    validateCommandOptions('emart24-inventory', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('emart24-inventory', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -129,8 +172,12 @@ export async function handleEmart24Inventory(options: string[], deps: CliDeps): 
   targetUrl.searchParams.set('pluCd', pluCd);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'emart24-inventory', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'emart24-inventory',
+    parsed.options.json === 'true',
   );
 }
 
@@ -144,17 +191,19 @@ export async function handleLotteMartStores(options: string[], deps: CliDeps): P
   if (keyword) {
     parsed.options.keyword = keyword;
   }
-  if (
-    validateCommandOptions('lottemart-stores', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('lottemart-stores', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const targetUrl = toUrl('/api/lottemart/stores');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'lottemart-stores', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'lottemart-stores',
+    parsed.options.json === 'true',
   );
 }
 
@@ -163,15 +212,15 @@ export async function handleLotteMartProducts(options: string[], deps: CliDeps):
   if (parsed.options.help === 'true') {
     return printCommandHelp('lottemart-products', deps.writeOut, deps.writeErr);
   }
-  if (
-    validateCommandOptions('lottemart-products', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('lottemart-products', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const keyword = parsed.positionals[0];
   if (!keyword) {
-    deps.writeErr('lottemart-products 명령은 검색어가 필요합니다. 예: daiso lottemart-products 콜라 --storeName 강변점');
+    deps.writeErr(
+      'lottemart-products 명령은 검색어가 필요합니다. 예: daiso lottemart-products 콜라 --storeName 강변점',
+    );
     return 1;
   }
 
@@ -186,8 +235,12 @@ export async function handleLotteMartProducts(options: string[], deps: CliDeps):
   targetUrl.searchParams.set('keyword', keyword);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'lottemart-products', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'lottemart-products',
+    parsed.options.json === 'true',
   );
 }
 
@@ -201,17 +254,19 @@ export async function handleGs25Stores(options: string[], deps: CliDeps): Promis
   if (keyword) {
     parsed.options.keyword = keyword;
   }
-  if (
-    validateCommandOptions('gs25-stores', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('gs25-stores', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const targetUrl = toUrl('/api/gs25/stores');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'gs25-stores', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'gs25-stores',
+    parsed.options.json === 'true',
   );
 }
 
@@ -234,8 +289,12 @@ export async function handleGs25Products(options: string[], deps: CliDeps): Prom
   targetUrl.searchParams.set('keyword', keyword);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'gs25-products', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'gs25-products',
+    parsed.options.json === 'true',
   );
 }
 
@@ -244,9 +303,7 @@ export async function handleGs25Inventory(options: string[], deps: CliDeps): Pro
   if (parsed.options.help === 'true') {
     return printCommandHelp('gs25-inventory', deps.writeOut, deps.writeErr);
   }
-  if (
-    validateCommandOptions('gs25-inventory', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('gs25-inventory', parsed.options, deps.writeErr)) {
     return 1;
   }
 
@@ -260,8 +317,12 @@ export async function handleGs25Inventory(options: string[], deps: CliDeps): Pro
   targetUrl.searchParams.set('keyword', keyword);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'gs25-inventory', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'gs25-inventory',
+    parsed.options.json === 'true',
   );
 }
 
@@ -286,8 +347,12 @@ export async function handleSevenElevenProducts(options: string[], deps: CliDeps
   targetUrl.searchParams.set('query', query);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'seveneleven-products', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'seveneleven-products',
+    parsed.options.json === 'true',
   );
 }
 
@@ -312,8 +377,12 @@ export async function handleSevenElevenStores(options: string[], deps: CliDeps):
   targetUrl.searchParams.set('keyword', keyword);
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'seveneleven-stores', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'seveneleven-stores',
+    parsed.options.json === 'true',
   );
 }
 
@@ -329,8 +398,12 @@ export async function handleSevenElevenPopwords(options: string[], deps: CliDeps
   const targetUrl = toUrl('/api/seveneleven/popwords');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'seveneleven-popwords', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'seveneleven-popwords',
+    parsed.options.json === 'true',
   );
 }
 
@@ -339,17 +412,19 @@ export async function handleSevenElevenCatalog(options: string[], deps: CliDeps)
   if (parsed.options.help === 'true') {
     return printCommandHelp('seveneleven-catalog', deps.writeOut, deps.writeErr);
   }
-  if (
-    validateCommandOptions('seveneleven-catalog', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('seveneleven-catalog', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const targetUrl = toUrl('/api/seveneleven/catalog');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'seveneleven-catalog', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'seveneleven-catalog',
+    parsed.options.json === 'true',
   );
 }
 
@@ -363,17 +438,19 @@ export async function handleLottecinemaTheaters(options: string[], deps: CliDeps
   if (keyword) {
     parsed.options.keyword = keyword;
   }
-  if (
-    validateCommandOptions('lottecinema-theaters', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('lottecinema-theaters', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const targetUrl = toUrl('/api/lottecinema/theaters');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'lottecinema-theaters', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'lottecinema-theaters',
+    parsed.options.json === 'true',
   );
 }
 
@@ -387,17 +464,19 @@ export async function handleLottecinemaMovies(options: string[], deps: CliDeps):
   if (keyword) {
     parsed.options.keyword = keyword;
   }
-  if (
-    validateCommandOptions('lottecinema-movies', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('lottecinema-movies', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const targetUrl = toUrl('/api/lottecinema/movies');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'lottecinema-movies', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'lottecinema-movies',
+    parsed.options.json === 'true',
   );
 }
 
@@ -411,16 +490,18 @@ export async function handleLottecinemaSeats(options: string[], deps: CliDeps): 
   if (keyword) {
     parsed.options.keyword = keyword;
   }
-  if (
-    validateCommandOptions('lottecinema-seats', parsed.options, deps.writeErr)
-  ) {
+  if (validateCommandOptions('lottecinema-seats', parsed.options, deps.writeErr)) {
     return 1;
   }
 
   const targetUrl = toUrl('/api/lottecinema/seats');
   applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
   return await requestAndPrintResponse(
-    deps.fetchImpl, deps.writeOut, deps.writeErr,
-    targetUrl, 'lottecinema-seats', parsed.options.json === 'true',
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'lottecinema-seats',
+    parsed.options.json === 'true',
   );
 }

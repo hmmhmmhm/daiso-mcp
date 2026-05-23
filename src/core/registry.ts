@@ -13,7 +13,11 @@ import { getErrorMessage, toStandardErrorDiagnostics } from './errors.js';
 const DEFAULT_OUTPUT_SCHEMA = z.object({}).loose().describe('도구 실행 결과(JSON 객체)');
 
 function createFallbackOutputSchema(toolName: string): ToolOutputSchema {
-  if (toolName.includes('search_products') || toolName.includes('searchProducts') || toolName.endsWith('_products')) {
+  if (
+    toolName.includes('search_products') ||
+    toolName.includes('searchProducts') ||
+    toolName.endsWith('_products')
+  ) {
     return {
       keyword: z.string().optional(),
       query: z.string().optional(),
@@ -26,7 +30,11 @@ function createFallbackOutputSchema(toolName: string): ToolOutputSchema {
     };
   }
 
-  if (toolName.includes('find_stores') || toolName.includes('nearby_stores') || toolName.includes('search_stores')) {
+  if (
+    toolName.includes('find_stores') ||
+    toolName.includes('nearby_stores') ||
+    toolName.includes('search_stores')
+  ) {
     return {
       keyword: z.string().optional(),
       searchParams: z.unknown().optional(),
@@ -35,6 +43,19 @@ function createFallbackOutputSchema(toolName: string): ToolOutputSchema {
       filteredCount: z.number().optional(),
       count: z.number().optional(),
       stores: z.array(z.unknown()).optional(),
+    };
+  }
+
+  if (toolName.includes('places')) {
+    return {
+      provider: z.string().optional(),
+      searchMode: z.string().optional(),
+      query: z.string().optional(),
+      category: z.string().optional(),
+      location: z.string().optional(),
+      totalCount: z.number().optional(),
+      count: z.number().optional(),
+      places: z.array(z.unknown()).optional(),
     };
   }
 
@@ -172,11 +193,28 @@ function firstNumber(...values: unknown[]): number | null {
 
 function normalizeProducts(products: unknown[]): Array<Record<string, unknown>> {
   return products
-    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+    )
     .map((item) => ({
       code: firstString(item.itemCode, item.productCode, item.pluCd, item.id, item.productNo),
-      name: firstString(item.itemName, item.shortItemName, item.goodsName, item.productName, item.movieName, item.name),
-      price: firstNumber(item.viewPrice, item.salePrice, item.sellPrice, item.price, item.originPrice, item.searchItemSellPrice),
+      name: firstString(
+        item.itemName,
+        item.shortItemName,
+        item.goodsName,
+        item.productName,
+        item.movieName,
+        item.name,
+      ),
+      price: firstNumber(
+        item.viewPrice,
+        item.salePrice,
+        item.sellPrice,
+        item.price,
+        item.originPrice,
+        item.searchItemSellPrice,
+      ),
       imageUrl: firstString(item.imageUrl),
       raw: item,
     }));
@@ -184,7 +222,10 @@ function normalizeProducts(products: unknown[]): Array<Record<string, unknown>> 
 
 function normalizeStores(stores: unknown[]): Array<Record<string, unknown>> {
   return stores
-    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+    )
     .map((item) => ({
       code: firstString(item.storeCode, item.code, item.id),
       name: firstString(item.storeName, item.name, item.theaterName),
@@ -201,6 +242,9 @@ function withStandardCollections(payload: Record<string, unknown>): Record<strin
   }
   if (Array.isArray(payload.stores)) {
     standard.stores = normalizeStores(payload.stores);
+  }
+  if (Array.isArray(payload.places)) {
+    standard.places = normalizeStores(payload.places);
   }
   if (Array.isArray(payload.theaters)) {
     standard.theaters = normalizeStores(payload.theaters);
@@ -219,7 +263,10 @@ function withStandardCollections(payload: Record<string, unknown>): Record<strin
   };
 }
 
-function buildStructuredContent(result: { content: Array<{ text: string }>; structuredContent?: Record<string, unknown> }) {
+function buildStructuredContent(result: {
+  content: Array<{ text: string }>;
+  structuredContent?: Record<string, unknown>;
+}) {
   if (result.structuredContent) {
     return withStandardCollections(result.structuredContent);
   }

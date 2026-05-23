@@ -21,6 +21,7 @@ import { createCuService } from './services/cu/index.js';
 import { createEmart24Service } from './services/emart24/index.js';
 import { createGs25Service } from './services/gs25/index.js';
 import { createSevenElevenService } from './services/seveneleven/index.js';
+import { createPlacesService } from './services/places/index.js';
 import { createPromptResponse } from './pages/prompt.js';
 import {
   createFullOpenApiJsonResponse,
@@ -41,6 +42,7 @@ import { registerCuRoutes } from './api/routes/cuRoutes.js';
 import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 import { registerGs25Routes } from './api/routes/gs25Routes.js';
 import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
+import { registerPlacesRoutes } from './api/routes/placesRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
 import { buildConfigStatus } from './api/configStatus.js';
 
@@ -72,6 +74,11 @@ const createRegistry = (bindings?: AppBindings) => {
         zyteApiKey: bindings?.ZYTE_API_KEY,
       }),
     createSevenElevenService,
+    () =>
+      createPlacesService({
+        naverClientId: bindings?.NAVER_CLIENT_ID,
+        naverClientSecret: bindings?.NAVER_CLIENT_SECRET,
+      }),
     createCuService,
     createEmart24Service,
     () =>
@@ -306,6 +313,7 @@ app.get('/privacy', (c) => {
 registerDaisoRoutes(app);
 registerGs25Routes(app);
 registerSevenElevenRoutes(app);
+registerPlacesRoutes(app);
 registerCuRoutes(app);
 registerEmart24Routes(app);
 registerLotteMartRoutes(app);

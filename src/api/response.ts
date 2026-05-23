@@ -8,6 +8,8 @@ import { toStandardErrorDiagnostics } from '../core/errors.js';
 export interface AppBindings {
   ZYTE_API_KEY?: string;
   GOOGLE_MAPS_API_KEY?: string;
+  NAVER_CLIENT_ID?: string;
+  NAVER_CLIENT_SECRET?: string;
   HEALTH_CHECK_SECRET?: string;
   HEALTH_CHECK_BASE_URL?: string;
   HEALTH_CHECK_TRANSPORT?: string;

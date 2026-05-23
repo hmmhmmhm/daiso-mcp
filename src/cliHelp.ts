@@ -14,6 +14,7 @@ export type CommandName =
   | 'stores'
   | 'inventory'
   | 'display-location'
+  | 'places'
   | 'cu-stores'
   | 'cu-inventory'
   | 'lottecinema-theaters'
@@ -44,6 +45,7 @@ export const COMMAND_LIST: CommandName[] = [
   'stores',
   'inventory',
   'display-location',
+  'places',
   'cu-stores',
   'cu-inventory',
   'lottecinema-theaters',
@@ -75,6 +77,7 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   stores: '다이소 매장 검색',
   inventory: '다이소 재고 조회',
   'display-location': '다이소 진열 위치 조회',
+  places: '음식점/카페 등 주변 장소 검색',
   'cu-stores': 'CU 매장 검색',
   'cu-inventory': 'CU 재고 조회',
   'lottecinema-theaters': '롯데시네마 주변 지점 조회',
@@ -101,11 +104,7 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '사용법: daiso help [command]',
     '예시: daiso help products',
   ],
-  version: [
-    '명령: version',
-    '설명: 설치된 daiso CLI 버전을 출력합니다.',
-    '사용법: daiso version',
-  ],
+  version: ['명령: version', '설명: 설치된 daiso CLI 버전을 출력합니다.', '사용법: daiso version'],
   url: [
     '명령: url',
     '설명: MCP 엔드포인트 URL을 출력합니다.',
@@ -173,6 +172,15 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '필수: <productId>, <storeCode>',
     '옵션: --json',
     '예시: daiso display-location 1034604 04515',
+  ],
+  places: [
+    '명령: places',
+    '설명: 네이버 지역 검색으로 음식점, 카페, 디저트 가게 등 주변 장소를 검색합니다.',
+    '사용법: daiso places <location> [--category cafe|restaurant|food|dessert|all] [--keyword 검색어] [--limit N] [--json]',
+    '필수: <location> 또는 --keyword',
+    '옵션: --category, --keyword, --limit, --start, --sort, --json',
+    '예시: daiso places 강남역 --category cafe --limit 5',
+    '예시: daiso places 성수동 --keyword 브런치 --limit 5',
   ],
   'cu-stores': [
     '명령: cu-stores',
@@ -338,11 +346,14 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso stores 강남역');
   writeOut('  npx daiso inventory 1034604 --keyword 강남역');
   writeOut('  npx daiso display-location 1034604 04515');
+  writeOut('  npx daiso places 강남역 --category cafe --limit 5');
   writeOut('  npx daiso cu-stores 강남');
   writeOut('  npx daiso cu-inventory 과자 --storeKeyword 강남');
   writeOut('  npx daiso lottecinema-theaters --keyword "안산 중앙역" --limit 5');
   writeOut('  npx daiso lottecinema-movies --playDate 20260310 --keyword "안산 중앙역"');
-  writeOut('  npx daiso lottecinema-seats --playDate 20260310 --keyword "안산 중앙역" --movieId 23816');
+  writeOut(
+    '  npx daiso lottecinema-seats --playDate 20260310 --keyword "안산 중앙역" --movieId 23816',
+  );
   writeOut('  npx daiso lottemart-stores 잠실 --area 서울 --limit 10');
   writeOut('  npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울');
   writeOut('  npx daiso emart24-stores 강남 --limit 10');
@@ -375,7 +386,7 @@ export function printCommandHelp(
   if (!Object.hasOwn(COMMAND_DETAIL, command)) {
     writeErr(`도움말을 찾을 수 없는 명령어: ${command}`);
     writeErr(
-      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, cu-stores, cu-inventory, lottecinema-theaters, lottecinema-movies, lottecinema-seats, lottemart-stores, lottemart-products, emart24-stores, emart24-products, emart24-inventory, gs25-stores, gs25-products, gs25-inventory, seveneleven-products, seveneleven-stores, seveneleven-popwords, seveneleven-catalog',
+      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, places, cu-stores, cu-inventory, lottecinema-theaters, lottecinema-movies, lottecinema-seats, lottemart-stores, lottemart-products, emart24-stores, emart24-products, emart24-inventory, gs25-stores, gs25-products, gs25-inventory, seveneleven-products, seveneleven-stores, seveneleven-popwords, seveneleven-catalog',
     );
     return 1;
   }

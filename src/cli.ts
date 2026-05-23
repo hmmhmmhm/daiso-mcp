@@ -30,6 +30,7 @@ import {
   handleEmart24Inventory,
   handleLotteMartStores,
   handleLotteMartProducts,
+  handlePlaces,
   handleGs25Stores,
   handleGs25Products,
   handleGs25Inventory,
@@ -160,9 +161,11 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   if (command === 'stores') return await handleStores(options, resolvedDeps);
   if (command === 'inventory') return await handleInventory(options, resolvedDeps);
   if (command === 'display-location') return await handleDisplayLocation(options, resolvedDeps);
+  if (command === 'places') return await handlePlaces(options, resolvedDeps);
   if (command === 'cu-stores') return await handleCuStores(options, resolvedDeps);
   if (command === 'cu-inventory') return await handleCuInventory(options, resolvedDeps);
-  if (command === 'lottecinema-theaters') return await handleLottecinemaTheaters(options, resolvedDeps);
+  if (command === 'lottecinema-theaters')
+    return await handleLottecinemaTheaters(options, resolvedDeps);
   if (command === 'lottecinema-movies') return await handleLottecinemaMovies(options, resolvedDeps);
   if (command === 'lottecinema-seats') return await handleLottecinemaSeats(options, resolvedDeps);
   if (command === 'emart24-stores') return await handleEmart24Stores(options, resolvedDeps);
@@ -173,10 +176,13 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   if (command === 'gs25-stores') return await handleGs25Stores(options, resolvedDeps);
   if (command === 'gs25-products') return await handleGs25Products(options, resolvedDeps);
   if (command === 'gs25-inventory') return await handleGs25Inventory(options, resolvedDeps);
-  if (command === 'seveneleven-products') return await handleSevenElevenProducts(options, resolvedDeps);
+  if (command === 'seveneleven-products')
+    return await handleSevenElevenProducts(options, resolvedDeps);
   if (command === 'seveneleven-stores') return await handleSevenElevenStores(options, resolvedDeps);
-  if (command === 'seveneleven-popwords') return await handleSevenElevenPopwords(options, resolvedDeps);
-  if (command === 'seveneleven-catalog') return await handleSevenElevenCatalog(options, resolvedDeps);
+  if (command === 'seveneleven-popwords')
+    return await handleSevenElevenPopwords(options, resolvedDeps);
+  if (command === 'seveneleven-catalog')
+    return await handleSevenElevenCatalog(options, resolvedDeps);
 
   resolvedDeps.writeErr(`알 수 없는 명령어: ${command}`);
   if (command === 'search') {

@@ -53,6 +53,7 @@
                 "sevenelevenCheckInventory",
                 "sevenelevenGetPopwords",
                 "sevenelevenGetCatalog",
+                "placesSearchNearby",
                 "megaboxFindTheaters",
                 "megaboxListMovies",
                 "megaboxGetSeats",
@@ -106,6 +107,24 @@
             "in": "query",
             "required": false,
             "description": "공통 키워드 파라미터",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "description": "주변 장소 검색 지역/역/주소 키워드",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "주변 장소 카테고리(restaurant, cafe, food, dessert, all)",
             "schema": {
               "type": "string"
             }

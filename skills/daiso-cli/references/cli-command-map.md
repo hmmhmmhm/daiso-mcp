@@ -11,6 +11,13 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - Product-name inventory flow: run product search, ask for location if missing, select the product ID, then run inventory.
 - Display location: `npx daiso display-location 1034604 04515 --json`
 
+## Nearby Places
+
+- Cafes near a place: `npx daiso places 강남역 --category cafe --limit 5 --json`
+- Restaurants near a place: `npx daiso places 강남역 --category restaurant --limit 5 --json`
+- Specific food or mood: `npx daiso places 성수동 --keyword 브런치 --limit 5 --json`
+- Note: this uses Naver Local keyword search, not exact coordinate radius search.
+
 ## Convenience Stores
 
 - CU stores: `npx daiso cu-stores 강남 --json`
