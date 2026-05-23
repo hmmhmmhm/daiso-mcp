@@ -53,6 +53,11 @@ export function formatNumber(value) {
 
 export function formatCompactNumber(value) {
   const numeric = Number(value);
+  if (Math.abs(numeric) >= 1000000) {
+    const unit = numeric / 1000000;
+    const digits = Math.abs(unit) >= 100 ? 0 : 1;
+    return `${unit.toFixed(digits)}M`;
+  }
   if (Math.abs(numeric) >= 1000) {
     const unit = numeric / 1000;
     const digits = Math.abs(unit) >= 10 ? 0 : 1;
@@ -121,6 +126,15 @@ export function isWeekendKst(dateText) {
   return weekday === 'Sat' || weekday === 'Sun';
 }
 
+export function isMondayKst(dateText) {
+  const date = new Date(`${dateText}T00:00:00+09:00`);
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    weekday: 'short',
+  }).format(date);
+  return weekday === 'Mon';
+}
+
 export function findMinNonZero(points) {
   const candidates = points.filter((point) => point.requests > 0);
   if (candidates.length === 0) {
@@ -137,6 +151,66 @@ export function buildPointStyleArray(length, base, highlights) {
     }
   }
   return values;
+}
+
+export function calculateMedian(points) {
+  if (points.length === 0) {
+    return 0;
+  }
+
+  const sorted = points.map((point) => point.requests).sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) {
+    return sorted[middle] ?? 0;
+  }
+
+  return Math.round(((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2);
+}
+
+export function buildDataLabelIndexes(points) {
+  if (points.length === 0) {
+    return new Set();
+  }
+
+  const indexes = new Set([points.length - 1]);
+  const values = points.map((point) => point.requests);
+  const peakValue = Math.max(...values);
+  const peakIndex = values.findIndex((value) => value === peakValue);
+  indexes.add(peakIndex);
+
+  const sortedByRequests = points
+    .map((point, index) => ({ index, requests: point.requests }))
+    .sort((a, b) => b.requests - a.requests)
+    .slice(0, Math.min(3, points.length));
+  const median = calculateMedian(points);
+
+  for (const point of sortedByRequests) {
+    if (point.requests >= median * 4) {
+      indexes.add(point.index);
+    }
+  }
+
+  const minimumSurge = Math.max(100, Math.round(median * 0.1));
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]?.requests ?? 0;
+    const current = points[index]?.requests ?? 0;
+    if (previous > 0 && current >= previous * 2 && current - previous >= minimumSurge) {
+      indexes.add(index);
+    }
+  }
+
+  return new Set([...indexes].sort((a, b) => a - b));
+}
+
+export function shouldShowWeeklyTick(points, index) {
+  const point = points[index];
+  if (!point) {
+    return false;
+  }
+  if (index === 0 || index === points.length - 1) {
+    return true;
+  }
+  return index >= 2 && index <= points.length - 3 && isMondayKst(point.date);
 }
 
 export function createWeekendShadePlugin(points) {
@@ -172,11 +246,16 @@ export function createWeekendShadePlugin(points) {
 export function calculateSummary(points) {
   const total = points.reduce((sum, point) => sum + point.requests, 0);
   const average = Math.round(total / Math.max(points.length, 1));
+  const median = calculateMedian(points);
   const peak = points.reduce(
     (max, point) => (point.requests > max.requests ? point : max),
     points[0] ?? { date: formatKstDate(new Date()), requests: 0 },
   );
   const recent7Total = points.slice(-7).reduce((sum, point) => sum + point.requests, 0);
+  const recent7Average = Math.round(recent7Total / Math.min(points.length, 7));
+  const previous7Total = points.slice(-14, -7).reduce((sum, point) => sum + point.requests, 0);
+  const weekOverWeekDiff = recent7Total - previous7Total;
+  const weekOverWeekPercent = previous7Total > 0 ? (weekOverWeekDiff / previous7Total) * 100 : null;
   const latest = points[points.length - 1] ?? { date: formatKstDate(new Date()), requests: 0 };
   const previous = points[points.length - 2] ?? latest;
   const dayOverDayDiff = latest.requests - previous.requests;
@@ -186,8 +265,13 @@ export function calculateSummary(points) {
   return {
     total,
     average,
+    median,
     peak,
     recent7Total,
+    recent7Average,
+    previous7Total,
+    weekOverWeekDiff,
+    weekOverWeekPercent,
     latest,
     previous,
     dayOverDayDiff,
@@ -195,14 +279,7 @@ export function calculateSummary(points) {
   };
 }
 
-export function buildReadmeSection({
-  scriptName,
-  updatedAt,
-  days,
-  startDate,
-  endDate,
-  cacheKey,
-}) {
+export function buildReadmeSection({ scriptName, updatedAt, days, startDate, endDate, cacheKey }) {
   return [
     '<!-- WORKERS_INVOCATIONS_CHART:START -->',
     `<h3>Cloudflare Workers 호출량 (${startDate} ~ ${endDate}, ${days}일)</h3>`,

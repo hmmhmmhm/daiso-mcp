@@ -5,13 +5,19 @@
   "startDate": "2026-03-01",
   "endDate": "2026-05-21",
   "updatedAt": "2026-05-21T16:24:24.230Z",
+  "renderedAt": "2026-05-23T04:29:35.784Z",
   "total": 22774062,
   "average": 277732,
+  "median": 139240,
   "peak": {
     "date": "2026-05-15",
     "requests": 1887901
   },
   "recent7Total": 4007572,
+  "recent7Average": 572510,
+  "previous7Total": 3128076,
+  "weekOverWeekDiff": 879496,
+  "weekOverWeekPercent": 28.116196665298414,
   "latest": {
     "date": "2026-05-21",
     "requests": 350877

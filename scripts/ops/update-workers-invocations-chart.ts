@@ -5,6 +5,7 @@ import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { registerFont } from 'canvas';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
+  buildDataLabelIndexes,
   buildPointStyleArray,
   buildReadmeSection,
   calculateMovingAverage,
@@ -16,6 +17,7 @@ import {
   formatKstDateTime,
   formatNumber,
   parseKstDateText,
+  shouldShowWeeklyTick,
 } from './workers-chart-helpers.ts';
 import { fetchDailyWorkerInvocations } from './workers-chart-data.ts';
 
@@ -43,10 +45,11 @@ const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const SCRIPT_NAME = process.env.CF_WORKER_SCRIPT_NAME ?? 'daiso-mcp';
 const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE ?? '2026-03-01';
 const CHART_CONCURRENCY = Number.parseInt(process.env.WORKERS_CHART_CONCURRENCY ?? '4', 10);
+const INPUT_JSON_PATH = process.env.WORKERS_CHART_INPUT_JSON;
 
-if (!ACCOUNT_ID || !API_TOKEN) {
+if (!INPUT_JSON_PATH && (!ACCOUNT_ID || !API_TOKEN)) {
   throw new Error(
-    'CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN 환경 변수가 필요합니다.',
+    'CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN 환경 변수가 필요합니다. 기존 JSON으로 다시 그릴 때는 WORKERS_CHART_INPUT_JSON을 지정하세요.',
   );
 }
 
@@ -61,12 +64,11 @@ function formatDelta(diff) {
   return formatNumber(diff);
 }
 
-function formatDeltaPercent(percent) {
-  if (percent === null) {
-    return 'N/A';
+function formatSignedNumber(value) {
+  if (value > 0) {
+    return `+${formatNumber(value)}`;
   }
-  const sign = percent > 0 ? '+' : '';
-  return `${sign}${percent.toFixed(1)}%`;
+  return formatNumber(value);
 }
 
 function drawRoundRect(ctx, x, y, width, height, radius) {
@@ -78,6 +80,105 @@ function drawRoundRect(ctx, x, y, width, height, radius) {
   ctx.arcTo(x, y + height, x, y, r);
   ctx.arcTo(x, y, x + width, y, r);
   ctx.closePath();
+}
+
+function drawMetric(ctx, x, y, label, value, color = '#111827') {
+  ctx.font = `12px ${PREFERRED_FONT_FAMILY}`;
+  ctx.fillStyle = '#64748b';
+  ctx.fillText(label, x, y);
+  ctx.font = `bold 18px ${PREFERRED_FONT_FAMILY}`;
+  ctx.fillStyle = color;
+  ctx.fillText(value, x, y + 24);
+}
+
+function buildRecent14PanelPlugin(points) {
+  return {
+    id: 'recent-14-panel',
+    afterDraw(chart) {
+      const { ctx, chartArea } = chart;
+      if (!chartArea || points.length === 0) {
+        return;
+      }
+
+      const recent = points.slice(-14);
+      const values = recent.map((point) => point.requests);
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = Math.max(max - min, 1);
+      const x = chartArea.left;
+      const y = chartArea.bottom + 36;
+      const width = chartArea.right - chartArea.left;
+      const height = 86;
+      const innerTop = y + 34;
+      const innerBottom = y + height - 20;
+
+      ctx.save();
+      drawRoundRect(ctx, x, y, width, height, 8);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.font = `bold 13px ${PREFERRED_FONT_FAMILY}`;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText('최근 14일 확대', x + 14, y + 21);
+      ctx.font = `11px ${PREFERRED_FONT_FAMILY}`;
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(
+        `${recent[0]?.date ?? ''} ~ ${recent[recent.length - 1]?.date ?? ''}`,
+        x + 118,
+        y + 21,
+      );
+
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(x + 14, innerBottom);
+      ctx.lineTo(x + width - 14, innerBottom);
+      ctx.stroke();
+
+      const toX = (index) => x + 18 + (index / Math.max(recent.length - 1, 1)) * (width - 36);
+      const toY = (value) => innerBottom - ((value - min) / range) * (innerBottom - innerTop);
+
+      ctx.beginPath();
+      recent.forEach((point, index) => {
+        const px = toX(index);
+        const py = toY(point.requests);
+        if (index === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      });
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#2563eb';
+      for (const [index, point] of recent.entries()) {
+        ctx.beginPath();
+        ctx.arc(
+          toX(index),
+          toY(point.requests),
+          index === recent.length - 1 ? 4 : 2.5,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+
+      const latest = recent[recent.length - 1];
+      if (latest) {
+        ctx.font = `bold 12px ${PREFERRED_FONT_FAMILY}`;
+        ctx.fillStyle = '#1d4ed8';
+        ctx.textAlign = 'right';
+        ctx.fillText(`최신 ${formatNumber(latest.requests)}회`, x + width - 16, y + 22);
+        ctx.textAlign = 'left';
+      }
+
+      ctx.restore();
+    },
+  };
 }
 
 async function initializeKoreanFonts() {
@@ -92,7 +193,16 @@ async function initializeKoreanFonts() {
   }
 }
 
-async function renderChart(points, summary) {
+async function readInputPayload(inputPath) {
+  const resolvedPath = path.isAbsolute(inputPath) ? inputPath : path.resolve(REPO_ROOT, inputPath);
+  const payload = JSON.parse(await fs.readFile(resolvedPath, 'utf8'));
+  if (!Array.isArray(payload.points)) {
+    throw new Error(`points 배열이 없는 JSON입니다: ${resolvedPath}`);
+  }
+  return payload;
+}
+
+async function renderChart(points, summary, metadata) {
   const movingAverage = calculateMovingAverage(points, 7);
   const labels = points.map((point) => point.date.slice(5));
   const values = points.map((point) => point.requests);
@@ -100,12 +210,14 @@ async function renderChart(points, summary) {
   const peakIndex = values.findIndex((value) => value === Math.max(...values));
   const minNonZero = findMinNonZero(points);
   const minNonZeroIndex = points.findIndex((point) => point.date === minNonZero.date);
+  const dataLabelIndexes = buildDataLabelIndexes(points);
   const highlights = [
     { index: latestIndex, value: 6 },
     { index: peakIndex, value: 6 },
     { index: minNonZeroIndex, value: 6 },
   ];
   const weekendShadePlugin = createWeekendShadePlugin(points);
+  const recent14PanelPlugin = buildRecent14PanelPlugin(points);
   const summaryPanelPlugin = {
     id: 'summary-panel',
     afterDraw(chart) {
@@ -115,13 +227,10 @@ async function renderChart(points, summary) {
       }
 
       const x = chartArea.left;
-      const y = chartArea.bottom + 44;
+      const y = chartArea.bottom + 132;
       const panelWidth = chartArea.right - chartArea.left;
-      const panelHeight = 34;
-      const line =
-        `전체 ${formatNumber(summary.total)}회  |  일평균 ${formatNumber(summary.average)}회  |  ` +
-        `최근 7일 ${formatNumber(summary.recent7Total)}회  |  최대 ${formatNumber(summary.peak.requests)}회 (${summary.peak.date.slice(5)})  |  ` +
-        `전일 대비 ${formatDelta(summary.dayOverDayDiff)}회 (${formatDeltaPercent(summary.dayOverDayPercent)})`;
+      const panelHeight = 54;
+      const metricWidth = panelWidth / 6;
 
       ctx.save();
       drawRoundRect(ctx, x, y, panelWidth, panelHeight, 8);
@@ -131,28 +240,57 @@ async function renderChart(points, summary) {
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      let fontSize = 13;
-      ctx.font = `bold ${fontSize}px ${PREFERRED_FONT_FAMILY}`;
-      ctx.fillStyle = '#111827';
-      while (fontSize > 10 && ctx.measureText(line).width > panelWidth - 24) {
-        fontSize -= 1;
-        ctx.font = `bold ${fontSize}px ${PREFERRED_FONT_FAMILY}`;
-      }
-      const textWidth = ctx.measureText(line).width;
-      const centeredX = x + Math.max((panelWidth - textWidth) / 2, 12);
-      ctx.fillText(line, centeredX, y + 23);
+      drawMetric(ctx, x + 18, y + 19, '전체', `${formatCompactNumber(summary.total)}회`);
+      drawMetric(
+        ctx,
+        x + metricWidth + 18,
+        y + 19,
+        '일평균',
+        `${formatCompactNumber(summary.average)}회`,
+      );
+      drawMetric(
+        ctx,
+        x + metricWidth * 2 + 18,
+        y + 19,
+        '중앙값',
+        `${formatCompactNumber(summary.median)}회`,
+      );
+      drawMetric(
+        ctx,
+        x + metricWidth * 3 + 18,
+        y + 19,
+        '최근 7일 평균',
+        `${formatCompactNumber(summary.recent7Average)}회`,
+      );
+      drawMetric(
+        ctx,
+        x + metricWidth * 4 + 18,
+        y + 19,
+        '전주 대비',
+        `${formatSignedNumber(summary.weekOverWeekDiff)}회`,
+        summary.weekOverWeekDiff >= 0 ? '#047857' : '#b91c1c',
+      );
+      drawMetric(
+        ctx,
+        x + metricWidth * 5 + 18,
+        y + 19,
+        '전일 대비',
+        `${formatDelta(summary.dayOverDayDiff)}회`,
+        summary.dayOverDayDiff >= 0 ? '#047857' : '#b91c1c',
+      );
       ctx.restore();
     },
   };
 
   const canvas = new ChartJSNodeCanvas({
     width: 1400,
-    height: 560,
+    height: 720,
     backgroundColour: '#ffffff',
     chartCallback: (ChartJS) => {
       ChartJS.defaults.font.family = PREFERRED_FONT_FAMILY;
       ChartJS.register(ChartDataLabels);
       ChartJS.register(weekendShadePlugin);
+      ChartJS.register(recent14PanelPlugin);
       ChartJS.register(summaryPanelPlugin);
     },
   });
@@ -181,7 +319,7 @@ async function renderChart(points, summary) {
         {
           label: '7일 이동평균',
           data: movingAverage,
-          borderColor: '#ea580c',
+          borderColor: '#2563eb',
           borderWidth: 2,
           borderDash: [6, 4],
           pointRadius: 0,
@@ -196,7 +334,7 @@ async function renderChart(points, summary) {
           top: 28,
           right: 16,
           left: 8,
-          bottom: 112,
+          bottom: 220,
         },
       },
       plugins: {
@@ -208,11 +346,11 @@ async function renderChart(points, summary) {
         },
         datalabels: {
           display(context) {
-            return context.datasetIndex === 0;
+            return context.datasetIndex === 0 && dataLabelIndexes.has(context.dataIndex);
           },
           color(context) {
             const value = Number(context.dataset.data[context.dataIndex] ?? 0);
-            return value >= 1000 ? '#7a4a1f' : '#6b7280';
+            return value >= 1000 ? '#7c2d12' : '#6b7280';
           },
           anchor: 'end',
           align(context) {
@@ -232,11 +370,14 @@ async function renderChart(points, summary) {
         },
         title: {
           display: true,
-          text: `Cloudflare Workers 호출량 (최근 ${labels.length}일)`,
+          text: [
+            `Cloudflare Workers 호출량 (${metadata.startDate} ~ ${metadata.endDate}, ${labels.length}일)`,
+            `데이터 갱신: ${metadata.updatedAtText}`,
+          ],
           color: '#111111',
           font: {
             family: PREFERRED_FONT_FAMILY,
-            size: 20,
+            size: 18,
           },
         },
       },
@@ -245,6 +386,9 @@ async function renderChart(points, summary) {
           ticks: {
             maxRotation: 0,
             autoSkip: false,
+            callback(_value, index) {
+              return shouldShowWeeklyTick(points, index) ? labels[index] : '';
+            },
           },
           grid: {
             color: 'rgba(0, 0, 0, 0.08)',
@@ -287,45 +431,68 @@ async function updateReadme(section) {
 async function main() {
   await initializeKoreanFonts();
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
-  const todayKstDate = formatKstDate(new Date());
-  const endDateExclusive = parseKstDateText(todayKstDate);
-  const endDateInclusive = formatKstDate(new Date(endDateExclusive.getTime() - 86400000));
+  const renderedAt = new Date();
+  let points;
+  let scriptName = SCRIPT_NAME;
+  let startDate = CHART_START_DATE;
+  let endDate;
+  let updatedAt = renderedAt.toISOString();
 
-  const points = await fetchDailyWorkerInvocations({
-    accountId: ACCOUNT_ID,
-    apiToken: API_TOKEN,
-    scriptName: SCRIPT_NAME,
-    startDateText: CHART_START_DATE,
-    endDateText: endDateInclusive,
-    concurrency: Number.isFinite(CHART_CONCURRENCY) && CHART_CONCURRENCY > 0 ? CHART_CONCURRENCY : 4,
-  });
+  if (INPUT_JSON_PATH) {
+    const inputPayload = await readInputPayload(INPUT_JSON_PATH);
+    points = inputPayload.points;
+    scriptName = inputPayload.scriptName ?? scriptName;
+    startDate = inputPayload.startDate ?? points[0]?.date ?? startDate;
+    endDate = inputPayload.endDate ?? points[points.length - 1]?.date ?? startDate;
+    updatedAt = inputPayload.updatedAt ?? updatedAt;
+  } else {
+    const todayKstDate = formatKstDate(renderedAt);
+    const endDateExclusive = parseKstDateText(todayKstDate);
+    endDate = formatKstDate(new Date(endDateExclusive.getTime() - 86400000));
+
+    points = await fetchDailyWorkerInvocations({
+      accountId: ACCOUNT_ID,
+      apiToken: API_TOKEN,
+      scriptName,
+      startDateText: startDate,
+      endDateText: endDate,
+      concurrency:
+        Number.isFinite(CHART_CONCURRENCY) && CHART_CONCURRENCY > 0 ? CHART_CONCURRENCY : 4,
+    });
+  }
+
   const summary = calculateSummary(points);
-  const chartBuffer = await renderChart(points, summary);
+  const chartBuffer = await renderChart(points, summary, {
+    startDate,
+    endDate,
+    updatedAtText: formatKstDateTime(new Date(updatedAt)),
+  });
   await fs.writeFile(CHART_PATH, chartBuffer);
   const payload = {
-    scriptName: SCRIPT_NAME,
+    scriptName,
     timezone: 'Asia/Seoul',
     days: points.length,
-    startDate: CHART_START_DATE,
-    endDate: endDateInclusive,
-    updatedAt: new Date().toISOString(),
+    startDate,
+    endDate,
+    updatedAt,
+    renderedAt: renderedAt.toISOString(),
     ...summary,
     points,
   };
   await fs.writeFile(DATA_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 
   const section = buildReadmeSection({
-    scriptName: SCRIPT_NAME,
-    updatedAt: formatKstDateTime(new Date()),
+    scriptName,
+    updatedAt: formatKstDateTime(renderedAt),
     days: points.length,
-    startDate: CHART_START_DATE,
-    endDate: endDateInclusive,
-    cacheKey: payload.updatedAt,
+    startDate,
+    endDate,
+    cacheKey: payload.renderedAt,
   });
   await updateReadme(section);
 
   console.log(
-    `[workers-chart] script=${SCRIPT_NAME} days=${points.length} total=${formatNumber(payload.total)}`,
+    `[workers-chart] script=${scriptName} days=${points.length} total=${formatNumber(payload.total)}`,
   );
 }
 
