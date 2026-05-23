@@ -65,11 +65,11 @@
 **[실시간 서비스 상태 보기](https://aka-page.betteruptime.com/)**
 
 <!-- WORKERS_INVOCATIONS_CHART:START -->
-<h3>Cloudflare Workers 호출량 (2026-03-01 ~ 2026-05-21, 82일)</h3>
+<h3>Cloudflare Workers 호출량 (2026-03-01 ~ 2026-05-23, 84일)</h3>
 
-<img src="./assets/analytics/workers-invocations.png?v=2026-05-23T04:50:41.937Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 2026-05-21)" width="100%">
+<img src="./assets/analytics/workers-invocations.png?v=2026-05-23T15:44:29.609Z" alt="Cloudflare Workers 호출량 그래프 (2026-03-01 ~ 2026-05-23)" width="100%">
 
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-05-23 13:50 KST</sub>
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-05-24 00:44 KST</sub>
 
 <!-- WORKERS_INVOCATIONS_CHART:END -->
 
