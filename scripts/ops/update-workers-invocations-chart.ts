@@ -18,6 +18,7 @@ import {
   formatNumber,
   parseKstDateText,
   shouldShowWeeklyTick,
+  WORKERS_CHART_ACCENT_COLORS,
 } from './workers-chart-helpers.ts';
 import { fetchDailyWorkerInvocations } from './workers-chart-data.ts';
 
@@ -150,11 +151,11 @@ function buildRecent14PanelPlugin(points) {
           ctx.lineTo(px, py);
         }
       });
-      ctx.strokeStyle = '#2563eb';
+      ctx.strokeStyle = WORKERS_CHART_ACCENT_COLORS.recent14Line;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = '#2563eb';
+      ctx.fillStyle = WORKERS_CHART_ACCENT_COLORS.recent14Line;
       for (const [index, point] of recent.entries()) {
         ctx.beginPath();
         ctx.arc(
@@ -170,7 +171,7 @@ function buildRecent14PanelPlugin(points) {
       const latest = recent[recent.length - 1];
       if (latest) {
         ctx.font = `bold 12px ${PREFERRED_FONT_FAMILY}`;
-        ctx.fillStyle = '#1d4ed8';
+        ctx.fillStyle = WORKERS_CHART_ACCENT_COLORS.recent14Label;
         ctx.textAlign = 'right';
         ctx.fillText(`최신 ${formatNumber(latest.requests)}회`, x + width - 16, y + 22);
         ctx.textAlign = 'left';
@@ -319,7 +320,7 @@ async function renderChart(points, summary, metadata) {
         {
           label: '7일 이동평균',
           data: movingAverage,
-          borderColor: '#2563eb',
+          borderColor: WORKERS_CHART_ACCENT_COLORS.movingAverage,
           borderWidth: 2,
           borderDash: [6, 4],
           pointRadius: 0,

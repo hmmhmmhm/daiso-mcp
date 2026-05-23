@@ -6,6 +6,7 @@ import {
   buildDataLabelIndexes,
   calculateSummary,
   shouldShowWeeklyTick,
+  WORKERS_CHART_ACCENT_COLORS,
 } from '../../scripts/ops/workers-chart-helpers.ts';
 
 describe('calculateSummary', () => {
@@ -57,5 +58,13 @@ describe('shouldShowWeeklyTick', () => {
       false,
       true,
     ]);
+  });
+});
+
+describe('WORKERS_CHART_ACCENT_COLORS', () => {
+  it('보조선 색상은 amber 계열을 사용한다', () => {
+    expect(WORKERS_CHART_ACCENT_COLORS.movingAverage).toBe('#f59e0b');
+    expect(WORKERS_CHART_ACCENT_COLORS.recent14Line).toBe('#f59e0b');
+    expect(WORKERS_CHART_ACCENT_COLORS.recent14Label).toBe('#b45309');
   });
 });

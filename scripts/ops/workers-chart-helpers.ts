@@ -7,6 +7,12 @@ export function formatKstDate(date) {
   }).format(date);
 }
 
+export const WORKERS_CHART_ACCENT_COLORS = {
+  movingAverage: '#f59e0b',
+  recent14Line: '#f59e0b',
+  recent14Label: '#b45309',
+};
+
 export function formatKstDateTime(date) {
   const parts = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Seoul',
