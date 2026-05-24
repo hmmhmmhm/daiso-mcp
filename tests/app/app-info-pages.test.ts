@@ -219,6 +219,13 @@ describe('GET /', () => {
     expect(data.tools).toContain('places_search_nearby');
   });
 
+  it('통합 비교 도구가 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('compare_products');
+  });
+
   it('엔드포인트 정보를 포함한다', async () => {
     const res = await app.request('/');
     const data = await res.json();

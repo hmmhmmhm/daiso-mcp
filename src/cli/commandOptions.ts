@@ -14,6 +14,7 @@ export const COMMAND_OPTION_ALLOWLISTS = {
   stores: ['help', 'json', 'keyword', 'sido', 'gugun', 'dong', 'limit'],
   inventory: ['help', 'json', 'keyword', 'lat', 'lng', 'page', 'pageSize'],
   'display-location': ['help', 'json'],
+  compare: ['help', 'json', 'keyword', 'q', 'services', 'limit'],
   places: ['help', 'json', 'location', 'category', 'keyword', 'limit', 'start', 'sort'],
   'cu-stores': ['help', 'json', 'keyword', 'lat', 'lng', 'limit'],
   'cu-inventory': [

@@ -30,6 +30,7 @@ import {
   handleEmart24Inventory,
   handleLotteMartStores,
   handleLotteMartProducts,
+  handleCompareProducts,
   handlePlaces,
   handleGs25Stores,
   handleGs25Products,
@@ -161,6 +162,7 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   if (command === 'stores') return await handleStores(options, resolvedDeps);
   if (command === 'inventory') return await handleInventory(options, resolvedDeps);
   if (command === 'display-location') return await handleDisplayLocation(options, resolvedDeps);
+  if (command === 'compare') return await handleCompareProducts(options, resolvedDeps);
   if (command === 'places') return await handlePlaces(options, resolvedDeps);
   if (command === 'cu-stores') return await handleCuStores(options, resolvedDeps);
   if (command === 'cu-inventory') return await handleCuInventory(options, resolvedDeps);

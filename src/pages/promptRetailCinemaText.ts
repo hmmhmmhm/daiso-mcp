@@ -3,7 +3,24 @@
  */
 
 export function buildPromptRetailCinemaText(baseUrl: string): string {
-  return `### 6-0. 주변 음식점/카페 검색
+  return `### 6-0. 키 없는 통합 상품 가격 후보 비교
+
+**설명**: 새 외부 API 키 없이 기존 다이소, GS25, 세븐일레븐, 이마트24 상품 검색을 묶어 가격 후보를 비교합니다. 실제 매장 재고와 행사가까지 확정하는 기능이 아니라 "어디가 싸 보이는지"를 빠르게 고르는 1차 검색입니다.
+
+**URL**:
+- ${baseUrl}/api/compare/products?keyword={검색어}
+
+**선택 파라미터**:
+- services: daiso,gs25,seveneleven,emart24 중 쉼표 구분 목록
+- limit: 서비스별 최대 결과 수 (기본값: 5)
+
+**예시**:
+- ${baseUrl}/api/compare/products?keyword=콜라&limit=3
+- ${baseUrl}/api/compare/products?keyword=컵라면&services=seveneleven,emart24
+
+---
+
+### 6-1. 주변 음식점/카페 검색
 
 **설명**: 네이버 지역 검색으로 특정 지역의 음식점, 카페, 디저트 가게 등 주변 장소를 조회합니다. 좌표 반경 검색이 아니라 \`강남역 카페\` 같은 키워드 기반 검색입니다.
 
@@ -24,7 +41,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 ---
 
-### 6-1. 롯데마트 매장/상품 조회
+### 6-2. 롯데마트 매장/상품 조회
 
 **설명**: 롯데마트 계열 매장 검색과 특정 매장 기준 상품 가격/재고 조회를 제공합니다.
 
@@ -50,7 +67,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 ---
 
-### 6-2. GS25 매장/상품/재고 조회
+### 6-3. GS25 매장/상품/재고 조회
 
 **설명**: GS25 매장 탐색, 상품 키워드 검색, 재고 조회를 제공합니다.
 
@@ -74,7 +91,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 ---
 
-### 6-3. 세븐일레븐 상품/매장/재고/인기검색어/카탈로그 조회
+### 6-4. 세븐일레븐 상품/매장/재고/인기검색어/카탈로그 조회
 
 **설명**: 세븐일레븐 상품 검색, 매장 검색, 재고 수량 조회, 인기 검색어, 카탈로그 스냅샷을 제공합니다.
 

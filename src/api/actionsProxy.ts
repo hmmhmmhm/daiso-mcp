@@ -95,6 +95,11 @@ export const ACTION_QUERY_DEFINITIONS: ActionQueryDefinition[] = [
     targetPath: '/api/seveneleven/catalog',
   },
   {
+    action: 'compareProducts',
+    summary: '키 없는 통합 상품 가격 후보 비교',
+    targetPath: '/api/compare/products',
+  },
+  {
     action: 'placesSearchNearby',
     summary: '음식점/카페 등 주변 장소 검색',
     targetPath: '/api/places/search',

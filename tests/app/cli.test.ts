@@ -498,6 +498,31 @@ describe('CLI', () => {
     expect(errors[0]).toContain('위치나 검색어가 필요합니다');
   });
 
+  it('compare 명령은 통합 가격 후보 비교 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { results: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['compare', '콜라', '--limit', '3'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/compare/products?keyword=%EC%BD%9C%EB%9D%BC&limit=3',
+    );
+  });
+
+  it('compare 명령은 검색어가 없으면 실패한다', async () => {
+    const { errors, deps } = createDeps();
+
+    const exitCode = await runCli(['compare'], deps);
+
+    expect(exitCode).toBe(1);
+    expect(errors[0]).toContain('검색어가 필요합니다');
+  });
+
   it('lottecinema-theaters 명령은 롯데시네마 주변 지점 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
@@ -541,13 +566,11 @@ describe('CLI', () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
-      json: vi
-        .fn()
-        .mockResolvedValue({
-          success: true,
-          data: { movies: [], showtimes: [] },
-          meta: { total: 0 },
-        }),
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        data: { movies: [], showtimes: [] },
+        meta: { total: 0 },
+      }),
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 
@@ -566,13 +589,11 @@ describe('CLI', () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
       ok: true,
-      json: vi
-        .fn()
-        .mockResolvedValue({
-          success: true,
-          data: { movies: [], showtimes: [] },
-          meta: { total: 0 },
-        }),
+      json: vi.fn().mockResolvedValue({
+        success: true,
+        data: { movies: [], showtimes: [] },
+        meta: { total: 0 },
+      }),
     } as unknown as Response);
     deps.fetchImpl = fetchImpl;
 

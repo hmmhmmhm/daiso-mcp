@@ -67,6 +67,13 @@ const ACTION_QUERY_PARAMETERS = [
     schema: { type: 'string' },
   },
   {
+    name: 'services',
+    in: 'query',
+    required: false,
+    description: '통합 비교 서비스 목록(daiso,gs25,seveneleven,emart24)',
+    schema: { type: 'string' },
+  },
+  {
     name: 'sido',
     in: 'query',
     required: false,

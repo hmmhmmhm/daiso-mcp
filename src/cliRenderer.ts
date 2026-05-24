@@ -217,6 +217,21 @@ function formatInventory(data: Record<string, unknown>): string[] {
   return lines;
 }
 
+function formatCompare(data: Record<string, unknown>): string[] {
+  const lines: string[] = [];
+  if (isRecord(data.bestPrice)) {
+    lines.push(
+      `최저가 후보: ${toText(data.bestPrice.serviceName)} / ${toText(data.bestPrice.name)} / ${toText(data.bestPrice.price)}원`,
+    );
+  }
+  lines.push(...formatCollection('가격 후보', data.results));
+  lines.push(...formatCollection('오류', data.errors));
+  if (typeof data.note === 'string') {
+    lines.push(`참고: ${data.note}`);
+  }
+  return lines;
+}
+
 export function renderApiEnvelope(command: string, url: URL, payload: unknown): string {
   if (!isRecord(payload)) {
     return `요청 성공: ${url.pathname}\n${toText(payload)}\n\n원본 JSON은 --json 옵션으로 확인하세요.`;
@@ -244,6 +259,8 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
     lines.push(...formatInventory(data));
   } else if (command === 'display-location') {
     lines.push(...formatDisplayLocation(data));
+  } else if (command === 'compare') {
+    lines.push(...formatCompare(data));
   } else if (command === 'cu-inventory') {
     lines.push(
       ...formatCollection(

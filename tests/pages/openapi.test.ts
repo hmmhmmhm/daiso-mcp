@@ -65,6 +65,11 @@ describe('OpenAPI 페이지', () => {
         (parameter) => parameter.name === 'location',
       ),
     ).toBe(true);
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.some(
+        (parameter) => parameter.name === 'services',
+      ),
+    ).toBe(true);
   });
 
   it('전체 OpenAPI 스펙 객체를 생성한다', () => {
@@ -77,6 +82,7 @@ describe('OpenAPI 페이지', () => {
     expect(spec.openapi).toBe('3.1.0');
     expect(spec.servers[0].url).toBe('https://example.com');
     expect(spec.paths['/api/daiso/products']).toBeDefined();
+    expect(spec.paths['/api/compare/products']).toBeDefined();
     expect(spec.paths['/api/daiso/display-location']).toBeDefined();
     expect(
       (

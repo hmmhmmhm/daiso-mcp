@@ -13,6 +13,19 @@ import { getErrorMessage, toStandardErrorDiagnostics } from './errors.js';
 const DEFAULT_OUTPUT_SCHEMA = z.object({}).loose().describe('도구 실행 결과(JSON 객체)');
 
 function createFallbackOutputSchema(toolName: string): ToolOutputSchema {
+  if (toolName.includes('compare')) {
+    return {
+      keyword: z.string().optional(),
+      services: z.array(z.string()).optional(),
+      serviceCount: z.number().optional(),
+      resultCount: z.number().optional(),
+      bestPrice: z.unknown().optional(),
+      results: z.array(z.unknown()).optional(),
+      errors: z.array(z.unknown()).optional(),
+      note: z.string().optional(),
+    };
+  }
+
   if (
     toolName.includes('search_products') ||
     toolName.includes('searchProducts') ||

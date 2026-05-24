@@ -22,6 +22,7 @@ import { createEmart24Service } from './services/emart24/index.js';
 import { createGs25Service } from './services/gs25/index.js';
 import { createSevenElevenService } from './services/seveneleven/index.js';
 import { createPlacesService } from './services/places/index.js';
+import { createCompareService } from './services/compare/index.js';
 import { createPromptResponse } from './pages/prompt.js';
 import {
   createFullOpenApiJsonResponse,
@@ -43,6 +44,7 @@ import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 import { registerGs25Routes } from './api/routes/gs25Routes.js';
 import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
 import { registerPlacesRoutes } from './api/routes/placesRoutes.js';
+import { registerCompareRoutes } from './api/routes/compareRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
 import { buildConfigStatus } from './api/configStatus.js';
 
@@ -74,6 +76,7 @@ const createRegistry = (bindings?: AppBindings) => {
         zyteApiKey: bindings?.ZYTE_API_KEY,
       }),
     createSevenElevenService,
+    createCompareService,
     () =>
       createPlacesService({
         naverClientId: bindings?.NAVER_CLIENT_ID,
@@ -256,6 +259,7 @@ app.get('/', (c) => {
       openapi: '/openapi.json (GET) - OpenAI Actions용 축약 OpenAPI',
       openapiFull: '/openapi-full.json (GET) - 전체 OpenAPI',
       actionsQuery: '/api/actions/query (GET) - 기존 GET API 통합 facade',
+      compareProducts: '/api/compare/products (GET) - 키 없는 통합 상품 가격 후보 비교',
     },
     services,
     tools: allTools,
@@ -313,6 +317,7 @@ app.get('/privacy', (c) => {
 registerDaisoRoutes(app);
 registerGs25Routes(app);
 registerSevenElevenRoutes(app);
+registerCompareRoutes(app);
 registerPlacesRoutes(app);
 registerCuRoutes(app);
 registerEmart24Routes(app);

@@ -1,6 +1,6 @@
 ---
 name: daiso-cli
-description: Use this when a user wants to search Daiso/다이소, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, places, movies, showtimes, seats, health checks, and raw JSON output.
+description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
 version: 1.0.6
 metadata:
   openclaw:
@@ -46,6 +46,7 @@ npx daiso products 수납박스 --json
 npx daiso stores 강남역 --limit 5 --json
 npx daiso inventory 1034604 --keyword 강남역 --json
 npx daiso display-location 1034604 04515 --json
+npx daiso compare 콜라 --limit 3 --json
 npx daiso places 강남역 --category cafe --limit 5 --json
 npx daiso places 성수동 --keyword 브런치 --limit 5 --json
 npx daiso gs25-products 콜라 --limit 10 --json
@@ -63,6 +64,7 @@ For more command selection examples, read `references/cli-command-map.md`.
 ## Multi-step Korean request patterns
 
 - Convenience store product near a place: if the request has both product and location, prefer inventory lookup over product-only search. Example: `npx daiso gs25-inventory 콜라 --storeKeyword 강남역 --storeLimit 10 --json`.
+- Cross-service price candidate comparison: if the user asks which service is cheaper without naming a brand, use `npx daiso compare <keyword> --json` first. This uses no new external API key and compares Daiso, GS25, Seven-Eleven, and Emart24 product search candidates.
 - Nearby restaurants or cafes: use `npx daiso places <location> --category cafe|restaurant --json`. If the user gives a specific food or mood, use `--keyword`, for example `npx daiso places 성수동 --keyword 브런치 --json`.
 - Seven-Eleven inventory currently uses the raw GET fallback. Example: `npx daiso get /api/seveneleven/inventory --keyword 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10 --json`.
 - Daiso inventory by product name: search products first, keep the selected product ID, then run inventory with a store keyword. 위치가 없으면 ask the user for an area or store before checking inventory.
@@ -70,7 +72,7 @@ For more command selection examples, read `references/cli-command-map.md`.
 
 ## Workflow
 
-1. Identify the target service from the user request: Daiso, places/restaurants/cafes, GS25, Seven-Eleven, CU, Emart24, Lotte Mart, Olive Young, Megabox, Lotte Cinema, or CGV.
+1. Identify the target service from the user request: compare, Daiso, places/restaurants/cafes, GS25, Seven-Eleven, CU, Emart24, Lotte Mart, Olive Young, Megabox, Lotte Cinema, or CGV.
 2. Choose a CLI command from the common commands or `references/cli-command-map.md`.
 3. Add `--json` for machine-readable output or when summarizing multiple records.
 4. If a CLI command is not available for the exact route, use `npx daiso get /api/... --json`.

@@ -9,6 +9,34 @@ import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../arg
 import { validateCommandOptions } from '../commandOptions.js';
 import { requestAndPrintResponse } from '../http.js';
 
+export async function handleCompareProducts(options: string[], deps: CliDeps): Promise<number> {
+  const parsed = parseCliArgs(options);
+  if (parsed.options.help === 'true') {
+    return printCommandHelp('compare', deps.writeOut, deps.writeErr);
+  }
+  if (validateCommandOptions('compare', parsed.options, deps.writeErr)) {
+    return 1;
+  }
+
+  const keyword = parsed.positionals[0] || parsed.options.keyword || parsed.options.q;
+  if (!keyword) {
+    deps.writeErr('compare 명령은 검색어가 필요합니다. 예: daiso compare 콜라');
+    return 1;
+  }
+
+  const targetUrl = toUrl('/api/compare/products');
+  targetUrl.searchParams.set('keyword', keyword);
+  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
+  return await requestAndPrintResponse(
+    deps.fetchImpl,
+    deps.writeOut,
+    deps.writeErr,
+    targetUrl,
+    'compare',
+    parsed.options.json === 'true',
+  );
+}
+
 export async function handlePlaces(options: string[], deps: CliDeps): Promise<number> {
   const parsed = parseCliArgs(options);
   if (parsed.options.help === 'true') {

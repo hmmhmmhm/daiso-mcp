@@ -12,6 +12,7 @@ import { OPENAPI_PATHS_LOTTECINEMA } from './openapiSpecPathsLottecinema.js';
 import { OPENAPI_PATHS_GS25 } from './openapiSpecPathsGs25.js';
 import { OPENAPI_PATHS_SEVENELEVEN } from './openapiSpecPathsSeveneleven.js';
 import { OPENAPI_PATHS_PLACES } from './openapiSpecPathsPlaces.js';
+import { OPENAPI_PATHS_COMPARE } from './openapiSpecPathsCompare.js';
 import { OPENAPI_COMPONENTS } from './openapiSpecComponents.js';
 
 export function generateFullOpenApiSpec(baseUrl: string): object {
@@ -28,6 +29,7 @@ export function generateFullOpenApiSpec(baseUrl: string): object {
 - 🧭 **진열 위치 조회**: 매장 내 상품 구역/층 정보 조회
 - 🏪 **GS25 매장/상품/재고 조회**: GS25 매장 탐색, 상품 검색, 재고 조회
 - 7️⃣ **세븐일레븐 상품/매장/재고 조회**: 상품 검색, 매장 검색, 실재고 조회
+- 🧾 **통합 가격 후보 비교**: 새 외부 키 없이 상품 검색 결과를 묶어 가격 비교
 - 🏪 **CU 매장/재고 조회**: CU 매장 탐색 및 상품 재고 검색
 - 🎬 **메가박스 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
 - 🎞️ **롯데시네마 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
@@ -53,6 +55,7 @@ export function generateFullOpenApiSpec(baseUrl: string): object {
       ...OPENAPI_PATHS_LOTTEMART,
       ...OPENAPI_PATHS_GS25,
       ...OPENAPI_PATHS_SEVENELEVEN,
+      ...OPENAPI_PATHS_COMPARE,
       ...OPENAPI_PATHS_PLACES,
       ...OPENAPI_PATHS_MEGABOX,
       ...OPENAPI_PATHS_LOTTECINEMA,

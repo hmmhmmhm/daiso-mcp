@@ -25,7 +25,9 @@ describe('GET /api/actions/query', () => {
       new Response(
         JSON.stringify({
           resultSet: {
-            result: [{ totalSize: 1, resultDocuments: [{ PD_NO: '1', PDNM: 'Test', PD_PRC: '1000' }] }],
+            result: [
+              { totalSize: 1, resultDocuments: [{ PD_NO: '1', PDNM: 'Test', PD_PRC: '1000' }] },
+            ],
           },
         }),
       ),
@@ -73,7 +75,13 @@ describe('GET /api/actions/query', () => {
                 {
                   Documentset: {
                     Document: [
-                      { field: { itemCode: '8801056038861', itemName: '핫식스250ML', stockCheckYn: 'Y' } },
+                      {
+                        field: {
+                          itemCode: '8801056038861',
+                          itemName: '핫식스250ML',
+                          stockCheckYn: 'Y',
+                        },
+                      },
                     ],
                   },
                 },
@@ -118,7 +126,9 @@ describe('GET /api/actions/query', () => {
         ),
       );
 
-    const searchRes = await app.request('/api/actions/query?action=gs25SearchProducts&keyword=%ED%95%AB%EC%8B%9D%EC%8A%A4');
+    const searchRes = await app.request(
+      '/api/actions/query?action=gs25SearchProducts&keyword=%ED%95%AB%EC%8B%9D%EC%8A%A4',
+    );
     expect(searchRes.status).toBe(200);
 
     const searchData = await searchRes.json();
@@ -189,10 +199,14 @@ describe('GET /api/actions/query', () => {
         ),
       );
 
-    const storeRes = await app.request('/api/actions/query?action=emart24FindStores&keyword=안산%20중앙역');
+    const storeRes = await app.request(
+      '/api/actions/query?action=emart24FindStores&keyword=안산%20중앙역',
+    );
     expect(storeRes.status).toBe(200);
 
-    const productRes = await app.request('/api/actions/query?action=emart24SearchProducts&keyword=고양이%20츄르');
+    const productRes = await app.request(
+      '/api/actions/query?action=emart24SearchProducts&keyword=고양이%20츄르',
+    );
     expect(productRes.status).toBe(200);
 
     const productData = await productRes.json();
@@ -207,6 +221,32 @@ describe('GET /api/actions/query', () => {
     expect(inventoryData.success).toBe(true);
     expect(inventoryData.data.count).toBe(1);
     expect(inventoryData.data.stores[0].storeName).toBe('안산중앙점');
+  });
+
+  it('통합 가격 후보 비교를 action facade로 위임한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          resultSet: {
+            result: [
+              {
+                totalSize: 1,
+                resultDocuments: [{ PD_NO: '1', PDNM: '콜라', PD_PRC: '1500' }],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const res = await app.request(
+      '/api/actions/query?action=compareProducts&keyword=%EC%BD%9C%EB%9D%BC&services=daiso',
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.data.bestPrice.price).toBe(1500);
   });
 
   it('올리브영 상품 검색을 action facade로 위임한다', async () => {
@@ -306,9 +346,13 @@ describe('GET /api/actions/query', () => {
         ),
       );
 
-    const res = await app.request('/api/actions/query?action=cgvSearchMovies&playDate=20260315&keyword=안산%20중앙역', undefined, {
-      GOOGLE_MAPS_API_KEY: 'test-google-key',
-    });
+    const res = await app.request(
+      '/api/actions/query?action=cgvSearchMovies&playDate=20260315&keyword=안산%20중앙역',
+      undefined,
+      {
+        GOOGLE_MAPS_API_KEY: 'test-google-key',
+      },
+    );
     expect(res.status).toBe(200);
 
     const data = await res.json();

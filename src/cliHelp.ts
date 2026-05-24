@@ -14,6 +14,7 @@ export type CommandName =
   | 'stores'
   | 'inventory'
   | 'display-location'
+  | 'compare'
   | 'places'
   | 'cu-stores'
   | 'cu-inventory'
@@ -45,6 +46,7 @@ export const COMMAND_LIST: CommandName[] = [
   'stores',
   'inventory',
   'display-location',
+  'compare',
   'places',
   'cu-stores',
   'cu-inventory',
@@ -77,6 +79,7 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   stores: '다이소 매장 검색',
   inventory: '다이소 재고 조회',
   'display-location': '다이소 진열 위치 조회',
+  compare: '키 없는 통합 상품 가격 후보 비교',
   places: '음식점/카페 등 주변 장소 검색',
   'cu-stores': 'CU 매장 검색',
   'cu-inventory': 'CU 재고 조회',
@@ -172,6 +175,15 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '필수: <productId>, <storeCode>',
     '옵션: --json',
     '예시: daiso display-location 1034604 04515',
+  ],
+  compare: [
+    '명령: compare',
+    '설명: 새 외부 키 없이 다이소, GS25, 세븐일레븐, 이마트24 상품 검색을 묶어 가격 후보를 비교합니다.',
+    '사용법: daiso compare <keyword> [--services daiso,gs25,seveneleven,emart24] [--limit N] [--json]',
+    '필수: <keyword>',
+    '옵션: --services, --limit, --json',
+    '예시: daiso compare 콜라 --limit 3',
+    '예시: daiso compare 컵라면 --services seveneleven,emart24 --json',
   ],
   places: [
     '명령: places',

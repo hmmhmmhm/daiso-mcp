@@ -11,6 +11,12 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - Product-name inventory flow: run product search, ask for location if missing, select the product ID, then run inventory.
 - Display location: `npx daiso display-location 1034604 04515 --json`
 
+## Compare
+
+- Cross-service price candidates: `npx daiso compare 콜라 --limit 3 --json`
+- Narrow comparison services: `npx daiso compare 컵라면 --services seveneleven,emart24 --json`
+- Note: compare uses existing product search without a new external API key. Confirm actual stock or store-specific sale prices with service-specific inventory or product endpoints.
+
 ## Nearby Places
 
 - Cafes near a place: `npx daiso places 강남역 --category cafe --limit 5 --json`

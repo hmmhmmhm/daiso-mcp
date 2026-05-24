@@ -273,6 +273,28 @@ describe('ServiceRegistry', () => {
       ).toBe(true);
     });
 
+    it('통합 비교 도구 이름에는 비교 결과 스키마를 추론한다', () => {
+      const tool = createMockTool('compare_products');
+      registry.register(() => createMockService('compare', [tool]));
+
+      const mockServer = {
+        registerTool: vi.fn(),
+      };
+
+      registry.applyToServer(mockServer as never);
+
+      const metadata = mockServer.registerTool.mock.calls[0][1];
+      expect(
+        metadata.outputSchema.safeParse({
+          keyword: '콜라',
+          services: ['daiso'],
+          resultCount: 1,
+          results: [],
+          errors: [],
+        }).success,
+      ).toBe(true);
+    });
+
     it('JSON text 응답을 structuredContent로 승격하고 공통 결과 모델을 덧붙인다', async () => {
       const tool = createJsonMockTool('json-tool');
       registry.register(() => createMockService('test', [tool]));
