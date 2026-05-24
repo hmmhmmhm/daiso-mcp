@@ -7,7 +7,7 @@
 
 # Daiso MCP 및 Skill
 
-다이소(제품/매장/재고), 키 없는 통합 가격 후보 비교, 주변 음식점/카페, 롯데마트(매장/상품), GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표) 조회 기능을 MCP, CLI, Codex Skill로 AI에 연결합니다.
+다이소(제품/매장/재고), 키 없는 통합 가격 후보 비교, 주변 음식점/카페, 개발자 요청 제출, 롯데마트(매장/상품), GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표) 조회 기능을 MCP, CLI, Codex Skill로 AI에 연결합니다.
 
 <br>
 
@@ -39,6 +39,11 @@
       <td>비교</td>
       <td>다이소, GS25, 세븐일레븐, 이마트24</td>
       <td>새 외부 키 없는 상품 가격 후보 비교</td>
+    </tr>
+    <tr>
+      <td>운영</td>
+      <td>Supabase</td>
+      <td>MCP 오류, 개선 요청, 신규 기능 요청 저장</td>
     </tr>
     <tr>
       <td>리테일</td>
@@ -135,6 +140,7 @@ CGV mcp로 강남 상영 영화와 시간표 알려줘
 - 브랜드 명시 재고: `다이소 핫식스 재고 찾아줘` → 먼저 다이소에서 검색 후 결과 없을 때만 대안 제안
 - 편의점 재고: `GS25 강남 오감자 재고` → 상품 후보 확인 후 재고 조회
 - 영화 시간표: `오늘 강남 CGV 시간표` → KST 오늘 날짜로 극장 검색 후 시간표 조회
+- 개발자 요청: `올리브영 재고 도구가 계속 실패한다고 개발자에게 알려줘` → `submit_developer_request`
 
 <br>
 
@@ -335,6 +341,25 @@ GET /api/compare/products?keyword=콜라&limit=3
 ```
 
 지원 서비스는 `daiso`, `gs25`, `seveneleven`, `emart24`입니다. GS25처럼 상품 검색 응답에 가격이 없는 서비스는 후보에는 포함되지만 최저가 계산에서는 제외됩니다.
+
+### 개발자 요청 제출
+
+AI 에이전트가 MCP 기능 오류, 개선 요청, 신규 기능 요청, 문서 문제를 바로 개발자에게 전달할 수 있습니다. 요청은 Supabase `agent_requests` 테이블에 저장됩니다.
+
+MCP 도구:
+
+```text
+submit_developer_request
+```
+
+REST:
+
+```text
+POST /api/feedback/requests
+GET /api/feedback/requests?type=bug&title=제목&description=설명
+```
+
+로컬 실행이나 배포 환경에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 설정하세요. 테이블 스키마는 [supabase-agent-requests.sql](./docs/supabase-agent-requests.sql)에 있습니다.
 
 ### 운영 헬스 체크
 

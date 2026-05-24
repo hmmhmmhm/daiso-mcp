@@ -10,6 +10,7 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - "다이소 핫식스 재고": search Daiso first, then run Daiso inventory if a product ID exists. Suggest convenience stores only after no Daiso result.
 - "GS25 강남 오감자 재고": search product candidates when needed, then run `npx daiso gs25-inventory 오감자 --storeKeyword 강남 --json`
 - "오늘 강남 CGV 시간표": compute today in KST as `YYYYMMDD`, find theater code if needed, then call CGV timetable.
+- "올리브영 재고 도구 오류를 개발자에게 알려줘": `npx daiso get /api/feedback/requests --type bug --title "올리브영 재고 오류" --description "재고 조회가 실패합니다." --service oliveyoung --toolName oliveyoung_check_inventory --json`
 - Failure rule: retry once with narrower input, then report the failing service and command.
 
 ## Daiso
@@ -33,6 +34,12 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - Restaurants near a place: `npx daiso places 강남역 --category restaurant --limit 5 --json`
 - Specific food or mood: `npx daiso places 성수동 --keyword 브런치 --limit 5 --json`
 - Note: this uses Naver Local keyword search, not exact coordinate radius search.
+
+## Developer Requests
+
+- Submit MCP bug: `npx daiso get /api/feedback/requests --type bug --title "올리브영 재고 오류" --description "oliveyoung_check_inventory가 빈 결과를 반환합니다." --service oliveyoung --toolName oliveyoung_check_inventory --json`
+- Submit feature request: `npx daiso get /api/feedback/requests --type feature --title "행사가 비교" --description "compare가 행사 가격도 비교하면 좋겠습니다." --service compare --json`
+- Note: `title` and `description` are required. Prefer the MCP tool `submit_developer_request` when the host app exposes MCP.
 
 ## Convenience Stores
 

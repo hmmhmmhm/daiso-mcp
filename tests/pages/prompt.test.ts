@@ -135,6 +135,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('cgv_search_movies');
     expect(text).toContain('cgv_get_timetable');
     expect(text).toContain('places_search_nearby');
+    expect(text).toContain('submit_developer_request');
+    expect(text).toContain('/api/feedback/requests');
   });
 
   it('사용 팁을 포함한다', () => {

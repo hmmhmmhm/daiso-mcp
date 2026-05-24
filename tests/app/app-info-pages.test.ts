@@ -123,6 +123,15 @@ describe('GET /', () => {
     expect(placesService.name).toBe('장소 검색');
   });
 
+  it('개발자 요청 서비스가 등록되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    const feedbackService = data.services.find((s: { id: string }) => s.id === 'feedback');
+    expect(feedbackService).toBeDefined();
+    expect(feedbackService.name).toBe('개발자 요청');
+  });
+
   it('다이소 도구들이 포함되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -219,6 +228,13 @@ describe('GET /', () => {
     expect(data.tools).toContain('places_search_nearby');
   });
 
+  it('개발자 요청 제출 도구가 포함되어 있다', async () => {
+    const res = await app.request('/');
+    const data = await res.json();
+
+    expect(data.tools).toContain('submit_developer_request');
+  });
+
   it('통합 비교 도구가 포함되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
@@ -252,6 +268,7 @@ describe('기본 페이지', () => {
       googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
       zyteApiKey: { configured: false, usedBy: expect.arrayContaining(['oliveyoung', 'cgv']) },
       naverLocalSearch: { configured: false, usedBy: ['places'] },
+      supabaseFeedback: { configured: false, usedBy: ['feedback'] },
       healthCheckSecret: { configured: true, usedBy: ['health-checks'] },
     });
   });
@@ -267,6 +284,20 @@ describe('기본 페이지', () => {
     expect(data.config.naverLocalSearch).toEqual({
       configured: true,
       usedBy: ['places'],
+    });
+  });
+
+  it('GET /health는 Supabase 요청 저장 설정 상태를 반환한다', async () => {
+    const res = await app.request('/health', undefined, {
+      SUPABASE_URL: 'https://project.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.config.supabaseFeedback).toEqual({
+      configured: true,
+      usedBy: ['feedback'],
     });
   });
 

@@ -105,6 +105,11 @@ export const ACTION_QUERY_DEFINITIONS: ActionQueryDefinition[] = [
     targetPath: '/api/places/search',
   },
   {
+    action: 'submitDeveloperRequest',
+    summary: '개발자 요청 제출',
+    targetPath: '/api/feedback/requests',
+  },
+  {
     action: 'megaboxFindTheaters',
     summary: '메가박스 지점 검색',
     targetPath: '/api/megabox/theaters',

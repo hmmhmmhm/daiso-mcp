@@ -56,6 +56,7 @@ paths:
               - sevenelevenGetCatalog
               - compareProducts
               - placesSearchNearby
+              - submitDeveloperRequest
               - megaboxFindTheaters
               - megaboxListMovies
               - megaboxGetSeats
@@ -111,6 +112,60 @@ paths:
           in: query
           required: false
           description: 통합 비교 서비스 목록(daiso,gs25,seveneleven,emart24)
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          description: 개발자 요청 유형(bug, improvement, feature, docs, other)
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          description: 개발자 요청 영향도(low, medium, high, critical)
+          schema:
+            type: string
+        - name: title
+          in: query
+          required: false
+          description: 개발자 요청 제목
+          schema:
+            type: string
+        - name: description
+          in: query
+          required: false
+          description: 개발자 요청 상세 설명
+          schema:
+            type: string
+        - name: toolName
+          in: query
+          required: false
+          description: 문제가 발생했거나 개선이 필요한 MCP 도구 이름
+          schema:
+            type: string
+        - name: reproduction
+          in: query
+          required: false
+          description: 오류 재현 방법
+          schema:
+            type: string
+        - name: expected
+          in: query
+          required: false
+          description: 기대 결과
+          schema:
+            type: string
+        - name: actual
+          in: query
+          required: false
+          description: 실제 결과
+          schema:
+            type: string
+        - name: source
+          in: query
+          required: false
+          description: 요청 출처(mcp, chatgpt, claude, cli, api, other)
           schema:
             type: string
         - name: sido

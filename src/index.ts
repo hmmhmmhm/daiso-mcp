@@ -23,6 +23,7 @@ import { createGs25Service } from './services/gs25/index.js';
 import { createSevenElevenService } from './services/seveneleven/index.js';
 import { createPlacesService } from './services/places/index.js';
 import { createCompareService } from './services/compare/index.js';
+import { createFeedbackService } from './services/feedback/index.js';
 import { createPromptResponse } from './pages/prompt.js';
 import {
   createFullOpenApiJsonResponse,
@@ -45,6 +46,7 @@ import { registerGs25Routes } from './api/routes/gs25Routes.js';
 import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
 import { registerPlacesRoutes } from './api/routes/placesRoutes.js';
 import { registerCompareRoutes } from './api/routes/compareRoutes.js';
+import { registerFeedbackRoutes } from './api/routes/feedbackRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
 import { buildConfigStatus } from './api/configStatus.js';
 
@@ -77,6 +79,11 @@ const createRegistry = (bindings?: AppBindings) => {
       }),
     createSevenElevenService,
     createCompareService,
+    () =>
+      createFeedbackService({
+        supabaseUrl: bindings?.SUPABASE_URL,
+        supabaseServiceRoleKey: bindings?.SUPABASE_SERVICE_ROLE_KEY,
+      }),
     () =>
       createPlacesService({
         naverClientId: bindings?.NAVER_CLIENT_ID,
@@ -260,6 +267,7 @@ app.get('/', (c) => {
       openapiFull: '/openapi-full.json (GET) - 전체 OpenAPI',
       actionsQuery: '/api/actions/query (GET) - 기존 GET API 통합 facade',
       compareProducts: '/api/compare/products (GET) - 키 없는 통합 상품 가격 후보 비교',
+      developerRequests: '/api/feedback/requests (POST/GET) - 개발자 요청 제출',
     },
     services,
     tools: allTools,
@@ -318,6 +326,7 @@ registerDaisoRoutes(app);
 registerGs25Routes(app);
 registerSevenElevenRoutes(app);
 registerCompareRoutes(app);
+registerFeedbackRoutes(app);
 registerPlacesRoutes(app);
 registerCuRoutes(app);
 registerEmart24Routes(app);

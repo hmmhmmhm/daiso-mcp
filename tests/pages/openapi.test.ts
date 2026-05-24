@@ -70,6 +70,16 @@ describe('OpenAPI 페이지', () => {
         (parameter) => parameter.name === 'services',
       ),
     ).toBe(true);
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.find(
+        (parameter) => parameter.name === 'action',
+      )?.schema.enum,
+    ).toContain('submitDeveloperRequest');
+    expect(
+      spec.paths['/api/actions/query'].get.parameters.some(
+        (parameter) => parameter.name === 'description',
+      ),
+    ).toBe(true);
   });
 
   it('전체 OpenAPI 스펙 객체를 생성한다', () => {
@@ -154,6 +164,7 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/seveneleven/popwords']).toBeDefined();
     expect(spec.paths['/api/seveneleven/catalog']).toBeDefined();
     expect(spec.paths['/api/places/search']).toBeDefined();
+    expect(spec.paths['/api/feedback/requests']).toBeDefined();
     expect(spec.paths['/api/megabox/theaters']).toBeDefined();
     expect(spec.paths['/api/megabox/movies']).toBeDefined();
     expect(spec.paths['/api/megabox/seats']).toBeDefined();

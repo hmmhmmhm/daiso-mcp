@@ -59,6 +59,7 @@ export function buildPromptReferenceText(baseUrl: string): string {
 | LOTTEMART_PRODUCT_SEARCH_FAILED | 롯데마트 상품 조회 실패 |
 | SEVENELEVEN_INVENTORY_CHECK_FAILED | 세븐일레븐 재고 조회 실패 |
 | PLACES_SEARCH_FAILED | 주변 장소 검색 실패 |
+| DEVELOPER_REQUEST_SUBMIT_FAILED | 개발자 요청 저장 실패 |
 
 ---
 
@@ -69,6 +70,7 @@ export function buildPromptReferenceText(baseUrl: string): string {
 - "다이소 핫식스 재고", "올리브영 두바이초콜릿 있어?": 상품이 브랜드와 어색해 보여도 브랜드를 바꾸지 말고 먼저 다이소로 검색하거나 명시된 서비스로 검색합니다. 결과가 없을 때만 다른 서비스 대안을 제안합니다.
 - "GS25 강남 오감자 재고": 상품명과 위치를 분리해 상품 후보를 먼저 찾고, 선택한 itemCode나 keyword와 storeKeyword로 재고를 확인합니다.
 - "오늘 강남 CGV 시간표": 오늘 날짜는 KST 기준 YYYYMMDD로 계산하고, theaterCode가 없으면 극장 검색 후 시간표를 조회합니다.
+- MCP 기능이 제대로 동작하지 않거나 개선/신규 기능 요청이 있으면 \`submit_developer_request\` 또는 /api/feedback/requests를 사용해 개발자에게 전달합니다. 제목과 설명은 필수입니다.
 - 도구 호출이 실패하면 같은 도구를 한 번 더 좁은 조건으로 재시도합니다. 두 번 실패하면 실패한 서비스와 요청 조건을 밝히고 추측으로 결과를 만들지 않습니다.
 - 결과에 imageUrl이 있으면 각 항목 이미지 표시를 우선합니다. 쿼리 문자열이 있는 이미지 URL도 그대로 사용합니다.
 
@@ -138,6 +140,7 @@ MCP 연결 정보: ${baseUrl}/mcp
 - seveneleven_get_search_popwords: 세븐일레븐 인기 검색어 조회
 - seveneleven_get_catalog_snapshot: 세븐일레븐 카탈로그 조회
 - compare_products: 키 없는 통합 상품 가격 후보 비교
+- submit_developer_request: MCP 오류, 개선 요청, 신규 기능 요청을 개발자에게 전달
 - places_search_nearby: 음식점/카페 등 주변 장소 검색
 - oliveyoung_search_products: 올리브영 상품 검색
 - oliveyoung_find_nearby_stores: 올리브영 주변 매장 탐색

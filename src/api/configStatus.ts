@@ -9,6 +9,7 @@ export interface ConfigStatus {
   googleMapsApiKey: ConfigStatusItem;
   zyteApiKey: ConfigStatusItem;
   naverLocalSearch: ConfigStatusItem;
+  supabaseFeedback: ConfigStatusItem;
   healthCheckSecret: ConfigStatusItem;
 }
 
@@ -30,6 +31,11 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
       configured:
         isConfigured(bindings?.NAVER_CLIENT_ID) && isConfigured(bindings?.NAVER_CLIENT_SECRET),
       usedBy: ['places'],
+    },
+    supabaseFeedback: {
+      configured:
+        isConfigured(bindings?.SUPABASE_URL) && isConfigured(bindings?.SUPABASE_SERVICE_ROLE_KEY),
+      usedBy: ['feedback'],
     },
     healthCheckSecret: {
       configured: isConfigured(bindings?.HEALTH_CHECK_SECRET),

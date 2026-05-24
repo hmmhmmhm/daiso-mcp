@@ -49,6 +49,7 @@ npx daiso display-location 1034604 04515 --json
 npx daiso compare 콜라 --limit 3 --json
 npx daiso places 강남역 --category cafe --limit 5 --json
 npx daiso places 성수동 --keyword 브런치 --limit 5 --json
+npx daiso get /api/feedback/requests --type bug --title "올리브영 재고 오류" --description "oliveyoung_check_inventory가 빈 결과를 반환합니다." --service oliveyoung --toolName oliveyoung_check_inventory --json
 npx daiso gs25-products 콜라 --limit 10 --json
 npx daiso gs25-stores 강남 --limit 10 --json
 npx daiso gs25-inventory 오감자 --storeKeyword 강남 --storeLimit 10 --json
@@ -68,6 +69,7 @@ For more command selection examples, read `references/cli-command-map.md`.
 - "다이소 핫식스 재고", "올리브영 두바이초콜릿 있어?": keep the named brand. Search that service first even if the product seems unusual for the brand, then suggest alternatives only after no results.
 - "GS25 강남 오감자 재고": separate product and location. Search product candidates first when an item code is needed, then run inventory with `--storeKeyword`.
 - "오늘 강남 CGV 시간표": compute today in KST as `YYYYMMDD`, find the theater if the code is unknown, then query timetable.
+- "MCP가 오류나요", "개발자에게 개선 요청 보내줘": use `submit_developer_request` when MCP is available. In CLI-only environments, use `npx daiso get /api/feedback/requests --type bug|improvement|feature|docs --title "..." --description "..." --json`.
 - If a command fails, retry once with narrower input. If it still fails, report the service, command, and condition instead of inventing results.
 - If output contains `imageUrl`, preserve the full URL including query string when showing images.
 
@@ -82,7 +84,7 @@ For more command selection examples, read `references/cli-command-map.md`.
 
 ## Workflow
 
-1. Identify the target service from the user request: compare, Daiso, places/restaurants/cafes, GS25, Seven-Eleven, CU, Emart24, Lotte Mart, Olive Young, Megabox, Lotte Cinema, or CGV.
+1. Identify the target service from the user request: feedback/developer request, compare, Daiso, places/restaurants/cafes, GS25, Seven-Eleven, CU, Emart24, Lotte Mart, Olive Young, Megabox, Lotte Cinema, or CGV.
 2. Choose a CLI command from the common commands or `references/cli-command-map.md`.
 3. Add `--json` for machine-readable output or when summarizing multiple records.
 4. If a CLI command is not available for the exact route, use `npx daiso get /api/... --json`.
