@@ -193,6 +193,20 @@ describe('generatePromptText', () => {
     expect(text).toContain('각 상품 이미지를 생략하지 말고 모두 렌더링');
     expect(text).toContain('query string을 삭제하지 말고');
   });
+
+  it('상황별 에이전트 실행 레시피를 포함한다', () => {
+    const text = generatePromptText('https://test.com');
+
+    expect(text).toContain('에이전트 실행 레시피');
+    expect(text).toContain('콜라 어디가 싸?');
+    expect(text).toContain('compare_products');
+    expect(text).toContain('강남역 근처 카페');
+    expect(text).toContain('places_search_nearby');
+    expect(text).toContain('다이소 핫식스 재고');
+    expect(text).toContain('브랜드를 바꾸지 말고 먼저 다이소로 검색');
+    expect(text).toContain('실패하면 같은 도구를 한 번 더 좁은 조건으로 재시도');
+    expect(text).toContain('결과에 imageUrl이 있으면 각 항목 이미지 표시');
+  });
 });
 
 describe('createPromptResponse', () => {

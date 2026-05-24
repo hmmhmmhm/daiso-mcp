@@ -128,6 +128,14 @@ GS25 mcp로 강남 근처 매장과 오감자 재고 알려줘
 CGV mcp로 강남 상영 영화와 시간표 알려줘
 ```
 
+에이전트가 고르면 좋은 대표 흐름:
+
+- 가격 비교: `콜라 어디가 싸?` → `compare_products`
+- 주변 장소: `강남역 근처 카페 찾아줘` → `places_search_nearby`
+- 브랜드 명시 재고: `다이소 핫식스 재고 찾아줘` → 먼저 다이소에서 검색 후 결과 없을 때만 대안 제안
+- 편의점 재고: `GS25 강남 오감자 재고` → 상품 후보 확인 후 재고 조회
+- 영화 시간표: `오늘 강남 CGV 시간표` → KST 오늘 날짜로 극장 검색 후 시간표 조회
+
 <br>
 
 ### ![Claude](https://img.shields.io/badge/Claude-D4A27F?logo=anthropic&logoColor=white)
@@ -294,6 +302,7 @@ npx daiso products 수납박스 --json
 - 명령 맵: `skills/daiso-cli/references/cli-command-map.md`
 - 기본 원칙: 쉘 실행이 가능한 환경에서는 CLI를 우선 사용하고, AI 앱 연결이 필요할 때는 MCP 서버 URL `https://mcp.aka.page`를 사용합니다.
 - 구조화 결과가 필요하면 스킬은 `npx daiso ... --json` 형태를 선택합니다.
+- 상황별 레시피는 `콜라 어디가 싸?`, `강남역 근처 카페`, `다이소 핫식스 재고`, `오늘 강남 CGV 시간표`처럼 실제 사용자 문장 기준으로 정리되어 있습니다.
 
 ### OpenAPI 스펙
 

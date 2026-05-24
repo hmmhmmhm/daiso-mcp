@@ -61,6 +61,16 @@ npx daiso get /api/cgv/movies --playDate <YYYYMMDD> --theaterCode <theaterCode> 
 
 For more command selection examples, read `references/cli-command-map.md`.
 
+## Request Recipes
+
+- "콜라 어디가 싸?", "컵라면 가격 비교해줘": run `npx daiso compare <keyword> --json` first. Confirm stock or sale prices with service-specific inventory only when the user asks for store-level availability.
+- "강남역 근처 카페", "성수동 브런치 음식점": run `npx daiso places <location> --category cafe|restaurant --json` or use `--keyword` for the food or mood. Do not ask which retail brand they mean.
+- "다이소 핫식스 재고", "올리브영 두바이초콜릿 있어?": keep the named brand. Search that service first even if the product seems unusual for the brand, then suggest alternatives only after no results.
+- "GS25 강남 오감자 재고": separate product and location. Search product candidates first when an item code is needed, then run inventory with `--storeKeyword`.
+- "오늘 강남 CGV 시간표": compute today in KST as `YYYYMMDD`, find the theater if the code is unknown, then query timetable.
+- If a command fails, retry once with narrower input. If it still fails, report the service, command, and condition instead of inventing results.
+- If output contains `imageUrl`, preserve the full URL including query string when showing images.
+
 ## Multi-step Korean request patterns
 
 - Convenience store product near a place: if the request has both product and location, prefer inventory lookup over product-only search. Example: `npx daiso gs25-inventory 콜라 --storeKeyword 강남역 --storeLimit 10 --json`.

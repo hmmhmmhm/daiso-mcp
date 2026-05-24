@@ -2,6 +2,16 @@
 
 Use `--json` for structured output. In shell commands, quoted Korean strings are fine for values with spaces. URL-encode spaces and Korean only when writing raw URLs outside the CLI.
 
+## Agent Request Recipes
+
+- "콜라 어디가 싸?": `npx daiso compare 콜라 --json`
+- "강남역 근처 카페": `npx daiso places 강남역 --category cafe --json`
+- "성수동 브런치 음식점": `npx daiso places 성수동 --keyword 브런치 --json`
+- "다이소 핫식스 재고": search Daiso first, then run Daiso inventory if a product ID exists. Suggest convenience stores only after no Daiso result.
+- "GS25 강남 오감자 재고": search product candidates when needed, then run `npx daiso gs25-inventory 오감자 --storeKeyword 강남 --json`
+- "오늘 강남 CGV 시간표": compute today in KST as `YYYYMMDD`, find theater code if needed, then call CGV timetable.
+- Failure rule: retry once with narrower input, then report the failing service and command.
+
 ## Daiso
 
 - Product search: `npx daiso products 수납박스 --json`
