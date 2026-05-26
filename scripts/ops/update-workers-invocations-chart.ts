@@ -1,21 +1,18 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
-import { registerFont } from 'canvas';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import sharp from 'sharp';
 import {
   buildDataLabelIndexes,
-  buildPointStyleArray,
   buildReadmeSection,
   calculateMovingAverage,
   calculateSummary,
-  createWeekendShadePlugin,
   findMinNonZero,
   formatCompactNumber,
   formatKstDate,
   formatKstDateTime,
   formatNumber,
+  isWeekendKst,
   parseKstDateText,
   shouldShowWeeklyTick,
   WORKERS_CHART_ACCENT_COLORS,
@@ -30,13 +27,7 @@ const README_PATH = path.join(REPO_ROOT, 'README.md');
 const OUTPUT_DIR = path.join(REPO_ROOT, 'assets', 'analytics');
 const CHART_PATH = path.join(OUTPUT_DIR, 'workers-invocations.png');
 const DATA_PATH = path.join(OUTPUT_DIR, 'workers-invocations.json');
-const PREFERRED_FONT_FAMILY = '"Noto Sans KR", "Nanum Gothic", sans-serif';
-const FONT_CANDIDATES = [
-  '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-  '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
-  '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
-  '/System/Library/Fonts/AppleSDGothicNeo.ttc',
-];
+const PREFERRED_FONT_FAMILY = 'Arial, Helvetica, sans-serif';
 
 const README_START = '<!-- WORKERS_INVOCATIONS_CHART:START -->';
 const README_END = '<!-- WORKERS_INVOCATIONS_CHART:END -->';
@@ -72,128 +63,6 @@ function formatSignedNumber(value) {
   return formatNumber(value);
 }
 
-function drawRoundRect(ctx, x, y, width, height, radius) {
-  const r = Math.min(radius, width / 2, height / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + width, y, x + width, y + height, r);
-  ctx.arcTo(x + width, y + height, x, y + height, r);
-  ctx.arcTo(x, y + height, x, y, r);
-  ctx.arcTo(x, y, x + width, y, r);
-  ctx.closePath();
-}
-
-function drawMetric(ctx, x, y, label, value, color = '#111827') {
-  ctx.font = `12px ${PREFERRED_FONT_FAMILY}`;
-  ctx.fillStyle = '#64748b';
-  ctx.fillText(label, x, y);
-  ctx.font = `bold 18px ${PREFERRED_FONT_FAMILY}`;
-  ctx.fillStyle = color;
-  ctx.fillText(value, x, y + 24);
-}
-
-function buildRecent14PanelPlugin(points) {
-  return {
-    id: 'recent-14-panel',
-    afterDraw(chart) {
-      const { ctx, chartArea } = chart;
-      if (!chartArea || points.length === 0) {
-        return;
-      }
-
-      const recent = points.slice(-14);
-      const values = recent.map((point) => point.requests);
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const range = Math.max(max - min, 1);
-      const x = chartArea.left;
-      const y = chartArea.bottom + 36;
-      const width = chartArea.right - chartArea.left;
-      const height = 86;
-      const innerTop = y + 34;
-      const innerBottom = y + height - 20;
-
-      ctx.save();
-      drawRoundRect(ctx, x, y, width, height, 8);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(15, 23, 42, 0.12)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.font = `bold 13px ${PREFERRED_FONT_FAMILY}`;
-      ctx.fillStyle = '#0f172a';
-      ctx.fillText('최근 14일 확대', x + 14, y + 21);
-      ctx.font = `11px ${PREFERRED_FONT_FAMILY}`;
-      ctx.fillStyle = '#64748b';
-      ctx.fillText(
-        `${recent[0]?.date ?? ''} ~ ${recent[recent.length - 1]?.date ?? ''}`,
-        x + 118,
-        y + 21,
-      );
-
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
-      ctx.beginPath();
-      ctx.moveTo(x + 14, innerBottom);
-      ctx.lineTo(x + width - 14, innerBottom);
-      ctx.stroke();
-
-      const toX = (index) => x + 18 + (index / Math.max(recent.length - 1, 1)) * (width - 36);
-      const toY = (value) => innerBottom - ((value - min) / range) * (innerBottom - innerTop);
-
-      ctx.beginPath();
-      recent.forEach((point, index) => {
-        const px = toX(index);
-        const py = toY(point.requests);
-        if (index === 0) {
-          ctx.moveTo(px, py);
-        } else {
-          ctx.lineTo(px, py);
-        }
-      });
-      ctx.strokeStyle = WORKERS_CHART_ACCENT_COLORS.recent14Line;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = WORKERS_CHART_ACCENT_COLORS.recent14Line;
-      for (const [index, point] of recent.entries()) {
-        ctx.beginPath();
-        ctx.arc(
-          toX(index),
-          toY(point.requests),
-          index === recent.length - 1 ? 4 : 2.5,
-          0,
-          Math.PI * 2,
-        );
-        ctx.fill();
-      }
-
-      const latest = recent[recent.length - 1];
-      if (latest) {
-        ctx.font = `bold 12px ${PREFERRED_FONT_FAMILY}`;
-        ctx.fillStyle = WORKERS_CHART_ACCENT_COLORS.recent14Label;
-        ctx.textAlign = 'right';
-        ctx.fillText(`최신 ${formatNumber(latest.requests)}회`, x + width - 16, y + 22);
-        ctx.textAlign = 'left';
-      }
-
-      ctx.restore();
-    },
-  };
-}
-
-async function initializeKoreanFonts() {
-  for (const fontPath of FONT_CANDIDATES) {
-    try {
-      await fs.access(fontPath);
-      registerFont(fontPath, { family: 'Noto Sans KR' });
-      registerFont(fontPath, { family: 'Nanum Gothic' });
-    } catch {
-      // 폰트 파일이 없으면 다음 후보를 확인합니다.
-    }
-  }
-}
-
 async function readInputPayload(inputPath) {
   const resolvedPath = path.isAbsolute(inputPath) ? inputPath : path.resolve(REPO_ROOT, inputPath);
   const payload = JSON.parse(await fs.readFile(resolvedPath, 'utf8'));
@@ -203,214 +72,170 @@ async function readInputPayload(inputPath) {
   return payload;
 }
 
+function escapeXml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function linePath(points) {
+  return points
+    .filter((point) => point.y !== null)
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+    .join(' ');
+}
+
+function metricSvg(x, y, label, value, color = '#111827') {
+  return [
+    `<text x="${x}" y="${y}" class="metric-label">${escapeXml(label)}</text>`,
+    `<text x="${x}" y="${y + 24}" class="metric-value" fill="${color}">${escapeXml(value)}</text>`,
+  ].join('\n');
+}
+
+function renderRecent14Panel(points, chartArea) {
+  const recent = points.slice(-14);
+  if (recent.length === 0) {
+    return '';
+  }
+
+  const values = recent.map((point) => point.requests);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, 1);
+  const x = chartArea.left;
+  const y = chartArea.bottom + 36;
+  const width = chartArea.right - chartArea.left;
+  const height = 86;
+  const innerTop = y + 34;
+  const innerBottom = y + height - 20;
+  const toX = (index) => x + 18 + (index / Math.max(recent.length - 1, 1)) * (width - 36);
+  const toY = (value) => innerBottom - ((value - min) / range) * (innerBottom - innerTop);
+  const recentPath = linePath(recent.map((point, index) => ({ x: toX(index), y: toY(point.requests) })));
+  const latest = recent[recent.length - 1];
+
+  return `
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="8" fill="#f8fafc" stroke="rgba(15,23,42,0.12)" />
+    <text x="${x + 14}" y="${y + 21}" class="panel-title">Last 14 days</text>
+    <text x="${x + 118}" y="${y + 21}" class="small-muted">${escapeXml(recent[0]?.date ?? '')} ~ ${escapeXml(recent[recent.length - 1]?.date ?? '')}</text>
+    <line x1="${x + 14}" y1="${innerBottom}" x2="${x + width - 14}" y2="${innerBottom}" stroke="rgba(148,163,184,0.35)" />
+    <path d="${recentPath}" fill="none" stroke="${WORKERS_CHART_ACCENT_COLORS.recent14Line}" stroke-width="2" />
+    ${recent
+      .map((point, index) => {
+        const radius = index === recent.length - 1 ? 4 : 2.5;
+        return `<circle cx="${toX(index).toFixed(1)}" cy="${toY(point.requests).toFixed(1)}" r="${radius}" fill="${WORKERS_CHART_ACCENT_COLORS.recent14Line}" />`;
+      })
+      .join('\n')}
+    ${
+      latest
+        ? `<text x="${x + width - 16}" y="${y + 22}" text-anchor="end" class="recent-label">Latest ${escapeXml(formatNumber(latest.requests))}</text>`
+        : ''
+    }
+  `;
+}
+
 async function renderChart(points, summary, metadata) {
   const movingAverage = calculateMovingAverage(points, 7);
-  const labels = points.map((point) => point.date.slice(5));
   const values = points.map((point) => point.requests);
-  const latestIndex = points.length - 1;
-  const peakIndex = values.findIndex((value) => value === Math.max(...values));
+  const labels = points.map((point) => point.date.slice(5));
+  const width = 1400;
+  const height = 720;
+  const chartArea = { left: 76, top: 104, right: 1360, bottom: 436 };
+  const plotWidth = chartArea.right - chartArea.left;
+  const plotHeight = chartArea.bottom - chartArea.top;
+  const maxValue = Math.max(...values, 1);
+  const yMax = Math.ceil(maxValue / 1000) * 1000 || 1000;
+  const toX = (index) => chartArea.left + (index / Math.max(points.length - 1, 1)) * plotWidth;
+  const toY = (value) => chartArea.bottom - (value / yMax) * plotHeight;
+  const chartPoints = points.map((point, index) => ({ x: toX(index), y: toY(point.requests) }));
+  const averagePoints = movingAverage.map((value, index) => ({
+    x: toX(index),
+    y: value === null ? null : toY(value),
+  }));
   const minNonZero = findMinNonZero(points);
+  const peakIndex = values.findIndex((value) => value === Math.max(...values));
   const minNonZeroIndex = points.findIndex((point) => point.date === minNonZero.date);
+  const latestIndex = points.length - 1;
   const dataLabelIndexes = buildDataLabelIndexes(points);
-  const highlights = [
-    { index: latestIndex, value: 6 },
-    { index: peakIndex, value: 6 },
-    { index: minNonZeroIndex, value: 6 },
-  ];
-  const weekendShadePlugin = createWeekendShadePlugin(points);
-  const recent14PanelPlugin = buildRecent14PanelPlugin(points);
-  const summaryPanelPlugin = {
-    id: 'summary-panel',
-    afterDraw(chart) {
-      const { ctx, chartArea } = chart;
-      if (!chartArea) {
-        return;
-      }
+  const line = linePath(chartPoints);
+  const area = `${line} L ${chartArea.right} ${chartArea.bottom} L ${chartArea.left} ${chartArea.bottom} Z`;
+  const movingAverageLine = linePath(averagePoints);
+  const yTicks = Array.from({ length: 6 }, (_, index) => Math.round((yMax / 5) * index));
+  const highlighted = new Set([latestIndex, peakIndex, minNonZeroIndex]);
+  const metricWidth = plotWidth / 6;
+  const summaryY = chartArea.bottom + 132;
 
-      const x = chartArea.left;
-      const y = chartArea.bottom + 132;
-      const panelWidth = chartArea.right - chartArea.left;
-      const panelHeight = 54;
-      const metricWidth = panelWidth / 6;
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+  <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <style>
+      text { font-family: ${PREFERRED_FONT_FAMILY}; }
+      .title { font-size: 18px; font-weight: 700; fill: #111827; }
+      .subtitle, .small-muted, .axis { font-size: 11px; fill: #64748b; }
+      .legend { font-size: 12px; fill: #334155; }
+      .panel-title { font-size: 13px; font-weight: 700; fill: #0f172a; }
+      .metric-label { font-size: 12px; fill: #64748b; }
+      .metric-value { font-size: 18px; font-weight: 700; }
+      .data-label { font-size: 10px; font-weight: 700; fill: #7c2d12; }
+      .recent-label { font-size: 12px; font-weight: 700; fill: ${WORKERS_CHART_ACCENT_COLORS.recent14Label}; }
+    </style>
+    <rect width="${width}" height="${height}" fill="#ffffff" />
+    <text x="${width / 2}" y="42" text-anchor="middle" class="title">${escapeXml(`Cloudflare Workers Invocations (${metadata.startDate} ~ ${metadata.endDate}, ${labels.length} days)`)}</text>
+    <text x="${width / 2}" y="66" text-anchor="middle" class="subtitle">${escapeXml(`Updated: ${metadata.updatedAtText}`)}</text>
+    <rect x="920" y="82" width="16" height="10" fill="rgba(244,129,32,0.25)" stroke="#f48120" />
+    <text x="944" y="91" class="legend">Requests</text>
+    <line x1="1016" y1="87" x2="1040" y2="87" stroke="${WORKERS_CHART_ACCENT_COLORS.movingAverage}" stroke-width="2" stroke-dasharray="6 4" />
+    <text x="1048" y="91" class="legend">7-day avg</text>
+    ${points
+      .map((point, index) => {
+        if (!isWeekendKst(point.date)) return '';
+        const center = toX(index);
+        const prev = toX(Math.max(index - 1, 0));
+        const next = toX(Math.min(index + 1, points.length - 1));
+        const halfWidth = Math.max((next - prev) / 2, 8);
+        return `<rect x="${Math.max(center - halfWidth, chartArea.left).toFixed(1)}" y="${chartArea.top}" width="${Math.min(center + halfWidth, chartArea.right) - Math.max(center - halfWidth, chartArea.left)}" height="${plotHeight}" fill="rgba(24,92,160,0.06)" />`;
+      })
+      .join('\n')}
+    ${yTicks
+      .map((tick) => {
+        const y = toY(tick);
+        return `<line x1="${chartArea.left}" y1="${y.toFixed(1)}" x2="${chartArea.right}" y2="${y.toFixed(1)}" stroke="rgba(0,0,0,0.08)" /><text x="${chartArea.left - 12}" y="${(y + 4).toFixed(1)}" text-anchor="end" class="axis">${escapeXml(formatCompactNumber(tick))}</text>`;
+      })
+      .join('\n')}
+    ${points
+      .map((point, index) => {
+        if (!shouldShowWeeklyTick(points, index)) return '';
+        const x = toX(index);
+        return `<line x1="${x.toFixed(1)}" y1="${chartArea.top}" x2="${x.toFixed(1)}" y2="${chartArea.bottom}" stroke="rgba(0,0,0,0.08)" /><text x="${x.toFixed(1)}" y="${chartArea.bottom + 22}" text-anchor="middle" class="axis">${escapeXml(labels[index] ?? '')}</text>`;
+      })
+      .join('\n')}
+    <path d="${area}" fill="rgba(244,129,32,0.15)" />
+    <path d="${line}" fill="none" stroke="#f48120" stroke-width="3" />
+    <path d="${movingAverageLine}" fill="none" stroke="${WORKERS_CHART_ACCENT_COLORS.movingAverage}" stroke-width="2" stroke-dasharray="6 4" />
+    ${chartPoints
+      .map((point, index) => {
+        const radius = highlighted.has(index) ? 6 : 2.5;
+        return `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${radius}" fill="${highlighted.has(index) ? '#b45309' : '#f48120'}" />`;
+      })
+      .join('\n')}
+    ${[...dataLabelIndexes]
+      .map((index) => {
+        const point = chartPoints[index];
+        if (!point) return '';
+        return `<text x="${point.x.toFixed(1)}" y="${(point.y - 10).toFixed(1)}" text-anchor="middle" class="data-label">${escapeXml(formatNumber(points[index]?.requests ?? 0))}</text>`;
+      })
+      .join('\n')}
+    ${renderRecent14Panel(points, chartArea)}
+    <rect x="${chartArea.left}" y="${summaryY}" width="${plotWidth}" height="54" rx="8" fill="rgba(255,255,255,0.92)" stroke="rgba(15,23,42,0.15)" />
+    ${metricSvg(chartArea.left + 18, summaryY + 19, 'Total', formatCompactNumber(summary.total))}
+    ${metricSvg(chartArea.left + metricWidth + 18, summaryY + 19, 'Avg/day', formatCompactNumber(summary.average))}
+    ${metricSvg(chartArea.left + metricWidth * 2 + 18, summaryY + 19, 'Median', formatCompactNumber(summary.median))}
+    ${metricSvg(chartArea.left + metricWidth * 3 + 18, summaryY + 19, 'Recent 7d avg', formatCompactNumber(summary.recent7Average))}
+    ${metricSvg(chartArea.left + metricWidth * 4 + 18, summaryY + 19, 'WoW', formatSignedNumber(summary.weekOverWeekDiff), summary.weekOverWeekDiff >= 0 ? '#047857' : '#b91c1c')}
+    ${metricSvg(chartArea.left + metricWidth * 5 + 18, summaryY + 19, 'DoD', formatDelta(summary.dayOverDayDiff), summary.dayOverDayDiff >= 0 ? '#047857' : '#b91c1c')}
+  </svg>`;
 
-      ctx.save();
-      drawRoundRect(ctx, x, y, panelWidth, panelHeight, 8);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(15, 23, 42, 0.15)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      drawMetric(ctx, x + 18, y + 19, '전체', `${formatCompactNumber(summary.total)}회`);
-      drawMetric(
-        ctx,
-        x + metricWidth + 18,
-        y + 19,
-        '일평균',
-        `${formatCompactNumber(summary.average)}회`,
-      );
-      drawMetric(
-        ctx,
-        x + metricWidth * 2 + 18,
-        y + 19,
-        '중앙값',
-        `${formatCompactNumber(summary.median)}회`,
-      );
-      drawMetric(
-        ctx,
-        x + metricWidth * 3 + 18,
-        y + 19,
-        '최근 7일 평균',
-        `${formatCompactNumber(summary.recent7Average)}회`,
-      );
-      drawMetric(
-        ctx,
-        x + metricWidth * 4 + 18,
-        y + 19,
-        '전주 대비',
-        `${formatSignedNumber(summary.weekOverWeekDiff)}회`,
-        summary.weekOverWeekDiff >= 0 ? '#047857' : '#b91c1c',
-      );
-      drawMetric(
-        ctx,
-        x + metricWidth * 5 + 18,
-        y + 19,
-        '전일 대비',
-        `${formatDelta(summary.dayOverDayDiff)}회`,
-        summary.dayOverDayDiff >= 0 ? '#047857' : '#b91c1c',
-      );
-      ctx.restore();
-    },
-  };
-
-  const canvas = new ChartJSNodeCanvas({
-    width: 1400,
-    height: 720,
-    backgroundColour: '#ffffff',
-    chartCallback: (ChartJS) => {
-      ChartJS.defaults.font.family = PREFERRED_FONT_FAMILY;
-      ChartJS.register(ChartDataLabels);
-      ChartJS.register(weekendShadePlugin);
-      ChartJS.register(recent14PanelPlugin);
-      ChartJS.register(summaryPanelPlugin);
-    },
-  });
-
-  const configuration = {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: '호출 수',
-          data: values,
-          borderColor: '#f48120',
-          backgroundColor: 'rgba(244,129,32,0.15)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.25,
-          pointRadius: buildPointStyleArray(values.length, 2.5, highlights),
-          pointBackgroundColor: buildPointStyleArray(
-            values.length,
-            '#f48120',
-            highlights.map((item) => ({ ...item, value: '#b45309' })),
-          ),
-          pointHoverRadius: 3,
-        },
-        {
-          label: '7일 이동평균',
-          data: movingAverage,
-          borderColor: WORKERS_CHART_ACCENT_COLORS.movingAverage,
-          borderWidth: 2,
-          borderDash: [6, 4],
-          pointRadius: 0,
-          spanGaps: true,
-        },
-      ],
-    },
-    options: {
-      responsive: false,
-      layout: {
-        padding: {
-          top: 28,
-          right: 16,
-          left: 8,
-          bottom: 220,
-        },
-      },
-      plugins: {
-        legend: {
-          display: true,
-          labels: {
-            boxWidth: 16,
-          },
-        },
-        datalabels: {
-          display(context) {
-            return context.datasetIndex === 0 && dataLabelIndexes.has(context.dataIndex);
-          },
-          color(context) {
-            const value = Number(context.dataset.data[context.dataIndex] ?? 0);
-            return value >= 1000 ? '#7c2d12' : '#6b7280';
-          },
-          anchor: 'end',
-          align(context) {
-            const value = Number(context.dataset.data[context.dataIndex] ?? 0);
-            return value >= 1000 ? 'top' : 'end';
-          },
-          offset: 2,
-          clamp: true,
-          formatter(value) {
-            return formatNumber(value);
-          },
-          font: {
-            family: PREFERRED_FONT_FAMILY,
-            size: 10,
-            weight: 'bold',
-          },
-        },
-        title: {
-          display: true,
-          text: [
-            `Cloudflare Workers 호출량 (${metadata.startDate} ~ ${metadata.endDate}, ${labels.length}일)`,
-            `데이터 갱신: ${metadata.updatedAtText}`,
-          ],
-          color: '#111111',
-          font: {
-            family: PREFERRED_FONT_FAMILY,
-            size: 18,
-          },
-        },
-      },
-      scales: {
-        x: {
-          ticks: {
-            maxRotation: 0,
-            autoSkip: false,
-            callback(_value, index) {
-              return shouldShowWeeklyTick(points, index) ? labels[index] : '';
-            },
-          },
-          grid: {
-            color: 'rgba(0, 0, 0, 0.08)',
-          },
-        },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback(value) {
-              return formatCompactNumber(value);
-            },
-          },
-          grid: {
-            color: 'rgba(0, 0, 0, 0.08)',
-          },
-        },
-      },
-    },
-  };
-
-  return canvas.renderToBuffer(configuration);
+  return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 async function updateReadme(section) {
@@ -430,7 +255,6 @@ async function updateReadme(section) {
 }
 
 async function main() {
-  await initializeKoreanFonts();
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
   const renderedAt = new Date();
   let points: Array<{ date: string; requests: number }>;

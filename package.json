@@ -84,20 +84,18 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.7",
-    "chart.js": "^4.5.1",
-    "chartjs-node-canvas": "^5.0.0",
-    "chartjs-plugin-datalabels": "^2.2.0",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.4.0",
     "jiti": "^2.7.0",
     "playwright": "^1.60.0",
     "prettier": "^3.8.3",
+    "sharp": "^0.34.5",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.0",
     "vitest": "^4.1.7",
-    "wrangler": "^4.94.0"
+    "wrangler": "^4.95.0"
   },
   "overrides": {
     "flatted": "3.4.2",
