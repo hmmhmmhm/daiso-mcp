@@ -64,7 +64,7 @@ function buildCliHint(command: string, url: URL, bodyText: string): string[] {
   if (url.pathname === '/api/seveneleven/inventory') {
     return [
       '힌트: 세븐일레븐 재고는 매장 키워드가 필요합니다.',
-      '다음 명령 예시: daiso get /api/seveneleven/inventory --keyword <상품명> --storeKeyword 강남',
+      '다음 명령 예시: daiso seveneleven-inventory <상품명> --storeKeyword 강남',
     ];
   }
 

@@ -193,7 +193,7 @@ describe('CLI', () => {
       '/api/seveneleven/inventory',
       'MISSING_STORE_KEYWORD',
       '세븐일레븐 재고는 매장 키워드가 필요합니다.',
-      '다음 명령 예시: daiso get /api/seveneleven/inventory --keyword <상품명> --storeKeyword 강남',
+      '다음 명령 예시: daiso seveneleven-inventory <상품명> --storeKeyword 강남',
     ],
   ])('get %s 오류는 서비스별 CLI 힌트를 출력한다', async (path, code, firstHint, secondHint) => {
     const { deps, errors } = createDeps();
@@ -521,6 +521,60 @@ describe('CLI', () => {
 
     expect(exitCode).toBe(1);
     expect(errors[0]).toContain('검색어가 필요합니다');
+  });
+
+  it('cgv-theaters 명령은 CGV 극장 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { theaters: [] } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['cgv-theaters', '강남', '--limit', '5'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/cgv/theaters?limit=5&keyword=%EA%B0%95%EB%82%A8',
+    );
+  });
+
+  it('cgv-movies 명령은 CGV 영화 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { movies: [] } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['cgv-movies', '--playDate', '20260307', '--theaterCode', '0056'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/cgv/movies?playDate=20260307&theaterCode=0056',
+    );
+  });
+
+  it('cgv-timetable 명령은 CGV 시간표 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true, data: { showtimes: [] } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['cgv-timetable', '강남', '--playDate', '20260307', '--movieCode', '200001'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/cgv/timetable?playDate=20260307&movieCode=200001&keyword=%EA%B0%95%EB%82%A8',
+    );
   });
 
   it('lottecinema-theaters 명령은 롯데시네마 주변 지점 API를 호출한다', async () => {
@@ -867,7 +921,7 @@ describe('CLI', () => {
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://mcp.aka.page/api/seveneleven/products?query=%EC%82%BC%EA%B0%81%EA%B9%80%EB%B0%A5&size=20',
+      'https://mcp.aka.page/api/seveneleven/products?size=20&query=%EC%82%BC%EA%B0%81%EA%B9%80%EB%B0%A5',
     );
   });
 
@@ -883,7 +937,26 @@ describe('CLI', () => {
 
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://mcp.aka.page/api/seveneleven/stores?keyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD&limit=10',
+      'https://mcp.aka.page/api/seveneleven/stores?limit=10&keyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD',
+    );
+  });
+
+  it('seveneleven-inventory 명령은 세븐일레븐 재고 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['seveneleven-inventory', '핫식스', '--storeKeyword', '안산 중앙역', '--storeLimit', '10'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/seveneleven/inventory?storeKeyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD&storeLimit=10&keyword=%ED%95%AB%EC%8B%9D%EC%8A%A4',
     );
   });
 
@@ -1022,6 +1095,9 @@ describe('CLI', () => {
     ['display-location', ['display-location', '1034604', '04515']],
     ['cu-stores', ['cu-stores', '강남']],
     ['cu-inventory', ['cu-inventory', '과자']],
+    ['cgv-theaters', ['cgv-theaters', '강남']],
+    ['cgv-movies', ['cgv-movies', '강남']],
+    ['cgv-timetable', ['cgv-timetable', '강남']],
     ['lottecinema-theaters', ['lottecinema-theaters', '잠실']],
     ['lottecinema-movies', ['lottecinema-movies', '잠실']],
     ['lottecinema-seats', ['lottecinema-seats', '잠실']],
@@ -1035,6 +1111,7 @@ describe('CLI', () => {
     ['gs25-inventory', ['gs25-inventory', '오감자']],
     ['seveneleven-products', ['seveneleven-products', '삼각김밥']],
     ['seveneleven-stores', ['seveneleven-stores', '안산 중앙역']],
+    ['seveneleven-inventory', ['seveneleven-inventory', '핫식스']],
     ['seveneleven-popwords', ['seveneleven-popwords']],
     ['seveneleven-catalog', ['seveneleven-catalog']],
   ])('%s 명령은 알 수 없는 옵션을 거부한다', async (_command, args) => {

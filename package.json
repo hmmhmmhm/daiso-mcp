@@ -39,7 +39,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm test"
+    "check": "npm run format:check && npm run lint && npm run lint:biome && npm run typecheck && npm test",
+    "lint:biome": "biome lint"
   },
   "keywords": [
     "mcp",
@@ -78,6 +79,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@cloudflare/workers-types": "^4.20260316.1",
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.5.0",
@@ -85,12 +87,12 @@
     "chart.js": "^4.5.1",
     "chartjs-node-canvas": "^5.0.0",
     "chartjs-plugin-datalabels": "^2.2.0",
-    "eslint": "^10.0.2",
+    "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.4.0",
     "jiti": "^2.6.1",
     "playwright": "^1.58.2",
-    "prettier": "^3.8.1",
+    "prettier": "^3.8.3",
     "tsx": "^4.20.6",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",

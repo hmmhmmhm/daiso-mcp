@@ -10,6 +10,11 @@ import { normalizeStore, toNumber } from './storeUtils.js';
 import type { Gs25Store, Gs25StoreStockResponse } from './types.js';
 
 export {
+  fetchGs25NormalizedKeyword,
+  fetchGs25SearchProducts,
+  type Gs25SearchProduct,
+} from './productSearch.js';
+export {
   attachDistanceToGs25Stores,
   calculateDistanceM,
   extractGs25ProductCandidates,
@@ -37,33 +42,6 @@ interface FetchGs25StoresParams {
   useCache?: boolean;
 }
 
-interface Gs25TotalSearchDocument {
-  field?: {
-    itemCode?: string;
-    itemName?: string;
-    shortItemName?: string;
-    itemImageUrl?: string;
-    starPoint?: string;
-    stockCheckYn?: string;
-  };
-}
-
-interface Gs25TotalSearchResponse {
-  SearchQueryResult?: {
-    keywordInfo?: {
-      keyword?: string;
-      searchKeyword?: string;
-    };
-    Collection?: Array<{
-      CollectionId?: string;
-      Documentset?: {
-        totalCount?: number;
-        Document?: Gs25TotalSearchDocument[];
-      };
-    }>;
-  };
-}
-
 interface Gs25WebLocationStore {
   shopCode?: string;
   shopName?: string;
@@ -78,15 +56,6 @@ interface Gs25WebLocationResponse {
   pagination?: {
     totalNumberOfResults?: number;
   };
-}
-
-export interface Gs25SearchProduct {
-  itemCode: string;
-  itemName: string;
-  shortItemName: string;
-  imageUrl: string;
-  rating: number;
-  stockCheckEnabled: boolean;
 }
 
 interface GoogleGeocodeResponse {
@@ -113,10 +82,6 @@ const GS25_DEFAULT_HEADERS = {
     'Mozilla/5.0 (Linux; Android 15; SM-S928N) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/124.0 Mobile Safari/537.36',
   Origin: 'https://woodongs.com',
   Referer: 'https://woodongs.com/',
-} as const;
-const GS25_TOTAL_SEARCH_HEADERS = {
-  ...GS25_DEFAULT_HEADERS,
-  'Content-Type': 'application/json',
 } as const;
 const GS25_DEFAULT_FETCH_OPTIONS = {
   retries: 1,
@@ -203,45 +168,6 @@ async function fetchGs25StoreStock(
       headers: Object.entries(GS25_DEFAULT_HEADERS).map(([name, value]) => ({ name, value })),
     });
     return decodeZyteHttpBody<Gs25StoreStockResponse>(result);
-  }
-}
-
-async function fetchGs25TotalSearchResponse(
-  query: string,
-  options: RequestOptions,
-): Promise<Gs25TotalSearchResponse> {
-  const { timeout = 20000 } = options;
-  const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
-  const bodyText = JSON.stringify({ query });
-
-  try {
-    return await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
-      ...GS25_DEFAULT_FETCH_OPTIONS,
-      method: 'POST',
-      retryUnsafeMethods: true,
-      timeout,
-      headers: GS25_TOTAL_SEARCH_HEADERS,
-      body: bodyText,
-    });
-  } catch (error) {
-    const zyteApiKey = options.zyteApiKey?.trim();
-    if (!(error instanceof HttpError) || error.status !== 403 || !zyteApiKey) {
-      throw error;
-    }
-
-    const result = await requestByZyte({
-      apiKey: zyteApiKey,
-      url: endpoint.toString(),
-      method: 'POST',
-      timeout,
-      retries: 1,
-      headers: Object.entries(GS25_TOTAL_SEARCH_HEADERS).map(([name, value]) => ({
-        name,
-        value,
-      })),
-      bodyText,
-    });
-    return decodeZyteHttpBody<Gs25TotalSearchResponse>(result);
   }
 }
 
@@ -501,67 +427,6 @@ export async function fetchGs25Stores(
     stores,
     cacheHit: false,
   };
-}
-
-export async function fetchGs25NormalizedKeyword(
-  keyword: string,
-  options: RequestOptions = {},
-): Promise<{ keyword: string; searchKeyword: string } | null> {
-  const query = keyword.trim();
-  if (query.length === 0) {
-    return null;
-  }
-
-  const body = await fetchGs25TotalSearchResponse(query, options);
-
-  const normalizedKeyword = body.SearchQueryResult?.keywordInfo?.keyword?.trim() || '';
-  const normalizedSearchKeyword = body.SearchQueryResult?.keywordInfo?.searchKeyword?.trim() || '';
-  if (normalizedKeyword.length === 0 && normalizedSearchKeyword.length === 0) {
-    return null;
-  }
-
-  return {
-    keyword: normalizedKeyword,
-    searchKeyword: normalizedSearchKeyword,
-  };
-}
-
-/**
- * 키워드로 상품을 검색하여 itemCode 목록을 반환합니다.
- * 재고 조회 API는 itemCode가 필요하므로 이 함수로 먼저 변환해야 합니다.
- */
-export async function fetchGs25SearchProducts(
-  keyword: string,
-  options: RequestOptions = {},
-): Promise<Gs25SearchProduct[]> {
-  const query = keyword.trim();
-  if (query.length === 0) {
-    return [];
-  }
-
-  const body = await fetchGs25TotalSearchResponse(query, options);
-
-  const products: Gs25SearchProduct[] = [];
-  const collections = body.SearchQueryResult?.Collection || [];
-
-  for (const collection of collections) {
-    const documents = collection.Documentset?.Document || [];
-    for (const doc of documents) {
-      const field = doc.field;
-      if (!field?.itemCode) continue;
-
-      products.push({
-        itemCode: field.itemCode,
-        itemName: field.itemName || '',
-        shortItemName: field.shortItemName || '',
-        imageUrl: field.itemImageUrl || '',
-        rating: toNumber(field.starPoint),
-        stockCheckEnabled: field.stockCheckYn === 'Y',
-      });
-    }
-  }
-
-  return products;
 }
 
 export function clearGs25StoresCache(): void {

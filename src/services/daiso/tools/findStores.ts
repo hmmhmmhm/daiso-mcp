@@ -28,7 +28,7 @@ function parseStoresFromHtml(html: string): Store[] {
 
   // bx-store div 태그의 시작 위치 찾기
   const divStartRegex = /<div[^>]*class="bx-store"[^>]*>/gi;
-  let divMatch;
+  let divMatch: RegExpExecArray | null;
 
   while ((divMatch = divStartRegex.exec(html)) !== null) {
     const startIdx = divMatch.index;

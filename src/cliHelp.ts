@@ -18,6 +18,9 @@ export type CommandName =
   | 'places'
   | 'cu-stores'
   | 'cu-inventory'
+  | 'cgv-theaters'
+  | 'cgv-movies'
+  | 'cgv-timetable'
   | 'lottecinema-theaters'
   | 'lottecinema-movies'
   | 'lottecinema-seats'
@@ -31,6 +34,7 @@ export type CommandName =
   | 'gs25-inventory'
   | 'seveneleven-products'
   | 'seveneleven-stores'
+  | 'seveneleven-inventory'
   | 'seveneleven-popwords'
   | 'seveneleven-catalog';
 
@@ -50,6 +54,9 @@ export const COMMAND_LIST: CommandName[] = [
   'places',
   'cu-stores',
   'cu-inventory',
+  'cgv-theaters',
+  'cgv-movies',
+  'cgv-timetable',
   'lottecinema-theaters',
   'lottecinema-movies',
   'lottecinema-seats',
@@ -63,6 +70,7 @@ export const COMMAND_LIST: CommandName[] = [
   'gs25-inventory',
   'seveneleven-products',
   'seveneleven-stores',
+  'seveneleven-inventory',
   'seveneleven-popwords',
   'seveneleven-catalog',
 ];
@@ -83,6 +91,9 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   places: '음식점/카페 등 주변 장소 검색',
   'cu-stores': 'CU 매장 검색',
   'cu-inventory': 'CU 재고 조회',
+  'cgv-theaters': 'CGV 극장 검색',
+  'cgv-movies': 'CGV 영화 검색',
+  'cgv-timetable': 'CGV 시간표 조회',
   'lottecinema-theaters': '롯데시네마 주변 지점 조회',
   'lottecinema-movies': '롯데시네마 영화/회차 조회',
   'lottecinema-seats': '롯데시네마 잔여 좌석 조회',
@@ -96,6 +107,7 @@ const COMMAND_SUMMARY: Record<CommandName, string> = {
   'gs25-inventory': 'GS25 재고 조회',
   'seveneleven-products': '세븐일레븐 상품 검색',
   'seveneleven-stores': '세븐일레븐 매장 검색',
+  'seveneleven-inventory': '세븐일레븐 재고 조회',
   'seveneleven-popwords': '세븐일레븐 인기 검색어 조회',
   'seveneleven-catalog': '세븐일레븐 카탈로그 스냅샷 조회',
 };
@@ -211,6 +223,30 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '예시: daiso cu-inventory 과자',
     '예시: daiso cu-inventory 컵라면 --storeKeyword 강남 --size 10',
   ],
+  'cgv-theaters': [
+    '명령: cgv-theaters',
+    '설명: CGV 극장 검색 API를 호출합니다.',
+    '사용법: daiso cgv-theaters [keyword] [--regionCode 값] [--playDate YYYYMMDD] [--lat 값] [--lng 값] [--limit N] [--json]',
+    '옵션: --keyword, --regionCode, --playDate, --lat, --lng, --limit, --json',
+    '예시: daiso cgv-theaters 강남 --limit 5',
+    '예시: daiso cgv-theaters --regionCode 01 --playDate 20260304',
+  ],
+  'cgv-movies': [
+    '명령: cgv-movies',
+    '설명: CGV 영화 검색 API를 호출합니다.',
+    '사용법: daiso cgv-movies [keyword] [--playDate YYYYMMDD] [--theaterCode 값] [--movieCode 값] [--lat 값] [--lng 값] [--json]',
+    '옵션: --keyword, --playDate, --theaterCode, --movieCode, --lat, --lng, --json',
+    '예시: daiso cgv-movies 강남 --playDate 20260304',
+    '예시: daiso cgv-movies --playDate 20260304 --theaterCode 0056',
+  ],
+  'cgv-timetable': [
+    '명령: cgv-timetable',
+    '설명: CGV 시간표 API를 호출합니다.',
+    '사용법: daiso cgv-timetable [keyword] [--playDate YYYYMMDD] [--theaterCode 값] [--movieCode 값] [--lat 값] [--lng 값] [--json]',
+    '옵션: --keyword, --playDate, --theaterCode, --movieCode, --lat, --lng, --json',
+    '예시: daiso cgv-timetable 강남 --playDate 20260304',
+    '예시: daiso cgv-timetable --playDate 20260304 --theaterCode 0056',
+  ],
   'lottecinema-theaters': [
     '명령: lottecinema-theaters',
     '설명: 롯데시네마 주변 지점 API를 호출합니다.',
@@ -317,6 +353,14 @@ const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '옵션: --limit, --json',
     '예시: daiso seveneleven-stores 안산 중앙역 --limit 10',
   ],
+  'seveneleven-inventory': [
+    '명령: seveneleven-inventory',
+    '설명: 세븐일레븐 재고 API를 호출합니다.',
+    '사용법: daiso seveneleven-inventory <keyword> [--storeKeyword 값] [--storeLimit N] [--page N] [--size N] [--json]',
+    '필수: <keyword>',
+    '옵션: --keyword, --storeKeyword, --storeLimit, --page, --size, --json',
+    '예시: daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10',
+  ],
   'seveneleven-popwords': [
     '명령: seveneleven-popwords',
     '설명: 세븐일레븐 인기 검색어 API를 호출합니다.',
@@ -359,26 +403,20 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso inventory 1034604 --keyword 강남역');
   writeOut('  npx daiso display-location 1034604 04515');
   writeOut('  npx daiso places 강남역 --category cafe --limit 5');
-  writeOut('  npx daiso cu-stores 강남');
   writeOut('  npx daiso cu-inventory 과자 --storeKeyword 강남');
+  writeOut('  npx daiso cgv-theaters 강남 --limit 5');
+  writeOut('  npx daiso cgv-timetable --playDate 20260307 --theaterCode 0056');
   writeOut('  npx daiso lottecinema-theaters --keyword "안산 중앙역" --limit 5');
-  writeOut('  npx daiso lottecinema-movies --playDate 20260310 --keyword "안산 중앙역"');
-  writeOut(
-    '  npx daiso lottecinema-seats --playDate 20260310 --keyword "안산 중앙역" --movieId 23816',
-  );
   writeOut('  npx daiso lottemart-stores 잠실 --area 서울 --limit 10');
   writeOut('  npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울');
-  writeOut('  npx daiso emart24-stores 강남 --limit 10');
   writeOut('  npx daiso emart24-products 두바이 --pageSize 20');
-  writeOut('  npx daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015');
-  writeOut('  npx daiso gs25-stores 강남 --limit 10');
   writeOut('  npx daiso gs25-products 오감자');
   writeOut('  npx daiso gs25-inventory 오감자 --storeKeyword 강남');
   writeOut('  npx daiso seveneleven-products 삼각김밥 --size 20');
   writeOut('  npx daiso seveneleven-stores 안산 중앙역 --limit 10');
+  writeOut('  npx daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역"');
   writeOut('  npx daiso seveneleven-popwords --label home');
   writeOut('  npx daiso seveneleven-catalog --limit 10');
-  writeOut('  npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056');
   writeOut('');
   writeOut('정보가 부족할 때:');
   writeOut('  제품명을 먼저 검색해 productId를 확인: npx daiso products 수납박스');
@@ -398,7 +436,7 @@ export function printCommandHelp(
   if (!Object.hasOwn(COMMAND_DETAIL, command)) {
     writeErr(`도움말을 찾을 수 없는 명령어: ${command}`);
     writeErr(
-      '사용 가능한 명령어: help, version, url, health, claude, get, products, product, stores, inventory, display-location, places, cu-stores, cu-inventory, lottecinema-theaters, lottecinema-movies, lottecinema-seats, lottemart-stores, lottemart-products, emart24-stores, emart24-products, emart24-inventory, gs25-stores, gs25-products, gs25-inventory, seveneleven-products, seveneleven-stores, seveneleven-popwords, seveneleven-catalog',
+      `사용 가능한 명령어: ${COMMAND_LIST.join(', ')}`,
     );
     return 1;
   }

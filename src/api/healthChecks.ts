@@ -2,47 +2,23 @@
  * 개별 서비스 헬스 체크 실행기
  */
 
-export type HealthCheckStatus = 'ok' | 'degraded' | 'fail' | 'skipped';
-export type HealthCheckMode = 'quick' | 'deep' | 'full';
+import { GS25_CLOUDFRONT_403_PATTERNS, HEALTH_CHECKS } from './healthCheckDefinitions.js';
+import { hasRequiredRepresentativeFields, toCount, toFirstName } from './healthCheckShape.js';
+import type {
+  HealthCheckDefinition,
+  HealthCheckMode,
+  HealthCheckResult,
+  HealthCheckStatus,
+  HealthCheckSummary,
+} from './healthCheckTypes.js';
 
-export interface HealthCheckDefinition {
-  id: string;
-  service: string;
-  target: string;
-  mode: 'quick' | 'deep';
-  path: string;
-  kind?: 'api' | 'cli-contract';
-  collectionKey?: 'products' | 'stores' | 'theaters' | 'movies' | 'showtimes' | 'inventoryProducts' | 'inventoryItems';
-  requiredFields?: string[];
-  timeoutMs?: number;
-  degradedFailurePatterns?: string[];
-}
-
-export interface HealthCheckResult {
-  id: string;
-  service: string;
-  target: string;
-  status: HealthCheckStatus;
-  durationMs: number;
-  message: string;
-  httpStatus?: number;
-  sample?: {
-    first?: string;
-  };
-}
-
-export interface HealthCheckSummary {
-  status: HealthCheckStatus;
-  checkedAt: string;
-  durationMs: number;
-  cached: boolean;
-  filters: {
-    service: string | null;
-    check: string | null;
-    mode: HealthCheckMode;
-  };
-  checks: HealthCheckResult[];
-}
+export type {
+  HealthCheckDefinition,
+  HealthCheckMode,
+  HealthCheckResult,
+  HealthCheckStatus,
+  HealthCheckSummary,
+} from './healthCheckTypes.js';
 
 interface RunHealthChecksParams {
   baseUrl: string;
@@ -74,174 +50,6 @@ const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 7000;
 const MAX_HEALTH_CHECK_TIMEOUT_MS = 20_000;
 const DEFAULT_HEALTH_CHECK_CONCURRENCY = 1;
 const DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS = 0;
-const GS25_CLOUDFRONT_403_PATTERNS = [
-  '403 Forbidden',
-  'The request could not be satisfied',
-  '403 ERROR',
-];
-
-const HEALTH_CHECKS: HealthCheckDefinition[] = [
-  {
-    id: 'cli.contract',
-    service: 'cli',
-    target: 'api-contract',
-    mode: 'deep',
-    kind: 'cli-contract',
-    path: '/health',
-  },
-  {
-    id: 'daiso.products',
-    service: 'daiso',
-    target: 'products',
-    mode: 'quick',
-    path: '/api/daiso/products?q=%ED%85%8C%EC%9D%B4%ED%94%84&pageSize=1',
-    collectionKey: 'products',
-    requiredFields: ['id', 'name', 'productName', 'itemName', 'goodsName'],
-  },
-  {
-    id: 'cu.stores',
-    service: 'cu',
-    target: 'stores',
-    mode: 'quick',
-    path: '/api/cu/stores?keyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'stores',
-    requiredFields: ['storeCode', 'storeName', 'name'],
-  },
-  {
-    id: 'emart24.products',
-    service: 'emart24',
-    target: 'products',
-    mode: 'quick',
-    path: '/api/emart24/products?keyword=%EC%BB%A4%ED%94%BC&pageSize=1',
-    collectionKey: 'products',
-    requiredFields: ['pluCd', 'goodsName', 'itemName', 'name'],
-  },
-  {
-    id: 'gs25.products',
-    service: 'gs25',
-    target: 'products',
-    mode: 'quick',
-    path: '/api/gs25/products?keyword=%EC%BD%9C%EB%9D%BC&limit=1',
-    collectionKey: 'products',
-    requiredFields: ['itemCode', 'itemName', 'name'],
-    degradedFailurePatterns: GS25_CLOUDFRONT_403_PATTERNS,
-  },
-  {
-    id: 'gs25.stores',
-    service: 'gs25',
-    target: 'stores',
-    mode: 'quick',
-    path: '/api/gs25/stores?keyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'stores',
-    requiredFields: ['storeCode', 'storeName', 'name'],
-  },
-  {
-    id: 'seveneleven.products',
-    service: 'seveneleven',
-    target: 'products',
-    mode: 'quick',
-    path: '/api/seveneleven/products?query=%EC%BB%A4%ED%94%BC&size=1',
-    collectionKey: 'products',
-    requiredFields: ['itemCode', 'itemName', 'productNo', 'name'],
-  },
-  {
-    id: 'lottemart.products',
-    service: 'lottemart',
-    target: 'products',
-    mode: 'quick',
-    path: '/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeCode=2301&area=%EC%84%9C%EC%9A%B8&pageLimit=1&source=zetta',
-    collectionKey: 'products',
-    requiredFields: ['productCode', 'name', 'productName'],
-  },
-  {
-    id: 'oliveyoung.products',
-    service: 'oliveyoung',
-    target: 'products',
-    mode: 'quick',
-    path: '/api/oliveyoung/products?keyword=%EB%A6%BD%EB%B0%A4&size=1',
-    collectionKey: 'products',
-    requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
-    timeoutMs: 5000,
-  },
-  {
-    id: 'megabox.theaters',
-    service: 'megabox',
-    target: 'theaters',
-    mode: 'quick',
-    path: '/api/megabox/theaters?keyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'theaters',
-    requiredFields: ['theaterCode', 'theaterName', 'name'],
-  },
-  {
-    id: 'lottecinema.theaters',
-    service: 'lottecinema',
-    target: 'theaters',
-    mode: 'quick',
-    path: '/api/lottecinema/theaters?keyword=%EC%9E%A0%EC%8B%A4&limit=1',
-    collectionKey: 'theaters',
-    requiredFields: ['theaterCode', 'theaterName', 'name'],
-  },
-  {
-    id: 'cgv.theaters',
-    service: 'cgv',
-    target: 'theaters',
-    mode: 'quick',
-    path: '/api/cgv/theaters?keyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'theaters',
-    requiredFields: ['theaterCode', 'theaterName', 'name'],
-  },
-  {
-    id: 'cu.inventory',
-    service: 'cu',
-    target: 'inventory',
-    mode: 'deep',
-    path: '/api/cu/inventory?keyword=%EC%BB%A4%ED%94%BC&size=1&storeLimit=0&storeCheck=false',
-    collectionKey: 'inventoryItems',
-    requiredFields: ['itemCode', 'itemName', 'name'],
-  },
-  {
-    id: 'emart24.inventory',
-    service: 'emart24',
-    target: 'inventory',
-    mode: 'deep',
-    path: '/api/emart24/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'inventoryItems',
-    requiredFields: ['pluCd', 'goodsName', 'itemName', 'name'],
-  },
-  {
-    id: 'gs25.inventory',
-    service: 'gs25',
-    target: 'inventory',
-    mode: 'deep',
-    path: '/api/gs25/inventory?keyword=%EC%BD%9C%EB%9D%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'inventoryItems',
-    requiredFields: ['itemCode', 'itemName', 'name'],
-    degradedFailurePatterns: [
-      '401 Unauthorized',
-      '인증키가 제공되지 않음',
-      ...GS25_CLOUDFRONT_403_PATTERNS,
-    ],
-  },
-  {
-    id: 'seveneleven.inventory',
-    service: 'seveneleven',
-    target: 'inventory',
-    mode: 'deep',
-    path: '/api/seveneleven/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&size=1',
-    collectionKey: 'inventoryItems',
-    requiredFields: ['itemCode', 'itemName', 'productNo', 'name'],
-  },
-  {
-    id: 'oliveyoung.inventory',
-    service: 'oliveyoung',
-    target: 'inventory',
-    mode: 'deep',
-    path: '/api/oliveyoung/inventory?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&storeKeyword=%EB%AA%85%EB%8F%99&size=1&storeLimit=1&stockCheckLimit=0',
-    collectionKey: 'inventoryProducts',
-    requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
-    timeoutMs: 5000,
-  },
-];
 
 const healthCheckCache = new Map<string, { expiresAt: number; summary: HealthCheckSummary }>();
 
@@ -301,131 +109,6 @@ async function mapWithConcurrency<T, R>(
   );
 
   return results;
-}
-
-function toCount(data: unknown): number | null {
-  if (!data || typeof data !== 'object') {
-    return null;
-  }
-
-  const record = data as Record<string, unknown>;
-  if (typeof record.count === 'number') {
-    return record.count;
-  }
-
-  for (const key of ['products', 'stores', 'theaters', 'movies', 'showtimes']) {
-    const value = record[key];
-    if (Array.isArray(value)) {
-      return value.length;
-    }
-  }
-
-  if (record.inventory && typeof record.inventory === 'object') {
-    const inventory = record.inventory as Record<string, unknown>;
-    for (const key of ['products', 'items']) {
-      const value = inventory[key];
-      if (Array.isArray(value)) {
-        return value.length;
-      }
-    }
-  }
-
-  return null;
-}
-
-function toFirstName(data: unknown): string | undefined {
-  if (!data || typeof data !== 'object') {
-    return undefined;
-  }
-
-  const record = data as Record<string, unknown>;
-  for (const key of ['products', 'stores', 'theaters', 'movies', 'showtimes']) {
-    const value = record[key];
-    if (!Array.isArray(value) || !value[0] || typeof value[0] !== 'object') {
-      continue;
-    }
-    const item = value[0] as Record<string, unknown>;
-    for (const nameKey of ['productName', 'itemName', 'goodsName', 'name', 'storeName', 'theaterName', 'movieName']) {
-      if (typeof item[nameKey] === 'string' && item[nameKey].trim().length > 0) {
-        return item[nameKey].trim();
-      }
-    }
-  }
-
-  if (record.inventory && typeof record.inventory === 'object') {
-    const inventory = record.inventory as Record<string, unknown>;
-    for (const key of ['products', 'items']) {
-      const value = inventory[key];
-      if (!Array.isArray(value) || !value[0] || typeof value[0] !== 'object') {
-        continue;
-      }
-      const item = value[0] as Record<string, unknown>;
-      for (const nameKey of ['productName', 'itemName', 'goodsName', 'name']) {
-        if (typeof item[nameKey] === 'string' && item[nameKey].trim().length > 0) {
-          return item[nameKey].trim();
-        }
-      }
-    }
-  }
-
-  return undefined;
-}
-
-function getCollectionItems(data: unknown, collectionKey?: HealthCheckDefinition['collectionKey']): unknown[] {
-  if (!data || typeof data !== 'object') {
-    return [];
-  }
-
-  const record = data as Record<string, unknown>;
-  if (collectionKey === 'inventoryProducts' || collectionKey === 'inventoryItems') {
-    const inventory = record.inventory;
-    if (!inventory || typeof inventory !== 'object') {
-      return [];
-    }
-    const key = collectionKey === 'inventoryProducts' ? 'products' : 'items';
-    const value = (inventory as Record<string, unknown>)[key];
-    return Array.isArray(value) ? value : [];
-  }
-
-  if (collectionKey && Array.isArray(record[collectionKey])) {
-    return record[collectionKey];
-  }
-
-  for (const key of ['products', 'stores', 'theaters', 'movies', 'showtimes']) {
-    /* c8 ignore next -- 현재 정의된 체크는 collectionKey를 명시한다. */
-    if (Array.isArray(record[key])) {
-      return record[key];
-    }
-  }
-
-  return [];
-}
-
-function hasRequiredRepresentativeFields(
-  data: unknown,
-  collectionKey: HealthCheckDefinition['collectionKey'],
-  requiredFields: string[] = [],
-): boolean {
-  /* c8 ignore next -- 현재 정의된 API 체크는 requiredFields를 명시한다. */
-  if (requiredFields.length === 0) {
-    return true;
-  }
-
-  const items = getCollectionItems(data, collectionKey);
-  if (items.length === 0) {
-    return true;
-  }
-
-  const first = items[0];
-  if (!first || typeof first !== 'object' || Array.isArray(first)) {
-    return false;
-  }
-
-  const record = first as Record<string, unknown>;
-  return requiredFields.some((field) => {
-    const value = record[field];
-    return typeof value === 'string' ? value.trim().length > 0 : value !== undefined && value !== null;
-  });
 }
 
 function aggregateStatus(checks: HealthCheckResult[]): HealthCheckStatus {

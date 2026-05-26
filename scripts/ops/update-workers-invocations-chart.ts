@@ -433,10 +433,10 @@ async function main() {
   await initializeKoreanFonts();
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
   const renderedAt = new Date();
-  let points;
+  let points: Array<{ date: string; requests: number }>;
   let scriptName = SCRIPT_NAME;
   let startDate = CHART_START_DATE;
-  let endDate;
+  let endDate: string;
   let updatedAt = renderedAt.toISOString();
 
   if (INPUT_JSON_PATH) {

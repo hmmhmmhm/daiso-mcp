@@ -186,7 +186,7 @@ describe('repository maintenance configuration', () => {
     expect(skill).toContain('npx 또는 Node.js를 사용할 수 없으면');
     expect(commandMap).toContain('gs25-products');
     expect(commandMap).toContain('seveneleven-products');
-    expect(commandMap).toContain('get /api/cgv/movies');
+    expect(commandMap).toContain('cgv-movies');
     expect(commandMap).toContain('<YYYYMMDD>');
     expect(commandMap).toContain('quoted Korean strings');
     expect(commandMap).toContain('theaterId');

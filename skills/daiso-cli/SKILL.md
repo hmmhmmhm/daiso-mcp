@@ -55,9 +55,11 @@ npx daiso gs25-stores 강남 --limit 10 --json
 npx daiso gs25-inventory 오감자 --storeKeyword 강남 --storeLimit 10 --json
 npx daiso seveneleven-products 삼각김밥 --size 10 --json
 npx daiso seveneleven-stores "안산 중앙역" --limit 10 --json
+npx daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10 --json
 npx daiso emart24-products 커피 --pageSize 10 --json
 npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울 --json
-npx daiso get /api/cgv/movies --playDate <YYYYMMDD> --theaterCode <theaterCode> --json
+npx daiso cgv-movies --playDate <YYYYMMDD> --theaterCode <theaterCode> --json
+npx daiso cgv-timetable --playDate <YYYYMMDD> --theaterCode <theaterCode> --json
 ```
 
 For more command selection examples, read `references/cli-command-map.md`.
@@ -78,7 +80,7 @@ For more command selection examples, read `references/cli-command-map.md`.
 - Convenience store product near a place: if the request has both product and location, prefer inventory lookup over product-only search. Example: `npx daiso gs25-inventory 콜라 --storeKeyword 강남역 --storeLimit 10 --json`.
 - Cross-service price candidate comparison: if the user asks which service is cheaper without naming a brand, use `npx daiso compare <keyword> --json` first. This uses no new external API key and compares Daiso, GS25, Seven-Eleven, and Emart24 product search candidates.
 - Nearby restaurants or cafes: use `npx daiso places <location> --category cafe|restaurant --json`. If the user gives a specific food or mood, use `--keyword`, for example `npx daiso places 성수동 --keyword 브런치 --json`.
-- Seven-Eleven inventory currently uses the raw GET fallback. Example: `npx daiso get /api/seveneleven/inventory --keyword 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10 --json`.
+- Seven-Eleven inventory: use `npx daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10 --json`.
 - Daiso inventory by product name: search products first, keep the selected product ID, then run inventory with a store keyword. 위치가 없으면 ask the user for an area or store before checking inventory.
 - Cinema movies and timetable: find the theater first when the theater code is unknown, then call movies or timetable. If the user says today or omits a date, compute today in KST as `YYYYMMDD`; do not copy example dates.
 

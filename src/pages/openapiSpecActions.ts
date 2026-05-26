@@ -1,10 +1,8 @@
 /**
  * OpenAI Actions용 축약 OpenAPI 스펙
  */
-
 import { ACTION_QUERY_ACTIONS } from '../api/actionsProxy.js';
 import { OPENAPI_COMPONENTS } from './openapiSpecComponents.js';
-
 const ACTION_QUERY_PARAMETERS = [
   {
     name: 'action',

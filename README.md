@@ -237,7 +237,7 @@ AI 앱 연동 없이 터미널에서 바로 확인할 수 있습니다.
 npx daiso products 수납박스 --json
 npx daiso places 강남역 --category cafe --limit 5 --json
 npx daiso gs25-inventory 오감자 --storeKeyword 강남 --storeLimit 5 --json
-npx daiso get /api/cgv/movies --playDate 20260520 --theaterCode 0056 --json
+npx daiso cgv-movies --playDate 20260520 --theaterCode 0056 --json
 ```
 
 <br>
@@ -279,6 +279,9 @@ npx daiso places 강남역 --category cafe --limit 5
 npx daiso places 성수동 --keyword 브런치 --limit 5
 npx daiso cu-stores 강남
 npx daiso cu-inventory 과자 --storeKeyword 강남
+npx daiso cgv-theaters 강남 --limit 10
+npx daiso cgv-movies --playDate 20260307 --theaterCode 0056
+npx daiso cgv-timetable --playDate 20260307 --theaterCode 0056
 npx daiso lottemart-stores 잠실 --area 서울 --limit 10
 npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울
 npx daiso emart24-stores 강남 --service24h true
@@ -289,10 +292,9 @@ npx daiso gs25-products 오감자 --limit 20
 npx daiso gs25-inventory 오감자 --storeKeyword 강남 --storeLimit 10
 npx daiso seveneleven-products 삼각김밥 --size 20
 npx daiso seveneleven-stores 안산 중앙역 --limit 10
-npx daiso get /api/seveneleven/inventory --keyword 핫식스 --storeKeyword 안산%20중앙역 --storeLimit 10
+npx daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10
 npx daiso seveneleven-popwords --label home
 npx daiso seveneleven-catalog --includeIssues true --includeExhibition true --limit 10
-npx daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056
 
 # 원본 JSON 필요 시
 npx daiso products 수납박스 --json

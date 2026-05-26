@@ -8,6 +8,7 @@ import type { CliDeps } from '../types.js';
 import { parseCliArgs, toUrl, applyOptionsToQuery, toQueryOptions } from '../args.js';
 import { validateCommandOptions } from '../commandOptions.js';
 import { requestAndPrintResponse } from '../http.js';
+import { runApiCommand } from './apiCommand.js';
 
 export async function handleCompareProducts(options: string[], deps: CliDeps): Promise<number> {
   const parsed = parseCliArgs(options);
@@ -355,181 +356,70 @@ export async function handleGs25Inventory(options: string[], deps: CliDeps): Pro
 }
 
 export async function handleSevenElevenProducts(options: string[], deps: CliDeps): Promise<number> {
-  const parsed = parseCliArgs(options);
-  if (parsed.options.help === 'true') {
-    return printCommandHelp('seveneleven-products', deps.writeOut, deps.writeErr);
-  }
-  if (validateCommandOptions('seveneleven-products', parsed.options, deps.writeErr)) {
-    return 1;
-  }
-
-  const query = parsed.positionals[0];
-  if (!query) {
-    deps.writeErr(
-      'seveneleven-products 명령은 검색어가 필요합니다. 예: daiso seveneleven-products 삼각김밥',
-    );
-    return 1;
-  }
-
-  const targetUrl = toUrl('/api/seveneleven/products');
-  targetUrl.searchParams.set('query', query);
-  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
-  return await requestAndPrintResponse(
-    deps.fetchImpl,
-    deps.writeOut,
-    deps.writeErr,
-    targetUrl,
-    'seveneleven-products',
-    parsed.options.json === 'true',
-  );
+  return await runApiCommand({
+    command: 'seveneleven-products',
+    options,
+    deps,
+    path: '/api/seveneleven/products',
+    configure: (parsed) => {
+      const query = parsed.positionals[0];
+      if (!query) {
+        return 'seveneleven-products 명령은 검색어가 필요합니다. 예: daiso seveneleven-products 삼각김밥';
+      }
+      parsed.options.query = query;
+      return null;
+    },
+  });
 }
 
 export async function handleSevenElevenStores(options: string[], deps: CliDeps): Promise<number> {
-  const parsed = parseCliArgs(options);
-  if (parsed.options.help === 'true') {
-    return printCommandHelp('seveneleven-stores', deps.writeOut, deps.writeErr);
-  }
-  if (validateCommandOptions('seveneleven-stores', parsed.options, deps.writeErr)) {
-    return 1;
-  }
+  return await runApiCommand({
+    command: 'seveneleven-stores',
+    options,
+    deps,
+    path: '/api/seveneleven/stores',
+    configure: (parsed) => {
+      const keyword = parsed.positionals[0];
+      if (!keyword) {
+        return 'seveneleven-stores 명령은 검색어가 필요합니다. 예: daiso seveneleven-stores 안산 중앙역';
+      }
+      parsed.options.keyword = keyword;
+      return null;
+    },
+  });
+}
 
-  const keyword = parsed.positionals[0];
-  if (!keyword) {
-    deps.writeErr(
-      'seveneleven-stores 명령은 검색어가 필요합니다. 예: daiso seveneleven-stores 안산 중앙역',
-    );
-    return 1;
-  }
-
-  const targetUrl = toUrl('/api/seveneleven/stores');
-  targetUrl.searchParams.set('keyword', keyword);
-  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
-  return await requestAndPrintResponse(
-    deps.fetchImpl,
-    deps.writeOut,
-    deps.writeErr,
-    targetUrl,
-    'seveneleven-stores',
-    parsed.options.json === 'true',
-  );
+export async function handleSevenElevenInventory(options: string[], deps: CliDeps): Promise<number> {
+  return await runApiCommand({
+    command: 'seveneleven-inventory',
+    options,
+    deps,
+    path: '/api/seveneleven/inventory',
+    configure: (parsed) => {
+      const keyword = parsed.positionals[0] || parsed.options.keyword;
+      if (!keyword) {
+        return 'seveneleven-inventory 명령은 검색어가 필요합니다. 예: daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역"';
+      }
+      parsed.options.keyword = keyword;
+      return null;
+    },
+  });
 }
 
 export async function handleSevenElevenPopwords(options: string[], deps: CliDeps): Promise<number> {
-  const parsed = parseCliArgs(options);
-  if (parsed.options.help === 'true') {
-    return printCommandHelp('seveneleven-popwords', deps.writeOut, deps.writeErr);
-  }
-  if (validateCommandOptions('seveneleven-popwords', parsed.options, deps.writeErr)) {
-    return 1;
-  }
-
-  const targetUrl = toUrl('/api/seveneleven/popwords');
-  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
-  return await requestAndPrintResponse(
-    deps.fetchImpl,
-    deps.writeOut,
-    deps.writeErr,
-    targetUrl,
-    'seveneleven-popwords',
-    parsed.options.json === 'true',
-  );
+  return await runApiCommand({
+    command: 'seveneleven-popwords',
+    options,
+    deps,
+    path: '/api/seveneleven/popwords',
+  });
 }
 
 export async function handleSevenElevenCatalog(options: string[], deps: CliDeps): Promise<number> {
-  const parsed = parseCliArgs(options);
-  if (parsed.options.help === 'true') {
-    return printCommandHelp('seveneleven-catalog', deps.writeOut, deps.writeErr);
-  }
-  if (validateCommandOptions('seveneleven-catalog', parsed.options, deps.writeErr)) {
-    return 1;
-  }
-
-  const targetUrl = toUrl('/api/seveneleven/catalog');
-  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
-  return await requestAndPrintResponse(
-    deps.fetchImpl,
-    deps.writeOut,
-    deps.writeErr,
-    targetUrl,
-    'seveneleven-catalog',
-    parsed.options.json === 'true',
-  );
-}
-
-export async function handleLottecinemaTheaters(options: string[], deps: CliDeps): Promise<number> {
-  const parsed = parseCliArgs(options);
-  if (parsed.options.help === 'true') {
-    return printCommandHelp('lottecinema-theaters', deps.writeOut, deps.writeErr);
-  }
-
-  const keyword = parsed.positionals[0];
-  if (keyword) {
-    parsed.options.keyword = keyword;
-  }
-  if (validateCommandOptions('lottecinema-theaters', parsed.options, deps.writeErr)) {
-    return 1;
-  }
-
-  const targetUrl = toUrl('/api/lottecinema/theaters');
-  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
-  return await requestAndPrintResponse(
-    deps.fetchImpl,
-    deps.writeOut,
-    deps.writeErr,
-    targetUrl,
-    'lottecinema-theaters',
-    parsed.options.json === 'true',
-  );
-}
-
-export async function handleLottecinemaMovies(options: string[], deps: CliDeps): Promise<number> {
-  const parsed = parseCliArgs(options);
-  if (parsed.options.help === 'true') {
-    return printCommandHelp('lottecinema-movies', deps.writeOut, deps.writeErr);
-  }
-
-  const keyword = parsed.positionals[0];
-  if (keyword) {
-    parsed.options.keyword = keyword;
-  }
-  if (validateCommandOptions('lottecinema-movies', parsed.options, deps.writeErr)) {
-    return 1;
-  }
-
-  const targetUrl = toUrl('/api/lottecinema/movies');
-  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
-  return await requestAndPrintResponse(
-    deps.fetchImpl,
-    deps.writeOut,
-    deps.writeErr,
-    targetUrl,
-    'lottecinema-movies',
-    parsed.options.json === 'true',
-  );
-}
-
-export async function handleLottecinemaSeats(options: string[], deps: CliDeps): Promise<number> {
-  const parsed = parseCliArgs(options);
-  if (parsed.options.help === 'true') {
-    return printCommandHelp('lottecinema-seats', deps.writeOut, deps.writeErr);
-  }
-
-  const keyword = parsed.positionals[0];
-  if (keyword) {
-    parsed.options.keyword = keyword;
-  }
-  if (validateCommandOptions('lottecinema-seats', parsed.options, deps.writeErr)) {
-    return 1;
-  }
-
-  const targetUrl = toUrl('/api/lottecinema/seats');
-  applyOptionsToQuery(targetUrl, toQueryOptions(parsed.options));
-  return await requestAndPrintResponse(
-    deps.fetchImpl,
-    deps.writeOut,
-    deps.writeErr,
-    targetUrl,
-    'lottecinema-seats',
-    parsed.options.json === 'true',
-  );
+  return await runApiCommand({
+    command: 'seveneleven-catalog',
+    options,
+    deps,
+    path: '/api/seveneleven/catalog',
+  });
 }

@@ -50,7 +50,7 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - GS25 inventory: `npx daiso gs25-inventory 오감자 --storeKeyword 강남 --storeLimit 10 --json`
 - Seven-Eleven products: `npx daiso seveneleven-products 삼각김밥 --size 20 --json`
 - Seven-Eleven stores: `npx daiso seveneleven-stores "안산 중앙역" --limit 10 --json`
-- Seven-Eleven inventory: `npx daiso get /api/seveneleven/inventory --keyword 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10 --json`
+- Seven-Eleven inventory: `npx daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10 --json`
 - Seven-Eleven popular searches: `npx daiso seveneleven-popwords --label home --json`
 - Seven-Eleven catalog: `npx daiso seveneleven-catalog --includeIssues true --includeExhibition true --limit 10 --json`
 - Emart24 stores: `npx daiso emart24-stores 강남 --service24h true --json`
@@ -73,9 +73,9 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - Lotte Cinema theaters: `npx daiso lottecinema-theaters 잠실 --limit 10 --json`
 - Lotte Cinema movies: `npx daiso get /api/lottecinema/movies --theaterId <theaterId> --json`
 - Lotte Cinema seats: `npx daiso get /api/lottecinema/seats --theaterId <theaterId> --movieId <movieId> --playDate <YYYYMMDD> --json`
-- CGV theaters: `npx daiso get /api/cgv/theaters --keyword 강남 --limit 10 --json`
-- CGV movies: `npx daiso get /api/cgv/movies --playDate <YYYYMMDD> --theaterCode <theaterCode> --json`
-- CGV timetable: `npx daiso get /api/cgv/timetable --playDate <YYYYMMDD> --theaterCode <theaterCode> --json`
+- CGV theaters: `npx daiso cgv-theaters 강남 --limit 10 --json`
+- CGV movies: `npx daiso cgv-movies --playDate <YYYYMMDD> --theaterCode <theaterCode> --json`
+- CGV timetable: `npx daiso cgv-timetable --playDate <YYYYMMDD> --theaterCode <theaterCode> --json`
 - Cinema date rule: use today in KST as `YYYYMMDD` when the user says today or omits the date.
 
 ## Diagnostics

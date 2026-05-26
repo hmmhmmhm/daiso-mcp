@@ -8,7 +8,9 @@ describe('COMMAND_OPTION_ALLOWLISTS', () => {
   it('typed 명령의 옵션 검증 정의를 한 곳에서 제공한다', () => {
     expect(COMMAND_OPTION_ALLOWLISTS.products).toContain('pageSize');
     expect(COMMAND_OPTION_ALLOWLISTS.inventory).toContain('keyword');
+    expect(COMMAND_OPTION_ALLOWLISTS['cgv-timetable']).toContain('theaterCode');
     expect(COMMAND_OPTION_ALLOWLISTS['gs25-inventory']).toContain('storeKeyword');
+    expect(COMMAND_OPTION_ALLOWLISTS['seveneleven-inventory']).toContain('storeKeyword');
     expect(COMMAND_OPTION_ALLOWLISTS.get).toBeUndefined();
   });
 

@@ -37,12 +37,18 @@ import {
   handleGs25Inventory,
   handleSevenElevenProducts,
   handleSevenElevenStores,
+  handleSevenElevenInventory,
   handleSevenElevenPopwords,
   handleSevenElevenCatalog,
+} from './cli/commands/convenience.js';
+import {
+  handleCgvTheaters,
+  handleCgvMovies,
+  handleCgvTimetable,
   handleLottecinemaTheaters,
   handleLottecinemaMovies,
   handleLottecinemaSeats,
-} from './cli/commands/convenience.js';
+} from './cli/commands/cinema.js';
 
 export type { CliDeps } from './cli/types.js';
 export type { InteractiveCliDeps } from './cliInteractive.js';
@@ -166,6 +172,9 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   if (command === 'places') return await handlePlaces(options, resolvedDeps);
   if (command === 'cu-stores') return await handleCuStores(options, resolvedDeps);
   if (command === 'cu-inventory') return await handleCuInventory(options, resolvedDeps);
+  if (command === 'cgv-theaters') return await handleCgvTheaters(options, resolvedDeps);
+  if (command === 'cgv-movies') return await handleCgvMovies(options, resolvedDeps);
+  if (command === 'cgv-timetable') return await handleCgvTimetable(options, resolvedDeps);
   if (command === 'lottecinema-theaters')
     return await handleLottecinemaTheaters(options, resolvedDeps);
   if (command === 'lottecinema-movies') return await handleLottecinemaMovies(options, resolvedDeps);
@@ -181,6 +190,8 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   if (command === 'seveneleven-products')
     return await handleSevenElevenProducts(options, resolvedDeps);
   if (command === 'seveneleven-stores') return await handleSevenElevenStores(options, resolvedDeps);
+  if (command === 'seveneleven-inventory')
+    return await handleSevenElevenInventory(options, resolvedDeps);
   if (command === 'seveneleven-popwords')
     return await handleSevenElevenPopwords(options, resolvedDeps);
   if (command === 'seveneleven-catalog')
