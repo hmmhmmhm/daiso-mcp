@@ -6,4 +6,4 @@ compatibility_date = "2025-01-23"
 HEALTH_CHECK_BASE_URL = "https://daiso-mcp.hmmhmmhm.workers.dev"
 
 [observability]
-enabled = true
+enabled = false
