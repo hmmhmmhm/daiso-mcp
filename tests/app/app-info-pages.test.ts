@@ -22,6 +22,7 @@ describe('GET /', () => {
     expect(data.tools).toBeDefined();
     expect(data.totalServices).toBeGreaterThan(0);
     expect(data.totalTools).toBeGreaterThan(0);
+    expect(res.headers.get('Cache-Control')).toContain('s-maxage=3600');
   });
 
   it('다이소 서비스가 등록되어 있다', async () => {

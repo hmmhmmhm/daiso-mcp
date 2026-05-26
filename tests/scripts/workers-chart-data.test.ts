@@ -77,6 +77,10 @@ describe('fetchWorkerInvocationsForWindow', () => {
         }),
       }),
     );
+    const requestBody = JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string);
+    expect(requestBody.query).toContain('workersInvocationsAdaptive');
+    expect(requestBody.query).toContain('scriptName: $scriptName');
+    expect(requestBody.query).not.toContain('httpRequestsAdaptiveGroups');
   });
 
   it('GraphQL 오류를 전달한다', async () => {

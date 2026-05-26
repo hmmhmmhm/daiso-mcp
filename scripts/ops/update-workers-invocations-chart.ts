@@ -295,6 +295,10 @@ async function main() {
   await fs.writeFile(CHART_PATH, chartBuffer);
   const payload = {
     scriptName,
+    metric: 'workersInvocationsAdaptive.requests',
+    aggregation: 'script-level',
+    includedTraffic:
+      'All invocations for this Worker script are counted across routes and domains, including GET / on mcp.aka.page.',
     timezone: 'Asia/Seoul',
     days: points.length,
     startDate,

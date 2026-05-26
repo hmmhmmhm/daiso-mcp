@@ -130,6 +130,38 @@ const createMcpServer = (bindings?: AppBindings) => {
   return server;
 };
 
+function buildRootInfo() {
+  const registry = createRegistry();
+  const services = registry.getServicesInfo();
+  const allTools = registry.getAllToolNames();
+
+  return {
+    name: SERVER_NAME,
+    version: SERVER_VERSION,
+    description: 'Multi-Service MCP Server for Cloudflare Workers',
+    endpoints: {
+      mcp: '/ 또는 /mcp (POST) - MCP 프로토콜 엔드포인트',
+      health: '/health (GET) - 헬스 체크',
+      healthChecks: '/api/health/checks (GET) - 서비스별 상세 헬스 체크',
+      openapi: '/openapi.json (GET) - OpenAI Actions용 축약 OpenAPI',
+      openapiFull: '/openapi-full.json (GET) - 전체 OpenAPI',
+      actionsQuery: '/api/actions/query (GET) - 기존 GET API 통합 facade',
+      compareProducts: '/api/compare/products (GET) - 키 없는 통합 상품 가격 후보 비교',
+      developerRequests: '/api/feedback/requests (POST/GET) - 개발자 요청 제출',
+    },
+    services,
+    tools: allTools,
+    totalServices: services.length,
+    totalTools: allTools.length,
+  };
+}
+
+const ROOT_INFO_JSON = JSON.stringify(buildRootInfo());
+const ROOT_INFO_HEADERS = {
+  'Content-Type': 'application/json; charset=utf-8',
+  'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
+};
+
 /**
  * initialize 요청 여부를 확인합니다.
  */
@@ -251,29 +283,7 @@ app.use(
 
 // 기본 정보 엔드포인트 (GET 요청만)
 app.get('/', (c) => {
-  const registry = createRegistry(c.env);
-  const services = registry.getServicesInfo();
-  const allTools = registry.getAllToolNames();
-
-  return c.json({
-    name: SERVER_NAME,
-    version: SERVER_VERSION,
-    description: 'Multi-Service MCP Server for Cloudflare Workers',
-    endpoints: {
-      mcp: '/ 또는 /mcp (POST) - MCP 프로토콜 엔드포인트',
-      health: '/health (GET) - 헬스 체크',
-      healthChecks: '/api/health/checks (GET) - 서비스별 상세 헬스 체크',
-      openapi: '/openapi.json (GET) - OpenAI Actions용 축약 OpenAPI',
-      openapiFull: '/openapi-full.json (GET) - 전체 OpenAPI',
-      actionsQuery: '/api/actions/query (GET) - 기존 GET API 통합 facade',
-      compareProducts: '/api/compare/products (GET) - 키 없는 통합 상품 가격 후보 비교',
-      developerRequests: '/api/feedback/requests (POST/GET) - 개발자 요청 제출',
-    },
-    services,
-    tools: allTools,
-    totalServices: services.length,
-    totalTools: allTools.length,
-  });
+  return c.body(ROOT_INFO_JSON, 200, ROOT_INFO_HEADERS);
 });
 
 // 루트 경로에서 MCP 요청 처리 (POST, DELETE, OPTIONS)
