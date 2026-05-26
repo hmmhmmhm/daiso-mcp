@@ -52,7 +52,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('service: daiso');
     expect(workflow).toContain('service: oliveyoung');
     expect(workflow).toContain('suite: mcp');
-    expect(workflow).toContain("node-version: '20'");
+    expect(workflow).toContain("node-version: '24'");
     expect(workflow).toContain('npm run cli:smoke -- --service "${SMOKE_SERVICE}"');
     expect(workflow).toContain('npm run mcp:smoke -- --service "${SMOKE_SERVICE}"');
     expect(workflow).toContain('CLI smoke failed; retrying after 15 seconds');
