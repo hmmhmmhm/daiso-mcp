@@ -45,6 +45,13 @@ describe('GET /', () => {
     expect(await res.text()).toBe('');
   });
 
+  it('Worker fetch 엔트리에서 루트 GET/HEAD 외 요청은 Hono 앱으로 위임한다', async () => {
+    const res = await app.fetch(new Request('https://mcp.aka.page/', { method: 'OPTIONS' }));
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+  });
+
   it('다이소 서비스가 등록되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
