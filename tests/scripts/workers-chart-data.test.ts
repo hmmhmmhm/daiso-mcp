@@ -104,6 +104,45 @@ describe('fetchWorkerInvocationsForWindow', () => {
       }),
     ).rejects.toThrow('Cloudflare GraphQL 오류');
   });
+
+  it('global API key 인증 헤더로도 Worker 호출량을 조회한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            viewer: {
+              accounts: [
+                {
+                  workersInvocationsAdaptive: [{ sum: { requests: 7 } }],
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+
+    const requests = await fetchWorkerInvocationsForWindow({
+      accountId: 'account-id',
+      apiEmail: 'user@example.com',
+      globalApiKey: 'global-key',
+      scriptName: 'daiso-mcp',
+      start: new Date('2026-03-08T15:00:00.000Z'),
+      end: new Date('2026-03-09T15:00:00.000Z'),
+      fetchImpl: mockFetch,
+    });
+
+    expect(requests).toBe(7);
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.cloudflare.com/client/v4/graphql',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'X-Auth-Email': 'user@example.com',
+          'X-Auth-Key': 'global-key',
+        }),
+      }),
+    );
+  });
 });
 
 describe('fetchRootGetRequestsForWindow', () => {

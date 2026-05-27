@@ -74,6 +74,8 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('git pull --ff-only origin main');
     expect(workflow).toContain('npm run update:workers-chart');
     expect(workflow).toContain('WORKERS_CHART_CONCURRENCY');
+    expect(workflow).toContain('CLOUDFLARE_EMAIL');
+    expect(workflow).toContain('CLOUDFLARE_GLOBAL_API_KEY');
     expect(workflow).toContain('CLOUDFLARE_ZONE_ID');
     expect(workflow).toContain('WORKERS_CHART_ROOT_REDIRECT_START');
     expect(workflow).toContain('git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png');

@@ -211,6 +211,19 @@ describe('MCP 엔드포인트', () => {
     expect(res.status).toBeDefined();
   });
 
+  it('POST /는 파싱 불가 JSON도 stateless MCP 경로로 처리한다', async () => {
+    const res = await app.request('/', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/event-stream',
+        'Content-Type': 'application/json',
+      },
+      body: '{',
+    });
+
+    expect(res.status).toBeDefined();
+  });
+
   it('POST / initialize는 세션을 만들고 이후 루트 POST를 같은 세션으로 처리한다', async () => {
     const initRes = await app.request('/', {
       method: 'POST',

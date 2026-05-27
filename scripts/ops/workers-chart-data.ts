@@ -59,6 +59,32 @@ export function buildDailyWindows(startDateText, endDateText) {
   });
 }
 
+function buildCloudflareHeaders({ apiToken, apiEmail, globalApiKey }) {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (globalApiKey) {
+    if (!apiEmail) {
+      throw new Error('CLOUDFLARE_GLOBAL_API_KEY를 사용할 때는 CLOUDFLARE_EMAIL도 필요합니다.');
+    }
+    return {
+      ...headers,
+      'X-Auth-Email': apiEmail,
+      'X-Auth-Key': globalApiKey,
+    };
+  }
+
+  if (!apiToken) {
+    throw new Error('CLOUDFLARE_API_TOKEN 또는 CLOUDFLARE_GLOBAL_API_KEY가 필요합니다.');
+  }
+
+  return {
+    ...headers,
+    Authorization: `Bearer ${apiToken}`,
+  };
+}
+
 /**
  * Cloudflare GraphQL에서 특정 KST 하루의 호출량 합계를 조회합니다.
  *
@@ -67,7 +93,9 @@ export function buildDailyWindows(startDateText, endDateText) {
  *
  * @param {object} params
  * @param {string} params.accountId
- * @param {string} params.apiToken
+ * @param {string} [params.apiToken]
+ * @param {string} [params.apiEmail]
+ * @param {string} [params.globalApiKey]
  * @param {string} params.scriptName
  * @param {Date} params.start
  * @param {Date} params.end
@@ -77,6 +105,8 @@ export function buildDailyWindows(startDateText, endDateText) {
 export async function fetchWorkerInvocationsForWindow({
   accountId,
   apiToken,
+  apiEmail,
+  globalApiKey,
   scriptName,
   start,
   end,
@@ -84,10 +114,7 @@ export async function fetchWorkerInvocationsForWindow({
 }) {
   const response = await fetchImpl('https://api.cloudflare.com/client/v4/graphql', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      'Content-Type': 'application/json',
-    },
+    headers: buildCloudflareHeaders({ apiToken, apiEmail, globalApiKey }),
     body: JSON.stringify({
       query: WORKER_INVOCATIONS_QUERY,
       variables: {
@@ -124,7 +151,9 @@ export async function fetchWorkerInvocationsForWindow({
  * Cloudflare GraphQL에서 R2 redirect 이후 Worker를 우회하는 루트 GET 요청 수를 조회합니다.
  *
  * @param {object} params
- * @param {string} params.apiToken
+ * @param {string} [params.apiToken]
+ * @param {string} [params.apiEmail]
+ * @param {string} [params.globalApiKey]
  * @param {string} params.zoneId
  * @param {string} params.host
  * @param {string} params.path
@@ -135,6 +164,8 @@ export async function fetchWorkerInvocationsForWindow({
  */
 export async function fetchRootGetRequestsForWindow({
   apiToken,
+  apiEmail,
+  globalApiKey,
   zoneId,
   host,
   path,
@@ -148,10 +179,7 @@ export async function fetchRootGetRequestsForWindow({
 
   const response = await fetchImpl('https://api.cloudflare.com/client/v4/graphql', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      'Content-Type': 'application/json',
-    },
+    headers: buildCloudflareHeaders({ apiToken, apiEmail, globalApiKey }),
     body: JSON.stringify({
       query: ROOT_GET_REQUESTS_QUERY,
       variables: {
@@ -190,7 +218,9 @@ export async function fetchRootGetRequestsForWindow({
  *
  * @param {object} params
  * @param {string} params.accountId
- * @param {string} params.apiToken
+ * @param {string} [params.apiToken]
+ * @param {string} [params.apiEmail]
+ * @param {string} [params.globalApiKey]
  * @param {string} params.scriptName
  * @param {string} params.startDateText
  * @param {string} params.endDateText
@@ -205,6 +235,8 @@ export async function fetchRootGetRequestsForWindow({
 export async function fetchDailyWorkerInvocations({
   accountId,
   apiToken,
+  apiEmail,
+  globalApiKey,
   scriptName,
   startDateText,
   endDateText,
@@ -228,6 +260,8 @@ export async function fetchDailyWorkerInvocations({
       const requests = await fetchWorkerInvocationsForWindow({
         accountId,
         apiToken,
+        apiEmail,
+        globalApiKey,
         scriptName,
         start: window.start,
         end: window.end,
@@ -238,6 +272,8 @@ export async function fetchDailyWorkerInvocations({
         zoneId && rootRedirectStart && redirectStart < window.end
           ? await fetchRootGetRequestsForWindow({
               apiToken,
+              apiEmail,
+              globalApiKey,
               zoneId,
               host: rootRedirectHost,
               path: rootRedirectPath,

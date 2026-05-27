@@ -34,6 +34,8 @@ const README_END = '<!-- WORKERS_INVOCATIONS_CHART:END -->';
 
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+const API_EMAIL = process.env.CLOUDFLARE_EMAIL;
+const GLOBAL_API_KEY = process.env.CLOUDFLARE_GLOBAL_API_KEY;
 const ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
 const SCRIPT_NAME = process.env.CF_WORKER_SCRIPT_NAME ?? 'daiso-mcp';
 const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE ?? '2026-03-01';
@@ -45,9 +47,9 @@ const ROOT_REDIRECT_START = process.env.WORKERS_CHART_ROOT_REDIRECT_START
 const ROOT_REDIRECT_HOST = process.env.WORKERS_CHART_ROOT_REDIRECT_HOST ?? 'mcp.aka.page';
 const ROOT_REDIRECT_PATH = process.env.WORKERS_CHART_ROOT_REDIRECT_PATH ?? '/';
 
-if (!INPUT_JSON_PATH && (!ACCOUNT_ID || !API_TOKEN)) {
+if (!INPUT_JSON_PATH && (!ACCOUNT_ID || (!API_TOKEN && !GLOBAL_API_KEY))) {
   throw new Error(
-    'CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN 환경 변수가 필요합니다. 기존 JSON으로 다시 그릴 때는 WORKERS_CHART_INPUT_JSON을 지정하세요.',
+    'CLOUDFLARE_ACCOUNT_ID와 CLOUDFLARE_API_TOKEN 또는 CLOUDFLARE_GLOBAL_API_KEY 환경 변수가 필요합니다. 기존 JSON으로 다시 그릴 때는 WORKERS_CHART_INPUT_JSON을 지정하세요.',
   );
 }
 
@@ -288,6 +290,8 @@ async function main() {
     points = await fetchDailyWorkerInvocations({
       accountId: ACCOUNT_ID,
       apiToken: API_TOKEN,
+      apiEmail: API_EMAIL,
+      globalApiKey: GLOBAL_API_KEY,
       scriptName,
       startDateText: startDate,
       endDateText: endDate,

@@ -54,6 +54,8 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CLOUDFLARE_GLOBAL_API_KEY: ${{ secrets.CLOUDFLARE_GLOBAL_API_KEY }}
           CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID || 'c987d32286724a5a1fd5586cec7756c1' }}
           CF_WORKER_SCRIPT_NAME: ${{ inputs.worker_script_name || vars.CF_WORKER_SCRIPT_NAME || 'daiso-mcp' }}
           WORKERS_CHART_DAYS: ${{ inputs.days || '30' }}
