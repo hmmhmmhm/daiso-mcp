@@ -12,6 +12,7 @@ import { OPENAPI_PATHS_LOTTECINEMA } from './openapiSpecPathsLottecinema.js';
 import { OPENAPI_PATHS_GS25 } from './openapiSpecPathsGs25.js';
 import { OPENAPI_PATHS_SEVENELEVEN } from './openapiSpecPathsSeveneleven.js';
 import { OPENAPI_PATHS_PLACES } from './openapiSpecPathsPlaces.js';
+import { OPENAPI_PATHS_OPINET } from './openapiSpecPathsOpinet.js';
 import { OPENAPI_PATHS_COMPARE } from './openapiSpecPathsCompare.js';
 import { OPENAPI_PATHS_FEEDBACK } from './openapiSpecPathsFeedback.js';
 import { OPENAPI_COMPONENTS } from './openapiSpecComponents.js';
@@ -36,6 +37,7 @@ export function generateFullOpenApiSpec(baseUrl: string): object {
 - 🎞️ **롯데시네마 지점/영화 조회**: 주변 지점, 상영 목록, 잔여 좌석 조회
 - 🎥 **CGV 지점/영화 조회**: 극장 목록, 영화 목록, 시간표 조회
 - 🍽️ **주변 음식점/카페 검색**: 네이버 지역 검색 기반 장소 조회
+- ⛽ **오피넷 유가 정보**: 전국 평균 유가, 최저가 주유소, 반경 내 주유소 조회
 
 ## 사용 팁
 1. 한글 검색어는 URL 인코딩이 자동 처리됩니다
@@ -59,6 +61,7 @@ export function generateFullOpenApiSpec(baseUrl: string): object {
       ...OPENAPI_PATHS_COMPARE,
       ...OPENAPI_PATHS_FEEDBACK,
       ...OPENAPI_PATHS_PLACES,
+      ...OPENAPI_PATHS_OPINET,
       ...OPENAPI_PATHS_MEGABOX,
       ...OPENAPI_PATHS_LOTTECINEMA,
       ...OPENAPI_PATHS_CGV,

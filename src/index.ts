@@ -22,6 +22,7 @@ import { createEmart24Service } from './services/emart24/index.js';
 import { createGs25Service } from './services/gs25/index.js';
 import { createSevenElevenService } from './services/seveneleven/index.js';
 import { createPlacesService } from './services/places/index.js';
+import { createOpinetService } from './services/opinet/index.js';
 import { createCompareService } from './services/compare/index.js';
 import { createFeedbackService } from './services/feedback/index.js';
 import { createPromptResponse } from './pages/prompt.js';
@@ -45,6 +46,7 @@ import { registerEmart24Routes } from './api/routes/emart24Routes.js';
 import { registerGs25Routes } from './api/routes/gs25Routes.js';
 import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
 import { registerPlacesRoutes } from './api/routes/placesRoutes.js';
+import { registerOpinetRoutes } from './api/routes/opinetRoutes.js';
 import { registerCompareRoutes } from './api/routes/compareRoutes.js';
 import { registerFeedbackRoutes } from './api/routes/feedbackRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
@@ -88,6 +90,10 @@ const createRegistry = (bindings?: AppBindings) => {
       createPlacesService({
         naverClientId: bindings?.NAVER_CLIENT_ID,
         naverClientSecret: bindings?.NAVER_CLIENT_SECRET,
+      }),
+    () =>
+      createOpinetService({
+        apiKey: bindings?.OPINET_API_KEY,
       }),
     createCuService,
     createEmart24Service,
@@ -147,6 +153,8 @@ function buildRootInfo() {
       openapiFull: '/openapi-full.json (GET) - 전체 OpenAPI',
       actionsQuery: '/api/actions/query (GET) - 기존 GET API 통합 facade',
       compareProducts: '/api/compare/products (GET) - 키 없는 통합 상품 가격 후보 비교',
+      opinetAverage: '/api/opinet/average (GET) - 오피넷 전국 평균 유가',
+      opinetLowest: '/api/opinet/lowest (GET) - 오피넷 최저가 주유소',
       developerRequests: '/api/feedback/requests (POST/GET) - 개발자 요청 제출',
     },
     services,
@@ -374,6 +382,7 @@ registerSevenElevenRoutes(app);
 registerCompareRoutes(app);
 registerFeedbackRoutes(app);
 registerPlacesRoutes(app);
+registerOpinetRoutes(app);
 registerCuRoutes(app);
 registerEmart24Routes(app);
 registerLotteMartRoutes(app);

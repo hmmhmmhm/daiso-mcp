@@ -296,6 +296,7 @@ describe('기본 페이지', () => {
       googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
       zyteApiKey: { configured: false, usedBy: expect.arrayContaining(['oliveyoung', 'cgv']) },
       naverLocalSearch: { configured: false, usedBy: ['places'] },
+      opinetApiKey: { configured: false, usedBy: ['opinet'] },
       supabaseFeedback: { configured: false, usedBy: ['feedback'] },
       healthCheckSecret: { configured: true, usedBy: ['health-checks'] },
     });

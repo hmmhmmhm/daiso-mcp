@@ -164,6 +164,10 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/seveneleven/popwords']).toBeDefined();
     expect(spec.paths['/api/seveneleven/catalog']).toBeDefined();
     expect(spec.paths['/api/places/search']).toBeDefined();
+    expect(spec.paths['/api/opinet/average']).toBeDefined();
+    expect(spec.paths['/api/opinet/lowest']).toBeDefined();
+    expect(spec.paths['/api/opinet/stations/around']).toBeDefined();
+    expect(spec.paths['/api/opinet/station']).toBeDefined();
     expect(spec.paths['/api/feedback/requests']).toBeDefined();
     expect(spec.paths['/api/megabox/theaters']).toBeDefined();
     expect(spec.paths['/api/megabox/movies']).toBeDefined();

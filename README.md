@@ -277,6 +277,8 @@ npx daiso display-location 1034604 04515
 npx daiso compare 콜라 --limit 3
 npx daiso places 강남역 --category cafe --limit 5
 npx daiso places 성수동 --keyword 브런치 --limit 5
+npx daiso get /api/opinet/lowest --fuelCode B027 --areaCode 0113 --count 5 --json
+npx daiso get /api/opinet/average --json
 npx daiso cu-stores 강남
 npx daiso cu-inventory 과자 --storeKeyword 강남
 npx daiso cgv-theaters 강남 --limit 10
@@ -343,6 +345,30 @@ GET /api/compare/products?keyword=콜라&limit=3
 ```
 
 지원 서비스는 `daiso`, `gs25`, `seveneleven`, `emart24`입니다. GS25처럼 상품 검색 응답에 가격이 없는 서비스는 후보에는 포함되지만 최저가 계산에서는 제외됩니다.
+
+### 오피넷 유가 정보
+
+한국석유공사 오피넷 유가정보 API로 전국 평균 유가, 지역별 최저가 주유소, 반경 내 주유소, 주유소 상세정보를 조회합니다.
+
+MCP 도구:
+
+```text
+opinet_get_average_prices
+opinet_get_lowest_price_stations
+opinet_search_stations_around
+opinet_get_station_detail
+```
+
+REST:
+
+```text
+GET /api/opinet/average
+GET /api/opinet/lowest?fuelCode=B027&areaCode=0113&count=5
+GET /api/opinet/stations/around?x=314681.8&y=544837&radiusMeters=3000&fuelCode=B027&sort=price
+GET /api/opinet/station?id=A0010207
+```
+
+오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 오피넷 API 제약상 위경도가 아니라 KATEC `x/y` 좌표를 받습니다.
 
 ### 개발자 요청 제출
 

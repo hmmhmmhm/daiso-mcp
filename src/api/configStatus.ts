@@ -9,6 +9,7 @@ export interface ConfigStatus {
   googleMapsApiKey: ConfigStatusItem;
   zyteApiKey: ConfigStatusItem;
   naverLocalSearch: ConfigStatusItem;
+  opinetApiKey: ConfigStatusItem;
   supabaseFeedback: ConfigStatusItem;
   healthCheckSecret: ConfigStatusItem;
 }
@@ -31,6 +32,10 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
       configured:
         isConfigured(bindings?.NAVER_CLIENT_ID) && isConfigured(bindings?.NAVER_CLIENT_SECRET),
       usedBy: ['places'],
+    },
+    opinetApiKey: {
+      configured: isConfigured(bindings?.OPINET_API_KEY),
+      usedBy: ['opinet'],
     },
     supabaseFeedback: {
       configured:

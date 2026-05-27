@@ -10,6 +10,7 @@ export interface AppBindings {
   GOOGLE_MAPS_API_KEY?: string;
   NAVER_CLIENT_ID?: string;
   NAVER_CLIENT_SECRET?: string;
+  OPINET_API_KEY?: string;
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   HEALTH_CHECK_SECRET?: string;
