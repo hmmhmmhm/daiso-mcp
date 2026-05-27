@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildDailyWindows,
   fetchDailyWorkerInvocations,
+  fetchRootGetRequestsForWindow,
   fetchWorkerInvocationsForWindow,
 } from '../../scripts/ops/workers-chart-data.ts';
 
@@ -105,6 +106,67 @@ describe('fetchWorkerInvocationsForWindow', () => {
   });
 });
 
+describe('fetchRootGetRequestsForWindow', () => {
+  it('zone HTTP 요청 행을 모두 합산해서 루트 GET 요청량을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            viewer: {
+              zones: [
+                {
+                  httpRequestsAdaptiveGroups: [
+                    { count: 1200 },
+                    { count: '34' },
+                    { count: 'invalid' },
+                  ],
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+
+    const requests = await fetchRootGetRequestsForWindow({
+      apiToken: 'api-token',
+      zoneId: 'zone-id',
+      host: 'mcp.aka.page',
+      path: '/',
+      start: new Date('2026-05-27T07:24:50.000Z'),
+      end: new Date('2026-05-27T15:00:00.000Z'),
+      fetchImpl: mockFetch,
+    });
+
+    expect(requests).toBe(1234);
+    const requestBody = JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string);
+    expect(requestBody.query).toContain('httpRequestsAdaptiveGroups');
+    expect(requestBody.query).toContain('clientRequestHTTPMethodName: "GET"');
+    expect(requestBody.variables).toEqual({
+      zoneTag: 'zone-id',
+      host: 'mcp.aka.page',
+      path: '/',
+      start: '2026-05-27T07:24:50.000Z',
+      end: '2026-05-27T15:00:00.000Z',
+    });
+  });
+
+  it('빈 조회 창이면 Cloudflare를 호출하지 않고 0을 반환한다', async () => {
+    const requests = await fetchRootGetRequestsForWindow({
+      apiToken: 'api-token',
+      zoneId: 'zone-id',
+      host: 'mcp.aka.page',
+      path: '/',
+      start: new Date('2026-05-27T15:00:00.000Z'),
+      end: new Date('2026-05-27T15:00:00.000Z'),
+      fetchImpl: mockFetch,
+    });
+
+    expect(requests).toBe(0);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe('fetchDailyWorkerInvocations', () => {
   it('각 날짜를 개별 조회해서 기간과 무관한 고정 일별 합계를 만든다', async () => {
     mockFetch
@@ -175,6 +237,57 @@ describe('fetchDailyWorkerInvocations', () => {
       start: '2026-03-09T15:00:00.000Z',
       end: '2026-03-10T15:00:00.000Z',
     });
+  });
+
+  it('리다이렉트 시작 이후 루트 GET 요청량을 Worker 호출량에 합산한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: {
+              viewer: {
+                accounts: [
+                  {
+                    workersInvocationsAdaptive: [{ sum: { requests: 100 } }],
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: {
+              viewer: {
+                zones: [
+                  {
+                    httpRequestsAdaptiveGroups: [{ count: 25 }],
+                  },
+                ],
+              },
+            },
+          }),
+        ),
+      );
+
+    const points = await fetchDailyWorkerInvocations({
+      accountId: 'account-id',
+      apiToken: 'api-token',
+      scriptName: 'daiso-mcp',
+      startDateText: '2026-05-27',
+      endDateText: '2026-05-27',
+      zoneId: 'zone-id',
+      rootRedirectStart: new Date('2026-05-27T07:24:50.000Z'),
+      fetchImpl: mockFetch,
+    });
+
+    expect(points).toEqual([{ date: '2026-05-27', requests: 125 }]);
+
+    const rootGetBody = JSON.parse(mockFetch.mock.calls[1]?.[1]?.body as string);
+    expect(rootGetBody.variables.start).toBe('2026-05-27T07:24:50.000Z');
+    expect(rootGetBody.variables.end).toBe('2026-05-27T15:00:00.000Z');
   });
 
   it('지정한 동시성 안에서 날짜별 조회를 병렬 실행하고 원래 날짜 순서를 유지한다', async () => {

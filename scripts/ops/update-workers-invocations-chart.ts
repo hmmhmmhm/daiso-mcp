@@ -34,10 +34,16 @@ const README_END = '<!-- WORKERS_INVOCATIONS_CHART:END -->';
 
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+const ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
 const SCRIPT_NAME = process.env.CF_WORKER_SCRIPT_NAME ?? 'daiso-mcp';
 const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE ?? '2026-03-01';
 const CHART_CONCURRENCY = Number.parseInt(process.env.WORKERS_CHART_CONCURRENCY ?? '4', 10);
 const INPUT_JSON_PATH = process.env.WORKERS_CHART_INPUT_JSON;
+const ROOT_REDIRECT_START = process.env.WORKERS_CHART_ROOT_REDIRECT_START
+  ? new Date(process.env.WORKERS_CHART_ROOT_REDIRECT_START)
+  : undefined;
+const ROOT_REDIRECT_HOST = process.env.WORKERS_CHART_ROOT_REDIRECT_HOST ?? 'mcp.aka.page';
+const ROOT_REDIRECT_PATH = process.env.WORKERS_CHART_ROOT_REDIRECT_PATH ?? '/';
 
 if (!INPUT_JSON_PATH && (!ACCOUNT_ID || !API_TOKEN)) {
   throw new Error(
@@ -47,6 +53,10 @@ if (!INPUT_JSON_PATH && (!ACCOUNT_ID || !API_TOKEN)) {
 
 if (!/^\d{4}-\d{2}-\d{2}$/.test(CHART_START_DATE)) {
   throw new Error('WORKERS_CHART_START_DATE 형식은 YYYY-MM-DD 이어야 합니다.');
+}
+
+if (ROOT_REDIRECT_START && Number.isNaN(ROOT_REDIRECT_START.getTime())) {
+  throw new Error('WORKERS_CHART_ROOT_REDIRECT_START 형식은 ISO datetime 이어야 합니다.');
 }
 
 function formatDelta(diff) {
@@ -281,6 +291,10 @@ async function main() {
       scriptName,
       startDateText: startDate,
       endDateText: endDate,
+      zoneId: ZONE_ID,
+      rootRedirectHost: ROOT_REDIRECT_HOST,
+      rootRedirectPath: ROOT_REDIRECT_PATH,
+      rootRedirectStart: ROOT_REDIRECT_START,
       concurrency:
         Number.isFinite(CHART_CONCURRENCY) && CHART_CONCURRENCY > 0 ? CHART_CONCURRENCY : 4,
     });
@@ -295,10 +309,23 @@ async function main() {
   await fs.writeFile(CHART_PATH, chartBuffer);
   const payload = {
     scriptName,
-    metric: 'workersInvocationsAdaptive.requests',
-    aggregation: 'script-level',
+    metric: ROOT_REDIRECT_START
+      ? 'workersInvocationsAdaptive.requests + httpRequestsAdaptiveGroups.count'
+      : 'workersInvocationsAdaptive.requests',
+    aggregation: ROOT_REDIRECT_START ? 'script-level plus redirected root GET' : 'script-level',
     includedTraffic:
-      'All invocations for this Worker script are counted across routes and domains, including GET / on mcp.aka.page.',
+      ROOT_REDIRECT_START
+        ? `Worker invocations for ${scriptName} plus redirected GET ${ROOT_REDIRECT_PATH} traffic on ${ROOT_REDIRECT_HOST} after ${ROOT_REDIRECT_START.toISOString()}.`
+        : 'All invocations for this Worker script are counted across routes and domains, including GET / on mcp.aka.page.',
+    rootRedirect:
+      ROOT_REDIRECT_START && ZONE_ID
+        ? {
+            zoneId: ZONE_ID,
+            host: ROOT_REDIRECT_HOST,
+            path: ROOT_REDIRECT_PATH,
+            start: ROOT_REDIRECT_START.toISOString(),
+          }
+        : null,
     timezone: 'Asia/Seoul',
     days: points.length,
     startDate,
