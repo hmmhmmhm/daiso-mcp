@@ -157,10 +157,29 @@ function buildRootInfo() {
 }
 
 const ROOT_INFO_JSON = JSON.stringify(buildRootInfo());
+const ROOT_INFO_BODY = new TextEncoder().encode(ROOT_INFO_JSON);
 const ROOT_INFO_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
+  'Content-Length': String(ROOT_INFO_BODY.byteLength),
+  'Access-Control-Allow-Origin': '*',
   'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
 };
+
+function isRootInfoRequest(request: Request): boolean {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return false;
+  }
+
+  const url = new URL(request.url);
+  return url.pathname === '/' && url.search === '';
+}
+
+function createRootInfoResponse(method: string): Response {
+  return new Response(method === 'HEAD' ? null : ROOT_INFO_BODY, {
+    status: 200,
+    headers: ROOT_INFO_HEADERS,
+  });
+}
 
 /**
  * initialize 요청 여부를 확인합니다.
@@ -377,4 +396,15 @@ app.get('/api/actions/query', async (c) => {
 // MCP 엔드포인트
 app.all('/mcp', handleMcpRequest);
 
-export default app;
+const worker = {
+  fetch(request: Request, env: AppBindings, executionCtx: ExecutionContext) {
+    if (isRootInfoRequest(request)) {
+      return createRootInfoResponse(request.method);
+    }
+
+    return app.fetch(request, env, executionCtx);
+  },
+  request: app.request.bind(app),
+};
+
+export default worker;

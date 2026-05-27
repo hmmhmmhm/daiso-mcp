@@ -25,6 +25,26 @@ describe('GET /', () => {
     expect(res.headers.get('Cache-Control')).toContain('s-maxage=3600');
   });
 
+  it('Worker fetch 엔트리에서 루트 정보를 빠른 경로로 반환한다', async () => {
+    const res = await app.fetch(new Request('https://mcp.aka.page/'));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(res.headers.get('Content-Length')).toBeTruthy();
+
+    const data = await res.json();
+    expect(data.name).toBe('multi-service-mcp');
+    expect(data.totalTools).toBeGreaterThan(0);
+  });
+
+  it('Worker fetch 엔트리에서 HEAD /는 바디 없이 루트 헤더를 반환한다', async () => {
+    const res = await app.fetch(new Request('https://mcp.aka.page/', { method: 'HEAD' }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Length')).toBeTruthy();
+    expect(await res.text()).toBe('');
+  });
+
   it('다이소 서비스가 등록되어 있다', async () => {
     const res = await app.request('/');
     const data = await res.json();
