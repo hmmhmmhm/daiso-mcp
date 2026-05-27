@@ -55,16 +55,19 @@ export function createOpinetLowestStationsTool(apiKey?: string): ToolRegistratio
   };
 }
 
-export function createOpinetStationsAroundTool(apiKey?: string): ToolRegistration {
+export function createOpinetStationsAroundTool(apiKey?: string, googleMapsApiKey?: string): ToolRegistration {
   return {
     name: 'opinet_search_stations_around',
     metadata: {
       title: '오피넷 반경 내 주유소',
       description:
-        'KATEC x/y 좌표 기준 반경 내 주유소를 가격순 또는 거리순으로 조회합니다. 오피넷 API 제약상 위경도가 아닌 KATEC 좌표가 필요합니다.',
+        'KATEC x/y, 위도/경도, 또는 장소 키워드 기준 반경 내 주유소를 가격순 또는 거리순으로 조회합니다.',
       inputSchema: {
-        x: z.number().describe('기준 위치 X좌표(KATEC)'),
-        y: z.number().describe('기준 위치 Y좌표(KATEC)'),
+        x: z.number().optional().describe('기준 위치 X좌표(KATEC)'),
+        y: z.number().optional().describe('기준 위치 Y좌표(KATEC)'),
+        latitude: z.number().optional().describe('위도(WGS84)'),
+        longitude: z.number().optional().describe('경도(WGS84)'),
+        location: z.string().optional().describe('장소/주소 키워드. 예: 강남역, 서울역'),
         radiusMeters: z.number().optional().default(3000).describe('검색 반경 m(100~5000)'),
         fuelCode: z
           .enum(['B027', 'D047', 'B034', 'C004', 'K015'])
@@ -76,15 +79,18 @@ export function createOpinetStationsAroundTool(apiKey?: string): ToolRegistratio
       },
     },
     handler: (async (args: {
-      x: number;
-      y: number;
+      x?: number;
+      y?: number;
+      latitude?: number;
+      longitude?: number;
+      location?: string;
       radiusMeters?: number;
       fuelCode?: string;
       sort?: string;
       timeoutMs?: number;
     }) =>
       buildTextResponse(
-        await fetchOpinetStationsAround(args, { apiKey, timeoutMs: args.timeoutMs }),
+        await fetchOpinetStationsAround(args, { apiKey, googleMapsApiKey, timeoutMs: args.timeoutMs }),
       )) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

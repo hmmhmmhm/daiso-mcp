@@ -364,11 +364,13 @@ REST:
 ```text
 GET /api/opinet/average
 GET /api/opinet/lowest?fuelCode=B027&areaCode=0113&count=5
+GET /api/opinet/stations/around?lat=37.4979&lng=127.0276&radiusMeters=3000&fuelCode=B027&sort=price
+GET /api/opinet/stations/around?location=강남역&radiusMeters=3000&fuelCode=B027&sort=price
 GET /api/opinet/stations/around?x=314681.8&y=544837&radiusMeters=3000&fuelCode=B027&sort=price
 GET /api/opinet/station?id=A0010207
 ```
 
-오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 오피넷 API 제약상 위경도가 아니라 KATEC `x/y` 좌표를 받습니다.
+오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 `lat/lng`, `location`, KATEC `x/y`를 모두 지원하며, `location` 검색에는 `GOOGLE_MAPS_API_KEY`가 필요합니다.
 
 ### 개발자 요청 제출
 

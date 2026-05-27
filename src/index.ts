@@ -94,6 +94,7 @@ const createRegistry = (bindings?: AppBindings) => {
     () =>
       createOpinetService({
         apiKey: bindings?.OPINET_API_KEY,
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
       }),
     createCuService,
     createEmart24Service,

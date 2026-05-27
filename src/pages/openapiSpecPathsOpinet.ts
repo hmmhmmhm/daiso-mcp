@@ -56,10 +56,13 @@ export const OPENAPI_PATHS_OPINET = {
     get: {
       operationId: 'opinetSearchStationsAround',
       summary: '오피넷 반경 내 주유소',
-      description: 'KATEC x/y 좌표 기준 반경 내 주유소를 조회합니다.',
+      description: 'KATEC x/y, WGS84 위경도, 또는 location 키워드 기준 반경 내 주유소를 조회합니다.',
       parameters: [
-        { name: 'x', in: 'query', required: true, description: '기준 위치 X좌표(KATEC)', schema: { type: 'number' } },
-        { name: 'y', in: 'query', required: true, description: '기준 위치 Y좌표(KATEC)', schema: { type: 'number' } },
+        { name: 'x', in: 'query', required: false, description: '기준 위치 X좌표(KATEC)', schema: { type: 'number' } },
+        { name: 'y', in: 'query', required: false, description: '기준 위치 Y좌표(KATEC)', schema: { type: 'number' } },
+        { name: 'lat', in: 'query', required: false, description: '위도(WGS84)', schema: { type: 'number' } },
+        { name: 'lng', in: 'query', required: false, description: '경도(WGS84)', schema: { type: 'number' } },
+        { name: 'location', in: 'query', required: false, description: '장소/주소 키워드. 예: 강남역', schema: { type: 'string' } },
         { name: 'radiusMeters', in: 'query', required: false, description: '검색 반경 m(100~5000)', schema: { type: 'integer', minimum: 100, maximum: 5000, default: 3000 } },
         { name: 'fuelCode', in: 'query', required: false, description: '유종 코드', schema: fuelCodeSchema },
         { name: 'sort', in: 'query', required: false, description: '정렬 기준', schema: { type: 'string', enum: ['price', 'distance'], default: 'price' } },

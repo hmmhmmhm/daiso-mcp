@@ -9,6 +9,7 @@ import type {
   OpinetStationDetailResult,
   OpinetStationSummary,
 } from './types.js';
+import { resolveOpinetLocation } from './location.js';
 
 const OPINET_API_BASE_URL = 'https://www.opinet.co.kr/api';
 const OPINET_SOURCE = '한국석유공사 오피넷';
@@ -31,6 +32,7 @@ const BRAND_NAMES: Record<string, string> = {
 
 interface OpinetClientOptions {
   apiKey?: string;
+  googleMapsApiKey?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }
@@ -238,25 +240,30 @@ export async function fetchOpinetLowestStations(
 
 export async function fetchOpinetStationsAround(
   params: {
-    x: number;
-    y: number;
+    x?: number;
+    y?: number;
+    latitude?: number;
+    longitude?: number;
+    location?: string;
     radiusMeters?: number;
     fuelCode?: string;
     sort?: string;
   },
   options: OpinetClientOptions = {},
 ): Promise<OpinetAroundStationsResult> {
-  if (!Number.isFinite(params.x) || !Number.isFinite(params.y)) {
-    throw new Error('KATEC x/y 좌표를 입력해주세요.');
-  }
+  const resolvedLocation = await resolveOpinetLocation(params, {
+    googleMapsApiKey: options.googleMapsApiKey,
+    timeoutMs: options.timeoutMs,
+    fetchImpl: options.fetchImpl,
+  });
   const radiusMeters = Math.min(Math.max(Math.trunc(params.radiusMeters ?? 3000), 100), 5000);
   const fuelCode = normalizeFuelCode(params.fuelCode);
   const sort = normalizeOpinetSort(params.sort);
   const payload = await fetchOpinetJson(
     'aroundAll.do',
     {
-      x: String(params.x),
-      y: String(params.y),
+      x: String(resolvedLocation.katec.x),
+      y: String(resolvedLocation.katec.y),
       radius: String(radiusMeters),
       prodcd: fuelCode,
       sort: toOpinetSortCode(sort),
@@ -271,7 +278,15 @@ export async function fetchOpinetStationsAround(
     fuelCode,
     radiusMeters,
     sort,
-    katec: { x: params.x, y: params.y },
+    katec: resolvedLocation.katec,
+    location: {
+      latitude: resolvedLocation.latitude,
+      longitude: resolvedLocation.longitude,
+      location: resolvedLocation.location,
+      formattedAddress: resolvedLocation.formattedAddress,
+      geocodeUsed: resolvedLocation.geocodeUsed,
+      inputType: resolvedLocation.inputType,
+    },
     count: stations.length,
     stations,
   };

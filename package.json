@@ -106,6 +106,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "hono": "^4.12.23",
+    "proj4": "^2.20.8",
     "workers-mcp": "^0.0.13"
   }
 }

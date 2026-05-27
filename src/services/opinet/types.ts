@@ -71,6 +71,14 @@ export interface OpinetAroundStationsResult {
     x: number;
     y: number;
   };
+  location: {
+    latitude: number | null;
+    longitude: number | null;
+    location: string | null;
+    formattedAddress: string | null;
+    geocodeUsed: boolean;
+    inputType: 'katec' | 'coordinates' | 'location';
+  };
   count: number;
   stations: OpinetStationSummary[];
 }

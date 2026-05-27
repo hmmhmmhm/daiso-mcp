@@ -112,6 +112,44 @@ describe('opinet client', () => {
     expect(result.stations[0]?.distanceMeters).toBe(885.4);
   });
 
+  it('위경도와 location 기반 반경 검색을 지원한다', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ formatted_address: '서울 강남역', geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })));
+
+    const coordinateResult = await fetchOpinetStationsAround(
+      { latitude: 37.4979, longitude: 127.0276 },
+      { apiKey: 'key', fetchImpl },
+    );
+    const locationResult = await fetchOpinetStationsAround(
+      { location: '강남역' },
+      { apiKey: 'key', googleMapsApiKey: 'google-key', fetchImpl },
+    );
+
+    expect(coordinateResult.location).toMatchObject({
+      latitude: 37.4979,
+      longitude: 127.0276,
+      inputType: 'coordinates',
+    });
+    expect(locationResult.location).toMatchObject({
+      location: '강남역',
+      formattedAddress: '서울 강남역',
+      geocodeUsed: true,
+      inputType: 'location',
+    });
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain('x=314213.309');
+    expect(String(fetchImpl.mock.calls[2]?.[0])).toContain('y=544413.58');
+  });
+
   it('주유소 상세 정보를 정규화한다', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
@@ -155,9 +193,7 @@ describe('opinet client', () => {
     expect(normalizeOpinetSort('2')).toBe('distance');
     expect(() => normalizeFuelCode('BAD')).toThrow('fuelCode');
     await expect(fetchOpinetAveragePrices({ apiKey: '' })).rejects.toThrow('OPINET_API_KEY');
-    await expect(fetchOpinetStationsAround({ x: Number.NaN, y: 1 }, { apiKey: 'key' })).rejects.toThrow(
-      'KATEC x/y',
-    );
+    await expect(fetchOpinetStationsAround({ x: Number.NaN, y: 1 }, { apiKey: 'key' })).rejects.toThrow('location');
     await expect(fetchOpinetStationDetail('', { apiKey: 'key' })).rejects.toThrow('주유소 ID');
   });
 

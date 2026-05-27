@@ -33,12 +33,12 @@ describe('GET /api/opinet', () => {
     expect(data.data.stations[0].name).toBe('주유소');
   });
 
-  it('반경 내 주유소 API는 KATEC 좌표를 요구한다', async () => {
+  it('반경 내 주유소 API는 위치 입력을 요구한다', async () => {
     const res = await app.request('/api/opinet/stations/around?x=bad&y=1');
     const data = await res.json();
 
     expect(res.status).toBe(400);
-    expect(data.error.code).toBe('MISSING_KATEC_COORDINATES');
+    expect(data.error.code).toBe('MISSING_LOCATION');
   });
 
   it('반경 내 주유소 API를 반환한다', async () => {
@@ -53,6 +53,31 @@ describe('GET /api/opinet', () => {
 
     expect(res.status).toBe(200);
     expect(data.data.sort).toBe('distance');
+  });
+
+  it('반경 내 주유소 API는 위경도와 location을 지원한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'OK',
+            results: [{ formatted_address: '서울 강남역', geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })));
+
+    const byCoordinates = await app.request('/api/opinet/stations/around?lat=37.4979&lng=127.0276', undefined, {
+      OPINET_API_KEY: 'key',
+    });
+    const byLocation = await app.request('/api/opinet/stations/around?location=%EA%B0%95%EB%82%A8%EC%97%AD', undefined, {
+      OPINET_API_KEY: 'key',
+      GOOGLE_MAPS_API_KEY: 'google-key',
+    });
+
+    expect((await byCoordinates.json()).data.location.inputType).toBe('coordinates');
+    expect((await byLocation.json()).data.location.inputType).toBe('location');
   });
 
   it('주유소 상세 API는 stationId를 요구한다', async () => {

@@ -54,8 +54,19 @@ export async function handleOpinetLowestStations(c: ApiContext) {
 export async function handleOpinetStationsAround(c: ApiContext) {
   const x = parseNumber(c.req.query('x'));
   const y = parseNumber(c.req.query('y'));
-  if (x === undefined || y === undefined) {
-    return errorResponse(c, 'MISSING_KATEC_COORDINATES', 'KATEC x/y 좌표를 입력해주세요.');
+  const latitude = parseNumber(c.req.query('latitude') || c.req.query('lat'));
+  const longitude = parseNumber(c.req.query('longitude') || c.req.query('lng'));
+  const location = c.req.query('location') || c.req.query('keyword') || '';
+  const hasKatec = x !== undefined && y !== undefined;
+  const hasCoordinates = latitude !== undefined && longitude !== undefined;
+  const hasLocation = location.trim().length > 0;
+
+  if (!hasKatec && !hasCoordinates && !hasLocation) {
+    return errorResponse(
+      c,
+      'MISSING_LOCATION',
+      'KATEC x/y, 위도/경도(lat/lng), 또는 location 중 하나를 입력해주세요.',
+    );
   }
 
   try {
@@ -63,12 +74,16 @@ export async function handleOpinetStationsAround(c: ApiContext) {
       {
         x,
         y,
+        latitude,
+        longitude,
+        location,
         radiusMeters: parseInteger(c.req.query('radiusMeters') || c.req.query('radius')),
         fuelCode: c.req.query('fuelCode') || c.req.query('prodcd'),
         sort: c.req.query('sort'),
       },
       {
         apiKey: c.env?.OPINET_API_KEY,
+        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
         timeoutMs: parseInteger(c.req.query('timeoutMs')),
       },
     );
