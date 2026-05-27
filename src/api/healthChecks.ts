@@ -45,7 +45,7 @@ interface HealthCheckCacheKeyParams {
   cacheBust?: boolean;
 }
 
-const HEALTH_CHECK_CACHE_TTL_MS = 60_000;
+const HEALTH_CHECK_CACHE_TTL_MS = 300_000;
 const DEFAULT_HEALTH_CHECK_TIMEOUT_MS = 7000;
 const MAX_HEALTH_CHECK_TIMEOUT_MS = 20_000;
 const DEFAULT_HEALTH_CHECK_CONCURRENCY = 1;

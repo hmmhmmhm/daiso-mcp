@@ -279,6 +279,28 @@ const handleMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
   );
 };
 
+const handleRootMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
+  if (c.req.header(SESSION_HEADER) || c.req.method === 'DELETE') {
+    return handleMcpRequest(c);
+  }
+
+  const parsedBody = await c.req.raw
+    .clone()
+    .json()
+    .catch(() => undefined);
+
+  if (isInitializeRequest(parsedBody)) {
+    const { server, transport } = createSessionTransport(c.env);
+    await server.connect(transport);
+    return transport.handleRequest(c.req.raw, { parsedBody });
+  }
+
+  const transport = new WebStandardStreamableHTTPServerTransport();
+  const server = createMcpServer(c.env);
+  await server.connect(transport);
+  return transport.handleRequest(c.req.raw, { parsedBody });
+};
+
 // Hono 앱 생성
 const app = new Hono<{ Bindings: AppBindings }>();
 
@@ -305,13 +327,8 @@ app.get('/', (c) => {
   return c.body(ROOT_INFO_JSON, 200, ROOT_INFO_HEADERS);
 });
 
-// 루트 경로에서 MCP 요청 처리 (POST, DELETE, OPTIONS)
-app.on(['POST', 'DELETE', 'OPTIONS'], '/', async (c) => {
-  const transport = new WebStandardStreamableHTTPServerTransport();
-  const server = createMcpServer(c.env);
-  await server.connect(transport);
-  return transport.handleRequest(c.req.raw);
-});
+// 루트 경로에서 MCP 요청 처리 (POST, DELETE)
+app.on(['POST', 'DELETE'], '/', handleRootMcpRequest);
 
 // 헬스 체크 엔드포인트
 app.get('/health', (c) => c.json({ status: 'ok', config: buildConfigStatus(c.env) }));

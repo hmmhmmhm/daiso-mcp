@@ -239,6 +239,78 @@ describe('GET /api/health/checks', () => {
     expect((await second.json()).cached).toBe(true);
   });
 
+  it('Better Stack 모니터 요청은 fresh=true여도 캐시를 사용한다', async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({
+        success: true,
+        data: { products: [{ name: '상품' }] },
+        meta: { total: 1 },
+      }),
+    );
+
+    const requestInit = {
+      headers: {
+        Authorization: 'Bearer test-secret',
+        'User-Agent':
+          'Better Stack Better Uptime Bot Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    };
+    const env = { HEALTH_CHECK_SECRET: 'test-secret', HEALTH_CHECK_TRANSPORT: 'network' };
+
+    const first = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
+    const second = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect((await second.json()).cached).toBe(true);
+  });
+
+  it('force fresh 헤더가 있으면 fresh=true 요청은 캐시를 우회한다', async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({
+        success: true,
+        data: { products: [{ name: '상품' }] },
+        meta: { total: 1 },
+      }),
+    );
+
+    const requestInit = {
+      headers: {
+        Authorization: 'Bearer test-secret',
+        'x-health-check-force-fresh': 'true',
+      },
+    };
+    const env = { HEALTH_CHECK_SECRET: 'test-secret', HEALTH_CHECK_TRANSPORT: 'network' };
+
+    const first = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
+    const second = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect((await second.json()).cached).toBe(false);
+  });
+
+  it('nginx early hints health probe는 상세 체크 없이 204를 반환한다', async () => {
+    const res = await app.request(
+      '/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000',
+      {
+        headers: {
+          Authorization: 'Bearer test-secret',
+          'User-Agent': 'nginx-ssl early hints',
+        },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe('');
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it('deep 모드와 y 플래그를 파싱하고 CLI 계약 체크를 실행한다', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) =>
       Promise.resolve(

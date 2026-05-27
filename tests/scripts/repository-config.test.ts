@@ -92,6 +92,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain(
       '/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000',
     );
+    expect(workflow).toContain('x-health-check-force-fresh: true');
     expect(workflow).toContain('failedChecks');
     expect(workflow).toContain('degradedChecks');
     expect(workflow).toContain('GITHUB_SERVER_URL');

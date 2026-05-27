@@ -20,6 +20,19 @@ function readHealthCheckToken(headers: Headers): string {
   return (headers.get('x-health-check-key') || '').trim();
 }
 
+function isBetterStackHealthProbe(userAgent: string | undefined): boolean {
+  const normalized = (userAgent || '').toLowerCase();
+  return normalized.includes('better stack better uptime bot') || normalized === 'nginx-ssl early hints';
+}
+
+function isEarlyHintsProbe(userAgent: string | undefined): boolean {
+  return (userAgent || '').trim().toLowerCase() === 'nginx-ssl early hints';
+}
+
+function canForceFresh(headers: Headers): boolean {
+  return parseBoolean(headers.get('x-health-check-force-fresh') || undefined);
+}
+
 function parseMode(value: string | undefined): HealthCheckMode | null {
   if (!value || value === 'quick') {
     return 'quick';
@@ -32,6 +45,11 @@ function parseMode(value: string | undefined): HealthCheckMode | null {
 
 export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void {
   app.get('/api/health/checks', async (c) => {
+    const userAgent = c.req.header('User-Agent');
+    if (isEarlyHintsProbe(userAgent)) {
+      return c.body(null, 204);
+    }
+
     const secret = c.env?.HEALTH_CHECK_SECRET?.trim();
     if (!secret) {
       return errorResponse(
@@ -71,7 +89,10 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       timeoutMs,
       slowThresholdMs,
       includeSamples: parseBoolean(c.req.query('includeSamples')),
-      fresh: parseBoolean(c.req.query('fresh')),
+      fresh:
+        parseBoolean(c.req.query('fresh')) &&
+        canForceFresh(c.req.raw.headers) &&
+        !isBetterStackHealthProbe(userAgent),
       cacheBust,
       fetchImpl,
     });

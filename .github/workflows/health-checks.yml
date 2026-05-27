@@ -33,6 +33,7 @@ jobs:
           run_health_check() {
             curl -fsS \
               -H "Authorization: Bearer ${HEALTH_CHECK_SECRET}" \
+              -H "x-health-check-force-fresh: true" \
               "${HEALTH_CHECK_ENDPOINT}" \
               -o health-checks.json
 
