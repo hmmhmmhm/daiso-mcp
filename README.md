@@ -372,6 +372,18 @@ GET /api/opinet/station?id=A0010207
 
 오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 `lat/lng`, `location`, KATEC `x/y`를 모두 지원하며, `location` 검색에는 `GOOGLE_MAPS_API_KEY`가 필요합니다.
 
+운영 제약 및 캐싱 정책:
+
+- 오피넷 무료 API는 한국석유공사 공공데이터 활용 가이드 기준 **1일 1,500 call** 한도를 기준으로 운영합니다.
+- 모든 오피넷 응답에는 `source: "한국석유공사 오피넷"`과 `fetchedAt`을 포함합니다.
+- Cloudflare Edge Cache로 동일 GET 요청의 원본 오피넷 호출을 줄입니다.
+- `GET /api/opinet/average`: 60분 캐시, 30분 stale-while-revalidate
+- `GET /api/opinet/lowest`: 30분 캐시, 10분 stale-while-revalidate
+- `GET /api/opinet/stations/around`: 20분 캐시, 5분 stale-while-revalidate
+- `GET /api/opinet/station`: 60분 캐시, 10분 stale-while-revalidate
+- `location` 키워드의 Google Geocoding 결과는 Worker 인스턴스 메모리에서 24시간 캐시합니다.
+- 호출 한도에 자주 도달하면 운영자가 담당 기관인 한국석유공사/오피넷에 문의해 추가 할당량 또는 별도 이용 조건을 협의할 예정입니다.
+
 ### 개발자 요청 제출
 
 AI 에이전트가 MCP 기능 오류, 개선 요청, 신규 기능 요청, 문서 문제를 바로 개발자에게 전달할 수 있습니다. 요청은 Supabase `agent_requests` 테이블에 저장됩니다.
