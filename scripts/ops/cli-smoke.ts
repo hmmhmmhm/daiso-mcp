@@ -23,7 +23,8 @@ type SmokeService =
   | 'oliveyoung'
   | 'megabox'
   | 'lottecinema'
-  | 'cgv';
+  | 'cgv'
+  | 'opinet';
 
 interface CliSmokeDeps {
   runCommand?: RunCommand;
@@ -167,6 +168,12 @@ export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
     scenario: 'CGV get 위치 검색',
     args: ['get', '/api/cgv/theaters', '--keyword', '강남', '--limit', '1', '--json'],
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '강남')),
+  },
+  {
+    service: 'opinet',
+    scenario: '오피넷 전국 평균 유가 조회',
+    args: ['get', '/api/opinet/average', '--json'],
+    validate: (stdout) => validateApiEnvelope(stdout, expectDataField('provider', 'opinet')),
   },
 ];
 

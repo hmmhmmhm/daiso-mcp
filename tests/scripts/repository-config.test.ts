@@ -51,6 +51,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('max-parallel: 4');
     expect(workflow).toContain('service: daiso');
     expect(workflow).toContain('service: oliveyoung');
+    expect(workflow).toContain('service: opinet');
     expect(workflow).toContain('suite: mcp');
     expect(workflow).toContain("node-version: '24'");
     expect(workflow).toContain('npm run cli:smoke -- --service "${SMOKE_SERVICE}"');
@@ -63,6 +64,28 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('Notify smoke failure');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
     expect(workflow).toContain('if: failure()');
+  });
+
+  it('deploy workflow는 배포 때마다 Worker secret을 다시 쓰지 않는다', () => {
+    const workflow = readText('.github/workflows/deploy.yml');
+
+    expect(workflow).not.toContain('wrangler secret put');
+    expect(workflow).toContain('npx wrangler deploy');
+  });
+
+  it('worker secret sync workflow는 수동 실행으로만 configured secret을 동기화한다', () => {
+    const workflow = readText('.github/workflows/sync-worker-secrets.yml');
+
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain('put_secret_if_set');
+    expect(workflow).toContain('ZYTE_API_KEY');
+    expect(workflow).toContain('GOOGLE_MAPS_API_KEY');
+    expect(workflow).toContain('NAVER_CLIENT_ID');
+    expect(workflow).toContain('NAVER_CLIENT_SECRET');
+    expect(workflow).toContain('OPINET_API_KEY');
+    expect(workflow).toContain('HEALTH_CHECK_SECRET');
+    expect(workflow).toContain('SUPABASE_URL');
+    expect(workflow).toContain('SUPABASE_SERVICE_ROLE_KEY');
   });
 
   it('workers chart workflow는 최신 main 기준으로 자동 커밋을 푸시한다', () => {
@@ -87,14 +110,19 @@ describe('repository maintenance configuration', () => {
     const workflow = readText('.github/workflows/health-checks.yml');
 
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain("cron: '10 */3 * * *'");
+    expect(workflow).toContain("cron: '10 0,3,6,9,12,18,21 * * *'");
+    expect(workflow).toContain("cron: '10 15 * * *'");
     expect(workflow).toContain('group: health-checks-${{ github.ref }}');
     expect(workflow).toContain('HEALTH_CHECK_SECRET');
+    expect(workflow).toContain('HEALTH_CHECK_SCHEDULE');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
     expect(workflow).toContain(
       '/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000',
     );
-    expect(workflow).toContain('x-health-check-force-fresh: true');
+    expect(workflow).toContain('/api/health/checks?mode=quick&timeoutMs=5000&slowThresholdMs=3000');
+    expect(workflow).toContain('HEALTH_CHECK_FORCE_FRESH="true"');
+    expect(workflow).toContain('HEALTH_CHECK_FORCE_FRESH="false"');
+    expect(workflow).toContain('x-health-check-force-fresh: ${HEALTH_CHECK_FORCE_FRESH}');
     expect(workflow).toContain('failedChecks');
     expect(workflow).toContain('degradedChecks');
     expect(workflow).toContain('GITHUB_SERVER_URL');

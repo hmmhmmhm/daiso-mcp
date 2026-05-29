@@ -10,6 +10,7 @@ describe('runMcpSmoke', () => {
     expect(MCP_SMOKE_TOOL_NAMES).toContain('gs25_search_products');
     expect(MCP_SMOKE_TOOL_NAMES).toContain('seveneleven_search_products');
     expect(MCP_SMOKE_TOOL_NAMES).toContain('emart24_search_products');
+    expect(MCP_SMOKE_TOOL_NAMES).toContain('opinet_get_average_prices');
   });
 
   it('대표 호출 시나리오는 다이소/편의점 도구를 모두 포함한다', () => {
@@ -18,6 +19,7 @@ describe('runMcpSmoke', () => {
       'gs25_search_products',
       'seveneleven_search_products',
       'emart24_search_products',
+      'opinet_get_average_prices',
     ]);
   });
 
@@ -27,6 +29,7 @@ describe('runMcpSmoke', () => {
       'gs25',
       'seveneleven',
       'emart24',
+      'opinet',
     ]);
   });
 
@@ -45,6 +48,7 @@ describe('runMcpSmoke', () => {
         gs25_search_products: { keyword: '콜라', products: [{}] },
         seveneleven_search_products: { query: '커피', products: [{}] },
         emart24_search_products: { keyword: '커피', products: [{}] },
+        opinet_get_average_prices: { provider: 'opinet', prices: [] },
       };
 
       return Promise.resolve({

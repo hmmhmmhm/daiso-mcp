@@ -28,6 +28,7 @@ describe('runCliSmoke', () => {
         'megabox',
         'lottecinema',
         'cgv',
+        'opinet',
       ]),
     );
   });
@@ -54,6 +55,8 @@ describe('runCliSmoke', () => {
           ? { success: true, data: { keyword: '선크림' } }
           : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
             ? { success: true, data: { keyword: '강남' } }
+            : path === '/api/opinet/average'
+              ? { success: true, data: { provider: 'opinet' } }
             : undefined;
       const payload = stdoutByCommand[command] || getPayload || { success: true, data: {} };
       const stderr = args.includes('--store') ? '알 수 없는 옵션: --store\n매장명은 --keyword로 전달하세요' : '';
@@ -169,6 +172,8 @@ describe('runCliSmoke', () => {
           ? { success: true, data: { keyword: '선크림' } }
           : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
             ? { success: true, data: { keyword: '강남' } }
+            : path === '/api/opinet/average'
+              ? { success: true, data: { provider: 'opinet' } }
             : undefined;
       const payload = payloadByCommand[command] || getPayload || { success: true, data: {} };
 

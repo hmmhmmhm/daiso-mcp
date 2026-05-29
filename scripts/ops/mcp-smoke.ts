@@ -7,7 +7,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { DEFAULT_MCP_URL } from '../../src/cli/constants.js';
 
 type WriteFn = (message: string) => void;
-type SmokeService = 'daiso' | 'gs25' | 'seveneleven' | 'emart24';
+type SmokeService = 'daiso' | 'gs25' | 'seveneleven' | 'emart24' | 'opinet';
 
 interface ToolListResult {
   tools: Array<{ name: string }>;
@@ -38,6 +38,7 @@ export const MCP_SMOKE_TOOLS: Array<{ service: SmokeService; name: string }> = [
   { service: 'gs25', name: 'gs25_search_products' },
   { service: 'seveneleven', name: 'seveneleven_search_products' },
   { service: 'emart24', name: 'emart24_search_products' },
+  { service: 'opinet', name: 'opinet_get_average_prices' },
 ];
 
 export const MCP_SMOKE_TOOL_NAMES = MCP_SMOKE_TOOLS.map((tool) => tool.name);
@@ -126,6 +127,13 @@ export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
     toolName: 'emart24_search_products',
     args: { keyword: '커피', pageSize: 1 },
     validate: expectField('keyword', '커피'),
+  },
+  {
+    service: 'opinet',
+    label: '오피넷 전국 평균 유가 조회',
+    toolName: 'opinet_get_average_prices',
+    args: { timeoutMs: 10000 },
+    validate: expectField('provider', 'opinet'),
   },
 ];
 

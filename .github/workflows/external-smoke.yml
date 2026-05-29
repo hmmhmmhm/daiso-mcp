@@ -39,6 +39,8 @@ jobs:
             service: lottecinema
           - suite: cli
             service: cgv
+          - suite: cli
+            service: opinet
           - suite: mcp
             service: daiso
           - suite: mcp
@@ -47,6 +49,8 @@ jobs:
             service: seveneleven
           - suite: mcp
             service: emart24
+          - suite: mcp
+            service: opinet
     steps:
       - name: Checkout
         uses: actions/checkout@v6

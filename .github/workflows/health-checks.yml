@@ -2,8 +2,10 @@ name: Health Checks
 
 on:
   schedule:
-    # 3시간마다 실행
-    - cron: '10 */3 * * *'
+    # 3시간마다 quick 체크 실행
+    - cron: '10 0,3,6,9,12,18,21 * * *'
+    # 한국시간 00:10 = UTC 15:10, 하루 1회 full fresh 체크 실행
+    - cron: '10 15 * * *'
   workflow_dispatch:
 
 permissions:
@@ -22,18 +24,25 @@ jobs:
         env:
           HEALTH_CHECK_SECRET: ${{ secrets.HEALTH_CHECK_SECRET }}
           HEALTH_CHECK_URL: ${{ vars.HEALTH_CHECK_URL || 'https://mcp.aka.page' }}
+          HEALTH_CHECK_SCHEDULE: ${{ github.event.schedule }}
         run: |
           if [ -z "${HEALTH_CHECK_SECRET}" ]; then
             echo "HEALTH_CHECK_SECRET is not set"
             exit 1
           fi
 
-          HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_URL}/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] || [ "${HEALTH_CHECK_SCHEDULE:-}" = "10 15 * * *" ]; then
+            HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_URL}/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000"
+            HEALTH_CHECK_FORCE_FRESH="true"
+          else
+            HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_URL}/api/health/checks?mode=quick&timeoutMs=5000&slowThresholdMs=3000"
+            HEALTH_CHECK_FORCE_FRESH="false"
+          fi
 
           run_health_check() {
             curl -fsS \
               -H "Authorization: Bearer ${HEALTH_CHECK_SECRET}" \
-              -H "x-health-check-force-fresh: true" \
+              -H "x-health-check-force-fresh: ${HEALTH_CHECK_FORCE_FRESH}" \
               "${HEALTH_CHECK_ENDPOINT}" \
               -o health-checks.json
 
