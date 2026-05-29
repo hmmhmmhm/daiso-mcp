@@ -81,6 +81,7 @@ describe('fetchWorkerInvocationsForWindow', () => {
     const requestBody = JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string);
     expect(requestBody.query).toContain('workersInvocationsAdaptive');
     expect(requestBody.query).toContain('scriptName: $scriptName');
+    expect(requestBody.query).not.toContain('dimensions');
     expect(requestBody.query).not.toContain('httpRequestsAdaptiveGroups');
   });
 

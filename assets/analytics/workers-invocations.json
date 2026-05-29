@@ -13,30 +13,30 @@
   "days": 89,
   "startDate": "2026-03-01",
   "endDate": "2026-05-28",
-  "updatedAt": "2026-05-29T00:31:23.889Z",
-  "renderedAt": "2026-05-29T00:31:23.889Z",
-  "total": 11131203,
-  "average": 125070,
+  "updatedAt": "2026-05-29T00:35:49.532Z",
+  "renderedAt": "2026-05-29T00:35:49.532Z",
+  "total": 86683410,
+  "average": 973971,
   "median": 0,
   "peak": {
     "date": "2026-05-15",
-    "requests": 1887901
+    "requests": 16363224
   },
-  "recent7Total": 3206133,
-  "recent7Average": 458019,
-  "previous7Total": 4007572,
-  "weekOverWeekDiff": -801439,
-  "weekOverWeekPercent": -19.99811856156296,
+  "recent7Total": 18449554,
+  "recent7Average": 2635651,
+  "previous7Total": 34655700,
+  "weekOverWeekDiff": -16206146,
+  "weekOverWeekPercent": -46.763291464319,
   "latest": {
     "date": "2026-05-28",
-    "requests": 1099843
+    "requests": 1107411
   },
   "previous": {
     "date": "2026-05-27",
-    "requests": 200175
+    "requests": 876572
   },
-  "dayOverDayDiff": 899668,
-  "dayOverDayPercent": 449.440739353066,
+  "dayOverDayDiff": 230839,
+  "dayOverDayPercent": 26.33428856956417,
   "points": [
     {
       "date": "2026-03-01",
@@ -272,127 +272,127 @@
     },
     {
       "date": "2026-04-28",
-      "requests": 23950
+      "requests": 78144
     },
     {
       "date": "2026-04-29",
-      "requests": 100673
+      "requests": 726276
     },
     {
       "date": "2026-04-30",
-      "requests": 114183
+      "requests": 985618
     },
     {
       "date": "2026-05-01",
-      "requests": 79873
+      "requests": 690393
     },
     {
       "date": "2026-05-02",
-      "requests": 57615
+      "requests": 497864
     },
     {
       "date": "2026-05-03",
-      "requests": 46388
+      "requests": 396947
     },
     {
       "date": "2026-05-04",
-      "requests": 75938
+      "requests": 654465
     },
     {
       "date": "2026-05-05",
-      "requests": 61587
+      "requests": 534944
     },
     {
       "date": "2026-05-06",
-      "requests": 98727
+      "requests": 853276
     },
     {
       "date": "2026-05-07",
-      "requests": 130488
+      "requests": 1127887
     },
     {
       "date": "2026-05-08",
-      "requests": 130079
+      "requests": 1121259
     },
     {
       "date": "2026-05-09",
-      "requests": 191488
+      "requests": 1656232
     },
     {
       "date": "2026-05-10",
-      "requests": 214730
+      "requests": 1861210
     },
     {
       "date": "2026-05-11",
-      "requests": 224237
+      "requests": 1940210
     },
     {
       "date": "2026-05-12",
-      "requests": 421356
+      "requests": 3635592
     },
     {
       "date": "2026-05-13",
-      "requests": 802753
+      "requests": 6958586
     },
     {
       "date": "2026-05-14",
-      "requests": 1143433
+      "requests": 9859253
     },
     {
       "date": "2026-05-15",
-      "requests": 1887901
+      "requests": 16363224
     },
     {
       "date": "2026-05-16",
-      "requests": 340338
+      "requests": 2911914
     },
     {
       "date": "2026-05-17",
-      "requests": 349858
+      "requests": 3029037
     },
     {
       "date": "2026-05-18",
-      "requests": 332640
+      "requests": 2871830
     },
     {
       "date": "2026-05-19",
-      "requests": 361073
+      "requests": 3126075
     },
     {
       "date": "2026-05-20",
-      "requests": 384885
+      "requests": 3321195
     },
     {
       "date": "2026-05-21",
-      "requests": 350877
+      "requests": 3032425
     },
     {
       "date": "2026-05-22",
-      "requests": 382462
+      "requests": 3301772
     },
     {
       "date": "2026-05-23",
-      "requests": 386702
+      "requests": 3341578
     },
     {
       "date": "2026-05-24",
-      "requests": 415587
+      "requests": 3588238
     },
     {
       "date": "2026-05-25",
-      "requests": 390680
+      "requests": 3375684
     },
     {
       "date": "2026-05-26",
-      "requests": 330684
+      "requests": 2858299
     },
     {
       "date": "2026-05-27",
-      "requests": 200175
+      "requests": 876572
     },
     {
       "date": "2026-05-28",
-      "requests": 1099843
+      "requests": 1107411
     }
   ]
 }

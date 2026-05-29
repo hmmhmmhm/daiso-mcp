@@ -8,9 +8,6 @@ const WORKER_INVOCATIONS_QUERY = `
           limit: 10000
           filter: { scriptName: $scriptName, datetime_geq: $start, datetime_lt: $end }
         ) {
-          dimensions {
-            datetime
-          }
           sum {
             requests
           }
