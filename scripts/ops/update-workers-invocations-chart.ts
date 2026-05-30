@@ -38,7 +38,8 @@ const API_EMAIL = process.env.CLOUDFLARE_EMAIL;
 const GLOBAL_API_KEY = process.env.CLOUDFLARE_GLOBAL_API_KEY;
 const ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
 const SCRIPT_NAME = process.env.CF_WORKER_SCRIPT_NAME ?? 'daiso-mcp';
-const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE ?? '2026-03-01';
+const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE?.trim() || undefined;
+const CHART_DAYS = Number.parseInt(process.env.WORKERS_CHART_DAYS ?? '30', 10);
 const CHART_CONCURRENCY = Number.parseInt(process.env.WORKERS_CHART_CONCURRENCY ?? '4', 10);
 const INPUT_JSON_PATH = process.env.WORKERS_CHART_INPUT_JSON;
 const ROOT_REDIRECT_START = process.env.WORKERS_CHART_ROOT_REDIRECT_START
@@ -53,8 +54,12 @@ if (!INPUT_JSON_PATH && (!ACCOUNT_ID || (!API_TOKEN && !GLOBAL_API_KEY))) {
   );
 }
 
-if (!/^\d{4}-\d{2}-\d{2}$/.test(CHART_START_DATE)) {
+if (CHART_START_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(CHART_START_DATE)) {
   throw new Error('WORKERS_CHART_START_DATE 형식은 YYYY-MM-DD 이어야 합니다.');
+}
+
+if (!Number.isFinite(CHART_DAYS) || CHART_DAYS < 1) {
+  throw new Error('WORKERS_CHART_DAYS는 1 이상의 숫자여야 합니다.');
 }
 
 if (ROOT_REDIRECT_START && Number.isNaN(ROOT_REDIRECT_START.getTime())) {
@@ -73,6 +78,11 @@ function formatSignedNumber(value) {
     return `+${formatNumber(value)}`;
   }
   return formatNumber(value);
+}
+
+function calculateStartDateFromDays(endDateText, days) {
+  const endDate = parseKstDateText(endDateText);
+  return formatKstDate(new Date(endDate.getTime() - (days - 1) * 86400000));
 }
 
 async function readInputPayload(inputPath) {
@@ -286,6 +296,7 @@ async function main() {
     const todayKstDate = formatKstDate(renderedAt);
     const endDateExclusive = parseKstDateText(todayKstDate);
     endDate = formatKstDate(new Date(endDateExclusive.getTime() - 86400000));
+    startDate = startDate ?? calculateStartDateFromDays(endDate, CHART_DAYS);
 
     points = await fetchDailyWorkerInvocations({
       accountId: ACCOUNT_ID,

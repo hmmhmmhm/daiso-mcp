@@ -96,6 +96,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('group: workers-invocations-chart-${{ github.ref }}');
     expect(workflow).toContain('git pull --ff-only origin main');
     expect(workflow).toContain('npm run update:workers-chart');
+    expect(workflow).toContain("default: ''");
     expect(workflow).toContain('WORKERS_CHART_CONCURRENCY');
     expect(workflow).toContain('CLOUDFLARE_EMAIL');
     expect(workflow).toContain('CLOUDFLARE_GLOBAL_API_KEY');

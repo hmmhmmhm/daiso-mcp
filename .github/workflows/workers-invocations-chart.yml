@@ -15,9 +15,9 @@ on:
         required: false
         default: '30'
       start_date:
-        description: '그래프 시작일(YYYY-MM-DD)'
+        description: '그래프 시작일(YYYY-MM-DD). 비우면 days 기준 최근 기간을 사용'
         required: false
-        default: '2026-03-01'
+        default: ''
 
 permissions:
   contents: write
@@ -59,7 +59,7 @@ jobs:
           CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID || 'c987d32286724a5a1fd5586cec7756c1' }}
           CF_WORKER_SCRIPT_NAME: ${{ inputs.worker_script_name || vars.CF_WORKER_SCRIPT_NAME || 'daiso-mcp' }}
           WORKERS_CHART_DAYS: ${{ inputs.days || '30' }}
-          WORKERS_CHART_START_DATE: ${{ inputs.start_date || vars.WORKERS_CHART_START_DATE || '2026-03-01' }}
+          WORKERS_CHART_START_DATE: ${{ inputs.start_date || vars.WORKERS_CHART_START_DATE || '' }}
           WORKERS_CHART_CONCURRENCY: ${{ vars.WORKERS_CHART_CONCURRENCY || '4' }}
           WORKERS_CHART_ROOT_REDIRECT_START: ${{ vars.WORKERS_CHART_ROOT_REDIRECT_START || '2026-05-27T07:24:50.000Z' }}
         run: npm run update:workers-chart
