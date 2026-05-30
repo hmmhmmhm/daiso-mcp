@@ -10,277 +10,37 @@
     "start": "2026-05-27T07:24:50.000Z"
   },
   "timezone": "Asia/Seoul",
-  "days": 89,
-  "startDate": "2026-03-01",
-  "endDate": "2026-05-28",
-  "updatedAt": "2026-05-29T00:35:49.532Z",
-  "renderedAt": "2026-05-29T00:35:49.532Z",
-  "total": 86683410,
-  "average": 973971,
-  "median": 0,
+  "days": 30,
+  "startDate": "2026-04-30",
+  "endDate": "2026-05-29",
+  "updatedAt": "2026-05-30T06:10:45.827Z",
+  "renderedAt": "2026-05-30T06:10:45.827Z",
+  "total": 87204678,
+  "average": 2906823,
+  "median": 2399255,
   "peak": {
     "date": "2026-05-15",
     "requests": 16363224
   },
-  "recent7Total": 18449554,
-  "recent7Average": 2635651,
-  "previous7Total": 34655700,
-  "weekOverWeekDiff": -16206146,
-  "weekOverWeekPercent": -46.763291464319,
+  "recent7Total": 16824237,
+  "recent7Average": 2403462,
+  "previous7Total": 21594248,
+  "weekOverWeekDiff": -4770011,
+  "weekOverWeekPercent": -22.089266549129192,
   "latest": {
+    "date": "2026-05-29",
+    "requests": 1676455
+  },
+  "previous": {
     "date": "2026-05-28",
     "requests": 1107411
   },
-  "previous": {
-    "date": "2026-05-27",
-    "requests": 876572
-  },
-  "dayOverDayDiff": 230839,
-  "dayOverDayPercent": 26.33428856956417,
+  "dayOverDayDiff": 569044,
+  "dayOverDayPercent": 51.38507744640427,
   "points": [
     {
-      "date": "2026-03-01",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-02",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-03",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-04",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-05",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-06",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-07",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-08",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-09",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-10",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-11",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-12",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-13",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-14",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-15",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-16",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-17",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-18",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-19",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-20",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-21",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-22",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-23",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-24",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-25",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-26",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-27",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-28",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-29",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-30",
-      "requests": 0
-    },
-    {
-      "date": "2026-03-31",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-01",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-02",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-03",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-04",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-05",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-06",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-07",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-08",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-09",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-10",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-11",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-12",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-13",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-14",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-15",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-16",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-17",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-18",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-19",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-20",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-21",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-22",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-23",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-24",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-25",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-26",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-27",
-      "requests": 0
-    },
-    {
-      "date": "2026-04-28",
-      "requests": 78144
-    },
-    {
-      "date": "2026-04-29",
-      "requests": 726276
-    },
-    {
       "date": "2026-04-30",
-      "requests": 985618
+      "requests": 634851
     },
     {
       "date": "2026-05-01",
@@ -393,6 +153,10 @@
     {
       "date": "2026-05-28",
       "requests": 1107411
+    },
+    {
+      "date": "2026-05-29",
+      "requests": 1676455
     }
   ]
 }
