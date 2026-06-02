@@ -362,7 +362,7 @@ export async function handleSevenElevenProducts(options: string[], deps: CliDeps
     deps,
     path: '/api/seveneleven/products',
     configure: (parsed) => {
-      const query = parsed.positionals[0];
+      const query = parsed.positionals[0] || parsed.options.query;
       if (!query) {
         return 'seveneleven-products 명령은 검색어가 필요합니다. 예: daiso seveneleven-products 삼각김밥';
       }
@@ -379,7 +379,7 @@ export async function handleSevenElevenStores(options: string[], deps: CliDeps):
     deps,
     path: '/api/seveneleven/stores',
     configure: (parsed) => {
-      const keyword = parsed.positionals[0];
+      const keyword = parsed.positionals[0] || parsed.options.keyword;
       if (!keyword) {
         return 'seveneleven-stores 명령은 검색어가 필요합니다. 예: daiso seveneleven-stores 안산 중앙역';
       }

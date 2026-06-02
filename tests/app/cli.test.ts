@@ -925,6 +925,22 @@ describe('CLI', () => {
     );
   });
 
+  it('seveneleven-products 명령은 query 옵션을 검색어로 받는다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['seveneleven-products', '--query', '삼각김밥'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/seveneleven/products?query=%EC%82%BC%EA%B0%81%EA%B9%80%EB%B0%A5',
+    );
+  });
+
   it('seveneleven-stores 명령은 세븐일레븐 매장 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
@@ -938,6 +954,22 @@ describe('CLI', () => {
     expect(exitCode).toBe(0);
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://mcp.aka.page/api/seveneleven/stores?limit=10&keyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD',
+    );
+  });
+
+  it('seveneleven-stores 명령은 keyword 옵션을 검색어로 받는다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['seveneleven-stores', '--keyword', '안산 중앙역'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/seveneleven/stores?keyword=%EC%95%88%EC%82%B0+%EC%A4%91%EC%95%99%EC%97%AD',
     );
   });
 
