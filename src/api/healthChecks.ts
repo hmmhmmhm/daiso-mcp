@@ -2,7 +2,11 @@
  * 개별 서비스 헬스 체크 실행기
  */
 
-import { GS25_CLOUDFRONT_403_PATTERNS, HEALTH_CHECKS } from './healthCheckDefinitions.js';
+import {
+  EMART24_UPSTREAM_403_PATTERNS,
+  GS25_CLOUDFRONT_403_PATTERNS,
+  HEALTH_CHECKS,
+} from './healthCheckDefinitions.js';
 import { hasRequiredRepresentativeFields, toCount, toFirstName } from './healthCheckShape.js';
 import type {
   HealthCheckDefinition,
@@ -129,7 +133,13 @@ function shouldDegradeFailedResponse(check: HealthCheckDefinition, message: stri
 }
 
 function shouldDegradeCliContractPath(path: string, message: string): boolean {
-  return path.startsWith('/api/gs25/') && GS25_CLOUDFRONT_403_PATTERNS.some((pattern) => message.includes(pattern));
+  if (path.startsWith('/api/gs25/')) {
+    return GS25_CLOUDFRONT_403_PATTERNS.some((pattern) => message.includes(pattern));
+  }
+  if (path.startsWith('/api/emart24/')) {
+    return EMART24_UPSTREAM_403_PATTERNS.some((pattern) => message.includes(pattern));
+  }
+  return false;
 }
 
 function resolveCheckTimeoutMs(check: Pick<HealthCheckDefinition, 'timeoutMs'>, timeoutMs: number): number {
