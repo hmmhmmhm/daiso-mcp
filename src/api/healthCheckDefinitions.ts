@@ -10,6 +10,11 @@ export const GS25_CLOUDFRONT_403_PATTERNS = [
   '403 ERROR',
 ];
 
+export const EMART24_UPSTREAM_403_PATTERNS = [
+  '403 Forbidden',
+  '<title>403 Forbidden</title>',
+];
+
 export const HEALTH_CHECKS: HealthCheckDefinition[] = [
   {
     id: 'cli.contract',
@@ -45,6 +50,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/emart24/products?keyword=%EC%BB%A4%ED%94%BC&pageSize=1',
     collectionKey: 'products',
     requiredFields: ['pluCd', 'goodsName', 'itemName', 'name'],
+    degradedFailurePatterns: EMART24_UPSTREAM_403_PATTERNS,
   },
   {
     id: 'gs25.products',

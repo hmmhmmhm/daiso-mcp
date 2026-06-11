@@ -216,6 +216,78 @@ describe('GET /api/health/checks', () => {
     );
   });
 
+  it('이마트24 상품 upstream 403은 degraded로 집계한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: { message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>' },
+        },
+        502,
+      ),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=emart24.products&fresh=true&transport=network',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('degraded');
+    expect(data.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'emart24.products',
+        status: 'degraded',
+        message: expect.stringContaining('403 Forbidden'),
+      }),
+    );
+  });
+
+  it('CLI 계약 체크에서 이마트24 upstream 403은 degraded로 집계한다', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).includes('/api/emart24/products')
+          ? jsonResponse(
+              {
+                success: false,
+                error: { message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>' },
+              },
+              502,
+            )
+          : String(input).includes('/health')
+            ? jsonResponse({ status: 'ok' })
+            : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+      ),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=cli.contract&mode=deep&fresh=true&transport=network',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('degraded');
+    expect(data.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'cli.contract',
+        status: 'degraded',
+        message: expect.stringContaining('/api/emart24/products'),
+      }),
+    );
+  });
+
   it('fresh가 아니면 동일한 체크 결과를 캐시한다', async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({
