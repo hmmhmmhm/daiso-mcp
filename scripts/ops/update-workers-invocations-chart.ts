@@ -42,6 +42,7 @@ const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE?.trim() || undefin
 const CHART_DAYS = Number.parseInt(process.env.WORKERS_CHART_DAYS ?? '30', 10);
 const CHART_CONCURRENCY = Number.parseInt(process.env.WORKERS_CHART_CONCURRENCY ?? '4', 10);
 const INPUT_JSON_PATH = process.env.WORKERS_CHART_INPUT_JSON;
+const ROOT_REQUESTS_RETENTION_DAYS = Number.parseInt(process.env.WORKERS_CHART_ROOT_REQUESTS_RETENTION_DAYS ?? '7', 10);
 const ROOT_REDIRECT_START = process.env.WORKERS_CHART_ROOT_REDIRECT_START
   ? new Date(process.env.WORKERS_CHART_ROOT_REDIRECT_START)
   : undefined;
@@ -60,6 +61,10 @@ if (CHART_START_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(CHART_START_DATE)) {
 
 if (!Number.isFinite(CHART_DAYS) || CHART_DAYS < 1) {
   throw new Error('WORKERS_CHART_DAYS는 1 이상의 숫자여야 합니다.');
+}
+
+if (!Number.isFinite(ROOT_REQUESTS_RETENTION_DAYS) || ROOT_REQUESTS_RETENTION_DAYS < 1) {
+  throw new Error('WORKERS_CHART_ROOT_REQUESTS_RETENTION_DAYS는 1 이상의 숫자여야 합니다.');
 }
 
 if (ROOT_REDIRECT_START && Number.isNaN(ROOT_REDIRECT_START.getTime())) {
@@ -83,6 +88,10 @@ function formatSignedNumber(value) {
 function calculateStartDateFromDays(endDateText, days) {
   const endDate = parseKstDateText(endDateText);
   return formatKstDate(new Date(endDate.getTime() - (days - 1) * 86400000));
+}
+
+function calculateRetentionStart(now, days) {
+  return new Date(now.getTime() - days * 86400000);
 }
 
 async function readInputPayload(inputPath) {
@@ -297,6 +306,7 @@ async function main() {
     const endDateExclusive = parseKstDateText(todayKstDate);
     endDate = formatKstDate(new Date(endDateExclusive.getTime() - 86400000));
     startDate = startDate ?? calculateStartDateFromDays(endDate, CHART_DAYS);
+    const rootRequestsRetentionStart = calculateRetentionStart(renderedAt, ROOT_REQUESTS_RETENTION_DAYS);
 
     points = await fetchDailyWorkerInvocations({
       accountId: ACCOUNT_ID,
@@ -310,6 +320,7 @@ async function main() {
       rootRedirectHost: ROOT_REDIRECT_HOST,
       rootRedirectPath: ROOT_REDIRECT_PATH,
       rootRedirectStart: ROOT_REDIRECT_START,
+      rootRequestsRetentionStart,
       concurrency:
         Number.isFinite(CHART_CONCURRENCY) && CHART_CONCURRENCY > 0 ? CHART_CONCURRENCY : 4,
     });
@@ -330,7 +341,7 @@ async function main() {
     aggregation: ROOT_REDIRECT_START ? 'script-level plus redirected root GET' : 'script-level',
     includedTraffic:
       ROOT_REDIRECT_START
-        ? `Worker invocations for ${scriptName} plus redirected GET ${ROOT_REDIRECT_PATH} traffic on ${ROOT_REDIRECT_HOST} after ${ROOT_REDIRECT_START.toISOString()}.`
+        ? `Worker invocations for ${scriptName} plus redirected GET ${ROOT_REDIRECT_PATH} traffic on ${ROOT_REDIRECT_HOST} where zone analytics retention permits.`
         : 'All invocations for this Worker script are counted across routes and domains, including GET / on mcp.aka.page.',
     rootRedirect:
       ROOT_REDIRECT_START && ZONE_ID
@@ -339,6 +350,7 @@ async function main() {
             host: ROOT_REDIRECT_HOST,
             path: ROOT_REDIRECT_PATH,
             start: ROOT_REDIRECT_START.toISOString(),
+            rootRequestsRetentionDays: ROOT_REQUESTS_RETENTION_DAYS,
           }
         : null,
     timezone: 'Asia/Seoul',
