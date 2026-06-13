@@ -320,6 +320,7 @@ describe('fetchDailyWorkerInvocations', () => {
       endDateText: '2026-05-27',
       zoneId: 'zone-id',
       rootRedirectStart: new Date('2026-05-27T07:24:50.000Z'),
+      rootRequestsRetentionStart: new Date('2026-05-20T00:00:00.000Z'),
       fetchImpl: mockFetch,
     });
 
@@ -328,6 +329,64 @@ describe('fetchDailyWorkerInvocations', () => {
     const rootGetBody = JSON.parse(mockFetch.mock.calls[1]?.[1]?.body as string);
     expect(rootGetBody.variables.start).toBe('2026-05-27T07:24:50.000Z');
     expect(rootGetBody.variables.end).toBe('2026-05-27T15:00:00.000Z');
+  });
+
+  it('zone analytics 보존기간 밖의 루트 GET 요청 조회는 건너뛴다', async () => {
+    mockFetch.mockImplementation(async (_input: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      if (String(body.query).includes('httpRequestsAdaptiveGroups')) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              viewer: {
+                zones: [{ httpRequestsAdaptiveGroups: [{ count: 25 }] }],
+              },
+            },
+          }),
+        );
+      }
+
+      const start = String(body.variables.start);
+      return new Response(
+        JSON.stringify({
+          data: {
+            viewer: {
+              accounts: [
+                {
+                  workersInvocationsAdaptive: [{ sum: { requests: start.includes('06-03') ? 100 : 200 } }],
+                },
+              ],
+            },
+          },
+        }),
+      );
+    });
+
+    const points = await fetchDailyWorkerInvocations({
+      accountId: 'account-id',
+      apiToken: 'api-token',
+      scriptName: 'daiso-mcp',
+      startDateText: '2026-06-04',
+      endDateText: '2026-06-05',
+      zoneId: 'zone-id',
+      rootRedirectStart: new Date('2026-05-27T07:24:50.000Z'),
+      rootRequestsRetentionStart: new Date('2026-06-04T15:00:00.000Z'),
+      fetchImpl: mockFetch,
+      concurrency: 1,
+    });
+
+    expect(points).toEqual([
+      { date: '2026-06-04', requests: 100 },
+      { date: '2026-06-05', requests: 225 },
+    ]);
+
+    const rootGetCalls = mockFetch.mock.calls
+      .map((call) => JSON.parse(String(call[1]?.body)))
+      .filter((body) => String(body.query).includes('httpRequestsAdaptiveGroups'));
+
+    expect(rootGetCalls).toHaveLength(1);
+    expect(rootGetCalls[0]?.variables.start).toBe('2026-06-04T15:00:00.000Z');
+    expect(rootGetCalls[0]?.variables.end).toBe('2026-06-05T15:00:00.000Z');
   });
 
   it('지정한 동시성 안에서 날짜별 조회를 병렬 실행하고 원래 날짜 순서를 유지한다', async () => {

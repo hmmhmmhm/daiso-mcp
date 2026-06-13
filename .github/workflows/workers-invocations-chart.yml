@@ -61,6 +61,7 @@ jobs:
           WORKERS_CHART_DAYS: ${{ inputs.days || '30' }}
           WORKERS_CHART_START_DATE: ${{ inputs.start_date || vars.WORKERS_CHART_START_DATE || '' }}
           WORKERS_CHART_CONCURRENCY: ${{ vars.WORKERS_CHART_CONCURRENCY || '4' }}
+          WORKERS_CHART_ROOT_REQUESTS_RETENTION_DAYS: ${{ vars.WORKERS_CHART_ROOT_REQUESTS_RETENTION_DAYS || '7' }}
           WORKERS_CHART_ROOT_REDIRECT_START: ${{ vars.WORKERS_CHART_ROOT_REDIRECT_START || '2026-05-27T07:24:50.000Z' }}
         run: npm run update:workers-chart
 

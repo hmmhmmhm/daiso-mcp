@@ -17,4 +17,6 @@
 - `CLOUDFLARE_API_TOKEN`
 - `CF_WORKER_SCRIPT_NAME` (기본값: `daiso-mcp`)
 
+`GET /`를 R2로 리다이렉트한 뒤 Worker를 우회하는 루트 요청은 Cloudflare zone analytics 보존기간 안에서만 보정합니다. 기본 보정 기간은 `WORKERS_CHART_ROOT_REQUESTS_RETENTION_DAYS=7`입니다.
+
 기존 JSON으로 그래프만 다시 렌더링할 때는 Cloudflare 키 대신 `WORKERS_CHART_INPUT_JSON=assets/analytics/workers-invocations.json`을 지정할 수 있습니다.

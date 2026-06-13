@@ -1,5 +1,7 @@
 import { buildKstDateRangeBetween, parseKstDateText } from './workers-chart-helpers.ts';
 
+const DEFAULT_ROOT_REQUESTS_RETENTION_MS = 7 * 86400000;
+
 const WORKER_INVOCATIONS_QUERY = `
   query WorkerInvocations($accountTag: string, $scriptName: string, $start: Time!, $end: Time!) {
     viewer {
@@ -225,6 +227,7 @@ export async function fetchRootGetRequestsForWindow({
  * @param {string} [params.rootRedirectHost]
  * @param {string} [params.rootRedirectPath]
  * @param {Date} [params.rootRedirectStart]
+ * @param {Date} [params.rootRequestsRetentionStart]
  * @param {number} [params.concurrency]
  * @param {typeof fetch} [params.fetchImpl]
  * @returns {Promise<Array<{date: string, requests: number}>>}
@@ -241,6 +244,7 @@ export async function fetchDailyWorkerInvocations({
   rootRedirectHost = 'mcp.aka.page',
   rootRedirectPath = '/',
   rootRedirectStart,
+  rootRequestsRetentionStart = new Date(Date.now() - DEFAULT_ROOT_REQUESTS_RETENTION_MS),
   concurrency = 4,
   fetchImpl = fetch,
 }) {
@@ -264,7 +268,9 @@ export async function fetchDailyWorkerInvocations({
         end: window.end,
         fetchImpl,
       });
-      const redirectStart = rootRedirectStart && rootRedirectStart > window.start ? rootRedirectStart : window.start;
+      const redirectStart = [window.start, rootRedirectStart, rootRequestsRetentionStart]
+        .filter((date) => date instanceof Date)
+        .reduce((latest, date) => (date > latest ? date : latest), window.start);
       const redirectedRootRequests =
         zoneId && rootRedirectStart && redirectStart < window.end
           ? await fetchRootGetRequestsForWindow({
