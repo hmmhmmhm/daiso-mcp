@@ -2,81 +2,46 @@
   "scriptName": "daiso-mcp",
   "metric": "workersInvocationsAdaptive.requests + httpRequestsAdaptiveGroups.count",
   "aggregation": "script-level plus redirected root GET",
-  "includedTraffic": "Worker invocations for daiso-mcp plus redirected GET / traffic on mcp.aka.page after 2026-05-27T07:24:50.000Z.",
+  "includedTraffic": "Worker invocations for daiso-mcp plus redirected GET / traffic on mcp.aka.page where zone analytics retention permits.",
   "rootRedirect": {
     "zoneId": "c987d32286724a5a1fd5586cec7756c1",
     "host": "mcp.aka.page",
     "path": "/",
-    "start": "2026-05-27T07:24:50.000Z"
+    "start": "2026-05-27T07:24:50.000Z",
+    "rootRequestsRetentionDays": 7
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-05-05",
-  "endDate": "2026-06-03",
-  "updatedAt": "2026-06-03T17:00:30.706Z",
-  "renderedAt": "2026-06-03T17:00:30.706Z",
-  "total": 97357093,
-  "average": 3245236,
-  "median": 2891872,
+  "startDate": "2026-05-14",
+  "endDate": "2026-06-12",
+  "updatedAt": "2026-06-13T07:24:39.535Z",
+  "renderedAt": "2026-06-13T07:24:39.535Z",
+  "total": 72911730,
+  "average": 2430391,
+  "median": 2865065,
   "peak": {
     "date": "2026-05-15",
     "requests": 16363224
   },
-  "recent7Total": 15810801,
-  "recent7Average": 2258686,
-  "previous7Total": 20374568,
-  "weekOverWeekDiff": -4563767,
-  "weekOverWeekPercent": -22.39933136251036,
+  "recent7Total": 16940430,
+  "recent7Average": 2420061,
+  "previous7Total": 179390,
+  "weekOverWeekDiff": 16761040,
+  "weekOverWeekPercent": 9343.352472267128,
   "latest": {
-    "date": "2026-06-03",
-    "requests": 3214552
+    "date": "2026-06-12",
+    "requests": 1598447
   },
   "previous": {
-    "date": "2026-06-02",
-    "requests": 2975388
+    "date": "2026-06-11",
+    "requests": 1640948
   },
-  "dayOverDayDiff": 239164,
-  "dayOverDayPercent": 8.0380777229726,
+  "dayOverDayDiff": -42501,
+  "dayOverDayPercent": -2.5900272281632324,
   "points": [
     {
-      "date": "2026-05-05",
-      "requests": 534944
-    },
-    {
-      "date": "2026-05-06",
-      "requests": 853276
-    },
-    {
-      "date": "2026-05-07",
-      "requests": 1127887
-    },
-    {
-      "date": "2026-05-08",
-      "requests": 1121259
-    },
-    {
-      "date": "2026-05-09",
-      "requests": 1656232
-    },
-    {
-      "date": "2026-05-10",
-      "requests": 1861210
-    },
-    {
-      "date": "2026-05-11",
-      "requests": 1940210
-    },
-    {
-      "date": "2026-05-12",
-      "requests": 3635592
-    },
-    {
-      "date": "2026-05-13",
-      "requests": 6958586
-    },
-    {
       "date": "2026-05-14",
-      "requests": 9859253
+      "requests": 3816794
     },
     {
       "date": "2026-05-15",
@@ -128,35 +93,71 @@
     },
     {
       "date": "2026-05-27",
-      "requests": 876572
+      "requests": 804351
     },
     {
       "date": "2026-05-28",
-      "requests": 1107411
+      "requests": 23515
     },
     {
       "date": "2026-05-29",
-      "requests": 1676455
+      "requests": 25979
     },
     {
       "date": "2026-05-30",
-      "requests": 2040440
+      "requests": 20456
     },
     {
       "date": "2026-05-31",
-      "requests": 2266697
+      "requests": 18378
     },
     {
       "date": "2026-06-01",
-      "requests": 2529858
+      "requests": 23226
     },
     {
       "date": "2026-06-02",
-      "requests": 2975388
+      "requests": 30892
     },
     {
       "date": "2026-06-03",
-      "requests": 3214552
+      "requests": 21354
+    },
+    {
+      "date": "2026-06-04",
+      "requests": 32236
+    },
+    {
+      "date": "2026-06-05",
+      "requests": 32848
+    },
+    {
+      "date": "2026-06-06",
+      "requests": 1068011
+    },
+    {
+      "date": "2026-06-07",
+      "requests": 3557862
+    },
+    {
+      "date": "2026-06-08",
+      "requests": 3940144
+    },
+    {
+      "date": "2026-06-09",
+      "requests": 3436280
+    },
+    {
+      "date": "2026-06-10",
+      "requests": 1698738
+    },
+    {
+      "date": "2026-06-11",
+      "requests": 1640948
+    },
+    {
+      "date": "2026-06-12",
+      "requests": 1598447
     }
   ]
 }
