@@ -90,7 +90,7 @@
     "jiti": "^2.7.0",
     "playwright": "^1.60.0",
     "prettier": "^3.8.3",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.1",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.0",
