@@ -12,37 +12,33 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-05-21",
-  "endDate": "2026-06-19",
-  "updatedAt": "2026-06-19T16:17:18.110Z",
-  "renderedAt": "2026-06-19T16:17:18.110Z",
-  "total": 29669237,
-  "average": 988975,
-  "median": 53911,
+  "startDate": "2026-05-22",
+  "endDate": "2026-06-20",
+  "updatedAt": "2026-06-20T15:54:47.157Z",
+  "renderedAt": "2026-06-20T15:54:47.157Z",
+  "total": 26590200,
+  "average": 886340,
+  "median": 44433,
   "peak": {
     "date": "2026-05-24",
     "requests": 3588238
   },
-  "recent7Total": 8850213,
-  "recent7Average": 1264316,
-  "previous7Total": 287793,
-  "weekOverWeekDiff": 8562420,
-  "weekOverWeekPercent": 2975.200925665322,
+  "recent7Total": 8779660,
+  "recent7Average": 1254237,
+  "previous7Total": 274971,
+  "weekOverWeekDiff": 8504689,
+  "weekOverWeekPercent": 3092.940346436533,
   "latest": {
+    "date": "2026-06-20",
+    "requests": 1336087
+  },
+  "previous": {
     "date": "2026-06-19",
     "requests": 1486797
   },
-  "previous": {
-    "date": "2026-06-18",
-    "requests": 1048946
-  },
-  "dayOverDayDiff": 437851,
-  "dayOverDayPercent": 41.741996251475285,
+  "dayOverDayDiff": -150710,
+  "dayOverDayPercent": -10.136555293022518,
   "points": [
-    {
-      "date": "2026-05-21",
-      "requests": 3032425
-    },
     {
       "date": "2026-05-22",
       "requests": 3301772
@@ -133,15 +129,15 @@
     },
     {
       "date": "2026-06-13",
-      "requests": 1367132
+      "requests": 23941
     },
     {
       "date": "2026-06-14",
-      "requests": 1157610
+      "requests": 1118145
     },
     {
       "date": "2026-06-15",
-      "requests": 1256534
+      "requests": 1256496
     },
     {
       "date": "2026-06-16",
@@ -149,7 +145,7 @@
     },
     {
       "date": "2026-06-17",
-      "requests": 1008433
+      "requests": 1008428
     },
     {
       "date": "2026-06-18",
@@ -158,6 +154,10 @@
     {
       "date": "2026-06-19",
       "requests": 1486797
+    },
+    {
+      "date": "2026-06-20",
+      "requests": 1336087
     }
   ]
 }
