@@ -132,6 +132,32 @@ describe('runCliSmoke', () => {
     expect(runCommand.mock.calls.map(([, args]) => args[1])).toEqual(['gs25-products', 'gs25-stores']);
   });
 
+  it('known upstream 403이면 degraded로 기록하고 통과한다', async () => {
+    const runCommand = vi.fn().mockResolvedValue({
+      exitCode: 1,
+      stdout: JSON.stringify({
+        success: false,
+        error: {
+          message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>',
+        },
+      }),
+      stderr: '요청 실패: HTTP 500',
+    });
+    const writeErr = vi.fn();
+
+    const exitCode = await runCliSmoke({
+      runCommand,
+      writeOut: vi.fn(),
+      writeErr,
+      command: 'node',
+      cliPath: 'dist/bin.js',
+      service: 'emart24',
+    });
+
+    expect(exitCode).toBe(0);
+    expect(writeErr).toHaveBeenCalledWith(expect.stringContaining('CLI smoke degraded'));
+  });
+
   it('하나라도 실패하면 즉시 non-zero를 반환한다', async () => {
     const runCommand = vi
       .fn()
