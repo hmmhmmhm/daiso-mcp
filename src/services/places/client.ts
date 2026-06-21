@@ -53,14 +53,36 @@ function getProcessEnvValue(name: string): string | undefined {
   return typeof process !== 'undefined' ? process.env[name] : undefined;
 }
 
+function stripHtmlTags(value: string): string {
+  let result = '';
+  let insideTag = false;
+
+  for (const character of value) {
+    if (character === '<') {
+      insideTag = true;
+      continue;
+    }
+    if (character === '>' && insideTag) {
+      insideTag = false;
+      continue;
+    }
+    if (!insideTag) {
+      result += character;
+    }
+  }
+
+  return result;
+}
+
 function cleanHtml(value: string | undefined): string {
   if (!value) {
     return '';
   }
-  return value
-    .replace(/<[^>]*>/g, '')
-    .replace(/&(?:amp|quot|#39|#x27);/gi, (entity) => HTML_ENTITY_REPLACEMENTS[entity.toLowerCase()])
-    .trim();
+  let result = stripHtmlTags(value);
+  for (const [entity, replacement] of Object.entries(HTML_ENTITY_REPLACEMENTS)) {
+    result = result.split(entity).join(replacement);
+  }
+  return result.trim();
 }
 
 function toCoordinate(value: string | undefined): number | null {
