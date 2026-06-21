@@ -143,6 +143,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/emart24/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
     collectionKey: 'inventoryItems',
     requiredFields: ['pluCd', 'goodsName', 'itemName', 'name'],
+    degradedFailurePatterns: EMART24_UPSTREAM_403_PATTERNS,
   },
   {
     id: 'gs25.inventory',
