@@ -4,6 +4,7 @@
 
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { EMART24_UPSTREAM_403_PATTERNS } from '../../src/api/healthCheckDefinitions.js';
 
 interface CommandResult {
   exitCode: number;
@@ -42,6 +43,7 @@ interface CliSmokeCommand {
   scenario: string;
   args: string[];
   expectedExitCode?: number;
+  degradedFailurePatterns?: string[];
   validate: Validator;
 }
 
@@ -137,6 +139,7 @@ export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
     service: 'emart24',
     scenario: '이마트24 상품명 검색',
     args: ['emart24-products', '커피', '--pageSize', '1', '--json'],
+    degradedFailurePatterns: EMART24_UPSTREAM_403_PATTERNS,
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '커피')),
   },
   {
@@ -210,6 +213,11 @@ async function execCommand(command: string, args: string[]): Promise<CommandResu
   });
 }
 
+function matchesDegradedFailure(command: CliSmokeCommand, result: CommandResult): boolean {
+  const output = `${result.stdout}\n${result.stderr}`;
+  return command.degradedFailurePatterns?.some((pattern) => output.includes(pattern)) ?? false;
+}
+
 export async function runCliSmoke(deps: CliSmokeDeps = {}): Promise<number> {
   const runCommand = deps.runCommand || execCommand;
   const writeOut = deps.writeOut || ((message: string) => process.stdout.write(`${message}\n`));
@@ -226,11 +234,16 @@ export async function runCliSmoke(deps: CliSmokeDeps = {}): Promise<number> {
     return 1;
   }
 
-  for (const { args, expectedExitCode = 0, validate } of commands) {
+  for (const smokeCommand of commands) {
+    const { args, expectedExitCode = 0, validate } = smokeCommand;
     const fullArgs = [cliPath, ...args];
     writeOut(`CLI smoke 실행: ${command} ${fullArgs.join(' ')}`);
     const result = await runCommand(command, fullArgs);
     if (result.exitCode !== expectedExitCode) {
+      if (matchesDegradedFailure(smokeCommand, result)) {
+        writeErr(`CLI smoke degraded: ${args.join(' ')} known upstream issue`);
+        continue;
+      }
       writeErr(`CLI smoke 실패: ${args.join(' ')} exited with ${result.exitCode}`);
       if (result.stdout) {
         writeErr(result.stdout.trim());
