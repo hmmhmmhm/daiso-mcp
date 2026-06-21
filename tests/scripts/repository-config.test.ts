@@ -19,7 +19,7 @@ describe('repository maintenance configuration', () => {
   it('npm audit 경고가 난 ws 전이 의존성은 안전 버전으로 고정한다', () => {
     const pkg = JSON.parse(readText('package.json')) as { overrides?: Record<string, string> };
 
-    expect(pkg.overrides?.ws).toBe('8.20.1');
+    expect(pkg.overrides?.ws).toBe('8.21.0');
   });
 
   it('release 문서는 git 기록을 npm publish보다 먼저 남기도록 안내한다', () => {

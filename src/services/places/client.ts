@@ -41,6 +41,13 @@ const CATEGORY_KEYWORDS: Record<PlaceCategory, string> = {
   all: '',
 };
 
+const HTML_ENTITY_REPLACEMENTS: Record<string, string> = {
+  '&amp;': '&',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&#x27;': "'",
+};
+
 function getProcessEnvValue(name: string): string | undefined {
   /* c8 ignore next -- Node 테스트와 CLI 런타임은 process를 제공하며, Worker에는 API에서 키를 주입합니다. */
   return typeof process !== 'undefined' ? process.env[name] : undefined;
@@ -52,11 +59,7 @@ function cleanHtml(value: string | undefined): string {
   }
   return value
     .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&(?:amp|quot|#39|#x27);/gi, (entity) => HTML_ENTITY_REPLACEMENTS[entity.toLowerCase()])
     .trim();
 }
 

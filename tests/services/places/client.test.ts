@@ -183,6 +183,35 @@ describe('searchNaverLocalPlaces', () => {
     );
   });
 
+  it('인코딩된 태그 문자는 실행 가능한 HTML로 되살리지 않는다', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              title: '&lt;script&gt;alert(1)&lt;/script&gt; <b>강남</b> &quot;카페&quot;',
+              category: '카페 &amp; 디저트',
+            },
+          ],
+        }),
+      ),
+    );
+
+    const result = await searchNaverLocalPlaces({
+      naverClientId: 'client-id',
+      naverClientSecret: 'client-secret',
+      keyword: '강남 카페',
+      fetchImpl,
+    });
+
+    expect(result.places[0]).toEqual(
+      expect.objectContaining({
+        name: '&lt;script&gt;alert(1)&lt;/script&gt; 강남 "카페"',
+        category: '카페 & 디저트',
+      }),
+    );
+  });
+
   it('items가 없는 성공 응답은 빈 장소 목록으로 처리한다', async () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
