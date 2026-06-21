@@ -125,6 +125,20 @@ describe('fetchCgvTheaters', () => {
     const result = await fetchCgvTheaters({});
     expect(result).toEqual([]);
   });
+
+  it('data가 배열이 아니면 빈 배열을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          data: { status: 'temporarily-changed' },
+        }),
+      ),
+    );
+
+    const result = await fetchCgvTheaters({});
+    expect(result).toEqual([]);
+  });
 });
 
 describe('fetchCgvMovies', () => {
@@ -232,6 +246,20 @@ describe('fetchCgvMovies', () => {
       new Response(
         JSON.stringify({
           statusCode: 0,
+        }),
+      ),
+    );
+
+    const result = await fetchCgvMovies({ playDate: '20260304', theaterCode: '0056' });
+    expect(result).toEqual([]);
+  });
+
+  it('영화 목록 data가 배열이 아니면 빈 배열을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          statusCode: 0,
+          data: { status: 'temporarily-changed' },
         }),
       ),
     );
@@ -650,6 +678,34 @@ describe('fetchCgvTimetable', () => {
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 0 })));
+
+    const result = await fetchCgvTimetable({
+      playDate: '20260304',
+      theaterCode: '0056',
+      movieCode: '30000985',
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it('시간표 data가 배열이 아니면 빈 배열로 처리 후 fallback한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            data: { status: 'temporarily-changed' },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 0,
+            data: { status: 'temporarily-changed' },
+          }),
+        ),
+      );
 
     const result = await fetchCgvTimetable({
       playDate: '20260304',

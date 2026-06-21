@@ -249,6 +249,39 @@ describe('GET /api/health/checks', () => {
     );
   });
 
+  it('이마트24 재고 upstream 403은 degraded로 집계한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: { message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>' },
+        },
+        502,
+      ),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=emart24.inventory&mode=deep&fresh=true&transport=network',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('degraded');
+    expect(data.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'emart24.inventory',
+        status: 'degraded',
+        message: expect.stringContaining('403 Forbidden'),
+      }),
+    );
+  });
+
   it('CLI 계약 체크에서 이마트24 upstream 403은 degraded로 집계한다', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) =>
       Promise.resolve(

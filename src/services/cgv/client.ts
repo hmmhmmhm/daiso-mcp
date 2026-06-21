@@ -26,6 +26,10 @@ interface CommonFetchParams {
 const DEFAULT_THEATER_CODE = '0056';
 const MAX_FALLBACK_THEATERS = 5;
 
+function asArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
 async function resolveTheaterCode(playDate: string, theaterCode: string | undefined, params: CommonFetchParams) {
   if (theaterCode) {
     return theaterCode;
@@ -59,7 +63,7 @@ async function fetchMoviesByTheaterCode(
     params.zyteApiKey,
   );
 
-  return (response.data || [])
+  return asArray(response.data)
     .filter((item) => item.movNo && item.movNm)
     .map((item) => ({
       movieCode: item.movNo as string,
@@ -89,7 +93,7 @@ async function fetchTimetableByMovieCode(
     params.zyteApiKey,
   );
 
-  return (response.data || [])
+  return asArray(response.data)
     .filter((item) => item.siteNo && item.movNo && item.scnYmd)
     .map((item) => ({
       scheduleId: `${item.scnYmd}${item.siteNo}${item.scnSseq || ''}`,
@@ -124,7 +128,7 @@ async function fetchTimetableBySite(
     params.zyteApiKey,
   );
 
-  return (response.data || [])
+  return asArray(response.data)
     .filter((item) => item.siteNo && item.scnYmd)
     .map((item) => ({
       scheduleId: `${item.scnYmd}${item.siteNo}${item.scnSseq || ''}`,
@@ -152,8 +156,8 @@ export async function fetchCgvTheaters(params: CommonFetchParams): Promise<CgvTh
     params.zyteApiKey,
   );
 
-  const list = (response.data || []).flatMap((region) =>
-    (region.siteList || []).map((site) => ({
+  const list = asArray(response.data).flatMap((region) =>
+    asArray(region.siteList).map((site) => ({
       theaterCode: site.siteNo || '',
       theaterName: site.siteNm || '',
       regionCode: region.regnGrpCd || undefined,
