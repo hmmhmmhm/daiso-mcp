@@ -82,7 +82,7 @@
     "@biomejs/biome": "^2.5.0",
     "@cloudflare/workers-types": "^4.20260621.1",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.9.4",
+    "@types/node": "^26.0.0",
     "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
