@@ -688,6 +688,15 @@ npm view daiso version
 ## 운영 메모
 
 - 이 저장소의 기본 작업 브랜치는 `main`이며, open PR 또는 open issue가 있으면 먼저 triage합니다.
+- 사용자가 `정기체크합시다`라고 요청하면 별도 확인 질문 없이 아래 항목을 자동으로 조회하고 요약합니다.
+  - 열린 PR과 각 PR의 CI/Coverage/CodeQL 상태
+  - 열린 issue
+  - Dependabot security alerts
+  - CodeQL code scanning alerts
+  - Secret scanning alerts
+  - 최신 `main` 기준 `npm audit` 결과
+  - 최신 `main` 커밋과 최근 GitHub Actions 상태(CI, Coverage, CodeQL, Deploy, Health Checks, External Smoke)
+  - 로컬 작업트리 상태
 - 모든 `src/**/*.ts` 파일은 450줄 이하를 유지합니다.
 - npm `daiso` 배포 전에는 `npm run check`, `npm run test:coverage`, `npm audit`를 확인합니다.
 - 외부 사이트 응답 회귀는 `.github/workflows/external-smoke.yml`의 서비스별 CLI/MCP matrix로 야간 및 수동 확인합니다.
