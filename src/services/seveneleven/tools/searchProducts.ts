@@ -28,24 +28,40 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     throw new Error('상품 검색어(query)를 입력해주세요.');
   }
 
-  const result = await searchSevenElevenProductsWithVariants(query, {
-    page,
-    size,
-    sort,
-    timeout: timeoutMs,
-  });
+  try {
+    const result = await searchSevenElevenProductsWithVariants(query, {
+      page,
+      size,
+      sort,
+      timeout: timeoutMs,
+    });
 
-  return buildTextResponse({
-    query: result.query,
-    page,
-    size,
-    sort,
-    totalCount: result.totalCount,
-    count: result.products.length,
-    collectionIds: result.collectionIds,
-    appliedQueries: result.appliedQueries,
-    products: result.products,
-  });
+    return buildTextResponse({
+      query: result.query,
+      page,
+      size,
+      sort,
+      totalCount: result.totalCount,
+      count: result.products.length,
+      collectionIds: result.collectionIds,
+      appliedQueries: result.appliedQueries,
+      products: result.products,
+    });
+  } catch (error) {
+    return buildTextResponse({
+      query,
+      page,
+      size,
+      sort,
+      totalCount: 0,
+      count: 0,
+      collectionIds: [],
+      appliedQueries: [query],
+      products: [],
+      status: 'degraded',
+      message: error instanceof Error ? error.message : '세븐일레븐 상품 검색에 실패했습니다.',
+    });
+  }
 }
 
 const searchProductsOutputSchema = {
@@ -58,6 +74,8 @@ const searchProductsOutputSchema = {
   collectionIds: z.array(z.string()).describe('검색 컬렉션 ID 목록'),
   appliedQueries: z.array(z.string()).describe('실제로 시도한 검색어 목록'),
   products: z.array(z.unknown()).describe('세븐일레븐 상품 검색 결과'),
+  status: z.string().optional().describe('외부 API 차단 등으로 결과가 제한된 경우 degraded'),
+  message: z.string().optional().describe('degraded 상태의 원인 메시지'),
 };
 
 export function createSearchProductsTool(): ToolRegistration {

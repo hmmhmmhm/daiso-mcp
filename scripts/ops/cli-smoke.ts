@@ -4,7 +4,10 @@
 
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { EMART24_UPSTREAM_403_PATTERNS } from '../../src/api/healthCheckDefinitions.js';
+import {
+  EMART24_UPSTREAM_403_PATTERNS,
+  SEVENELEVEN_UPSTREAM_403_PATTERNS,
+} from '../../src/api/healthCheckDefinitions.js';
 
 interface CommandResult {
   exitCode: number;
@@ -133,6 +136,7 @@ export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
     service: 'seveneleven',
     scenario: '세븐일레븐 상품명 검색',
     args: ['seveneleven-products', '커피', '--size', '1', '--json'],
+    degradedFailurePatterns: SEVENELEVEN_UPSTREAM_403_PATTERNS,
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('query', '커피')),
   },
   {

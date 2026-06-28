@@ -158,6 +158,33 @@ describe('runCliSmoke', () => {
     expect(writeErr).toHaveBeenCalledWith(expect.stringContaining('CLI smoke degraded'));
   });
 
+  it('세븐일레븐 upstream 403이면 degraded로 기록하고 통과한다', async () => {
+    const runCommand = vi.fn().mockResolvedValue({
+      exitCode: 1,
+      stdout: JSON.stringify({
+        success: false,
+        error: {
+          message:
+            'API 요청 실패: 403 Forbidden - <html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+        },
+      }),
+      stderr: '요청 실패: HTTP 500',
+    });
+    const writeErr = vi.fn();
+
+    const exitCode = await runCliSmoke({
+      runCommand,
+      writeOut: vi.fn(),
+      writeErr,
+      command: 'node',
+      cliPath: 'dist/bin.js',
+      service: 'seveneleven',
+    });
+
+    expect(exitCode).toBe(0);
+    expect(writeErr).toHaveBeenCalledWith(expect.stringContaining('CLI smoke degraded'));
+  });
+
   it('하나라도 실패하면 즉시 non-zero를 반환한다', async () => {
     const runCommand = vi
       .fn()

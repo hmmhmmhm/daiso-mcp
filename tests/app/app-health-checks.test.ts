@@ -249,6 +249,42 @@ describe('GET /api/health/checks', () => {
     );
   });
 
+  it('세븐일레븐 상품 upstream Incapsula 403은 degraded로 집계한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: {
+            message:
+              'API 요청 실패: 403 Forbidden - <html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+          },
+        },
+        502,
+      ),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=seveneleven.products&fresh=true&transport=network',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('degraded');
+    expect(data.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'seveneleven.products',
+        status: 'degraded',
+        message: expect.stringContaining('403 Forbidden'),
+      }),
+    );
+  });
+
   it('이마트24 재고 upstream 403은 degraded로 집계한다', async () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse(
@@ -317,6 +353,48 @@ describe('GET /api/health/checks', () => {
         id: 'cli.contract',
         status: 'degraded',
         message: expect.stringContaining('/api/emart24/products'),
+      }),
+    );
+  });
+
+  it('CLI 계약 체크에서 세븐일레븐 upstream 403은 degraded로 집계한다', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) =>
+      Promise.resolve(
+        String(input).includes('/api/seveneleven/products')
+          ? jsonResponse(
+              {
+                success: false,
+                error: {
+                  message:
+                    'API 요청 실패: 403 Forbidden - <html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+                },
+              },
+              502,
+            )
+          : String(input).includes('/health')
+            ? jsonResponse({ status: 'ok' })
+            : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+      ),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=cli.contract&mode=deep&fresh=true&transport=network',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('degraded');
+    expect(data.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'cli.contract',
+        status: 'degraded',
+        message: expect.stringContaining('/api/seveneleven/products'),
       }),
     );
   });

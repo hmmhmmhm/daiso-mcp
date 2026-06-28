@@ -15,6 +15,12 @@ export const EMART24_UPSTREAM_403_PATTERNS = [
   '<title>403 Forbidden</title>',
 ];
 
+export const SEVENELEVEN_UPSTREAM_403_PATTERNS = [
+  '403 Forbidden',
+  '_Incapsula_Resource',
+  'NOINDEX, NOFOLLOW',
+];
+
 export const HEALTH_CHECKS: HealthCheckDefinition[] = [
   {
     id: 'cli.contract',
@@ -79,6 +85,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/seveneleven/products?query=%EC%BB%A4%ED%94%BC&size=1',
     collectionKey: 'products',
     requiredFields: ['itemCode', 'itemName', 'productNo', 'name'],
+    degradedFailurePatterns: SEVENELEVEN_UPSTREAM_403_PATTERNS,
   },
   {
     id: 'lottemart.products',

@@ -129,6 +129,41 @@ describe('createSearchProductsTool', () => {
     expect(parsed.products[0].itemCode).toBe('8801');
   });
 
+  it('외부 API가 차단되어도 output schema를 만족하는 degraded 응답을 반환한다', async () => {
+    mockFetch.mockResolvedValue(
+      new Response(
+        '<html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+        {
+          status: 403,
+          statusText: 'Forbidden',
+        },
+      ),
+    );
+
+    const tool = createSearchProductsTool();
+    const result = await tool.handler({ query: '커피', size: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed).toMatchObject({
+      query: '커피',
+      page: 1,
+      size: 1,
+      sort: 'recommend',
+      totalCount: 0,
+      count: 0,
+      collectionIds: [],
+      appliedQueries: ['커피'],
+      products: [],
+      status: 'degraded',
+    });
+    expect(parsed.message).toContain('403 Forbidden');
+    expect(result.structuredContent).toMatchObject({
+      query: '커피',
+      products: [],
+      status: 'degraded',
+    });
+  });
+
   it('필요하면 대체 질의로 상품을 찾아 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

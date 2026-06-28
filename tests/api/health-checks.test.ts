@@ -617,6 +617,39 @@ describe('runHealthChecks', () => {
     );
   });
 
+  it('세븐일레븐 상품 검색 Incapsula 403은 degraded로 처리한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: {
+            message:
+              'API 요청 실패: 403 Forbidden - <html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+          },
+        },
+        500,
+      ),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'seveneleven.products',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'seveneleven.products',
+        status: 'degraded',
+        httpStatus: 500,
+        message: expect.stringContaining('403 Forbidden'),
+      }),
+    );
+  });
+
   it('CLI 계약 체크에서 GS25 CloudFront 403만 실패하면 degraded로 계속 진행한다', async () => {
     const fetchImpl = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
@@ -655,6 +688,52 @@ describe('runHealthChecks', () => {
         id: 'cli.contract',
         status: 'degraded',
         message: expect.stringContaining('/api/gs25/products'),
+      }),
+    );
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining('/api/cgv/theaters?'),
+      expect.any(Object),
+    );
+  });
+
+  it('CLI 계약 체크에서 세븐일레븐 upstream 403만 실패하면 degraded로 계속 진행한다', async () => {
+    const fetchImpl = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/health')) {
+        return Promise.resolve(jsonResponse({ status: 'ok' }));
+      }
+      if (url.includes('/api/seveneleven/products?')) {
+        return Promise.resolve(
+          jsonResponse(
+            {
+              success: false,
+              error: {
+                message:
+                  'API 요청 실패: 403 Forbidden - <html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+              },
+            },
+            500,
+          ),
+        );
+      }
+      return Promise.resolve(jsonResponse({ success: true, data: { ok: true } }));
+    });
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cli.contract',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'cli.contract',
+        status: 'degraded',
+        message: expect.stringContaining('/api/seveneleven/products'),
       }),
     );
     expect(fetchImpl).toHaveBeenCalledWith(

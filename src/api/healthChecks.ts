@@ -6,6 +6,7 @@ import {
   EMART24_UPSTREAM_403_PATTERNS,
   GS25_CLOUDFRONT_403_PATTERNS,
   HEALTH_CHECKS,
+  SEVENELEVEN_UPSTREAM_403_PATTERNS,
 } from './healthCheckDefinitions.js';
 import { hasRequiredRepresentativeFields, toCount, toFirstName } from './healthCheckShape.js';
 import type {
@@ -138,6 +139,9 @@ function shouldDegradeCliContractPath(path: string, message: string): boolean {
   }
   if (path.startsWith('/api/emart24/')) {
     return EMART24_UPSTREAM_403_PATTERNS.some((pattern) => message.includes(pattern));
+  }
+  if (path.startsWith('/api/seveneleven/')) {
+    return SEVENELEVEN_UPSTREAM_403_PATTERNS.some((pattern) => message.includes(pattern));
   }
   return false;
 }
