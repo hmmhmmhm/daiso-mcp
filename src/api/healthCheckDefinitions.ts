@@ -174,6 +174,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/seveneleven/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&size=1',
     collectionKey: 'inventoryItems',
     requiredFields: ['itemCode', 'itemName', 'productNo', 'name'],
+    degradedFailurePatterns: SEVENELEVEN_UPSTREAM_403_PATTERNS,
   },
   {
     id: 'oliveyoung.inventory',

@@ -285,6 +285,42 @@ describe('GET /api/health/checks', () => {
     );
   });
 
+  it('세븐일레븐 재고 upstream Incapsula 403은 degraded로 집계한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: {
+            message:
+              'API 요청 실패: 403 Forbidden - <html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+          },
+        },
+        502,
+      ),
+    );
+
+    const res = await app.request(
+      '/api/health/checks?check=seveneleven.inventory&mode=deep&fresh=true&transport=network',
+      {
+        headers: { Authorization: 'Bearer test-secret' },
+      },
+      {
+        HEALTH_CHECK_SECRET: 'test-secret',
+      },
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('degraded');
+    expect(data.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'seveneleven.inventory',
+        status: 'degraded',
+        message: expect.stringContaining('403 Forbidden'),
+      }),
+    );
+  });
+
   it('이마트24 재고 upstream 403은 degraded로 집계한다', async () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse(

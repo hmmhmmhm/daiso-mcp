@@ -650,6 +650,40 @@ describe('runHealthChecks', () => {
     );
   });
 
+  it('세븐일레븐 재고 조회 Incapsula 403은 degraded로 처리한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: {
+            message:
+              'API 요청 실패: 403 Forbidden - <html><META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW"><script src="/_Incapsula_Resource"></script>',
+          },
+        },
+        500,
+      ),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'seveneleven.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'seveneleven.inventory',
+        status: 'degraded',
+        httpStatus: 500,
+        message: expect.stringContaining('403 Forbidden'),
+      }),
+    );
+  });
+
   it('CLI 계약 체크에서 GS25 CloudFront 403만 실패하면 degraded로 계속 진행한다', async () => {
     const fetchImpl = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
