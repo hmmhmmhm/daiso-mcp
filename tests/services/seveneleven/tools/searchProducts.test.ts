@@ -164,6 +164,23 @@ describe('createSearchProductsTool', () => {
     });
   });
 
+  it('비 Error 예외도 output schema를 만족하는 degraded 응답으로 변환한다', async () => {
+    mockFetch.mockRejectedValue('blocked');
+
+    const tool = createSearchProductsTool();
+    const result = await tool.handler({ query: '커피', size: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed).toMatchObject({
+      query: '커피',
+      totalCount: 0,
+      count: 0,
+      products: [],
+      status: 'degraded',
+      message: '세븐일레븐 상품 검색에 실패했습니다.',
+    });
+  });
+
   it('필요하면 대체 질의로 상품을 찾아 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
