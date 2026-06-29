@@ -36,29 +36,44 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     throw new Error('상품 검색어(keyword)를 입력해주세요.');
   }
 
-  const result = await searchEmart24Products(
-    {
+  try {
+    const result = await searchEmart24Products(
+      {
+        keyword,
+        page,
+        pageSize,
+        sortType,
+        saleProductYn,
+      },
+      {
+        timeout: timeoutMs,
+      },
+    );
+
+    return buildTextResponse({
       keyword,
       page,
       pageSize,
       sortType,
       saleProductYn,
-    },
-    {
-      timeout: timeoutMs,
-    },
-  );
-
-  return buildTextResponse({
-    keyword,
-    page,
-    pageSize,
-    sortType,
-    saleProductYn,
-    totalCount: result.totalCount,
-    count: result.products.length,
-    products: result.products,
-  });
+      totalCount: result.totalCount,
+      count: result.products.length,
+      products: result.products,
+    });
+  } catch (error) {
+    return buildTextResponse({
+      keyword,
+      page,
+      pageSize,
+      sortType,
+      saleProductYn,
+      totalCount: 0,
+      count: 0,
+      products: [],
+      status: 'degraded',
+      message: error instanceof Error ? error.message : '이마트24 상품 검색에 실패했습니다.',
+    });
+  }
 }
 
 const searchProductsOutputSchema = {
@@ -70,6 +85,8 @@ const searchProductsOutputSchema = {
   totalCount: z.number().describe('검색된 전체 상품 수'),
   count: z.number().describe('반환된 상품 수'),
   products: z.array(z.unknown()).describe('이마트24 상품 검색 결과'),
+  status: z.string().optional().describe('외부 API 차단 등으로 결과가 제한된 경우 degraded'),
+  message: z.string().optional().describe('degraded 상태의 원인 메시지'),
 };
 
 export function createSearchProductsTool(): ToolRegistration {
