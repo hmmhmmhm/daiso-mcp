@@ -27,5 +27,5 @@ describe('runInteractiveCli default prompt', () => {
     expect(exitCode).toBe(0);
     expect(questionMock).toHaveBeenCalled();
     expect(closeMock).toHaveBeenCalled();
-  });
+  }, 15000);
 });

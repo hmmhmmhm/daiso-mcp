@@ -79,23 +79,23 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.0",
-    "@cloudflare/workers-types": "^4.20260621.1",
+    "@biomejs/biome": "^2.5.1",
+    "@cloudflare/workers-types": "^4.20260629.1",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.0.0",
+    "@types/node": "^26.0.1",
     "@vitest/coverage-v8": "^4.1.7",
-    "eslint": "^10.5.0",
+    "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.4.0",
+    "globals": "^17.7.0",
     "jiti": "^2.7.0",
-    "playwright": "^1.60.0",
-    "prettier": "^3.8.4",
+    "playwright": "^1.61.1",
+    "prettier": "^3.9.1",
     "sharp": "^0.35.2",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.1",
+    "typescript-eslint": "^8.62.0",
     "vitest": "^4.1.7",
-    "wrangler": "^4.103.0"
+    "wrangler": "^4.105.0"
   },
   "overrides": {
     "flatted": "3.4.2",
@@ -108,7 +108,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "hono": "^4.12.26",
+    "hono": "^4.12.27",
     "proj4": "^2.20.9",
     "workers-mcp": "^0.0.13"
   }
