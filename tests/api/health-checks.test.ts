@@ -259,6 +259,40 @@ describe('runHealthChecks', () => {
     expect(String(fetchImpl.mock.calls[0][0])).toContain('storeCheck=false');
   });
 
+  it('CU 재고 조회 Request Blocked 400은 degraded로 처리한다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          error: {
+            message:
+              'API 요청 실패: 400 Bad Request - <!DOCTYPE HTML PUBLIC "-//IETF/DTD HTML 2.0//EN"><TITLE>400 Bad Request</TITLE><H1>Request Blocked</H1>',
+          },
+        },
+        500,
+      ),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'cu.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        id: 'cu.inventory',
+        status: 'degraded',
+        httpStatus: 500,
+        message: expect.stringContaining('Request Blocked'),
+      }),
+    );
+  });
+
   it('inventory 컬렉션 값이 배열이 아니면 빈 컬렉션으로 처리한다', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({

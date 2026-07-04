@@ -15,6 +15,11 @@ export const EMART24_UPSTREAM_403_PATTERNS = [
   '<title>403 Forbidden</title>',
 ];
 
+export const CU_UPSTREAM_BLOCK_PATTERNS = [
+  '400 Bad Request',
+  'Request Blocked',
+];
+
 export const SEVENELEVEN_UPSTREAM_403_PATTERNS = [
   '403 Forbidden',
   '_Incapsula_Resource',
@@ -141,6 +146,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/cu/inventory?keyword=%EC%BB%A4%ED%94%BC&size=1&storeLimit=0&storeCheck=false',
     collectionKey: 'inventoryItems',
     requiredFields: ['itemCode', 'itemName', 'name'],
+    degradedFailurePatterns: CU_UPSTREAM_BLOCK_PATTERNS,
   },
   {
     id: 'emart24.inventory',
