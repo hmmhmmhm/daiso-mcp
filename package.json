@@ -79,23 +79,23 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.1",
-    "@cloudflare/workers-types": "^4.20260629.1",
+    "@biomejs/biome": "^2.5.2",
+    "@cloudflare/workers-types": "^4.20260702.1",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.1.0",
     "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.7.0",
     "jiti": "^2.7.0",
     "playwright": "^1.61.1",
-    "prettier": "^3.9.1",
-    "sharp": "^0.35.2",
-    "tsx": "^4.22.3",
+    "prettier": "^3.9.4",
+    "sharp": "^0.35.3",
+    "tsx": "^4.23.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.62.0",
+    "typescript-eslint": "^8.62.1",
     "vitest": "^4.1.7",
-    "wrangler": "^4.105.0"
+    "wrangler": "^4.107.0"
   },
   "overrides": {
     "flatted": "3.4.2",
