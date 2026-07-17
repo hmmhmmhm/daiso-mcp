@@ -27,6 +27,20 @@ describe('buildReadmeSection', () => {
       section.indexOf('> [!IMPORTANT]'),
     );
   });
+
+  it('GitHub 알림 카드가 되도록 중앙 정렬 영역 밖에 안내문을 둔다', () => {
+    const section = buildReadmeSection({
+      scriptName: 'daiso-mcp',
+      updatedAt: '2026-07-17 23:05 KST',
+      days: 30,
+      startDate: '2026-06-18',
+      endDate: '2026-07-17',
+      cacheKey: '2026-07-17T14:05:00.000Z',
+    });
+
+    expect(section).toContain('</div>\n\n> [!IMPORTANT]');
+    expect(section).toContain('이용해 주세요.\n\n<div align="center">');
+  });
 });
 
 describe('calculateSummary', () => {

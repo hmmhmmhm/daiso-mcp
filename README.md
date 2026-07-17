@@ -87,8 +87,12 @@
 
 <sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-07-17 00:50 KST</sub>
 
+</div>
+
 > [!IMPORTANT]
 > 최근 공개 서버 사용량이 크게 증가하여 올리브영·CGV·CU·GS25·롯데마트의 검색을 포함한 공개 GET API에 IP당 하루 합산 3,000회(KST 기준)의 호출 제한을 적용합니다. 한도를 초과하는 사용이 필요하다면 Daiso MCP는 오픈 소스이므로 이 저장소를 직접 배포해 이용해 주세요.
+
+<div align="center">
 
 <!-- WORKERS_INVOCATIONS_CHART:END -->
 
