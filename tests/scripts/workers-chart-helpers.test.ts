@@ -4,10 +4,30 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildDataLabelIndexes,
+  buildReadmeSection,
   calculateSummary,
   shouldShowWeeklyTick,
   WORKERS_CHART_ACCENT_COLORS,
 } from '../../scripts/ops/workers-chart-helpers.ts';
+
+describe('buildReadmeSection', () => {
+  it('호출량 그래프 아래에 일일 합산 호출 제한 안내를 유지한다', () => {
+    const section = buildReadmeSection({
+      scriptName: 'daiso-mcp',
+      updatedAt: '2026-07-17 22:55 KST',
+      days: 30,
+      startDate: '2026-06-18',
+      endDate: '2026-07-17',
+      cacheKey: '2026-07-17T13:55:00.000Z',
+    });
+
+    expect(section).toContain('> [!IMPORTANT]');
+    expect(section).toContain('IP당 하루 합산 3,000회(KST 기준)');
+    expect(section.indexOf('workers-invocations.png')).toBeLessThan(
+      section.indexOf('> [!IMPORTANT]'),
+    );
+  });
+});
 
 describe('calculateSummary', () => {
   it('중앙값, 최근 7일 평균, 전주 대비를 계산한다', () => {
