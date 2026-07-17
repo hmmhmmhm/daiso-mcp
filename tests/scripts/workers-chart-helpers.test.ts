@@ -22,6 +22,7 @@ describe('buildReadmeSection', () => {
     });
 
     expect(section).toContain('> [!IMPORTANT]');
+    expect(section).toContain('2026년 7월 18일부터');
     expect(section).toContain('IP당 하루 합산 3,000회(KST 기준)');
     expect(section.indexOf('workers-invocations.png')).toBeLessThan(
       section.indexOf('> [!IMPORTANT]'),
