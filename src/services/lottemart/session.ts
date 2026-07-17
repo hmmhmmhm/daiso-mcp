@@ -306,6 +306,7 @@ async function fetchLotteMartHtmlByZyte(
     method: (init.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | undefined) || 'GET',
     headers: toZyteHeaders(headers),
     bodyText: toBodyText(init.body),
+    tags: { service: 'lottemart' },
   });
 
   if (!result.httpResponseBody) {

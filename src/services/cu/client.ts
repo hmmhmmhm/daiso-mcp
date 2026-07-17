@@ -143,6 +143,7 @@ async function requestCuWebHtml(
         method: 'POST',
         headers: Object.entries(CU_WEB_DEFAULT_HEADERS).map(([name, value]) => ({ name, value })),
         bodyText: formText,
+        tags: { service: 'cu' },
       });
 
       if (result.statusCode === 200 && result.httpResponseBody) {

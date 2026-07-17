@@ -6,6 +6,7 @@ import type { Context } from 'hono';
 import { toStandardErrorDiagnostics } from '../core/errors.js';
 
 export interface AppBindings {
+  DAILY_RATE_LIMITER?: DurableObjectNamespace;
   ZYTE_API_KEY?: string;
   GOOGLE_MAPS_API_KEY?: string;
   NAVER_CLIENT_ID?: string;
@@ -55,7 +56,7 @@ export function errorResponse(
   c: ApiContext,
   code: string,
   message: string,
-  status: 400 | 401 | 403 | 404 | 500 | 503 = 400,
+  status: 400 | 401 | 403 | 404 | 429 | 500 | 503 = 400,
 ) {
   return c.json<ApiResponse<never>>(
     {

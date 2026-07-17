@@ -593,6 +593,9 @@ describe('GET /api/health/checks', () => {
     expect(mockFetch).toHaveBeenCalled();
     expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/daiso-mcp\.example\.workers\.dev\//);
     expect(String(mockFetch.mock.calls[0][0])).toContain('_healthCheck=');
+    expect(new Headers((mockFetch.mock.calls[0][1] as RequestInit | undefined)?.headers).get('x-health-check-key')).toBe(
+      'test-secret',
+    );
   });
 
   it('baseUrl 쿼리가 있으면 헬스 체크 기준 URL로 우선 사용한다', async () => {
@@ -619,6 +622,9 @@ describe('GET /api/health/checks', () => {
 
     expect(res.status).toBe(200);
     expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/probe\.example\.com\/api\/daiso\/products/);
+    expect(
+      new Headers((mockFetch.mock.calls[0][1] as RequestInit | undefined)?.headers).get('x-health-check-key'),
+    ).toBeNull();
   });
 
   it('지원하지 않는 mode는 400을 반환한다', async () => {

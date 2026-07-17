@@ -7,3 +7,11 @@ HEALTH_CHECK_BASE_URL = "https://daiso-mcp.hmmhmmhm.workers.dev"
 
 [observability]
 enabled = false
+
+[[durable_objects.bindings]]
+name = "DAILY_RATE_LIMITER"
+class_name = "DailyRateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DailyRateLimiter"]

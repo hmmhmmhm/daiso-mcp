@@ -70,6 +70,7 @@ async function requestByZyteCgv<TResponse>(
       { name: 'X-TIMESTAMP', value: timestamp },
       { name: 'X-SIGNATURE', value: signature },
     ],
+    tags: { service: 'cgv' },
   });
 
   return decodeZyteHttpBody<TResponse>(result);

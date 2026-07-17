@@ -33,7 +33,7 @@
 - Create: `tests/durableObjects/dailyRateLimiter.test.ts`
 - Create: `src/durableObjects/dailyRateLimiter.ts`
 
-- [ ] **Step 1: 3,000회 경계와 KST 날짜 초기화 실패 테스트 작성**
+- [x] **Step 1: 3,000회 경계와 KST 날짜 초기화 실패 테스트 작성**
 
 ```ts
 const state = createState({ day: '2026-07-17', count: 2999 });
@@ -48,13 +48,13 @@ const reset = await limiter.consume(Date.parse('2026-07-17T15:00:00Z'));
 expect(reset).toMatchObject({ allowed: true, count: 1, remaining: 2999, day: '2026-07-18' });
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npx vitest run tests/durableObjects/dailyRateLimiter.test.ts`
 
 Expected: FAIL because `DailyRateLimiter` does not exist.
 
-- [ ] **Step 3: 최소 카운터 구현**
+- [x] **Step 3: 최소 카운터 구현**
 
 ```ts
 export const DAILY_RATE_LIMIT = 3000;
@@ -96,7 +96,7 @@ export class DailyRateLimiter {
 }
 ```
 
-- [ ] **Step 4: 단위 테스트 통과 확인**
+- [x] **Step 4: 단위 테스트 통과 확인**
 
 Run: `npx vitest run tests/durableObjects/dailyRateLimiter.test.ts`
 
@@ -110,7 +110,7 @@ Expected: PASS.
 - Modify: `src/api/response.ts`
 - Modify: `src/index.ts`
 
-- [ ] **Step 1: 보호·제외 경로와 fail-open 실패 테스트 작성**
+- [x] **Step 1: 보호·제외 경로와 fail-open 실패 테스트 작성**
 
 ```ts
 expect(isDailyRateLimitedRequest(new Request('https://example.com/api/cgv/timetable'))).toBe(true);
@@ -126,13 +126,13 @@ expect(result?.remaining).toBe(2999);
 expect(env.DAILY_RATE_LIMITER.idFromName).not.toHaveBeenCalledWith('203.0.113.10');
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npx vitest run tests/middleware/dailyRateLimit.test.ts`
 
 Expected: FAIL because the middleware module does not exist.
 
-- [ ] **Step 3: 경로 판별, IP 해시와 binding 호출 구현**
+- [x] **Step 3: 경로 판별, IP 해시와 binding 호출 구현**
 
 ```ts
 const PROTECTED_PREFIXES = [
@@ -170,7 +170,7 @@ export async function consumeDailyRateLimit(request: Request, env: AppBindings) 
 }
 ```
 
-- [ ] **Step 4: Hono 미들웨어와 429 구현**
+- [x] **Step 4: Hono 미들웨어와 429 구현**
 
 ```ts
 export function createDailyRateLimitMiddleware(): MiddlewareHandler<{ Bindings: AppBindings }> {
@@ -191,7 +191,7 @@ export function createDailyRateLimitMiddleware(): MiddlewareHandler<{ Bindings: 
 
 Register `app.use('/api/*', createDailyRateLimitMiddleware())` after CORS and before route registration. Export `DailyRateLimiter` from `src/index.ts`. Extend `AppBindings` with `DAILY_RATE_LIMITER?: DurableObjectNamespace` and allow status 429 in `errorResponse`.
 
-- [ ] **Step 5: 미들웨어 테스트 통과 확인**
+- [x] **Step 5: 미들웨어 테스트 통과 확인**
 
 Run: `npx vitest run tests/middleware/dailyRateLimit.test.ts`
 
@@ -204,7 +204,7 @@ Expected: PASS.
 - Modify: `src/api/routes/healthRoutes.ts`
 - Modify: `tests/app/app-health-checks.test.ts`
 
-- [ ] **Step 1: cache hit, 429, 제외 경로 실패 테스트 작성**
+- [x] **Step 1: cache hit, 429, 제외 경로 실패 테스트 작성**
 
 ```ts
 const env = createRateLimitEnv([{ allowed: true, count: 1, remaining: 2999, resetAt }, { allowed: false, count: 3000, remaining: 0, resetAt }]);
@@ -224,13 +224,13 @@ expect(env.DAILY_RATE_LIMITER.idFromName).toHaveBeenCalledTimes(2);
 
 Set `globalThis.caches.default.match` to return a cached response and verify `idFromName` is still called before the cached response is served.
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npx vitest run tests/app/app-daily-rate-limit.test.ts tests/app/app-health-checks.test.ts`
 
 Expected: FAIL because integration wiring and health bypass propagation are incomplete.
 
-- [ ] **Step 3: 신뢰 가능한 헬스 체크 fetch에 우회 secret 전달**
+- [x] **Step 3: 신뢰 가능한 헬스 체크 fetch에 우회 secret 전달**
 
 ```ts
 function isTrustedHealthTarget(target: string, requestUrl: string, configuredBaseUrl?: string): boolean {
@@ -253,7 +253,7 @@ const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
 
 Pass this `fetchImpl` to `runHealthChecks` for both internal and network transport. Add tests proving the configured Worker origin receives the header while an arbitrary `baseUrl` does not.
 
-- [ ] **Step 4: 통합 테스트 통과 확인**
+- [x] **Step 4: 통합 테스트 통과 확인**
 
 Run: `npx vitest run tests/app/app-daily-rate-limit.test.ts tests/app/app-health-checks.test.ts`
 
@@ -271,7 +271,7 @@ Expected: PASS.
 - Modify: `src/services/gs25/productSearch.ts`
 - Modify: `src/services/lottemart/session.ts`
 
-- [ ] **Step 1: 태그 payload 실패 테스트 작성**
+- [x] **Step 1: 태그 payload 실패 테스트 작성**
 
 ```ts
 await requestByZyte({ apiKey: 'key', url: 'https://example.com', tags: { service: 'cgv' } });
@@ -279,13 +279,13 @@ const init = mockFetch.mock.calls[0][1] as RequestInit;
 expect(JSON.parse(String(init.body))).toMatchObject({ tags: { service: 'cgv' } });
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npx vitest run tests/utils/zyte.test.ts`
 
 Expected: FAIL because `tags` is not in the request body.
 
-- [ ] **Step 3: 태그 옵션과 서비스 태그 구현**
+- [x] **Step 3: 태그 옵션과 서비스 태그 구현**
 
 Add `tags?: Record<string, string | null>` to `ZyteExtractOptions`, include `tags` in the JSON body only when supplied, and pass one of `oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart` from every `requestByZyte` call site.
 
@@ -300,7 +300,7 @@ body: JSON.stringify({
 }),
 ```
 
-- [ ] **Step 4: Zyte와 서비스 테스트 통과 확인**
+- [x] **Step 4: Zyte와 서비스 테스트 통과 확인**
 
 Run: `npx vitest run tests/utils/zyte.test.ts tests/services/oliveyoung/client.test.ts tests/services/cgv/transport.test.ts tests/services/cu/client.test.ts tests/services/gs25/client.test.ts tests/services/lottemart/session.test.ts`
 
@@ -311,7 +311,7 @@ Expected: PASS.
 **Files:**
 - Modify: `wrangler.toml`
 
-- [ ] **Step 1: binding과 SQLite migration 추가**
+- [x] **Step 1: binding과 SQLite migration 추가**
 
 ```toml
 [[durable_objects.bindings]]
@@ -323,7 +323,7 @@ tag = "v1"
 new_sqlite_classes = ["DailyRateLimiter"]
 ```
 
-- [ ] **Step 2: Cloudflare 타입과 빌드 확인**
+- [x] **Step 2: Cloudflare 타입과 빌드 확인**
 
 Run: `npm run typecheck && npm run build`
 
@@ -334,19 +334,19 @@ Expected: both commands exit 0 and generated OpenAPI files remain unchanged unle
 **Files:**
 - Modify: `/Users/hm/Documents/personal-agent/projects/daiso-mcp/PROJECT.md`
 
-- [ ] **Step 1: 전체 정적 검사와 테스트**
+- [x] **Step 1: 전체 정적 검사와 테스트**
 
 Run: `npm run check`
 
 Expected: format, ESLint, Biome, typecheck and all Vitest tests pass.
 
-- [ ] **Step 2: 100% coverage 확인**
+- [x] **Step 2: 100% coverage 확인**
 
 Run: `npm run test:coverage`
 
 Expected: Statements, Branches, Functions and Lines are all 100%.
 
-- [ ] **Step 3: 배포 전 diff와 비밀정보 확인**
+- [x] **Step 3: 배포 전 diff와 비밀정보 확인**
 
 Run: `git diff --check && git status --short && git diff --stat && git diff -- wrangler.toml src tests`
 

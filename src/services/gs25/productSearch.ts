@@ -98,6 +98,7 @@ async function fetchGs25TotalSearchResponse(
         value,
       })),
       bodyText,
+      tags: { service: 'gs25' },
     });
     return decodeZyteHttpBody<Gs25TotalSearchResponse>(result);
   }

@@ -51,6 +51,8 @@ import { registerCompareRoutes } from './api/routes/compareRoutes.js';
 import { registerFeedbackRoutes } from './api/routes/feedbackRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
 import { buildConfigStatus } from './api/configStatus.js';
+import { createDailyRateLimitMiddleware } from './middleware/dailyRateLimit.js';
+export { DailyRateLimiter } from './durableObjects/dailyRateLimiter.js';
 
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
@@ -330,6 +332,9 @@ app.use(
     exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
   }),
 );
+
+// Zyte 연동 공개 GET API의 일일 호출량을 IP별로 제한합니다.
+app.use('/api/*', createDailyRateLimitMiddleware());
 
 // 기본 정보 엔드포인트 (GET 요청만)
 app.get('/', (c) => {

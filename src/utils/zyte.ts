@@ -20,6 +20,7 @@ export interface ZyteExtractOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: Array<{ name: string; value: string }>;
   bodyText?: string;
+  tags?: Record<string, string | null>;
 }
 
 export function resolveZyteApiKey(apiKey?: string): string {
@@ -103,6 +104,7 @@ export async function requestByZyte(options: ZyteExtractOptions): Promise<ZyteEx
     headers = [],
     bodyText,
     apiKey,
+    tags,
   } = options;
   const auth = encodeBasicAuth(resolveZyteApiKey(apiKey));
   const maxAttempts = Math.max(1, Math.trunc(retries) + 1);
@@ -126,6 +128,7 @@ export async function requestByZyte(options: ZyteExtractOptions): Promise<ZyteEx
             customHttpRequestHeaders: headers,
             httpRequestText: bodyText,
             httpResponseBody: true,
+            ...(tags ? { tags } : {}),
           }),
           signal: controller.signal,
         });

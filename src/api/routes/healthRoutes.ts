@@ -33,6 +33,15 @@ function canForceFresh(headers: Headers): boolean {
   return parseBoolean(headers.get('x-health-check-force-fresh') || undefined);
 }
 
+function isTrustedHealthTarget(target: RequestInfo | URL, requestUrl: string, configuredBaseUrl?: string): boolean {
+  const allowedOrigins = new Set([new URL(requestUrl).origin]);
+  if (configuredBaseUrl) {
+    allowedOrigins.add(new URL(configuredBaseUrl).origin);
+  }
+
+  return allowedOrigins.has(new URL(String(target)).origin);
+}
+
 function parseMode(value: string | undefined): HealthCheckMode | null {
   if (!value || value === 'quick') {
     return 'quick';
@@ -77,10 +86,17 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
     const baseUrl = c.req.query('baseUrl')?.trim() || c.env?.HEALTH_CHECK_BASE_URL?.trim() || new URL(c.req.url).origin;
     const transport = c.req.query('transport') || c.env?.HEALTH_CHECK_TRANSPORT || 'internal';
     const cacheBust = parseBoolean(c.req.query('cacheBust')) || transport === 'network';
-    const fetchImpl =
-      transport !== 'network'
-        ? async (input: RequestInfo | URL, init?: RequestInit) => app.fetch(new Request(input, init), c.env)
-        : undefined;
+    const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      if (isTrustedHealthTarget(input, c.req.url, c.env?.HEALTH_CHECK_BASE_URL)) {
+        headers.set('x-health-check-key', secret);
+      }
+      const requestInit = { ...init, headers };
+
+      return transport !== 'network'
+        ? app.fetch(new Request(input, requestInit), c.env)
+        : globalThis.fetch(input, requestInit);
+    };
     const result = await runHealthChecks({
       baseUrl,
       service: c.req.query('service') || undefined,

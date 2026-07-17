@@ -166,6 +166,7 @@ async function fetchGs25StoreStock(
       timeout: options.timeout,
       retries: 1,
       headers: Object.entries(GS25_DEFAULT_HEADERS).map(([name, value]) => ({ name, value })),
+      tags: { service: 'gs25' },
     });
     return decodeZyteHttpBody<Gs25StoreStockResponse>(result);
   }

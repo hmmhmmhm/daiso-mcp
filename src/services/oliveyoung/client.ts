@@ -146,6 +146,7 @@ async function zyteExtract(
         { name: 'X-Requested-With', value: 'XMLHttpRequest' },
       ],
       bodyText: JSON.stringify(requestBody),
+      tags: { service: 'oliveyoung' },
     });
 
     if (result.statusCode !== 200 || !result.httpResponseBody) {
