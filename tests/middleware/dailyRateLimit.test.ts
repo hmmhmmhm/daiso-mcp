@@ -81,7 +81,79 @@ describe('consumeDailyRateLimit', () => {
     expect(result).toEqual(allowedResult);
     expect(fixture.idFromName).toHaveBeenCalledWith(await hashRateLimitIdentity('203.0.113.10'));
     expect(fixture.idFromName).not.toHaveBeenCalledWith('203.0.113.10');
-    expect(fixture.stubFetch).toHaveBeenCalledWith('https://daily-rate-limit/consume', { method: 'POST' });
+    expect(fixture.stubFetch).toHaveBeenCalledWith('https://daily-rate-limit/consume', {
+      method: 'POST',
+    });
+  });
+
+  it('교차 존 Worker 요청을 upstream zone별 객체로 분리한다', async () => {
+    const fixture = createRateLimitEnv();
+    const firstZone = new Request('https://example.com/api/cgv/timetable', {
+      headers: {
+        'CF-Connecting-IP': '2a06:98c0:3600::103',
+        'CF-Worker': 'first.example',
+      },
+    });
+    const secondZone = new Request('https://example.com/api/cgv/timetable', {
+      headers: {
+        'CF-Connecting-IP': '2a06:98c0:3600::103',
+        'CF-Worker': 'second.example',
+      },
+    });
+
+    await consumeDailyRateLimit(firstZone, fixture.env);
+    await consumeDailyRateLimit(secondZone, fixture.env);
+
+    expect(fixture.idFromName.mock.calls[0][0]).toBe(
+      await hashRateLimitIdentity('worker-zone:first.example'),
+    );
+    expect(fixture.idFromName.mock.calls[1][0]).toBe(
+      await hashRateLimitIdentity('worker-zone:second.example'),
+    );
+    expect(fixture.idFromName.mock.calls[0][0]).not.toBe(fixture.idFromName.mock.calls[1][0]);
+  });
+
+  it('교차 존 Worker 이름을 공백 제거와 소문자로 정규화한다', async () => {
+    const fixture = createRateLimitEnv();
+    const request = new Request('https://example.com/api/cgv/timetable', {
+      headers: {
+        'CF-Connecting-IP': '2a06:98c0:3600::103',
+        'CF-Worker': '  Example.COM  ',
+      },
+    });
+
+    await consumeDailyRateLimit(request, fixture.env);
+
+    expect(fixture.idFromName).toHaveBeenCalledWith(
+      await hashRateLimitIdentity('worker-zone:example.com'),
+    );
+  });
+
+  it('일반 IP는 CF-Worker 헤더가 있어도 기존 IP 객체를 사용한다', async () => {
+    const fixture = createRateLimitEnv();
+    const request = new Request('https://example.com/api/cgv/timetable', {
+      headers: {
+        'CF-Connecting-IP': '203.0.113.10',
+        'CF-Worker': 'spoofed.example',
+      },
+    });
+
+    await consumeDailyRateLimit(request, fixture.env);
+
+    expect(fixture.idFromName).toHaveBeenCalledWith(await hashRateLimitIdentity('203.0.113.10'));
+  });
+
+  it('교차 존 특수 IP에 CF-Worker가 없으면 기존 공유 객체를 사용한다', async () => {
+    const fixture = createRateLimitEnv();
+    const request = new Request('https://example.com/api/cgv/timetable', {
+      headers: { 'CF-Connecting-IP': '2a06:98c0:3600::103' },
+    });
+
+    await consumeDailyRateLimit(request, fixture.env);
+
+    expect(fixture.idFromName).toHaveBeenCalledWith(
+      await hashRateLimitIdentity('2a06:98c0:3600::103'),
+    );
   });
 
   it('같은 IP는 서비스가 달라도 같은 객체를 사용하고 다른 IP는 분리한다', async () => {
@@ -122,7 +194,10 @@ describe('consumeDailyRateLimit', () => {
       ),
     ).toBeNull();
     expect(
-      await consumeDailyRateLimit(new Request('https://example.com/api/cgv/timetable'), fixture.env),
+      await consumeDailyRateLimit(
+        new Request('https://example.com/api/cgv/timetable'),
+        fixture.env,
+      ),
     ).toBeNull();
     expect(
       await consumeDailyRateLimit(

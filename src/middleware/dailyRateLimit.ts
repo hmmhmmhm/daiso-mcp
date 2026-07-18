@@ -1,5 +1,5 @@
 /**
- * Zyte 연동 공개 GET API의 IP별 일일 호출 제한 미들웨어
+ * Zyte 연동 공개 GET API의 클라이언트별 일일 호출 제한 미들웨어
  */
 
 import type { MiddlewareHandler } from 'hono';
@@ -13,6 +13,9 @@ const PROTECTED_PREFIXES = [
   '/api/gs25/',
   '/api/lottemart/',
 ] as const;
+
+// Cloudflare가 교차 존 Worker subrequest에 사용하는 공통 client IP
+const CROSS_ZONE_WORKER_CLIENT_IP = '2a06:98c0:3600::103';
 
 export function isDailyRateLimitedRequest(request: Request): boolean {
   if (request.method !== 'GET') {
@@ -37,6 +40,16 @@ export async function hashRateLimitIdentity(ip: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function resolveRateLimitIdentity(request: Request): string | null {
+  const ip = request.headers.get('CF-Connecting-IP')?.trim();
+  if (!ip || ip !== CROSS_ZONE_WORKER_CLIENT_IP) {
+    return ip || null;
+  }
+
+  const workerZone = request.headers.get('CF-Worker')?.trim().toLowerCase();
+  return workerZone ? `worker-zone:${workerZone}` : ip;
+}
+
 export async function consumeDailyRateLimit(
   request: Request,
   env?: AppBindings,
@@ -45,13 +58,13 @@ export async function consumeDailyRateLimit(
     return null;
   }
 
-  const ip = request.headers.get('CF-Connecting-IP')?.trim();
-  if (!ip || !env?.DAILY_RATE_LIMITER) {
+  const identity = resolveRateLimitIdentity(request);
+  if (!identity || !env?.DAILY_RATE_LIMITER) {
     return null;
   }
 
   try {
-    const id = env.DAILY_RATE_LIMITER.idFromName(await hashRateLimitIdentity(ip));
+    const id = env.DAILY_RATE_LIMITER.idFromName(await hashRateLimitIdentity(identity));
     const stub = env.DAILY_RATE_LIMITER.get(id);
     const response = await stub.fetch('https://daily-rate-limit/consume', { method: 'POST' });
     if (!response.ok) {
@@ -61,7 +74,10 @@ export async function consumeDailyRateLimit(
 
     return (await response.json()) as DailyRateLimitResult;
   } catch (error) {
-    console.error('일일 호출 제한 확인 실패', error instanceof Error ? error.message : String(error));
+    console.error(
+      '일일 호출 제한 확인 실패',
+      error instanceof Error ? error.message : String(error),
+    );
     return null;
   }
 }
