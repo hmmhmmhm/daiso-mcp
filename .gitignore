@@ -146,6 +146,7 @@ vite.config.ts.timestamp-*
 # IDE
 .vscode/
 .idea/
+.worktrees/
 *.swp
 *.swo
 
