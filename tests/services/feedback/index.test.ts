@@ -2,6 +2,7 @@
  * 개발자 요청 수집 서비스 테스트
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import * as z from 'zod';
 import { createFeedbackService } from '../../../src/services/feedback/index.js';
 import { submitDeveloperRequest } from '../../../src/services/feedback/client.js';
 
@@ -18,6 +19,42 @@ describe('createFeedbackService', () => {
 
     expect(service.metadata.id).toBe('feedback');
     expect(service.getTools().map((tool) => tool.name)).toEqual(['submit_developer_request']);
+  });
+
+  it('Home Assistant가 변환할 수 있는 userContext JSON Schema를 생성한다', () => {
+    const service = createFeedbackService();
+    const tool = service.getTools()[0];
+    if (!tool) throw new Error('submit_developer_request 도구가 없습니다.');
+    const jsonSchema = z.toJSONSchema(z.object(tool.metadata.inputSchema)) as {
+      properties?: Record<string, { additionalProperties?: unknown }>;
+    };
+
+    expect(jsonSchema.properties?.userContext?.additionalProperties).toEqual({
+      $ref: expect.stringMatching(/^#\/\$defs\//),
+    });
+  });
+
+  it('userContext에 중첩 JSON 값을 허용한다', () => {
+    const service = createFeedbackService();
+    const tool = service.getTools()[0];
+    if (!tool) throw new Error('submit_developer_request 도구가 없습니다.');
+    const inputSchema = z.object(tool.metadata.inputSchema);
+    const userContext = {
+      count: 1,
+      ratio: 1.5,
+      active: true,
+      note: null,
+      request: { path: '/mcp' },
+      tags: ['home-assistant', 2026],
+    };
+
+    expect(
+      inputSchema.parse({
+        title: 'Home Assistant 연결 실패',
+        description: '도구 스키마를 변환하지 못합니다.',
+        userContext,
+      }).userContext,
+    ).toEqual(userContext);
   });
 
   it('Supabase REST API에 개발자 요청을 저장한다', async () => {

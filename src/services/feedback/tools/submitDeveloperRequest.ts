@@ -3,6 +3,18 @@ import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { submitDeveloperRequest } from '../client.js';
 import type { DeveloperRequestConfig, DeveloperRequestInput } from '../types.js';
 
+const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.int(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
+  ]),
+);
+
 export function createSubmitDeveloperRequestTool(config: DeveloperRequestConfig): ToolRegistration {
   return {
     name: 'submit_developer_request',
@@ -33,7 +45,10 @@ export function createSubmitDeveloperRequestTool(config: DeveloperRequestConfig)
           .optional()
           .default('mcp')
           .describe('요청 출처'),
-        userContext: z.object({}).loose().optional().describe('추가 컨텍스트 JSON'),
+        userContext: z
+          .record(z.string(), jsonValueSchema)
+          .optional()
+          .describe('추가 컨텍스트 JSON'),
       },
       outputSchema: {
         id: z.string().optional(),
