@@ -112,7 +112,7 @@
 
 ## AI 앱에서 MCP 연결하기
 
-ChatGPT, Claude, Grok 같은 AI 앱에서 바로 연결해 사용할 수 있습니다.
+ChatGPT, Claude, Home Assistant, Grok 같은 AI 앱에서 바로 연결해 사용할 수 있습니다.
 아래 앱별 가이드에서 먼저 연동한 뒤 검색/재고/영화 조회를 요청하세요.
 
 <br>
@@ -201,6 +201,19 @@ CGV mcp를 사용해서 강남 CGV 영화랑 시간표 확인해줘
 ```bash
 claude mcp add daiso-mcp https://mcp.aka.page --transport http
 ```
+
+<br>
+
+### Home Assistant
+
+> Home Assistant Core 2026.7.1에서 MCP 도구 40개를 모두 정상적으로 불러오는 것을 확인했습니다.
+
+1. Home Assistant에서 **Settings** → **Devices & services**로 이동
+2. **Add Integration**을 선택하고 **Model Context Protocol**을 검색
+3. 서버 URL 입력: `https://mcp.aka.page`
+4. 연동을 마친 뒤 사용할 대화 에이전트가 MCP 도구를 사용하도록 설정
+
+참고: [Home Assistant Model Context Protocol 통합 가이드](https://www.home-assistant.io/integrations/mcp)
 
 <br>
 

@@ -36,10 +36,10 @@ Insert the following section between Claude Code and Grok:
 ```markdown
 ### Home Assistant
 
-> Home Assistant Core 2026.7.1에서 MCP 도구 40개의 연결 호환성을 확인했습니다.
+> Home Assistant Core 2026.7.1에서 MCP 도구 40개를 모두 정상적으로 불러오는 것을 확인했습니다.
 
 1. Home Assistant에서 **Settings** → **Devices & services**로 이동
-2. **Add Integration**을 선택하고 **Model Context Protocol** 검색
+2. **Add Integration**을 선택하고 **Model Context Protocol**을 검색
 3. 서버 URL 입력: `https://mcp.aka.page`
 4. 연동을 마친 뒤 사용할 대화 에이전트가 MCP 도구를 사용하도록 설정
 
@@ -66,7 +66,7 @@ Expected: README passes Prettier without changes.
 
 - [ ] **Step 5: Verify chart updates preserve static README content**
 
-Run: `npm test -- tests/scripts/update-workers-invocations-chart.test.ts`
+Run: `npm test -- tests/scripts/workers-chart-helpers.test.ts`
 
 Expected: the complete chart update test file passes.
 
@@ -106,7 +106,7 @@ Run:
 
 ```bash
 npx prettier --check README.md
-npm test -- tests/scripts/update-workers-invocations-chart.test.ts
+npm test -- tests/scripts/workers-chart-helpers.test.ts
 ```
 
 Expected: both checks pass on the integrated branch.
