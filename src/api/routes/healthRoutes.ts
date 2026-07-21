@@ -61,7 +61,7 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       );
     }
 
-    if (authorizeOperationalRequest(c.req.raw.headers, secret) !== 'authorized') {
+    if ((await authorizeOperationalRequest(c.req.raw.headers, secret)) !== 'authorized') {
       return errorResponse(c, 'UNAUTHORIZED_HEALTH_CHECK', '유효한 헬스 체크 시크릿 키가 필요합니다.', 401);
     }
 
