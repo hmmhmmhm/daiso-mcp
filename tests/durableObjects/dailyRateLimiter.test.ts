@@ -202,7 +202,7 @@ describe('DailyRateLimiter', () => {
     const limiter = new DailyRateLimiter(fixture.state);
 
     const response = await limiter.fetch(
-      request('/stats?from=2026-07-22&to=2026-07-22&service=cgv'),
+      request('/stats?service=cgv&to=2026-07-22&from=2026-07-22'),
     );
 
     expect(response.status).toBe(200);
@@ -240,6 +240,10 @@ describe('DailyRateLimiter', () => {
     ['역전된 기간', '/stats?from=2026-07-23&to=2026-07-22'],
     ['빈 서비스', '/stats?from=2026-07-21&to=2026-07-22&service='],
     ['지원하지 않는 서비스', '/stats?from=2026-07-21&to=2026-07-22&service=daiso'],
+    ['중복 from', '/stats?from=2026-07-21&from=2026-07-22&to=2026-07-22'],
+    ['중복 to', '/stats?from=2026-07-21&to=2026-07-21&to=2026-07-22'],
+    ['중복 서비스', '/stats?from=2026-07-21&to=2026-07-22&service=cgv&service=gs25'],
+    ['알 수 없는 키', '/stats?from=2026-07-21&to=2026-07-22&identityId=opaque'],
   ])('%s 통계 요청은 400을 반환하고 조회하지 않는다', async (_, path) => {
     const fixture = createState();
     const query = vi.spyOn(RateLimitMetricsStore.prototype, 'query');

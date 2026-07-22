@@ -108,9 +108,30 @@ async function parseBlockedEvent(request: Request): Promise<BlockedRateLimitEven
   };
 }
 
+function hasStrictStatsParameters(searchParams: URLSearchParams): boolean {
+  let fromCount = 0;
+  let toCount = 0;
+  let serviceCount = 0;
+  for (const [key] of searchParams) {
+    if (key === 'from') {
+      fromCount += 1;
+    } else if (key === 'to') {
+      toCount += 1;
+    } else if (key === 'service') {
+      serviceCount += 1;
+    } else {
+      return false;
+    }
+  }
+  return fromCount === 1 && toCount === 1 && serviceCount <= 1;
+}
+
 function parseStatsInput(
   url: URL,
 ): { from: string; to: string; service?: RateLimitService } | undefined {
+  if (!hasStrictStatsParameters(url.searchParams)) {
+    return undefined;
+  }
   const from = url.searchParams.get('from');
   const to = url.searchParams.get('to');
   const service = url.searchParams.get('service');
