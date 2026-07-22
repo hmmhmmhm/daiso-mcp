@@ -209,6 +209,20 @@ describe('repository maintenance configuration', () => {
       serviceReference.indexOf('### 호출 제한 운영 통계'),
       serviceReference.indexOf('### 제품 검색'),
     );
+    const curlBlockMatch = readmeOperations.match(/```bash\r?\n([\s\S]*?)\r?\n```/);
+    if (!curlBlockMatch?.[1]) {
+      throw new Error('README 운영 통계 절에 `bash` 코드 블록 호출 예시가 필요합니다.');
+    }
+    const jsonBlockMatch = readmeOperations.match(/```json\r?\n([\s\S]*?)\r?\n```/);
+    if (!jsonBlockMatch?.[1]) {
+      throw new Error('README 운영 통계 절에 `json` 코드 블록 성공 응답 예시가 필요합니다.');
+    }
+    let statsExample: unknown;
+    try {
+      statsExample = JSON.parse(jsonBlockMatch[1]);
+    } catch (error) {
+      throw new Error(`README 운영 통계 JSON 예시를 파싱할 수 없습니다: ${String(error)}`);
+    }
 
     expect(readmeOperations).toContain('GET /api/rate-limit/stats');
     expect(readmeOperations).toContain('HEALTH_CHECK_SECRET');
@@ -229,19 +243,28 @@ describe('repository maintenance configuration', () => {
     expect(readmeOperations).toContain('배포 시점부터 수집');
     expect(readmeOperations).toContain('이전 429는 소급 집계하지 않습니다');
     expect(readmeOperations).toContain('원본 호출 주체나 IP를 노출하지 않습니다');
-    for (const field of [
-      '"success": true',
-      '"data": {',
-      '"totals": {',
-      '"daily": [',
-      '"services": [',
-      '"day":',
-      '"service":',
-      '"blockedRequests":',
-      '"uniqueIdentities":',
-    ]) {
-      expect(readmeOperations).toContain(field);
-    }
+    expect(curlBlockMatch[1]).not.toMatch(/[?&](?:from|to)=\d{4}-\d{2}-\d{2}/);
+    expect(statsExample).toEqual({
+      success: true,
+      data: {
+        totals: { blockedRequests: 3, uniqueIdentities: 2 },
+        daily: [
+          {
+            day: '2026-07-22',
+            blockedRequests: 3,
+            uniqueIdentities: 2,
+          },
+        ],
+        services: [
+          {
+            day: '2026-07-22',
+            service: 'cgv',
+            blockedRequests: 3,
+            uniqueIdentities: 2,
+          },
+        ],
+      },
+    });
 
     expect(serviceReferenceOperations).toContain('GET /api/rate-limit/stats');
     expect(serviceReferenceOperations).toContain('HEALTH_CHECK_SECRET');
