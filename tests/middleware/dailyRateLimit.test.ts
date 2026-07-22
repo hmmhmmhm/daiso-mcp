@@ -6,18 +6,22 @@ import {
   setRateLimitHeaders,
 } from '../../src/middleware/dailyRateLimit.js';
 import type { AppBindings } from '../../src/api/response.js';
-import type { DailyRateLimitResult } from '../../src/durableObjects/dailyRateLimiter.js';
+import {
+  nextKstMidnightEpochSeconds,
+  type DailyRateLimitResult,
+} from '../../src/durableObjects/dailyRateLimiter.js';
+
+const NOW_MS = Date.parse('2026-07-17T00:00:00.000Z');
 
 const allowedResult: DailyRateLimitResult = {
   allowed: true,
   count: 1,
   remaining: 2999,
-  resetAt: 1784296800,
+  resetAt: nextKstMidnightEpochSeconds(NOW_MS),
   day: '2026-07-17',
 };
 
 const FIRST_QUOTA_ID = '1'.repeat(64);
-const NOW_MS = Date.parse('2026-07-17T00:00:00.000Z');
 
 type QuotaOutcome = DailyRateLimitResult | Error | (() => Response);
 

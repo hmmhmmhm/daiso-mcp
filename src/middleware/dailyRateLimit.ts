@@ -6,6 +6,7 @@ import type { MiddlewareHandler } from 'hono';
 import { errorResponse, type AppBindings } from '../api/response.js';
 import {
   DAILY_RATE_LIMIT,
+  nextKstMidnightEpochSeconds,
   toKstDay,
   type DailyRateLimitResult,
 } from '../durableObjects/dailyRateLimiter.js';
@@ -141,6 +142,10 @@ async function consumeDailyRateLimitDecision(
     const nowMs = Date.now();
     if (result.day !== toKstDay(nowMs)) {
       console.error('일일 호출 제한 날짜 전환 감지');
+      return null;
+    }
+    if (result.resetAt !== nextKstMidnightEpochSeconds(nowMs)) {
+      console.error('일일 호출 제한 초기화 시각 검증 실패');
       return null;
     }
 

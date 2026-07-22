@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../../src/index.js';
 import type { AppBindings } from '../../src/api/response.js';
-import type { DailyRateLimitResult } from '../../src/durableObjects/dailyRateLimiter.js';
+import {
+  nextKstMidnightEpochSeconds,
+  type DailyRateLimitResult,
+} from '../../src/durableObjects/dailyRateLimiter.js';
 import { RATE_LIMIT_METRICS_LEDGER_NAME } from '../../src/durableObjects/rateLimitMetricsStore.js';
 import { hashRateLimitIdentity } from '../../src/middleware/dailyRateLimit.js';
 
@@ -26,7 +29,7 @@ function createResult(overrides: Partial<DailyRateLimitResult> = {}): DailyRateL
     allowed: true,
     count: 1,
     remaining: 2999,
-    resetAt: Math.floor(NOW_MS / 1000) + 3600,
+    resetAt: nextKstMidnightEpochSeconds(NOW_MS),
     day: RATE_LIMIT_DAY,
     ...overrides,
   };
@@ -226,6 +229,51 @@ describe('일일 호출 제한 통합', () => {
     expect(fixture.idFromName).not.toHaveBeenCalledWith(RATE_LIMIT_METRICS_LEDGER_NAME);
     expect(consoleSpy).toHaveBeenCalledWith('일일 호출 제한 날짜 전환 감지');
     expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain('203.0.113.10');
+  });
+
+  it.each([
+    ['stale', Math.floor(NOW_MS / 1000) - 1],
+    ['future', nextKstMidnightEpochSeconds(NOW_MS) + 1],
+  ] as const)('정확한 다음 KST 자정이 아닌 %s resetAt은 fail-open한다', async (_, resetAt) => {
+    const denied = createResult({ allowed: false, count: 3000, remaining: 0, resetAt });
+    const fixture = createRateLimitEnv([denied]);
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const response = await app.request(
+      '/api/oliveyoung/products',
+      { headers: { 'CF-Connecting-IP': '203.0.113.10' } },
+      fixture.env,
+    );
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).not.toBe('DAILY_RATE_LIMIT_EXCEEDED');
+    expect(response.headers.get('X-RateLimit-Limit')).toBeNull();
+    expect(response.headers.get('X-RateLimit-Remaining')).toBeNull();
+    expect(response.headers.get('X-RateLimit-Reset')).toBeNull();
+    expect(response.headers.get('Retry-After')).toBeNull();
+    expect(callPaths(fixture.calls)).toEqual(['/consume']);
+    expect(fixture.idFromName).not.toHaveBeenCalledWith(RATE_LIMIT_METRICS_LEDGER_NAME);
+    expect(consoleSpy).toHaveBeenCalledWith('일일 호출 제한 초기화 시각 검증 실패');
+    expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain('203.0.113.10');
+  });
+
+  it.each([
+    ['KST 자정 직전', KST_ROLLOVER_BEFORE_MS, RATE_LIMIT_DAY],
+    ['KST 자정 경계', KST_ROLLOVER_AFTER_MS, '2026-07-23'],
+  ] as const)('%s의 정확한 다음 자정 resetAt을 허용한다', async (_, nowMs, day) => {
+    vi.mocked(Date.now).mockReturnValue(nowMs);
+    const resetAt = nextKstMidnightEpochSeconds(nowMs);
+    const fixture = createRateLimitEnv([createResult({ day, resetAt })]);
+
+    const response = await app.request(
+      '/api/oliveyoung/products',
+      { headers: { 'CF-Connecting-IP': '203.0.113.10' } },
+      fixture.env,
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('X-RateLimit-Reset')).toBe(String(resetAt));
+    expect(callPaths(fixture.calls)).toEqual(['/consume']);
   });
 
   it.each([
