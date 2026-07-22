@@ -232,11 +232,30 @@ describe('DailyRateLimiter', () => {
     expect(query).toHaveBeenCalledWith({ from: '2026-07-21', to: '2026-07-22' });
   });
 
+  it('같은 인스턴스는 계측 저장소를 재사용하고 다른 인스턴스와 상태를 공유하지 않는다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-22T03:00:00+09:00'));
+    const first = createState();
+    const firstLimiter = new DailyRateLimiter(first.state);
+
+    await firstLimiter.fetch(request('/blocked-events', { method: 'POST', body: eventBody() }));
+    await firstLimiter.fetch(request('/stats?from=2026-07-22&to=2026-07-22'));
+    await firstLimiter.alarm();
+
+    const second = createState();
+    const secondLimiter = new DailyRateLimiter(second.state);
+    await secondLimiter.fetch(request('/stats?from=2026-07-22&to=2026-07-22'));
+
+    expect(first.sql.executed.filter(({ query }) => query.startsWith('CREATE'))).toHaveLength(4);
+    expect(second.sql.executed.filter(({ query }) => query.startsWith('CREATE'))).toHaveLength(4);
+    expect(first.readEvents()).toEqual([VALID_EVENT]);
+    expect(second.readEvents()).toHaveLength(0);
+  });
+
   it.each([
     ['from 누락', '/stats?to=2026-07-22'],
     ['to 누락', '/stats?from=2026-07-22'],
     ['정확하지 않은 from', '/stats?from=2026-7-21&to=2026-07-22'],
-    ['존재하지 않는 to', '/stats?from=2026-07-21&to=2026-02-30'],
+    ['존재하지 않는 to', '/stats?from=2026-02-01&to=2026-02-30'],
     ['역전된 기간', '/stats?from=2026-07-23&to=2026-07-22'],
     ['빈 서비스', '/stats?from=2026-07-21&to=2026-07-22&service='],
     ['지원하지 않는 서비스', '/stats?from=2026-07-21&to=2026-07-22&service=daiso'],

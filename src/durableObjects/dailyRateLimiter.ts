@@ -150,6 +150,8 @@ function errorResponse(message: string, status: 400 | 404): Response {
 }
 
 export class DailyRateLimiter {
+  private metricsStore: RateLimitMetricsStore | undefined;
+
   constructor(private readonly state: DurableObjectState) {}
 
   async consume(nowMs = Date.now()): Promise<DailyRateLimitResult> {
@@ -183,7 +185,7 @@ export class DailyRateLimiter {
       if (!event) {
         return errorResponse('차단 이벤트 형식이 올바르지 않습니다.', 400);
       }
-      const store = new RateLimitMetricsStore(this.state);
+      const store = this.getMetricsStore();
       await store.record(event);
       return new Response(null, { status: 204 });
     }
@@ -193,7 +195,7 @@ export class DailyRateLimiter {
       if (!input) {
         return errorResponse('통계 조회 조건이 올바르지 않습니다.', 400);
       }
-      const store = new RateLimitMetricsStore(this.state);
+      const store = this.getMetricsStore();
       return Response.json(await store.query(input));
     }
 
@@ -201,8 +203,13 @@ export class DailyRateLimiter {
   }
 
   async alarm(): Promise<void> {
-    const store = new RateLimitMetricsStore(this.state);
+    const store = this.getMetricsStore();
     await store.cleanup();
     await store.ensureAlarm();
+  }
+
+  private getMetricsStore(): RateLimitMetricsStore {
+    this.metricsStore ??= new RateLimitMetricsStore(this.state);
+    return this.metricsStore;
   }
 }
