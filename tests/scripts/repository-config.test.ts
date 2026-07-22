@@ -201,31 +201,68 @@ describe('repository maintenance configuration', () => {
   it('운영 문서는 정확한 429 통계 조회 계약과 범위를 설명한다', () => {
     const readme = readText('README.md');
     const serviceReference = readText('docs/service-reference.md');
+    const readmeOperations = readme.slice(
+      readme.indexOf('### 운영 통계'),
+      readme.indexOf('배포 전 로컬에서 CLI 모드까지 확인', readme.indexOf('### 운영 통계')),
+    );
+    const serviceReferenceOperations = serviceReference.slice(
+      serviceReference.indexOf('### 호출 제한 운영 통계'),
+      serviceReference.indexOf('### 제품 검색'),
+    );
 
-    expect(readme).toContain('GET /api/rate-limit/stats');
-    expect(readme).toContain('HEALTH_CHECK_SECRET');
-    expect(readme).toContain('Authorization: Bearer $HEALTH_CHECK_SECRET');
-    expect(readme).toContain('x-health-check-key: $HEALTH_CHECK_SECRET');
-    expect(readme).toContain('`from`, `to`, `service`');
-    expect(readme).toContain('`from`과 `to`는 함께 지정하거나 둘 다 생략');
-    expect(readme).toContain('`oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`');
-    expect(readme).toContain('현재 KST 일자를 포함한 최근 7일');
-    expect(readme).toContain('KST 달력 날짜 기준 최대 30일');
-    expect(readme).toContain('일별·서비스별 차단 요청 수와 고유 차단 주체 수');
-    expect(readme).toContain('Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정');
-    expect(readme).toContain('원장 커밋에 성공한 경우만 정확한 집계 범위');
-    expect(readme).toContain('Cloudflare 또는 네트워크 계층의 429');
-    expect(readme).toContain('클라이언트 전송 결과, 연결 종료 결과');
-    expect(readme).toContain('fail-open');
-    expect(readme).toContain('애플리케이션 429를 반환하지 않습니다');
-    expect(readme).toContain('배포 시점부터 수집');
-    expect(readme).toContain('이전 429는 소급 집계하지 않습니다');
-    expect(readme).toContain('원본 호출 주체나 IP를 노출하지 않습니다');
+    expect(readmeOperations).toContain('GET /api/rate-limit/stats');
+    expect(readmeOperations).toContain('HEALTH_CHECK_SECRET');
+    expect(readmeOperations).toContain('Authorization: Bearer $HEALTH_CHECK_SECRET');
+    expect(readmeOperations).toContain('x-health-check-key: $HEALTH_CHECK_SECRET');
+    expect(readmeOperations).toContain('`from`, `to`, `service`');
+    expect(readmeOperations).toContain('`from`과 `to`는 함께 지정하거나 둘 다 생략');
+    expect(readmeOperations).toContain('`oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`');
+    expect(readmeOperations).toContain('현재 KST 일자를 포함한 최근 7일');
+    expect(readmeOperations).toContain('KST 달력 날짜 기준 최대 30일');
+    expect(readmeOperations).toContain('일별·서비스별 차단 요청 수와 고유 차단 주체 수');
+    expect(readmeOperations).toContain('Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정');
+    expect(readmeOperations).toContain('원장 커밋에 성공한 경우만 정확한 집계 범위');
+    expect(readmeOperations).toContain('Cloudflare 또는 네트워크 계층의 429');
+    expect(readmeOperations).toContain('클라이언트 전송 결과, 연결 종료 결과');
+    expect(readmeOperations).toContain('fail-open');
+    expect(readmeOperations).toContain('애플리케이션 429를 반환하지 않습니다');
+    expect(readmeOperations).toContain('배포 시점부터 수집');
+    expect(readmeOperations).toContain('이전 429는 소급 집계하지 않습니다');
+    expect(readmeOperations).toContain('원본 호출 주체나 IP를 노출하지 않습니다');
+    for (const field of [
+      '"success": true',
+      '"data": {',
+      '"totals": {',
+      '"daily": [',
+      '"services": [',
+      '"day":',
+      '"service":',
+      '"blockedRequests":',
+      '"uniqueIdentities":',
+    ]) {
+      expect(readmeOperations).toContain(field);
+    }
 
-    expect(serviceReference).toContain('GET /api/rate-limit/stats');
-    expect(serviceReference).toContain('HEALTH_CHECK_SECRET');
-    expect(serviceReference).toContain('30일');
-    expect(serviceReference).toContain('집계만 반환');
+    expect(serviceReferenceOperations).toContain('GET /api/rate-limit/stats');
+    expect(serviceReferenceOperations).toContain('HEALTH_CHECK_SECRET');
+    expect(serviceReferenceOperations).toContain('Authorization: Bearer');
+    expect(serviceReferenceOperations).toContain('x-health-check-key');
+    expect(serviceReferenceOperations).toContain('`from`과 `to`');
+    expect(serviceReferenceOperations).toContain('`oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`');
+    expect(serviceReferenceOperations).toContain('현재 KST 일자를 포함한 최근 7일');
+    expect(serviceReferenceOperations).toContain('KST 달력 날짜 기준 최대 30일');
+    expect(serviceReferenceOperations).toContain(
+      'Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정',
+    );
+    expect(serviceReferenceOperations).toContain('원장 커밋에 성공한 경우만 정확한 집계 범위');
+    expect(serviceReferenceOperations).toContain('Cloudflare 또는 네트워크 계층의 429');
+    expect(serviceReferenceOperations).toContain('클라이언트 전송 결과, 연결 종료 결과');
+    expect(serviceReferenceOperations).toContain('fail-open');
+    expect(serviceReferenceOperations).toContain('애플리케이션 429를 반환하지 않습니다');
+    expect(serviceReferenceOperations).toContain('집계만 반환');
+    expect(serviceReferenceOperations).toContain('원본 호출 주체나 IP를 노출하지 않습니다');
+    expect(serviceReferenceOperations).toContain('배포 시점부터 수집');
+    expect(serviceReferenceOperations).toContain('이전 429는 소급 집계하지 않습니다');
   });
 
   it('daiso CLI 스킬은 에이전트가 CLI와 MCP를 함께 사용할 수 있게 안내한다', () => {
