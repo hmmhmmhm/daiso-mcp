@@ -30,6 +30,23 @@ describe('repository maintenance configuration', () => {
     expect(readText('.nvmrc').trim()).toBe('24');
   });
 
+  it('기여 가이드는 Node.js 24를 개발 버전으로 안내한다', () => {
+    expect(readText('CONTRIBUTING.md')).toContain('- Node.js: `24.x`');
+  });
+
+  it('기여 가이드는 Node.js 24에 포함된 npm 11을 안내한다', () => {
+    expect(readText('CONTRIBUTING.md')).toContain('- npm: `11.x`');
+  });
+
+  it('기여 가이드의 Node.js 버전은 .nvmrc와 일치한다', () => {
+    const contributing = readText('CONTRIBUTING.md');
+    const nodeVersion = contributing.match(/^- Node\.js: `(\d+)\.x`/m)?.[1];
+
+    expect(nodeVersion).toBe(readText('.nvmrc').trim());
+    expect(contributing).toContain('(`.nvmrc` 참고)');
+    expect(contributing).toContain('\nnvm use\n');
+  });
+
   it('MCP SDK가 아직 선택하지 못하는 Hono Node 서버 보안 버전을 부모 범위로 고정한다', () => {
     const pkg = JSON.parse(readText('package.json')) as {
       overrides?: Record<string, string | Record<string, string>>;
