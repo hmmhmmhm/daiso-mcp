@@ -463,6 +463,51 @@ curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
 
 Better Stack 같은 외부 모니터링에서는 `fail`을 장애 알림 기준으로 보고, `degraded`는 느린 외부 API나 응답 품질 저하를 추적하는 경고 신호로 봅니다.
 
+### 운영 통계
+
+일일 호출 제한으로 차단한 요청의 집계는 인증된 `GET /api/rate-limit/stats`에서 조회합니다. 헬스 체크와 같은 `HEALTH_CHECK_SECRET`을 사용하며, 다음 두 인증 헤더를 모두 지원합니다.
+
+```bash
+curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
+  "https://mcp.aka.page/api/rate-limit/stats"
+
+curl -H "x-health-check-key: $HEALTH_CHECK_SECRET" \
+  "https://mcp.aka.page/api/rate-limit/stats?service=cgv"
+```
+
+쿼리 필터는 `from`, `to`, `service`입니다. `from`과 `to`는 함께 지정하거나 둘 다 생략해야 하며 날짜 형식은 `YYYY-MM-DD`입니다. `service`에는 `oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`만 사용할 수 있습니다. 날짜를 생략하면 현재 KST 일자를 포함한 최근 7일을 조회합니다. 조회 가능한 보관 범위는 현재 KST 일자와 그 이전 29일이며, 한 번에 KST 달력 날짜 기준 최대 30일을 요청할 수 있습니다.
+
+성공 응답은 전체 합계와 일별·서비스별 차단 요청 수와 고유 차단 주체 수를 제공합니다.
+
+```json
+{
+  "success": true,
+  "data": {
+    "totals": {
+      "blockedRequests": 3,
+      "uniqueIdentities": 2
+    },
+    "daily": [
+      {
+        "day": "2026-07-22",
+        "blockedRequests": 3,
+        "uniqueIdentities": 2
+      }
+    ],
+    "services": [
+      {
+        "day": "2026-07-22",
+        "service": "cgv",
+        "blockedRequests": 3,
+        "uniqueIdentities": 2
+      }
+    ]
+  }
+}
+```
+
+데이터는 30일 동안 보관하며 집계 응답은 원본 호출 주체나 IP를 노출하지 않습니다. Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정 중 원장 커밋에 성공한 경우만 정확한 집계 범위에 포함됩니다. Cloudflare 또는 네트워크 계층의 429와 클라이언트 전송 결과, 연결 종료 결과는 이 범위에 포함되지 않습니다. 원장 쓰기에 실패하면 요청을 fail-open 처리하고 애플리케이션 429를 반환하지 않습니다. 통계는 이 기능의 배포 시점부터 수집하며 이전 429는 소급 집계하지 않습니다.
+
 배포 전 로컬에서 CLI 모드까지 확인할 때는 아래 명령을 사용합니다.
 
 ```bash

@@ -5,19 +5,11 @@
 import type { Hono } from 'hono';
 import { errorResponse, type AppBindings } from '../response.js';
 import { runHealthChecks, type HealthCheckMode } from '../healthChecks.js';
+import { authorizeOperationalRequest } from '../operationalAuth.js';
 
 function parseBoolean(value: string | undefined): boolean {
   const normalized = (value || '').trim().toLowerCase();
   return normalized === 'true' || normalized === '1' || normalized === 'y';
-}
-
-function readHealthCheckToken(headers: Headers): string {
-  const authorization = headers.get('Authorization') || '';
-  if (authorization.toLowerCase().startsWith('bearer ')) {
-    return authorization.slice('bearer '.length).trim();
-  }
-
-  return (headers.get('x-health-check-key') || '').trim();
 }
 
 function isBetterStackHealthProbe(userAgent: string | undefined): boolean {
@@ -69,7 +61,7 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       );
     }
 
-    if (readHealthCheckToken(c.req.raw.headers) !== secret) {
+    if ((await authorizeOperationalRequest(c.req.raw.headers, secret)) !== 'authorized') {
       return errorResponse(c, 'UNAUTHORIZED_HEALTH_CHECK', '유효한 헬스 체크 시크릿 키가 필요합니다.', 401);
     }
 

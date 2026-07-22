@@ -1,0 +1,16 @@
+export const INVALID_INTERNAL_STATS_PATHS = [
+  ['from 누락', '/stats?to=2026-07-22&asOf=2026-07-22'],
+  ['to 누락', '/stats?from=2026-07-22&asOf=2026-07-22'],
+  ['asOf 누락', '/stats?from=2026-07-21&to=2026-07-22'],
+  ['정확하지 않은 from', '/stats?from=2026-7-21&to=2026-07-22&asOf=2026-07-22'],
+  ['존재하지 않는 to', '/stats?from=2026-02-01&to=2026-02-30&asOf=2026-07-22'],
+  ['역전된 기간', '/stats?from=2026-07-23&to=2026-07-22&asOf=2026-07-22'],
+  ['빈 서비스', '/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22&service='],
+  ['지원하지 않는 서비스', '/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22&service=daiso'],
+  ['중복 from', '/stats?from=2026-07-21&from=2026-07-22&to=2026-07-22&asOf=2026-07-22'],
+  ['중복 to', '/stats?from=2026-07-21&to=2026-07-21&to=2026-07-22&asOf=2026-07-22'],
+  ['중복 서비스', '/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22&service=cgv&service=gs25'],
+  ['중복 asOf', '/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22&asOf=2026-07-22'],
+  ['존재하지 않는 asOf', '/stats?from=2026-07-21&to=2026-07-22&asOf=2026-02-30'],
+  ['알 수 없는 키', '/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22&identityId=opaque'],
+] as const;

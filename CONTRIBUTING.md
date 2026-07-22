@@ -4,8 +4,8 @@
 
 ## 사전 준비
 
-- Node.js: `20.x` (`.nvmrc` 참고)
-- npm: Node 20에 포함된 버전 사용 권장
+- Node.js: `24.x` (`.nvmrc` 참고)
+- npm: `11.x` (Node.js 24에 포함된 버전 사용 권장)
 
 ```bash
 nvm use

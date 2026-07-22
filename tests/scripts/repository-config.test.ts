@@ -2,24 +2,82 @@
  * 저장소 운영 설정 회귀 테스트
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+
+const setupNodeWorkflows = [
+  'ci.yml',
+  'coverage.yml',
+  'deploy.yml',
+  'external-smoke.yml',
+  'npm-publish.yml',
+  'sync-worker-secrets.yml',
+  'workers-invocations-chart.yml',
+];
 
 function readText(path: string): string {
   return readFileSync(path, 'utf8');
 }
 
 describe('repository maintenance configuration', () => {
-  it('Node 엔진 범위는 현재 LTS 이상을 허용한다', () => {
+  it('Node 엔진 범위는 Wrangler가 요구하는 버전과 일치한다', () => {
     const pkg = JSON.parse(readText('package.json')) as { engines?: { node?: string } };
 
-    expect(pkg.engines?.node).toBe('>=20');
+    expect(pkg.engines?.node).toBe('>=22');
   });
 
-  it('npm audit 경고가 난 ws 전이 의존성은 안전 버전으로 고정한다', () => {
-    const pkg = JSON.parse(readText('package.json')) as { overrides?: Record<string, string> };
+  it('.nvmrc는 현재 LTS를 사용한다', () => {
+    expect(readText('.nvmrc').trim()).toBe('24');
+  });
 
-    expect(pkg.overrides?.ws).toBe('8.21.0');
+  it('기여 가이드는 Node.js 24를 개발 버전으로 안내한다', () => {
+    expect(readText('CONTRIBUTING.md')).toContain('- Node.js: `24.x`');
+  });
+
+  it('기여 가이드는 Node.js 24에 포함된 npm 11을 안내한다', () => {
+    expect(readText('CONTRIBUTING.md')).toContain('- npm: `11.x`');
+  });
+
+  it('기여 가이드의 Node.js 버전은 .nvmrc와 일치한다', () => {
+    const contributing = readText('CONTRIBUTING.md');
+    const nodeVersion = contributing.match(/^- Node\.js: `(\d+)\.x`/m)?.[1];
+
+    expect(nodeVersion).toBe(readText('.nvmrc').trim());
+    expect(contributing).toContain('(`.nvmrc` 참고)');
+    expect(contributing).toContain('\nnvm use\n');
+  });
+
+  it('MCP SDK가 아직 선택하지 못하는 Hono Node 서버 보안 버전을 부모 범위로 고정한다', () => {
+    const pkg = JSON.parse(readText('package.json')) as {
+      overrides?: Record<string, string | Record<string, string>>;
+    };
+
+    expect(pkg.overrides?.['@modelcontextprotocol/sdk']).toEqual({
+      '@hono/node-server': '2.0.11',
+    });
+  });
+
+  it('Miniflare가 아직 선택하지 못하는 Sharp 보안 버전을 부모 범위로 고정한다', () => {
+    const pkg = JSON.parse(readText('package.json')) as {
+      overrides?: Record<string, string | Record<string, string>>;
+    };
+
+    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.3' });
+  });
+
+  it('모든 GitHub Actions workflow에서 setup-node v6을 사용하지 않는다', () => {
+    const workflows = readdirSync('.github/workflows')
+      .filter((file) => file.endsWith('.yml'))
+      .map((file) => readText(`.github/workflows/${file}`))
+      .join('\n');
+
+    expect(workflows).not.toContain('actions/setup-node@v6');
+  });
+
+  it('Node를 설정하는 일곱 workflow는 setup-node v7을 사용한다', () => {
+    for (const workflow of setupNodeWorkflows) {
+      expect(readText(`.github/workflows/${workflow}`)).toContain('actions/setup-node@v7');
+    }
   });
 
   it('release 문서는 git 기록을 npm publish보다 먼저 남기도록 안내한다', () => {
@@ -28,7 +86,9 @@ describe('repository maintenance configuration', () => {
     expect(agents).toContain('릴리스 절차');
     expect(agents).toContain('npm version');
     expect(agents).toContain('git push origin main --follow-tags');
-    expect(agents.indexOf('git push origin main --follow-tags')).toBeLessThan(agents.indexOf('npm publish'));
+    expect(agents.indexOf('git push origin main --follow-tags')).toBeLessThan(
+      agents.indexOf('npm publish'),
+    );
   });
 
   it('운영 메모는 repo 내부 문서에 포함된다', () => {
@@ -46,7 +106,9 @@ describe('repository maintenance configuration', () => {
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain("cron: '40 15 * * *'");
-    expect(workflow).toContain('group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}');
+    expect(workflow).toContain(
+      'group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}',
+    );
     expect(workflow).toContain('fail-fast: false');
     expect(workflow).toContain('max-parallel: 4');
     expect(workflow).toContain('service: daiso');
@@ -103,7 +165,9 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('CLOUDFLARE_GLOBAL_API_KEY');
     expect(workflow).toContain('CLOUDFLARE_ZONE_ID');
     expect(workflow).toContain('WORKERS_CHART_ROOT_REDIRECT_START');
-    expect(workflow).toContain('git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png');
+    expect(workflow).toContain(
+      'git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png',
+    );
     expect(workflow).toContain('git pull --rebase --autostash origin main');
     expect(workflow).toContain('git push origin HEAD:main');
   });
@@ -190,6 +254,99 @@ describe('repository maintenance configuration', () => {
     expect(readme).toContain('Daiso MCP 및 Skill');
     expect(readme).toContain('skills/daiso-cli/SKILL.md');
     expect(readme).toContain('npx daiso');
+  });
+
+  it('운영 문서는 정확한 429 통계 조회 계약과 범위를 설명한다', () => {
+    const readme = readText('README.md');
+    const serviceReference = readText('docs/service-reference.md');
+    const readmeOperations = readme.slice(
+      readme.indexOf('### 운영 통계'),
+      readme.indexOf('배포 전 로컬에서 CLI 모드까지 확인', readme.indexOf('### 운영 통계')),
+    );
+    const serviceReferenceOperations = serviceReference.slice(
+      serviceReference.indexOf('### 호출 제한 운영 통계'),
+      serviceReference.indexOf('### 제품 검색'),
+    );
+    const curlBlockMatch = readmeOperations.match(/```bash\r?\n([\s\S]*?)\r?\n```/);
+    if (!curlBlockMatch?.[1]) {
+      throw new Error('README 운영 통계 절에 `bash` 코드 블록 호출 예시가 필요합니다.');
+    }
+    const jsonBlockMatch = readmeOperations.match(/```json\r?\n([\s\S]*?)\r?\n```/);
+    if (!jsonBlockMatch?.[1]) {
+      throw new Error('README 운영 통계 절에 `json` 코드 블록 성공 응답 예시가 필요합니다.');
+    }
+    let statsExample: unknown;
+    try {
+      statsExample = JSON.parse(jsonBlockMatch[1]);
+    } catch (error) {
+      throw new Error(`README 운영 통계 JSON 예시를 파싱할 수 없습니다: ${String(error)}`);
+    }
+
+    expect(readmeOperations).toContain('GET /api/rate-limit/stats');
+    expect(readmeOperations).toContain('HEALTH_CHECK_SECRET');
+    expect(readmeOperations).toContain('Authorization: Bearer $HEALTH_CHECK_SECRET');
+    expect(readmeOperations).toContain('x-health-check-key: $HEALTH_CHECK_SECRET');
+    expect(readmeOperations).toContain('`from`, `to`, `service`');
+    expect(readmeOperations).toContain('`from`과 `to`는 함께 지정하거나 둘 다 생략');
+    expect(readmeOperations).toContain('`oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`');
+    expect(readmeOperations).toContain('현재 KST 일자를 포함한 최근 7일');
+    expect(readmeOperations).toContain('KST 달력 날짜 기준 최대 30일');
+    expect(readmeOperations).toContain('일별·서비스별 차단 요청 수와 고유 차단 주체 수');
+    expect(readmeOperations).toContain('Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정');
+    expect(readmeOperations).toContain('원장 커밋에 성공한 경우만 정확한 집계 범위');
+    expect(readmeOperations).toContain('Cloudflare 또는 네트워크 계층의 429');
+    expect(readmeOperations).toContain('클라이언트 전송 결과, 연결 종료 결과');
+    expect(readmeOperations).toContain('fail-open');
+    expect(readmeOperations).toContain('애플리케이션 429를 반환하지 않습니다');
+    expect(readmeOperations).toContain('배포 시점부터 수집');
+    expect(readmeOperations).toContain('이전 429는 소급 집계하지 않습니다');
+    expect(readmeOperations).toContain('원본 호출 주체나 IP를 노출하지 않습니다');
+    expect(curlBlockMatch[1]).not.toMatch(/[?&](?:from|to)=\d{4}-\d{2}-\d{2}/);
+    expect(statsExample).toEqual({
+      success: true,
+      data: {
+        totals: { blockedRequests: 3, uniqueIdentities: 2 },
+        daily: [
+          {
+            day: '2026-07-22',
+            blockedRequests: 3,
+            uniqueIdentities: 2,
+          },
+        ],
+        services: [
+          {
+            day: '2026-07-22',
+            service: 'cgv',
+            blockedRequests: 3,
+            uniqueIdentities: 2,
+          },
+        ],
+      },
+    });
+
+    expect(serviceReferenceOperations).toContain('GET /api/rate-limit/stats');
+    expect(serviceReferenceOperations).toContain('HEALTH_CHECK_SECRET');
+    expect(serviceReferenceOperations).toContain('Authorization: Bearer');
+    expect(serviceReferenceOperations).toContain('x-health-check-key');
+    expect(serviceReferenceOperations).toContain(
+      '`from`과 `to`는 둘 다 생략하거나 함께 제공해야 합니다',
+    );
+    expect(serviceReferenceOperations).toContain('`oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`');
+    expect(serviceReferenceOperations).toContain('현재 KST 일자를 포함한 최근 7일');
+    expect(serviceReferenceOperations).toContain('차단 이벤트는 30일 동안 보관합니다');
+    expect(serviceReferenceOperations).toContain('KST 달력 날짜 기준 최대 30일');
+    expect(serviceReferenceOperations).toContain(
+      'Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정',
+    );
+    expect(serviceReferenceOperations).toContain('원장 커밋에 성공한 경우만 정확한 집계 범위');
+    expect(serviceReferenceOperations).toContain('Cloudflare 또는 네트워크 계층의 429');
+    expect(serviceReferenceOperations).toContain('클라이언트 전송 결과, 연결 종료 결과');
+    expect(serviceReferenceOperations).toContain('fail-open');
+    expect(serviceReferenceOperations).toContain('애플리케이션 429를 반환하지 않습니다');
+    expect(serviceReferenceOperations).toContain('집계만 반환');
+    expect(serviceReferenceOperations).toContain('원본 호출 주체나 IP를 노출하지 않습니다');
+    expect(serviceReferenceOperations).toContain('배포 시점부터 수집');
+    expect(serviceReferenceOperations).toContain('이전 429는 소급 집계하지 않습니다');
   });
 
   it('daiso CLI 스킬은 에이전트가 CLI와 MCP를 함께 사용할 수 있게 안내한다', () => {
