@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../../src/index.js';
 import type { AppBindings } from '../../src/api/response.js';
 import type { DailyRateLimitResult } from '../../src/durableObjects/dailyRateLimiter.js';
@@ -9,6 +9,10 @@ const originalCaches = (globalThis as { caches?: CacheStorage }).caches;
 const QUOTA_ID = '1'.repeat(64);
 const LEDGER_ID = 'f'.repeat(64);
 const EVENT_ID = '018d6b61-b263-7f5c-8c2d-1c01b849eea7';
+const NOW_MS = Date.parse('2026-07-22T00:01:02.345Z');
+const KST_ROLLOVER_BEFORE_MS = Date.parse('2026-07-22T14:59:59.999Z');
+const KST_ROLLOVER_AFTER_MS = Date.parse('2026-07-22T15:00:00.000Z');
+const RATE_LIMIT_DAY = '2026-07-22';
 
 type LedgerOutcome = 204 | 200 | 503 | 'throw' | 'malformed';
 
@@ -22,8 +26,8 @@ function createResult(overrides: Partial<DailyRateLimitResult> = {}): DailyRateL
     allowed: true,
     count: 1,
     remaining: 2999,
-    resetAt: Math.floor(Date.now() / 1000) + 3600,
-    day: '2026-07-17',
+    resetAt: Math.floor(NOW_MS / 1000) + 3600,
+    day: RATE_LIMIT_DAY,
     ...overrides,
   };
 }
@@ -32,10 +36,17 @@ function createDurableObjectId(value: string): DurableObjectId {
   return { toString: () => value } as unknown as DurableObjectId;
 }
 
+function createQuotaResponse(value: unknown): Response {
+  const response = new Response(null, { status: 200 });
+  Object.defineProperty(response, 'json', { value: async () => value });
+  return response;
+}
+
 function createRateLimitEnv(
-  results: DailyRateLimitResult[],
+  results: unknown[],
   additional: Partial<AppBindings> = {},
   ledgerOutcome: LedgerOutcome = 204,
+  afterQuotaResponse: () => void = () => undefined,
 ) {
   const queue = [...results];
   const calls: DurableObjectCall[] = [];
@@ -61,8 +72,10 @@ function createRateLimitEnv(
       calls.push({ durableObjectId, request });
       if (new URL(request.url).pathname === '/consume') {
         order.push('consume:started');
-        const response = Response.json(queue.shift() ?? createResult());
+        const result = queue.length > 0 ? queue.shift() : createResult();
+        const response = createQuotaResponse(result);
         order.push('consume:resolved');
+        afterQuotaResponse();
         return response;
       }
 
@@ -96,9 +109,36 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(NOW_MS);
+});
+
 function callPaths(calls: DurableObjectCall[]): string[] {
   return calls.map(({ request }) => new URL(request.url).pathname);
 }
+
+const MALFORMED_QUOTA_RESULTS: ReadonlyArray<readonly [string, unknown]> = [
+  ['빈 객체', {}],
+  ['null', null],
+  ['배열', []],
+  ['문자열 allowed', { ...createResult(), allowed: 'true' }],
+  ['NaN count', { ...createResult(), count: Number.NaN }],
+  ['소수 count', { ...createResult(), count: 1.5 }],
+  ['음수 count', { ...createResult(), count: -1 }],
+  ['한도 초과 count', { ...createResult(), count: 3001 }],
+  ['NaN remaining', { ...createResult(), remaining: Number.NaN }],
+  ['소수 remaining', { ...createResult(), remaining: 1.5 }],
+  ['음수 remaining', { ...createResult(), remaining: -1 }],
+  ['한도 초과 remaining', { ...createResult(), remaining: 3001 }],
+  ['NaN resetAt', { ...createResult(), resetAt: Number.NaN }],
+  ['소수 resetAt', { ...createResult(), resetAt: 1.5 }],
+  ['음수 resetAt', { ...createResult(), resetAt: -1 }],
+  ['safe integer 초과 resetAt', { ...createResult(), resetAt: Number.MAX_SAFE_INTEGER + 1 }],
+  ['잘못된 날짜 형식', { ...createResult(), day: '2026/07/17' }],
+  ['존재하지 않는 날짜', { ...createResult(), day: '2026-02-29' }],
+  ['허용 결과의 불일치한 remaining', { ...createResult(), remaining: 0 }],
+  ['거부 결과의 불일치한 count', { ...createResult(), allowed: false, count: 2999, remaining: 1 }],
+];
 
 describe('일일 호출 제한 통합', () => {
   it('허용 요청의 기존 응답에 rate limit 헤더를 추가한다', async () => {
@@ -118,6 +158,76 @@ describe('일일 호출 제한 통합', () => {
     expect(callPaths(fixture.calls)).toEqual(['/consume']);
   });
 
+  it.each(MALFORMED_QUOTA_RESULTS)(
+    'HTTP 200 %s quota JSON은 기록이나 제한 헤더 없이 fail-open한다',
+    async (_, malformedResult) => {
+      const fixture = createRateLimitEnv([malformedResult]);
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const response = await app.request(
+        '/api/oliveyoung/products',
+        { headers: { 'CF-Connecting-IP': '203.0.113.10' } },
+        fixture.env,
+      );
+
+      expect(response.status).toBe(400);
+      expect((await response.json()).error.code).not.toBe('DAILY_RATE_LIMIT_EXCEEDED');
+      expect(response.headers.get('X-RateLimit-Limit')).toBeNull();
+      expect(response.headers.get('X-RateLimit-Remaining')).toBeNull();
+      expect(response.headers.get('X-RateLimit-Reset')).toBeNull();
+      expect(response.headers.get('Retry-After')).toBeNull();
+      expect(callPaths(fixture.calls)).toEqual(['/consume']);
+      expect(fixture.idFromName).not.toHaveBeenCalledWith(RATE_LIMIT_METRICS_LEDGER_NAME);
+      expect(consoleSpy).toHaveBeenCalledWith('일일 호출 제한 응답 검증 실패');
+      expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain('203.0.113.10');
+    },
+  );
+
+  it('3,000번째 허용 응답은 remaining 0인 정상 결과로 처리한다', async () => {
+    const fixture = createRateLimitEnv([
+      createResult({ allowed: true, count: 3000, remaining: 0 }),
+    ]);
+
+    const response = await app.request(
+      '/api/oliveyoung/products',
+      { headers: { 'CF-Connecting-IP': '203.0.113.10' } },
+      fixture.env,
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('X-RateLimit-Remaining')).toBe('0');
+    expect(callPaths(fixture.calls)).toEqual(['/consume']);
+  });
+
+  it.each([
+    ['허용', createResult()],
+    ['거부', createResult({ allowed: false, count: 3000, remaining: 0 })],
+  ] as const)('quota 응답 직후 KST 일자가 바뀐 %s 결정은 fail-open한다', async (_, result) => {
+    const nowSpy = vi.mocked(Date.now);
+    nowSpy.mockReturnValue(KST_ROLLOVER_BEFORE_MS);
+    const fixture = createRateLimitEnv([result], {}, 204, () => {
+      nowSpy.mockReturnValue(KST_ROLLOVER_AFTER_MS);
+    });
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const response = await app.request(
+      '/api/oliveyoung/products',
+      { headers: { 'CF-Connecting-IP': '203.0.113.10' } },
+      fixture.env,
+    );
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).not.toBe('DAILY_RATE_LIMIT_EXCEEDED');
+    expect(response.headers.get('X-RateLimit-Limit')).toBeNull();
+    expect(response.headers.get('X-RateLimit-Remaining')).toBeNull();
+    expect(response.headers.get('X-RateLimit-Reset')).toBeNull();
+    expect(response.headers.get('Retry-After')).toBeNull();
+    expect(callPaths(fixture.calls)).toEqual(['/consume']);
+    expect(fixture.idFromName).not.toHaveBeenCalledWith(RATE_LIMIT_METRICS_LEDGER_NAME);
+    expect(consoleSpy).toHaveBeenCalledWith('일일 호출 제한 날짜 전환 감지');
+    expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain('203.0.113.10');
+  });
+
   it.each([
     ['oliveyoung', '/api/oliveyoung/products'],
     ['cgv', '/api/cgv/timetable'],
@@ -129,7 +239,7 @@ describe('일일 호출 제한 통합', () => {
     const fixture = createRateLimitEnv([denied]);
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const randomUuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValue(EVENT_ID);
-    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-22T00:01:02.345Z'));
+    vi.mocked(Date.now).mockReturnValue(NOW_MS);
 
     const response = await app.request(
       path,
@@ -161,21 +271,21 @@ describe('일일 호출 제한 통합', () => {
     const body = await ledgerRequest?.json();
     expect(body).toEqual({
       eventId: EVENT_ID,
-      occurredAt: Date.parse('2026-07-22T00:01:02.345Z'),
-      day: '2026-07-22',
+      occurredAt: NOW_MS,
+      day: RATE_LIMIT_DAY,
       service,
       identityId: QUOTA_ID,
     });
   });
 
   it('교차 존 요청의 원장에는 원본·정규화 주체·단순 해시 대신 DO ID만 기록한다', async () => {
-    const denied = createResult({ allowed: false, count: 3000, remaining: 0, day: '2026-07-22' });
+    const denied = createResult({ allowed: false, count: 3000, remaining: 0 });
     const fixture = createRateLimitEnv([denied]);
     const rawIp = '2a06:98c0:3600::103';
     const normalizedIdentity = 'worker-zone:example.com';
     const plainHash = await hashRateLimitIdentity(normalizedIdentity);
     vi.spyOn(crypto, 'randomUUID').mockReturnValue(EVENT_ID);
-    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-22T14:59:59.999Z'));
+    vi.mocked(Date.now).mockReturnValue(KST_ROLLOVER_BEFORE_MS);
 
     const response = await app.request(
       '/api/cgv/timetable',

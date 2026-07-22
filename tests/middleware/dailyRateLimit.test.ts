@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   consumeDailyRateLimit,
   hashRateLimitIdentity,
@@ -17,6 +17,7 @@ const allowedResult: DailyRateLimitResult = {
 };
 
 const FIRST_QUOTA_ID = '1'.repeat(64);
+const NOW_MS = Date.parse('2026-07-17T00:00:00.000Z');
 
 type QuotaOutcome = DailyRateLimitResult | Error | (() => Response);
 
@@ -55,6 +56,10 @@ function createRateLimitEnv(outcome: QuotaOutcome = allowedResult) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(NOW_MS);
 });
 
 describe('isDailyRateLimitedRequest', () => {

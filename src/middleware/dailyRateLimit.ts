@@ -23,6 +23,8 @@ const PROTECTED_SERVICES: ReadonlyArray<{ prefix: string; service: RateLimitServ
   { prefix: '/api/lottemart/', service: 'lottemart' },
 ] as const;
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 // Cloudflare가 교차 존 Worker subrequest에 사용하는 공통 client IP
 const CROSS_ZONE_WORKER_CLIENT_IP = '2a06:98c0:3600::103';
 
@@ -31,6 +33,7 @@ interface DailyRateLimitDecision {
   service: RateLimitService;
   identityId: DurableObjectId;
   namespace: DurableObjectNamespace;
+  nowMs: number;
 }
 
 function resolveRateLimitService(request: Request): RateLimitService | null {
@@ -70,6 +73,42 @@ function resolveRateLimitIdentity(request: Request): string | null {
   return workerZone ? `worker-zone:${workerZone}` : ip;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isExactDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !DATE_PATTERN.test(value)) {
+    return false;
+  }
+  const timestamp = Date.parse(`${value}T00:00:00.000Z`);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
+}
+
+function isSafeIntegerInRange(value: unknown, minimum: number, maximum: number): value is number {
+  return (
+    typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum && value <= maximum
+  );
+}
+
+function isDailyRateLimitResult(value: unknown): value is DailyRateLimitResult {
+  if (!isRecord(value) || typeof value.allowed !== 'boolean') {
+    return false;
+  }
+  const { allowed, count, remaining, resetAt, day } = value;
+  if (
+    !isSafeIntegerInRange(count, 0, DAILY_RATE_LIMIT) ||
+    !isSafeIntegerInRange(remaining, 0, DAILY_RATE_LIMIT) ||
+    !isSafeIntegerInRange(resetAt, 1, Number.MAX_SAFE_INTEGER) ||
+    !isExactDate(day)
+  ) {
+    return false;
+  }
+
+  const countersMatch = count + remaining === DAILY_RATE_LIMIT;
+  return allowed ? countersMatch && count > 0 : count === DAILY_RATE_LIMIT && remaining === 0;
+}
+
 async function consumeDailyRateLimitDecision(
   request: Request,
   env?: AppBindings,
@@ -94,11 +133,23 @@ async function consumeDailyRateLimitDecision(
       return null;
     }
 
+    const result: unknown = await response.json();
+    if (!isDailyRateLimitResult(result)) {
+      console.error('일일 호출 제한 응답 검증 실패');
+      return null;
+    }
+    const nowMs = Date.now();
+    if (result.day !== toKstDay(nowMs)) {
+      console.error('일일 호출 제한 날짜 전환 감지');
+      return null;
+    }
+
     return {
-      result: (await response.json()) as DailyRateLimitResult,
+      result,
       service,
       identityId,
       namespace,
+      nowMs,
     };
   } catch {
     console.error('일일 호출 제한 확인 실패');
@@ -114,12 +165,10 @@ export async function consumeDailyRateLimit(
 }
 
 async function recordBlockedRateLimitEvent(decision: DailyRateLimitDecision): Promise<boolean> {
-  const occurredAt = Date.now();
-  const occurredDay = toKstDay(occurredAt);
   const event: BlockedRateLimitEvent = {
     eventId: crypto.randomUUID(),
-    occurredAt,
-    day: decision.result.day === occurredDay ? decision.result.day : occurredDay,
+    occurredAt: decision.nowMs,
+    day: decision.result.day,
     service: decision.service,
     identityId: decision.identityId.toString(),
   };
@@ -174,7 +223,7 @@ export function createDailyRateLimitMiddleware(): MiddlewareHandler<{ Bindings: 
       setRateLimitHeaders(response.headers, result);
       response.headers.set(
         'Retry-After',
-        String(Math.max(1, result.resetAt - Math.floor(Date.now() / 1000))),
+        String(Math.max(1, result.resetAt - Math.floor(decision.nowMs / 1000))),
       );
       return response;
     }
