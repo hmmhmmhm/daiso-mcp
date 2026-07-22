@@ -16,20 +16,41 @@ const allowedResult: DailyRateLimitResult = {
   day: '2026-07-17',
 };
 
-function createRateLimitEnv(response: Response | Error = Response.json(allowedResult)) {
-  const stubFetch = vi.fn(async () => {
-    if (response instanceof Error) {
-      throw response;
+const FIRST_QUOTA_ID = '1'.repeat(64);
+
+type QuotaOutcome = DailyRateLimitResult | Error | (() => Response);
+
+function createDurableObjectId(value: string): DurableObjectId {
+  return { toString: () => value } as unknown as DurableObjectId;
+}
+
+function createRateLimitEnv(outcome: QuotaOutcome = allowedResult) {
+  const quotaIds = new Map<string, DurableObjectId>();
+  const requests: Request[] = [];
+  const stubFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    requests.push(request);
+    if (outcome instanceof Error) {
+      throw outcome;
     }
-    return response;
+    return typeof outcome === 'function' ? outcome() : Response.json(outcome);
   });
   const get = vi.fn(() => ({ fetch: stubFetch }));
-  const idFromName = vi.fn((name: string) => ({ name }) as unknown as DurableObjectId);
+  const idFromName = vi.fn((name: string) => {
+    let id = quotaIds.get(name);
+    if (!id) {
+      id = createDurableObjectId(
+        (FIRST_QUOTA_ID.slice(0, -1) + (quotaIds.size + 1).toString(16)).padStart(64, '0'),
+      );
+      quotaIds.set(name, id);
+    }
+    return id;
+  });
   const env: AppBindings = {
     DAILY_RATE_LIMITER: { get, idFromName } as unknown as DurableObjectNamespace,
   };
 
-  return { env, idFromName, get, stubFetch };
+  return { env, idFromName, get, stubFetch, requests };
 }
 
 afterEach(() => {
@@ -54,6 +75,11 @@ describe('isDailyRateLimitedRequest', () => {
     '/',
     '/api/daiso/products',
     '/api/oliveyoungness/products',
+    '/api/cgvish/timetable',
+    '/api/cuish/stores',
+    '/api/gs250/products',
+    '/api/lottemartish/products',
+    '/api/cgv',
   ])('%s 경로를 제외한다', (path) => {
     expect(isDailyRateLimitedRequest(new Request(`https://example.com${path}`))).toBe(false);
   });
@@ -81,9 +107,13 @@ describe('consumeDailyRateLimit', () => {
     expect(result).toEqual(allowedResult);
     expect(fixture.idFromName).toHaveBeenCalledWith(await hashRateLimitIdentity('203.0.113.10'));
     expect(fixture.idFromName).not.toHaveBeenCalledWith('203.0.113.10');
+    expect(fixture.get.mock.calls[0]?.[0].toString()).toBe(FIRST_QUOTA_ID);
     expect(fixture.stubFetch).toHaveBeenCalledWith('https://daily-rate-limit/consume', {
       method: 'POST',
     });
+    expect(fixture.requests).toHaveLength(1);
+    expect(fixture.requests[0]?.method).toBe('POST');
+    expect(new URL(fixture.requests[0]?.url ?? '').pathname).toBe('/consume');
   });
 
   it('교차 존 Worker 요청을 upstream zone별 객체로 분리한다', async () => {
@@ -242,7 +272,7 @@ describe('consumeDailyRateLimit', () => {
 
   it('Durable Object 오류나 비정상 응답이면 fail-open한다', async () => {
     const errorFixture = createRateLimitEnv(new Error('temporary failure'));
-    const badResponseFixture = createRateLimitEnv(new Response('bad', { status: 503 }));
+    const badResponseFixture = createRateLimitEnv(() => new Response('bad', { status: 503 }));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const request = new Request('https://example.com/api/cgv/timetable', {
       headers: { 'CF-Connecting-IP': '203.0.113.10' },
@@ -250,23 +280,29 @@ describe('consumeDailyRateLimit', () => {
 
     expect(await consumeDailyRateLimit(request, errorFixture.env)).toBeNull();
     expect(await consumeDailyRateLimit(request, badResponseFixture.env)).toBeNull();
-    expect(consoleSpy).toHaveBeenCalledWith('일일 호출 제한 확인 실패', 'temporary failure');
+    expect(consoleSpy).toHaveBeenCalled();
+    expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain('temporary failure');
+    expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain('203.0.113.10');
   });
 
-  it('Error가 아닌 예외도 민감정보 없이 기록하고 fail-open한다', async () => {
-    const fixture = createRateLimitEnv();
-    fixture.stubFetch.mockRejectedValueOnce('failed');
+  it('본문이 잘못된 성공 응답이나 Error가 아닌 예외도 민감정보 없이 fail-open한다', async () => {
+    const malformedFixture = createRateLimitEnv(() => new Response('not-json'));
+    const thrownFixture = createRateLimitEnv();
+    thrownFixture.stubFetch.mockRejectedValueOnce('failed 203.0.113.10');
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const request = new Request('https://example.com/api/cgv/timetable', {
+      headers: { 'CF-Connecting-IP': '203.0.113.10' },
+    });
 
-    const result = await consumeDailyRateLimit(
-      new Request('https://example.com/api/cgv/timetable', {
-        headers: { 'CF-Connecting-IP': '203.0.113.10' },
-      }),
-      fixture.env,
-    );
+    const malformedResult = await consumeDailyRateLimit(request, malformedFixture.env);
+    const thrownResult = await consumeDailyRateLimit(request, thrownFixture.env);
 
-    expect(result).toBeNull();
-    expect(consoleSpy).toHaveBeenCalledWith('일일 호출 제한 확인 실패', 'failed');
+    expect(malformedResult).toBeNull();
+    expect(thrownResult).toBeNull();
+    expect(consoleSpy).toHaveBeenCalled();
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).not.toContain('failed 203.0.113.10');
+    expect(logged).not.toContain('203.0.113.10');
   });
 });
 
