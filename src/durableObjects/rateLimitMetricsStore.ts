@@ -95,6 +95,7 @@ export class RateLimitMetricsStore {
       throw new TypeError('이벤트 날짜가 KST 발생 날짜와 일치하지 않습니다.');
     }
 
+    await this.ensureAlarm();
     this.cleanupExpiredBatch(Date.now());
     this.sql.exec(
       `INSERT OR IGNORE INTO blocked_events
@@ -106,11 +107,6 @@ export class RateLimitMetricsStore {
       event.service,
       event.identityId,
     );
-    try {
-      await this.ensureAlarm();
-    } catch {
-      // 원장 확정 이후의 alarm 실패는 이벤트 승인을 되돌리지 않습니다.
-    }
   }
 
   async query(input: {

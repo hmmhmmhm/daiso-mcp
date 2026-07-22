@@ -1,4 +1,3 @@
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   RATE_LIMIT_METRICS_LEDGER_NAME,
@@ -8,138 +7,10 @@ import {
   type BlockedRateLimitEvent,
   type RateLimitService,
 } from '../../src/durableObjects/rateLimitMetricsStore.js';
-
-type SqlRow = Record<string, SqlStorageValue>;
-
-class SqliteCursor<T extends SqlRow> implements SqlStorageCursor<T> {
-  readonly rowsRead: number;
-  private index = 0;
-
-  constructor(
-    private readonly rows: T[],
-    readonly rowsWritten = 0,
-    readonly columnNames: string[] = rows[0] ? Object.keys(rows[0]) : [],
-  ) {
-    this.rowsRead = rows.length;
-  }
-
-  next(): { done?: false; value: T } | { done: true; value?: never } {
-    const value = this.rows[this.index++];
-    return value === undefined ? { done: true } : { done: false, value };
-  }
-
-  toArray(): T[] {
-    return [...this];
-  }
-
-  one(): T {
-    const rows = this.toArray();
-    if (rows.length !== 1) {
-      throw new Error(`한 행이 필요하지만 ${rows.length}개를 받았습니다.`);
-    }
-    return rows[0];
-  }
-
-  *raw<U extends SqlStorageValue[]>(): IterableIterator<U> {
-    for (const row of this) {
-      yield Object.values(row) as unknown as U;
-    }
-  }
-
-  *[Symbol.iterator](): IterableIterator<T> {
-    let result = this.next();
-    while (!result.done) {
-      yield result.value;
-      result = this.next();
-    }
-  }
-}
-
-interface StoredEvent {
-  eventId: string;
-  occurredAt: number;
-  day: string;
-  service: string;
-  identityId: string;
-}
-
-interface ExecutedSql {
-  query: string;
-  bindings: SqlStorageValue[];
-}
-
-class SqliteStorage {
-  readonly executed: ExecutedSql[] = [];
-
-  constructor(private readonly database: DatabaseSync) {}
-
-  exec<T extends SqlRow>(query: string, ...bindings: any[]): SqlStorageCursor<T> {
-    const normalized = query.replace(/\s+/g, ' ').trim();
-    const sqlBindings = bindings as SqlStorageValue[];
-    this.executed.push({ query: normalized, bindings: sqlBindings });
-    const statement = this.database.prepare(query);
-    const columnNames = statement.columns().map(({ name }) => name);
-    const nodeBindings = sqlBindings.map((binding): SQLInputValue => {
-      return binding instanceof ArrayBuffer ? new Uint8Array(binding) : binding;
-    });
-
-    if (columnNames.length > 0) {
-      const rows = statement.all(...nodeBindings) as unknown as T[];
-      return new SqliteCursor(rows, 0, columnNames);
-    }
-
-    const result = statement.run(...nodeBindings);
-    return new SqliteCursor<T>([], Number(result.changes), columnNames);
-  }
-}
-
-function createState(options: { alarm?: number | null; setAlarmError?: Error } = {}) {
-  const database = new DatabaseSync(':memory:');
-  const sql = new SqliteStorage(database);
-  let alarm = options.alarm ?? null;
-  const getAlarm = vi.fn(async () => alarm);
-  const setAlarm = vi.fn(async (scheduledTime: number | Date) => {
-    if (options.setAlarmError) {
-      throw options.setAlarmError;
-    }
-    alarm = scheduledTime instanceof Date ? scheduledTime.getTime() : scheduledTime;
-  });
-  const state = {
-    storage: { sql, getAlarm, setAlarm },
-  } as unknown as DurableObjectState;
-  const seed = (events: StoredEvent[]) => {
-    const statement = database.prepare(
-      `INSERT INTO blocked_events (event_id, occurred_at, day, service, identity_id)
-       VALUES (?, ?, ?, ?, ?)`,
-    );
-    for (const stored of events) {
-      statement.run(
-        stored.eventId,
-        stored.occurredAt,
-        stored.day,
-        stored.service,
-        stored.identityId,
-      );
-    }
-  };
-  const readEvents = (): StoredEvent[] => {
-    const rows = database
-      .prepare(
-        `SELECT event_id, occurred_at, day, service, identity_id
-         FROM blocked_events
-         ORDER BY event_id ASC`,
-      )
-      .all();
-    return rows.map((row) => ({
-      eventId: String(row.event_id),
-      occurredAt: Number(row.occurred_at),
-      day: String(row.day),
-      service: String(row.service),
-      identityId: String(row.identity_id),
-    }));
-  };
-  return { state, sql, getAlarm, setAlarm, seed, readEvents };
-}
+import {
+  HAS_NATIVE_SQLITE,
+  createRateLimitSqlState as createState,
+} from '../helpers/rateLimitSqlStorage.js';
 
 function event(
   eventId: string,
@@ -173,6 +44,7 @@ describe('RateLimitMetricsStore', () => {
     expect(RATE_LIMIT_METRICS_RETENTION_DAYS).toBe(30);
     expect(RATE_LIMIT_METRICS_LEDGER_NAME).toBe('__blocked-ledger-v1__');
     expect(RATE_LIMIT_SERVICES).toEqual(['oliveyoung', 'cgv', 'cu', 'gs25', 'lottemart']);
+    expect(fixture.storageKind).toBe(HAS_NATIVE_SQLITE ? 'node:sqlite' : 'memory');
     expect(fixture.sql.executed.map(({ query }) => query)).toEqual([
       expect.stringContaining('CREATE TABLE IF NOT EXISTS blocked_events'),
       expect.stringContaining('ON blocked_events(day, service)'),
@@ -182,7 +54,7 @@ describe('RateLimitMetricsStore', () => {
     expect(() => fixture.sql.exec('MALFORMED SQL')).toThrow();
   });
 
-  it('전체 이벤트 필드를 INSERT OR IGNORE로 저장하고 event_id 중복은 한 번만 센다', async () => {
+  it('기존 alarm을 재설정하지 않고 이벤트를 저장하며 event_id 중복은 한 번만 센다', async () => {
     const fixture = createState({ alarm: Date.parse('2026-07-22T15:05:00Z') });
     const store = new RateLimitMetricsStore(fixture.state);
     const blockedEvent = event('event-1', '2026-07-22', 'cgv', 'opaque-id-1');
@@ -202,17 +74,19 @@ describe('RateLimitMetricsStore', () => {
     expect(fixture.setAlarm).not.toHaveBeenCalled();
   });
 
-  it('alarm 예약 실패가 확정된 이벤트 기록을 실패로 바꾸거나 민감값을 기록하지 않는다', async () => {
+  it('alarm 예약 실패 시 cleanup과 INSERT 전에 거부하고 민감값을 기록하지 않는다', async () => {
     const fixture = createState({ setAlarmError: new Error('alarm unavailable') });
     const store = new RateLimitMetricsStore(fixture.state);
     const blockedEvent = event('event-1', '2026-07-22', 'cgv', 'opaque-id-1');
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const statementsBeforeRecord = fixture.sql.executed.length;
 
-    await expect(store.record(blockedEvent)).resolves.toBeUndefined();
-    await expect(store.record(blockedEvent)).resolves.toBeUndefined();
+    await expect(store.record(blockedEvent)).rejects.toThrow('alarm unavailable');
 
+    expect(fixture.sql.executed).toHaveLength(statementsBeforeRecord);
+    expect(fixture.readEvents()).toHaveLength(0);
     await expect(store.query({ from: '2026-07-22', to: '2026-07-22' })).resolves.toMatchObject({
-      totals: { blockedRequests: 1, uniqueIdentities: 1 },
+      totals: { blockedRequests: 0, uniqueIdentities: 0 },
     });
     expect(consoleError).not.toHaveBeenCalled();
   });
