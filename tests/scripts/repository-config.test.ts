@@ -28,7 +28,9 @@ describe('repository maintenance configuration', () => {
     expect(agents).toContain('릴리스 절차');
     expect(agents).toContain('npm version');
     expect(agents).toContain('git push origin main --follow-tags');
-    expect(agents.indexOf('git push origin main --follow-tags')).toBeLessThan(agents.indexOf('npm publish'));
+    expect(agents.indexOf('git push origin main --follow-tags')).toBeLessThan(
+      agents.indexOf('npm publish'),
+    );
   });
 
   it('운영 메모는 repo 내부 문서에 포함된다', () => {
@@ -46,7 +48,9 @@ describe('repository maintenance configuration', () => {
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain("cron: '40 15 * * *'");
-    expect(workflow).toContain('group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}');
+    expect(workflow).toContain(
+      'group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}',
+    );
     expect(workflow).toContain('fail-fast: false');
     expect(workflow).toContain('max-parallel: 4');
     expect(workflow).toContain('service: daiso');
@@ -103,7 +107,9 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('CLOUDFLARE_GLOBAL_API_KEY');
     expect(workflow).toContain('CLOUDFLARE_ZONE_ID');
     expect(workflow).toContain('WORKERS_CHART_ROOT_REDIRECT_START');
-    expect(workflow).toContain('git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png');
+    expect(workflow).toContain(
+      'git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png',
+    );
     expect(workflow).toContain('git pull --rebase --autostash origin main');
     expect(workflow).toContain('git push origin HEAD:main');
   });
@@ -190,6 +196,36 @@ describe('repository maintenance configuration', () => {
     expect(readme).toContain('Daiso MCP 및 Skill');
     expect(readme).toContain('skills/daiso-cli/SKILL.md');
     expect(readme).toContain('npx daiso');
+  });
+
+  it('운영 문서는 정확한 429 통계 조회 계약과 범위를 설명한다', () => {
+    const readme = readText('README.md');
+    const serviceReference = readText('docs/service-reference.md');
+
+    expect(readme).toContain('GET /api/rate-limit/stats');
+    expect(readme).toContain('HEALTH_CHECK_SECRET');
+    expect(readme).toContain('Authorization: Bearer $HEALTH_CHECK_SECRET');
+    expect(readme).toContain('x-health-check-key: $HEALTH_CHECK_SECRET');
+    expect(readme).toContain('`from`, `to`, `service`');
+    expect(readme).toContain('`from`과 `to`는 함께 지정하거나 둘 다 생략');
+    expect(readme).toContain('`oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`');
+    expect(readme).toContain('현재 KST 일자를 포함한 최근 7일');
+    expect(readme).toContain('KST 달력 날짜 기준 최대 30일');
+    expect(readme).toContain('일별·서비스별 차단 요청 수와 고유 차단 주체 수');
+    expect(readme).toContain('Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정');
+    expect(readme).toContain('원장 커밋에 성공한 경우만 정확한 집계 범위');
+    expect(readme).toContain('Cloudflare 또는 네트워크 계층의 429');
+    expect(readme).toContain('클라이언트 전송 결과, 연결 종료 결과');
+    expect(readme).toContain('fail-open');
+    expect(readme).toContain('애플리케이션 429를 반환하지 않습니다');
+    expect(readme).toContain('배포 시점부터 수집');
+    expect(readme).toContain('이전 429는 소급 집계하지 않습니다');
+    expect(readme).toContain('원본 호출 주체나 IP를 노출하지 않습니다');
+
+    expect(serviceReference).toContain('GET /api/rate-limit/stats');
+    expect(serviceReference).toContain('HEALTH_CHECK_SECRET');
+    expect(serviceReference).toContain('30일');
+    expect(serviceReference).toContain('집계만 반환');
   });
 
   it('daiso CLI 스킬은 에이전트가 CLI와 MCP를 함께 사용할 수 있게 안내한다', () => {

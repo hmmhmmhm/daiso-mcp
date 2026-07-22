@@ -425,6 +425,11 @@ MCP를 지원하지 않는 서비스를 위한 GET 기반 REST API입니다.
 | `GET /api/cgv/theaters`           | CGV 극장 목록 조회                  |
 | `GET /api/cgv/movies`             | CGV 영화 목록 조회                  |
 | `GET /api/cgv/timetable`          | CGV 상영 시간표 조회                |
+| `GET /api/rate-limit/stats`       | 인증된 일일 호출 제한 운영 통계     |
+
+### 호출 제한 운영 통계
+
+`GET /api/rate-limit/stats` 요청은 `HEALTH_CHECK_SECRET`을 `Authorization: Bearer` 또는 `x-health-check-key` 헤더로 전달해 인증합니다. `from`과 `to`는 함께 지정하고 `service`로 서비스를 선택할 수 있습니다. 날짜를 생략하면 현재 KST 일자를 포함한 최근 7일을 조회하며, 30일 보관 범위 안에서 최대 30일을 요청할 수 있습니다. 응답은 전체, 일별, 서비스별 차단 요청 수와 고유 차단 주체 수 집계만 반환하며 호출 주체와 IP는 노출하지 않습니다. 정확성 범위와 fail-open 동작은 README의 운영 통계 절을 참고하세요.
 
 ### 제품 검색
 
@@ -500,16 +505,16 @@ GET /api/cu/stores?keyword={키워드}&lat={위도}&lng={경도}
 GET /api/cu/inventory?keyword={검색어}&lat={위도}&lng={경도}
 ```
 
-| 파라미터       | 필수 | 설명                           |
-| :------------- | :--: | :----------------------------- |
-| `keyword`      |  O   | 검색 키워드 (예: 과자, 컵라면) |
-| `lat`          |      | 위도 (기본값: 37.5665)         |
-| `lng`          |      | 경도 (기본값: 126.978)         |
-| `storeKeyword` |      | 주변 매장 필터 키워드          |
-| `size`         |      | 검색 결과 수 (기본값: 20)      |
-| `offset`       |      | 검색 시작 오프셋 (기본값: 0)   |
-| `searchSort`   |      | 정렬 방식 (기본값: `recom`)    |
-| `storeLimit`   |      | 매장 결과 수 (기본값: 10)      |
+| 파라미터       | 필수 | 설명                            |
+| :------------- | :--: | :------------------------------ |
+| `keyword`      |  O   | 검색 키워드 (예: 과자, 컵라면)  |
+| `lat`          |      | 위도 (기본값: 37.5665)          |
+| `lng`          |      | 경도 (기본값: 126.978)          |
+| `storeKeyword` |      | 주변 매장 필터 키워드           |
+| `size`         |      | 검색 결과 수 (기본값: 20)       |
+| `offset`       |      | 검색 시작 오프셋 (기본값: 0)    |
+| `searchSort`   |      | 정렬 방식 (기본값: `recom`)     |
+| `storeLimit`   |      | 매장 결과 수 (기본값: 10)       |
 | `storeCheck`   |      | `false`이면 주변 매장 조회 생략 |
 
 ### 올리브영 재고 확인
@@ -863,9 +868,7 @@ class CuService implements ServiceProvider {
   };
 
   getTools() {
-    return [
-      /* cu_search_products, cu_find_stores 등 */
-    ];
+    return [/* cu_search_products, cu_find_stores 등 */];
   }
 }
 
