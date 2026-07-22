@@ -42,7 +42,8 @@ type ServiceRow = DailyRow & {
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const ALARM_DELAY_MS = 5 * 60 * 1000;
-const OPPORTUNISTIC_CLEANUP_LIMIT = 1000;
+// 요청 경로의 SQLite 쓰기 증폭을 제한하고 나머지는 일일 alarm에 맡깁니다.
+const OPPORTUNISTIC_CLEANUP_LIMIT = 100;
 
 function toKstDay(nowMs: number): string {
   return new Date(nowMs + KST_OFFSET_MS).toISOString().slice(0, 10);
@@ -94,6 +95,7 @@ export class RateLimitMetricsStore {
       throw new TypeError('이벤트 날짜가 KST 발생 날짜와 일치하지 않습니다.');
     }
 
+    this.cleanupExpiredBatch(Date.now());
     this.sql.exec(
       `INSERT OR IGNORE INTO blocked_events
         (event_id, occurred_at, day, service, identity_id)
@@ -104,8 +106,11 @@ export class RateLimitMetricsStore {
       event.service,
       event.identityId,
     );
-    this.cleanupExpiredBatch(Date.now());
-    await this.ensureAlarm();
+    try {
+      await this.ensureAlarm();
+    } catch {
+      // 원장 확정 이후의 alarm 실패는 이벤트 승인을 되돌리지 않습니다.
+    }
   }
 
   async query(input: {
@@ -117,11 +122,15 @@ export class RateLimitMetricsStore {
       throw new TypeError('지원하지 않는 서비스입니다.');
     }
 
-    this.cleanupExpiredBatch(Date.now());
+    const nowMs = Date.now();
+    const cutoffDay = retentionCutoffDay(nowMs);
+    this.cleanupExpiredBatch(nowMs);
     const serviceClause = input.service === undefined ? '' : ' AND service = ?';
     const bindings =
-      input.service === undefined ? [input.from, input.to] : [input.from, input.to, input.service];
-    const whereClause = `day >= ? AND day <= ?${serviceClause}`;
+      input.service === undefined
+        ? [input.from, input.to, cutoffDay]
+        : [input.from, input.to, cutoffDay, input.service];
+    const whereClause = `day >= ? AND day <= ? AND day >= ?${serviceClause}`;
 
     const totals = this.sql
       .exec<AggregateRow>(

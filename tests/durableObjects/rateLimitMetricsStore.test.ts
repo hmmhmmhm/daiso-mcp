@@ -1,3 +1,4 @@
+import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   RATE_LIMIT_METRICS_LEDGER_NAME,
@@ -10,16 +11,15 @@ import {
 
 type SqlRow = Record<string, SqlStorageValue>;
 
-class FakeSqlCursor<T extends SqlRow> implements SqlStorageCursor<T> {
-  readonly columnNames: string[];
+class SqliteCursor<T extends SqlRow> implements SqlStorageCursor<T> {
   readonly rowsRead: number;
   private index = 0;
 
   constructor(
     private readonly rows: T[],
     readonly rowsWritten = 0,
+    readonly columnNames: string[] = rows[0] ? Object.keys(rows[0]) : [],
   ) {
-    this.columnNames = rows[0] ? Object.keys(rows[0]) : [];
     this.rowsRead = rows.length;
   }
 
@@ -29,22 +29,29 @@ class FakeSqlCursor<T extends SqlRow> implements SqlStorageCursor<T> {
   }
 
   toArray(): T[] {
-    return [...this.rows];
+    return [...this];
   }
 
   one(): T {
-    if (this.rows.length !== 1) {
-      throw new Error(`한 행이 필요하지만 ${this.rows.length}개를 받았습니다.`);
+    const rows = this.toArray();
+    if (rows.length !== 1) {
+      throw new Error(`한 행이 필요하지만 ${rows.length}개를 받았습니다.`);
     }
-    return this.rows[0];
+    return rows[0];
   }
 
-  raw<U extends SqlStorageValue[]>(): IterableIterator<U> {
-    return this.rows.map((row) => Object.values(row) as unknown as U)[Symbol.iterator]();
+  *raw<U extends SqlStorageValue[]>(): IterableIterator<U> {
+    for (const row of this) {
+      yield Object.values(row) as unknown as U;
+    }
   }
 
-  [Symbol.iterator](): IterableIterator<T> {
-    return this.rows[Symbol.iterator]();
+  *[Symbol.iterator](): IterableIterator<T> {
+    let result = this.next();
+    while (!result.done) {
+      yield result.value;
+      result = this.next();
+    }
   }
 }
 
@@ -61,121 +68,77 @@ interface ExecutedSql {
   bindings: SqlStorageValue[];
 }
 
-class FakeSqlStorage {
-  readonly events = new Map<string, StoredEvent>();
+class SqliteStorage {
   readonly executed: ExecutedSql[] = [];
 
-  constructor(events: StoredEvent[] = []) {
-    for (const event of events) {
-      this.events.set(event.eventId, event);
-    }
-  }
+  constructor(private readonly database: DatabaseSync) {}
 
   exec<T extends SqlRow>(query: string, ...bindings: any[]): SqlStorageCursor<T> {
     const normalized = query.replace(/\s+/g, ' ').trim();
-    this.executed.push({ query: normalized, bindings });
+    const sqlBindings = bindings as SqlStorageValue[];
+    this.executed.push({ query: normalized, bindings: sqlBindings });
+    const statement = this.database.prepare(query);
+    const columnNames = statement.columns().map(({ name }) => name);
+    const nodeBindings = sqlBindings.map((binding): SQLInputValue => {
+      return binding instanceof ArrayBuffer ? new Uint8Array(binding) : binding;
+    });
 
-    if (normalized.startsWith('INSERT OR IGNORE')) {
-      const [eventId, occurredAt, day, service, identityId] = bindings as [
-        string,
-        number,
-        string,
-        string,
-        string,
-      ];
-      const existed = this.events.has(eventId);
-      if (!existed) {
-        this.events.set(eventId, { eventId, occurredAt, day, service, identityId });
-      }
-      return new FakeSqlCursor<T>([], existed ? 0 : 1);
+    if (columnNames.length > 0) {
+      const rows = statement.all(...nodeBindings) as unknown as T[];
+      return new SqliteCursor(rows, 0, columnNames);
     }
 
-    if (normalized.startsWith('DELETE FROM blocked_events WHERE event_id IN')) {
-      const [cutoff, limit] = bindings as [string, number];
-      const expired = [...this.events.values()]
-        .filter((event) => event.day < cutoff)
-        .sort((left, right) =>
-          left.day === right.day
-            ? left.eventId.localeCompare(right.eventId)
-            : left.day.localeCompare(right.day),
-        )
-        .slice(0, limit);
-      for (const event of expired) {
-        this.events.delete(event.eventId);
-      }
-      return new FakeSqlCursor<T>([], expired.length);
-    }
-
-    if (normalized.startsWith('DELETE FROM blocked_events WHERE day < ?')) {
-      const [cutoff] = bindings as [string];
-      const expired = [...this.events.values()].filter((event) => event.day < cutoff);
-      for (const event of expired) {
-        this.events.delete(event.eventId);
-      }
-      return new FakeSqlCursor<T>([], expired.length);
-    }
-
-    if (normalized.startsWith('SELECT')) {
-      return new FakeSqlCursor<T>(this.select(normalized, bindings) as T[]);
-    }
-
-    return new FakeSqlCursor<T>([]);
-  }
-
-  private select(query: string, bindings: SqlStorageValue[]): SqlRow[] {
-    const [from, to, selectedService] = bindings as [string, string, string?];
-    const events = [...this.events.values()].filter(
-      (event) =>
-        event.day >= from &&
-        event.day <= to &&
-        (!query.includes('AND service = ?') || event.service === selectedService),
-    );
-
-    if (query.includes('GROUP BY day, service')) {
-      return this.group(events, (event) => `${event.day}\0${event.service}`).map((group) => ({
-        day: group[0].day,
-        service: group[0].service,
-        blocked_requests: group.length,
-        unique_identities: new Set(group.map((event) => event.identityId)).size,
-      }));
-    }
-
-    if (query.includes('GROUP BY day')) {
-      return this.group(events, (event) => event.day).map((group) => ({
-        day: group[0].day,
-        blocked_requests: group.length,
-        unique_identities: new Set(group.map((event) => event.identityId)).size,
-      }));
-    }
-
-    return [
-      {
-        blocked_requests: events.length,
-        unique_identities: new Set(events.map((event) => event.identityId)).size,
-      },
-    ];
-  }
-
-  private group(events: StoredEvent[], keyOf: (event: StoredEvent) => string): StoredEvent[][] {
-    const groups = new Map<string, StoredEvent[]>();
-    for (const event of events) {
-      const key = keyOf(event);
-      groups.set(key, [...(groups.get(key) ?? []), event]);
-    }
-    return [...groups.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([, group]) => group);
+    const result = statement.run(...nodeBindings);
+    return new SqliteCursor<T>([], Number(result.changes), columnNames);
   }
 }
 
-function createState(options: { events?: StoredEvent[]; alarm?: number | null } = {}) {
-  const sql = new FakeSqlStorage(options.events);
-  const getAlarm = vi.fn(async () => options.alarm ?? null);
-  const setAlarm = vi.fn(async (_scheduledTime: number | Date) => undefined);
+function createState(options: { alarm?: number | null; setAlarmError?: Error } = {}) {
+  const database = new DatabaseSync(':memory:');
+  const sql = new SqliteStorage(database);
+  let alarm = options.alarm ?? null;
+  const getAlarm = vi.fn(async () => alarm);
+  const setAlarm = vi.fn(async (scheduledTime: number | Date) => {
+    if (options.setAlarmError) {
+      throw options.setAlarmError;
+    }
+    alarm = scheduledTime instanceof Date ? scheduledTime.getTime() : scheduledTime;
+  });
   const state = {
     storage: { sql, getAlarm, setAlarm },
   } as unknown as DurableObjectState;
-  return { state, sql, getAlarm, setAlarm };
+  const seed = (events: StoredEvent[]) => {
+    const statement = database.prepare(
+      `INSERT INTO blocked_events (event_id, occurred_at, day, service, identity_id)
+       VALUES (?, ?, ?, ?, ?)`,
+    );
+    for (const stored of events) {
+      statement.run(
+        stored.eventId,
+        stored.occurredAt,
+        stored.day,
+        stored.service,
+        stored.identityId,
+      );
+    }
+  };
+  const readEvents = (): StoredEvent[] => {
+    const rows = database
+      .prepare(
+        `SELECT event_id, occurred_at, day, service, identity_id
+         FROM blocked_events
+         ORDER BY event_id ASC`,
+      )
+      .all();
+    return rows.map((row) => ({
+      eventId: String(row.event_id),
+      occurredAt: Number(row.occurred_at),
+      day: String(row.day),
+      service: String(row.service),
+      identityId: String(row.identity_id),
+    }));
+  };
+  return { state, sql, getAlarm, setAlarm, seed, readEvents };
 }
 
 function event(
@@ -216,6 +179,7 @@ describe('RateLimitMetricsStore', () => {
       expect.stringContaining('ON blocked_events(day, identity_id)'),
       expect.stringContaining('ON blocked_events(day, service, identity_id)'),
     ]);
+    expect(() => fixture.sql.exec('MALFORMED SQL')).toThrow();
   });
 
   it('전체 이벤트 필드를 INSERT OR IGNORE로 저장하고 event_id 중복은 한 번만 센다', async () => {
@@ -238,6 +202,21 @@ describe('RateLimitMetricsStore', () => {
     expect(fixture.setAlarm).not.toHaveBeenCalled();
   });
 
+  it('alarm 예약 실패가 확정된 이벤트 기록을 실패로 바꾸거나 민감값을 기록하지 않는다', async () => {
+    const fixture = createState({ setAlarmError: new Error('alarm unavailable') });
+    const store = new RateLimitMetricsStore(fixture.state);
+    const blockedEvent = event('event-1', '2026-07-22', 'cgv', 'opaque-id-1');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(store.record(blockedEvent)).resolves.toBeUndefined();
+    await expect(store.record(blockedEvent)).resolves.toBeUndefined();
+
+    await expect(store.query({ from: '2026-07-22', to: '2026-07-22' })).resolves.toMatchObject({
+      totals: { blockedRequests: 1, uniqueIdentities: 1 },
+    });
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
   it('KST 발생 날짜와 일치하지 않는 이벤트는 저장하지 않는다', async () => {
     const fixture = createState();
     const store = new RateLimitMetricsStore(fixture.state);
@@ -245,7 +224,7 @@ describe('RateLimitMetricsStore', () => {
     mismatched.occurredAt = Date.parse('2026-07-21T14:59:59Z');
 
     await expect(store.record(mismatched)).rejects.toThrow('KST 발생 날짜');
-    expect(fixture.sql.events).toHaveLength(0);
+    expect(fixture.readEvents()).toHaveLength(0);
   });
 
   it('반복 호출 주체와 서비스별 호출 주체를 정확하고 결정적인 순서로 집계한다', async () => {
@@ -308,6 +287,26 @@ describe('RateLimitMetricsStore', () => {
     });
   });
 
+  it('정리 backlog가 있어도 현재 KST 보관 기간보다 오래된 행은 집계하지 않는다', async () => {
+    const expired = Array.from({ length: 2_001 }, (_, index) =>
+      event(`expired-${index}`, '2026-01-01', 'cgv', `expired-id-${index}`),
+    );
+    const fixture = createState({ alarm: 1 });
+    const store = new RateLimitMetricsStore(fixture.state);
+    fixture.seed([...expired, event('current', '2026-07-22', 'cgv', 'current-id')]);
+
+    await expect(store.query({ from: '2026-01-01', to: '2026-07-22' })).resolves.toEqual({
+      totals: { blockedRequests: 1, uniqueIdentities: 1 },
+      daily: [{ day: '2026-07-22', blockedRequests: 1, uniqueIdentities: 1 }],
+      services: [{ day: '2026-07-22', service: 'cgv', blockedRequests: 1, uniqueIdentities: 1 }],
+    });
+    await expect(store.query({ from: '2026-01-01', to: '2026-01-31' })).resolves.toEqual({
+      totals: { blockedRequests: 0, uniqueIdentities: 0 },
+      daily: [],
+      services: [],
+    });
+  });
+
   it('허용 목록에 없는 서비스 필터는 SQL 실행 전에 거부한다', async () => {
     const fixture = createState();
     const store = new RateLimitMetricsStore(fixture.state);
@@ -324,44 +323,41 @@ describe('RateLimitMetricsStore', () => {
   });
 
   it('KST 현재 날짜를 포함한 정확히 30개 날짜를 보존한다', async () => {
-    const first = createState({
-      events: [
-        event('expired-before-midnight', '2026-06-22', 'cgv', 'old'),
-        event('boundary-before-midnight', '2026-06-23', 'cgv', 'keep'),
-      ],
-    });
+    const first = createState();
     const firstStore = new RateLimitMetricsStore(first.state);
+    first.seed([
+      event('expired-before-midnight', '2026-06-22', 'cgv', 'old'),
+      event('boundary-before-midnight', '2026-06-23', 'cgv', 'keep'),
+    ]);
 
     await firstStore.cleanup(Date.parse('2026-07-22T14:59:59.999Z'));
 
-    expect([...first.sql.events.keys()]).toEqual(['boundary-before-midnight']);
+    expect(first.readEvents().map(({ eventId }) => eventId)).toEqual(['boundary-before-midnight']);
 
-    const second = createState({
-      events: [
-        event('expired-after-midnight', '2026-06-23', 'cgv', 'old'),
-        event('boundary-after-midnight', '2026-06-24', 'cgv', 'keep'),
-      ],
-    });
+    const second = createState();
     const secondStore = new RateLimitMetricsStore(second.state);
+    second.seed([
+      event('expired-after-midnight', '2026-06-23', 'cgv', 'old'),
+      event('boundary-after-midnight', '2026-06-24', 'cgv', 'keep'),
+    ]);
 
     await secondStore.cleanup(Date.parse('2026-07-22T15:00:00.000Z'));
 
-    expect([...second.sql.events.keys()]).toEqual(['boundary-after-midnight']);
+    expect(second.readEvents().map(({ eventId }) => eventId)).toEqual(['boundary-after-midnight']);
   });
 
   it('기록 시 오래된 행 정리를 한 번에 제한한다', async () => {
-    const oldEvents = Array.from({ length: 1_001 }, (_, index) =>
+    const oldEvents = Array.from({ length: 101 }, (_, index) =>
       event(`old-${index.toString().padStart(4, '0')}`, '2026-01-01', 'cgv', `id-${index}`),
     );
-    const fixture = createState({ events: oldEvents, alarm: 1 });
+    const fixture = createState({ alarm: 1 });
     const store = new RateLimitMetricsStore(fixture.state);
+    fixture.seed(oldEvents);
 
     await store.record(event('current', '2026-07-22', 'cgv', 'current-id'));
 
-    expect([...fixture.sql.events.values()].filter(({ day }) => day === '2026-01-01')).toHaveLength(
-      1,
-    );
-    expect(fixture.sql.events.has('current')).toBe(true);
+    expect(fixture.readEvents().filter(({ day }) => day === '2026-01-01')).toHaveLength(1);
+    expect(fixture.readEvents().some(({ eventId }) => eventId === 'current')).toBe(true);
   });
 
   it('기존 alarm은 유지하고 없을 때만 다음 KST 자정 5분 후를 예약한다', async () => {
@@ -373,6 +369,7 @@ describe('RateLimitMetricsStore', () => {
     const missing = createState();
     const missingStore = new RateLimitMetricsStore(missing.state);
     await missingStore.ensureAlarm(Date.parse('2026-07-22T15:00:00Z'));
+    await missingStore.ensureAlarm(Date.parse('2026-07-22T15:01:00Z'));
     expect(missing.setAlarm).toHaveBeenCalledOnce();
     expect(missing.setAlarm).toHaveBeenCalledWith(Date.parse('2026-07-23T15:05:00Z'));
   });
