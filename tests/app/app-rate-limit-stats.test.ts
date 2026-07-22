@@ -1,65 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../../src/index.js';
-import type { AppBindings } from '../../src/api/response.js';
+import { RATE_LIMIT_METRICS_LEDGER_NAME } from '../../src/durableObjects/rateLimitMetricsStore.js';
 import {
-  RATE_LIMIT_METRICS_LEDGER_NAME,
-  type RateLimitStats,
-} from '../../src/durableObjects/rateLimitMetricsStore.js';
-
-const SECRET = 'test-secret';
-const NOW_MS = Date.parse('2026-07-22T03:00:00.000Z');
-const EMPTY_STATS: RateLimitStats = {
-  totals: { blockedRequests: 0, uniqueIdentities: 0 },
-  daily: [],
-  services: [],
-};
-const AGGREGATE_STATS: RateLimitStats = {
-  totals: { blockedRequests: 3, uniqueIdentities: 2 },
-  daily: [
-    { day: '2026-07-20', blockedRequests: 1, uniqueIdentities: 1 },
-    { day: '2026-07-22', blockedRequests: 2, uniqueIdentities: 2 },
-  ],
-  services: [
-    { day: '2026-07-20', service: 'cgv', blockedRequests: 1, uniqueIdentities: 1 },
-    { day: '2026-07-22', service: 'cgv', blockedRequests: 2, uniqueIdentities: 2 },
-  ],
-};
-
-type BackendOutcome = unknown | Response | 'throw';
-
-function createFixture(outcome: BackendOutcome = EMPTY_STATS) {
-  const calls: Request[] = [];
-  const ledgerId = { toString: () => 'reserved-ledger-id' } as unknown as DurableObjectId;
-  const stubFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    calls.push(input instanceof Request ? input : new Request(input, init));
-    if (outcome === 'throw') {
-      throw new Error('backend failed');
-    }
-    return outcome instanceof Response ? outcome : Response.json(outcome);
-  });
-  const get = vi.fn(() => ({ fetch: stubFetch }) as unknown as DurableObjectStub);
-  const idFromName = vi.fn(() => ledgerId);
-  const env: AppBindings = {
-    HEALTH_CHECK_SECRET: SECRET,
-    DAILY_RATE_LIMITER: { get, idFromName } as unknown as DurableObjectNamespace,
-  };
-
-  return { calls, env, get, idFromName, ledgerId, stubFetch };
-}
-
-function authenticatedHeaders(header: 'bearer' | 'key' = 'bearer'): HeadersInit {
-  return header === 'bearer'
-    ? { Authorization: `Bearer ${SECRET}` }
-    : { 'x-health-check-key': SECRET };
-}
-
-async function expectError(response: Response, status: number, code: string, message: string) {
-  expect(response.status).toBe(status);
-  expect(await response.json()).toMatchObject({
-    success: false,
-    error: { code, message },
-  });
-}
+  authenticatedHeaders,
+  CONTRADICTORY_STATS_CASES,
+  createStatsFixture,
+  EMPTY_STATS,
+  expectApiError,
+  FILTERED_STATS,
+  NOW_MS,
+  SECRET,
+  UNFILTERED_STATS,
+} from './rateLimitStatsTestHelpers.js';
 
 beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(NOW_MS);
@@ -73,12 +25,12 @@ describe('GET /api/rate-limit/stats', () => {
   it.each([undefined, '', '   '] as const)(
     'HEALTH_CHECK_SECRET이 %s이면 기존 운영 설정 오류 503을 반환한다',
     async (secret) => {
-      const fixture = createFixture();
+      const fixture = createStatsFixture();
       fixture.env.HEALTH_CHECK_SECRET = secret;
 
       const response = await app.request('/api/rate-limit/stats', undefined, fixture.env);
 
-      await expectError(
+      await expectApiError(
         response,
         503,
         'HEALTH_CHECK_SECRET_NOT_CONFIGURED',
@@ -93,7 +45,7 @@ describe('GET /api/rate-limit/stats', () => {
     ['잘못된 bearer', { Authorization: 'Bearer wrong-secret' }],
     ['잘못된 key', { 'x-health-check-key': 'wrong-secret' }],
   ] as const)('%s 인증은 query 검증과 DO 접근보다 먼저 401을 반환한다', async (_, headers) => {
-    const fixture = createFixture();
+    const fixture = createStatsFixture();
 
     const response = await app.request(
       '/api/rate-limit/stats?from=not-a-date',
@@ -101,7 +53,7 @@ describe('GET /api/rate-limit/stats', () => {
       fixture.env,
     );
 
-    await expectError(
+    await expectApiError(
       response,
       401,
       'UNAUTHORIZED_RATE_LIMIT_STATS',
@@ -111,7 +63,7 @@ describe('GET /api/rate-limit/stats', () => {
   });
 
   it.each(['bearer', 'key'] as const)('%s 인증을 공용 운영 인증으로 허용한다', async (header) => {
-    const fixture = createFixture();
+    const fixture = createStatsFixture();
 
     const response = await app.request(
       '/api/rate-limit/stats?from=2026-07-22&to=2026-07-22',
@@ -137,7 +89,7 @@ describe('GET /api/rate-limit/stats', () => {
     ['대문자 서비스', 'from=2026-07-22&to=2026-07-22&service=CGV'],
     ['빈 서비스', 'from=2026-07-22&to=2026-07-22&service='],
   ] as const)('%s query shape를 400으로 거부하고 DO를 호출하지 않는다', async (_, query) => {
-    const fixture = createFixture();
+    const fixture = createStatsFixture();
 
     const response = await app.request(
       `/api/rate-limit/stats?${query}`,
@@ -145,7 +97,7 @@ describe('GET /api/rate-limit/stats', () => {
       fixture.env,
     );
 
-    await expectError(
+    await expectApiError(
       response,
       400,
       'INVALID_RATE_LIMIT_STATS_QUERY',
@@ -159,7 +111,7 @@ describe('GET /api/rate-limit/stats', () => {
     ['미래 종료일', 'from=2026-07-22&to=2026-07-23'],
     ['31일 범위', 'from=2026-06-22&to=2026-07-22'],
   ] as const)('%s 요청을 backend 호출 전에 400으로 거부한다', async (_, query) => {
-    const fixture = createFixture();
+    const fixture = createStatsFixture();
 
     const response = await app.request(
       `/api/rate-limit/stats?${query}`,
@@ -167,7 +119,7 @@ describe('GET /api/rate-limit/stats', () => {
       fixture.env,
     );
 
-    await expectError(
+    await expectApiError(
       response,
       400,
       'INVALID_RATE_LIMIT_STATS_QUERY',
@@ -177,7 +129,7 @@ describe('GET /api/rate-limit/stats', () => {
   });
 
   it('보관 범위의 정확한 30일을 허용한다', async () => {
-    const fixture = createFixture();
+    const fixture = createStatsFixture();
 
     const response = await app.request(
       '/api/rate-limit/stats?from=2026-06-23&to=2026-07-22',
@@ -196,7 +148,7 @@ describe('GET /api/rate-limit/stats', () => {
     '%s에는 현재 KST 일자 포함 최근 7일을 기본값으로 쓴다',
     async (_, nowMs, from, to) => {
       vi.mocked(Date.now).mockReturnValue(nowMs);
-      const fixture = createFixture();
+      const fixture = createStatsFixture();
 
       const response = await app.request(
         '/api/rate-limit/stats?service=cgv',
@@ -217,7 +169,7 @@ describe('GET /api/rate-limit/stats', () => {
       { HEALTH_CHECK_SECRET: SECRET },
     );
 
-    await expectError(
+    await expectApiError(
       response,
       503,
       'RATE_LIMIT_STATS_UNAVAILABLE',
@@ -226,7 +178,7 @@ describe('GET /api/rate-limit/stats', () => {
   });
 
   it('예약 원장 객체에 인코딩한 필터를 전달하며 별도 quota 호출을 하지 않는다', async () => {
-    const fixture = createFixture(AGGREGATE_STATS);
+    const fixture = createStatsFixture(FILTERED_STATS);
 
     const response = await app.request(
       '/api/rate-limit/stats?from=2026-07-20&to=2026-07-22&service=cgv',
@@ -256,7 +208,7 @@ describe('GET /api/rate-limit/stats', () => {
     ['backend invalid JSON', new Response('{', { status: 200 })],
     ['backend null JSON', null],
   ] as const)('%s를 거짓 0이 아닌 503으로 반환한다', async (_, outcome) => {
-    const fixture = createFixture(outcome);
+    const fixture = createStatsFixture(outcome);
 
     const response = await app.request(
       '/api/rate-limit/stats?from=2026-07-20&to=2026-07-22',
@@ -264,7 +216,7 @@ describe('GET /api/rate-limit/stats', () => {
       fixture.env,
     );
 
-    await expectError(
+    await expectApiError(
       response,
       503,
       'RATE_LIMIT_STATS_UNAVAILABLE',
@@ -329,7 +281,55 @@ describe('GET /api/rate-limit/stats', () => {
       },
     ],
   ] as const)('malformed aggregate(%s)는 503을 반환한다', async (_, stats) => {
-    const fixture = createFixture(stats);
+    const fixture = createStatsFixture(stats);
+
+    const response = await app.request(
+      '/api/rate-limit/stats?from=2026-07-20&to=2026-07-22&service=cgv',
+      { headers: authenticatedHeaders() },
+      fixture.env,
+    );
+
+    expect(response.status).toBe(503);
+  });
+
+  it.each(CONTRADICTORY_STATS_CASES)(
+    '모순 집계(%s)는 전체 합계가 맞아도 503을 반환한다',
+    async (_, stats, requestKind) => {
+      const fixture = createStatsFixture(stats);
+      const service = requestKind === 'filtered' ? '&service=cgv' : '';
+
+      const response = await app.request(
+        `/api/rate-limit/stats?from=2026-07-20&to=2026-07-22${service}`,
+        { headers: authenticatedHeaders() },
+        fixture.env,
+      );
+
+      expect(response.status).toBe(503);
+    },
+  );
+
+  it.each([
+    ['empty', EMPTY_STATS, ''],
+    ['filtered', FILTERED_STATS, '&service=cgv'],
+    ['unfiltered', UNFILTERED_STATS, ''],
+  ] as const)('유효한 %s 집계를 유지한다', async (_, stats, service) => {
+    const fixture = createStatsFixture(stats);
+
+    const response = await app.request(
+      `/api/rate-limit/stats?from=2026-07-20&to=2026-07-22${service}`,
+      { headers: authenticatedHeaders() },
+      fixture.env,
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual(stats);
+  });
+
+  it.each([201, 204, 206] as const)('내부 /stats HTTP %s는 503으로 거부한다', async (status) => {
+    const body = status === 204 ? null : JSON.stringify(FILTERED_STATS);
+    const fixture = createStatsFixture(
+      new Response(body, { status, headers: { 'Content-Type': 'application/json' } }),
+    );
 
     const response = await app.request(
       '/api/rate-limit/stats?from=2026-07-20&to=2026-07-22&service=cgv',
@@ -342,15 +342,15 @@ describe('GET /api/rate-limit/stats', () => {
 
   it('검증된 집계 필드만 직렬화하고 원장 식별 정보는 전달하지 않는다', async () => {
     const privateStats = {
-      ...AGGREGATE_STATS,
+      ...FILTERED_STATS,
       identityId: 'opaque-id',
       eventId: 'event-1',
       rawIp: '203.0.113.10',
-      totals: { ...AGGREGATE_STATS.totals, identityIds: ['opaque-id'] },
-      daily: AGGREGATE_STATS.daily.map((row) => ({ ...row, identityId: 'opaque-id' })),
-      services: AGGREGATE_STATS.services.map((row) => ({ ...row, eventIds: ['event-1'] })),
+      totals: { ...FILTERED_STATS.totals, identityIds: ['opaque-id'] },
+      daily: FILTERED_STATS.daily.map((row) => ({ ...row, identityId: 'opaque-id' })),
+      services: FILTERED_STATS.services.map((row) => ({ ...row, eventIds: ['event-1'] })),
     };
-    const fixture = createFixture(privateStats);
+    const fixture = createStatsFixture(privateStats);
 
     const response = await app.request(
       '/api/rate-limit/stats?from=2026-07-20&to=2026-07-22&service=cgv',
@@ -360,7 +360,7 @@ describe('GET /api/rate-limit/stats', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ success: true, data: AGGREGATE_STATS });
+    expect(body).toEqual({ success: true, data: FILTERED_STATS });
     expect(JSON.stringify(body)).not.toMatch(/identityId|eventId|rawIp|203\.0\.113\.10/);
   });
 });

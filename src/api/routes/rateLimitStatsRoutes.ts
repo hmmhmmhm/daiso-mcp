@@ -192,6 +192,66 @@ function sumBlockedRequests(rows: Array<{ blockedRequests: number }>): number | 
   return total;
 }
 
+function hasValidGroupedRelations(stats: RateLimitStats, input: StatsInput): boolean {
+  const { totals, daily, services } = stats;
+  if (totals.blockedRequests === 0) {
+    return totals.uniqueIdentities === 0 && daily.length === 0 && services.length === 0;
+  }
+  const dailyUniqueSum = daily.reduce((sum, row) => sum + row.uniqueIdentities, 0);
+  if (
+    totals.uniqueIdentities > dailyUniqueSum ||
+    daily.some(
+      (row) =>
+        row.blockedRequests === 0 ||
+        row.uniqueIdentities === 0 ||
+        row.uniqueIdentities > totals.uniqueIdentities,
+    ) ||
+    services.some(
+      (row) =>
+        row.blockedRequests === 0 ||
+        row.uniqueIdentities === 0 ||
+        row.uniqueIdentities > totals.uniqueIdentities,
+    )
+  ) {
+    return false;
+  }
+
+  const dailyByDay = new Map(daily.map((row) => [row.day, row]));
+  const servicesByDay = new Map<string, RateLimitStats['services']>(
+    daily.map((row) => [row.day, []]),
+  );
+  for (const row of services) {
+    const dailyRow = dailyByDay.get(row.day);
+    if (!dailyRow || row.uniqueIdentities > dailyRow.uniqueIdentities) {
+      return false;
+    }
+    servicesByDay.get(row.day)!.push(row);
+  }
+
+  return daily.every((dailyRow) => {
+    const dayServices = servicesByDay.get(dailyRow.day)!;
+    if (input.service !== undefined) {
+      const serviceRow = dayServices[0];
+      return (
+        dayServices.length === 1 &&
+        serviceRow?.service === input.service &&
+        serviceRow.blockedRequests === dailyRow.blockedRequests &&
+        serviceRow.uniqueIdentities === dailyRow.uniqueIdentities
+      );
+    }
+
+    const blockedRequests = dayServices.reduce((sum, row) => sum + row.blockedRequests, 0);
+    const uniqueIdentities = dayServices.map((row) => row.uniqueIdentities);
+    const uniqueSum = uniqueIdentities.reduce((sum, count) => sum + count, 0);
+    const uniqueMaximum = Math.max(0, ...uniqueIdentities);
+    return (
+      blockedRequests === dailyRow.blockedRequests &&
+      dailyRow.uniqueIdentities >= uniqueMaximum &&
+      dailyRow.uniqueIdentities <= uniqueSum
+    );
+  });
+}
+
 function sanitizeStats(value: unknown, input: StatsInput): RateLimitStats | undefined {
   if (!isRecord(value)) {
     return undefined;
@@ -208,7 +268,8 @@ function sanitizeStats(value: unknown, input: StatsInput): RateLimitStats | unde
   ) {
     return undefined;
   }
-  return { totals, daily, services };
+  const stats = { totals, daily, services };
+  return hasValidGroupedRelations(stats, input) ? stats : undefined;
 }
 
 function unavailableResponse(c: ApiContext) {
@@ -255,9 +316,11 @@ export function registerRateLimitStatsRoutes(app: Hono<{ Bindings: AppBindings }
 
     const namespace = c.env?.DAILY_RATE_LIMITER;
     if (!namespace) {
+      console.error('호출 제한 통계 binding 누락');
       return unavailableResponse(c);
     }
 
+    let response: Response;
     try {
       const id = namespace.idFromName(RATE_LIMIT_METRICS_LEDGER_NAME);
       const stub = namespace.get(id);
@@ -267,14 +330,29 @@ export function registerRateLimitStatsRoutes(app: Hono<{ Bindings: AppBindings }
       if (input.service !== undefined) {
         backendUrl.searchParams.set('service', input.service);
       }
-      const response = await stub.fetch(backendUrl.toString(), { method: 'GET' });
-      if (!(response instanceof Response) || !response.ok) {
-        return unavailableResponse(c);
-      }
-      const stats = sanitizeStats(await response.json(), input);
-      return stats ? successResponse(c, stats) : unavailableResponse(c);
+      response = await stub.fetch(backendUrl.toString(), { method: 'GET' });
     } catch {
+      console.error('호출 제한 통계 Durable Object 호출 실패');
       return unavailableResponse(c);
     }
+
+    if (response.status !== 200) {
+      console.error('호출 제한 통계 Durable Object 응답 실패', response.status);
+      return unavailableResponse(c);
+    }
+
+    let value: unknown;
+    try {
+      value = await response.json();
+    } catch {
+      console.error('호출 제한 통계 응답 검증 실패');
+      return unavailableResponse(c);
+    }
+    const stats = sanitizeStats(value, input);
+    if (!stats) {
+      console.error('호출 제한 통계 응답 검증 실패');
+      return unavailableResponse(c);
+    }
+    return successResponse(c, stats);
   });
 }
