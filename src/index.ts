@@ -50,6 +50,7 @@ import { registerOpinetRoutes } from './api/routes/opinetRoutes.js';
 import { registerCompareRoutes } from './api/routes/compareRoutes.js';
 import { registerFeedbackRoutes } from './api/routes/feedbackRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
+import { registerRateLimitStatsRoutes } from './api/routes/rateLimitStatsRoutes.js';
 import { buildConfigStatus } from './api/configStatus.js';
 import { createDailyRateLimitMiddleware } from './middleware/dailyRateLimit.js';
 export { DailyRateLimiter } from './durableObjects/dailyRateLimiter.js';
@@ -347,6 +348,7 @@ app.on(['POST', 'DELETE'], '/', handleRootMcpRequest);
 // 헬스 체크 엔드포인트
 app.get('/health', (c) => c.json({ status: 'ok', config: buildConfigStatus(c.env) }));
 registerHealthRoutes(app);
+registerRateLimitStatsRoutes(app);
 
 // 프롬프트 페이지 (MCP 미지원 에이전트용)
 app.get('/prompt', (c) => {
