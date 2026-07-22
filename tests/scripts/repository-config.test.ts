@@ -247,9 +247,12 @@ describe('repository maintenance configuration', () => {
     expect(serviceReferenceOperations).toContain('HEALTH_CHECK_SECRET');
     expect(serviceReferenceOperations).toContain('Authorization: Bearer');
     expect(serviceReferenceOperations).toContain('x-health-check-key');
-    expect(serviceReferenceOperations).toContain('`from`과 `to`');
+    expect(serviceReferenceOperations).toContain(
+      '`from`과 `to`는 둘 다 생략하거나 함께 제공해야 합니다',
+    );
     expect(serviceReferenceOperations).toContain('`oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`');
     expect(serviceReferenceOperations).toContain('현재 KST 일자를 포함한 최근 7일');
+    expect(serviceReferenceOperations).toContain('차단 이벤트는 30일 동안 보관합니다');
     expect(serviceReferenceOperations).toContain('KST 달력 날짜 기준 최대 30일');
     expect(serviceReferenceOperations).toContain(
       'Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정',
