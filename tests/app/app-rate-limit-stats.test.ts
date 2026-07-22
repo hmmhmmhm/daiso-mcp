@@ -80,6 +80,7 @@ describe('GET /api/rate-limit/stats', () => {
     ['중복 from', 'from=2026-07-22&from=2026-07-21&to=2026-07-22'],
     ['중복 to', 'from=2026-07-22&to=2026-07-22&to=2026-07-21'],
     ['중복 service', 'from=2026-07-22&to=2026-07-22&service=cgv&service=cu'],
+    ['내부 전용 asOf', 'from=2026-07-22&to=2026-07-22&asOf=2026-07-22'],
     ['from만 제공', 'from=2026-07-22'],
     ['to만 제공', 'to=2026-07-22'],
     ['빈 날짜', 'from=&to='],
@@ -138,7 +139,9 @@ describe('GET /api/rate-limit/stats', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(new URL(fixture.calls[0]!.url).search).toBe('?from=2026-06-23&to=2026-07-22');
+    expect(new URL(fixture.calls[0]!.url).search).toBe(
+      '?from=2026-06-23&to=2026-07-22&asOf=2026-07-22',
+    );
   });
 
   it.each([
@@ -157,8 +160,10 @@ describe('GET /api/rate-limit/stats', () => {
       );
 
       expect(response.status).toBe(200);
-      expect(new URL(fixture.calls[0]!.url).search).toBe(`?from=${from}&to=${to}&service=cgv`);
-      expect(Date.now).toHaveBeenCalledTimes(1);
+      expect(new URL(fixture.calls[0]!.url).search).toBe(
+        `?from=${from}&to=${to}&asOf=${to}&service=cgv`,
+      );
+      expect(Date.now).toHaveBeenCalledTimes(2);
     },
   );
 
@@ -198,8 +203,50 @@ describe('GET /api/rate-limit/stats', () => {
     expect(fixture.calls).toHaveLength(1);
     expect(fixture.calls[0]!.method).toBe('GET');
     expect(fixture.calls[0]!.url).toBe(
-      'https://daily-rate-limit/stats?from=2026-07-20&to=2026-07-22&service=cgv',
+      'https://daily-rate-limit/stats?from=2026-07-20&to=2026-07-22&asOf=2026-07-22&service=cgv',
     );
+  });
+
+  it('DO 응답 대기 중 KST 날짜가 바뀌면 이전 날짜의 거짓 0 대신 503을 반환한다', async () => {
+    const beforeMidnight = Date.parse('2026-07-22T14:59:59.999Z');
+    const afterMidnight = Date.parse('2026-07-22T15:00:00.000Z');
+    const nowSpy = vi.mocked(Date.now);
+    nowSpy.mockReturnValue(beforeMidnight);
+    let releaseResponse: (() => void) | undefined;
+    const responseGate = new Promise<void>((resolve) => {
+      releaseResponse = resolve;
+    });
+    const fixture = createStatsFixture(async () => {
+      await responseGate;
+      return Response.json(EMPTY_STATS);
+    });
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const responsePromise = app.request(
+      '/api/rate-limit/stats?from=2026-07-22&to=2026-07-22',
+      {
+        headers: {
+          ...authenticatedHeaders(),
+          'CF-Connecting-IP': '203.0.113.10',
+        },
+      },
+      fixture.env,
+    );
+    await vi.waitFor(() => expect(fixture.stubFetch).toHaveBeenCalledOnce());
+
+    nowSpy.mockReturnValue(afterMidnight);
+    releaseResponse?.();
+    const response = await responsePromise;
+
+    await expectApiError(
+      response,
+      503,
+      'RATE_LIMIT_STATS_UNAVAILABLE',
+      '호출 제한 통계를 조회할 수 없습니다.',
+    );
+    expect(new URL(fixture.calls[0]!.url).searchParams.get('asOf')).toBe('2026-07-22');
+    expect(consoleSpy).toHaveBeenCalledWith('호출 제한 통계 날짜 전환 감지');
+    expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain('203.0.113.10');
+    expect(JSON.stringify(consoleSpy.mock.calls)).not.toContain(SECRET);
   });
 
   it.each([
@@ -325,20 +372,23 @@ describe('GET /api/rate-limit/stats', () => {
     expect((await response.json()).data).toEqual(stats);
   });
 
-  it.each([201, 204, 206] as const)('내부 /stats HTTP %s는 503으로 거부한다', async (status) => {
-    const body = status === 204 ? null : JSON.stringify(FILTERED_STATS);
-    const fixture = createStatsFixture(
-      new Response(body, { status, headers: { 'Content-Type': 'application/json' } }),
-    );
+  it.each([201, 204, 206, 409] as const)(
+    '내부 /stats HTTP %s는 503으로 거부한다',
+    async (status) => {
+      const body = status === 204 ? null : JSON.stringify(FILTERED_STATS);
+      const fixture = createStatsFixture(
+        new Response(body, { status, headers: { 'Content-Type': 'application/json' } }),
+      );
 
-    const response = await app.request(
-      '/api/rate-limit/stats?from=2026-07-20&to=2026-07-22&service=cgv',
-      { headers: authenticatedHeaders() },
-      fixture.env,
-    );
+      const response = await app.request(
+        '/api/rate-limit/stats?from=2026-07-20&to=2026-07-22&service=cgv',
+        { headers: authenticatedHeaders() },
+        fixture.env,
+      );
 
-    expect(response.status).toBe(503);
-  });
+      expect(response.status).toBe(503);
+    },
+  );
 
   it('검증된 집계 필드만 직렬화하고 원장 식별 정보는 전달하지 않는다', async () => {
     const privateStats = {

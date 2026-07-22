@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../../src/index.js';
-import { nextKstMidnightEpochSeconds } from '../../src/durableObjects/dailyRateLimiter.js';
-import { RATE_LIMIT_METRICS_LEDGER_NAME } from '../../src/durableObjects/rateLimitMetricsStore.js';
+import {
+  DailyRateLimiter,
+  nextKstMidnightEpochSeconds,
+} from '../../src/durableObjects/dailyRateLimiter.js';
+import {
+  RATE_LIMIT_METRICS_LEDGER_NAME,
+  RateLimitMetricsStore,
+} from '../../src/durableObjects/rateLimitMetricsStore.js';
 import { hashRateLimitIdentity } from '../../src/middleware/dailyRateLimit.js';
 import {
   callPaths,
@@ -17,6 +23,7 @@ import {
   QUOTA_ID,
   RATE_LIMIT_DAY,
 } from '../helpers/dailyRateLimitFixture.js';
+import { createRateLimitSqlState } from '../helpers/rateLimitSqlStorage.js';
 
 afterEach(() => {
   (globalThis as { caches?: CacheStorage }).caches = ORIGINAL_CACHES;
@@ -269,6 +276,51 @@ describe('일일 호출 제한 통합', () => {
       expect(logged).not.toContain('worker-zone:');
     },
   );
+
+  it('원장 대기 중 KST 날짜가 바뀌면 저장과 애플리케이션 429 없이 fail-open한다', async () => {
+    const nowSpy = vi.mocked(Date.now);
+    nowSpy.mockReturnValue(KST_ROLLOVER_BEFORE_MS);
+    const denied = createResult({
+      allowed: false,
+      count: 3000,
+      remaining: 0,
+      resetAt: nextKstMidnightEpochSeconds(KST_ROLLOVER_BEFORE_MS),
+    });
+    const ledgerState = createRateLimitSqlState();
+    const ledger = new DailyRateLimiter(ledgerState.state);
+    let releaseAlarm: (() => void) | undefined;
+    const alarmGate = new Promise<void>((resolve) => {
+      releaseAlarm = resolve;
+    });
+    const ensureAlarm = vi
+      .spyOn(RateLimitMetricsStore.prototype, 'ensureAlarm')
+      .mockReturnValue(alarmGate);
+    const fixture = createRateLimitEnv([denied], {}, (request) => ledger.fetch(request));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const responsePromise = app.request(
+      '/api/oliveyoung/products',
+      { headers: { 'CF-Connecting-IP': '203.0.113.10' } },
+      fixture.env,
+    );
+    await vi.waitFor(() => expect(ensureAlarm).toHaveBeenCalledOnce());
+
+    nowSpy.mockReturnValue(KST_ROLLOVER_AFTER_MS);
+    releaseAlarm?.();
+    const response = await responsePromise;
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).not.toBe('DAILY_RATE_LIMIT_EXCEEDED');
+    expect(response.headers.get('X-RateLimit-Limit')).toBeNull();
+    expect(response.headers.get('X-RateLimit-Remaining')).toBeNull();
+    expect(response.headers.get('X-RateLimit-Reset')).toBeNull();
+    expect(response.headers.get('Retry-After')).toBeNull();
+    expect(callPaths(fixture.calls)).toEqual(['/consume', '/blocked-events']);
+    expect(ledgerState.readEvents()).toHaveLength(0);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '일일 호출 제한 원장 기록 실패',
+      'Durable Object HTTP 409',
+    );
+  });
 
   it('edge cache hit 응답도 호출량을 계산한다', async () => {
     const fixture = createRateLimitEnv([createResult({ count: 2, remaining: 2998 })]);

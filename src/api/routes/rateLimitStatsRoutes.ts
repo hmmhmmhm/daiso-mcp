@@ -21,6 +21,7 @@ const ALLOWED_QUERY_KEYS = new Set(['from', 'to', 'service']);
 type StatsInput = {
   from: string;
   to: string;
+  asOfDay: string;
   service?: RateLimitService;
 };
 
@@ -99,7 +100,9 @@ function parseStatsInput(url: URL, nowMs: number): StatsInput | undefined {
     return undefined;
   }
 
-  return serviceValue === null ? { from, to } : { from, to, service: serviceValue };
+  return serviceValue === null
+    ? { from, to, asOfDay: currentDay }
+    : { from, to, asOfDay: currentDay, service: serviceValue };
 }
 
 function sanitizeAggregate(value: unknown): RateLimitStats['totals'] | undefined {
@@ -327,6 +330,7 @@ export function registerRateLimitStatsRoutes(app: Hono<{ Bindings: AppBindings }
       const backendUrl = new URL('https://daily-rate-limit/stats');
       backendUrl.searchParams.set('from', input.from);
       backendUrl.searchParams.set('to', input.to);
+      backendUrl.searchParams.set('asOf', input.asOfDay);
       if (input.service !== undefined) {
         backendUrl.searchParams.set('service', input.service);
       }
@@ -351,6 +355,10 @@ export function registerRateLimitStatsRoutes(app: Hono<{ Bindings: AppBindings }
     const stats = sanitizeStats(value, input);
     if (!stats) {
       console.error('호출 제한 통계 응답 검증 실패');
+      return unavailableResponse(c);
+    }
+    if (toKstDay(Date.now()) !== input.asOfDay) {
+      console.error('호출 제한 통계 날짜 전환 감지');
       return unavailableResponse(c);
     }
     return successResponse(c, stats);

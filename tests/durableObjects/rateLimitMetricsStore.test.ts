@@ -67,9 +67,9 @@ describe('RateLimitMetricsStore', () => {
       query: expect.stringContaining('blocked_events'),
       bindings: ['event-1', blockedEvent.occurredAt, '2026-07-22', 'cgv', 'opaque-id-1'],
     });
-    await expect(store.query({ from: '2026-07-22', to: '2026-07-22' })).resolves.toMatchObject({
-      totals: { blockedRequests: 1, uniqueIdentities: 1 },
-    });
+    await expect(
+      store.query({ from: '2026-07-22', to: '2026-07-22', asOfDay: '2026-07-22' }),
+    ).resolves.toMatchObject({ totals: { blockedRequests: 1, uniqueIdentities: 1 } });
     expect(fixture.getAlarm).toHaveBeenCalledTimes(2);
     expect(fixture.setAlarm).not.toHaveBeenCalled();
   });
@@ -85,9 +85,9 @@ describe('RateLimitMetricsStore', () => {
 
     expect(fixture.sql.executed).toHaveLength(statementsBeforeRecord);
     expect(fixture.readEvents()).toHaveLength(0);
-    await expect(store.query({ from: '2026-07-22', to: '2026-07-22' })).resolves.toMatchObject({
-      totals: { blockedRequests: 0, uniqueIdentities: 0 },
-    });
+    await expect(
+      store.query({ from: '2026-07-22', to: '2026-07-22', asOfDay: '2026-07-22' }),
+    ).resolves.toMatchObject({ totals: { blockedRequests: 0, uniqueIdentities: 0 } });
     expect(consoleError).not.toHaveBeenCalled();
   });
 
@@ -101,6 +101,47 @@ describe('RateLimitMetricsStore', () => {
     expect(fixture.readEvents()).toHaveLength(0);
   });
 
+  it('alarm 대기 중 KST 날짜가 바뀌면 cleanup과 INSERT 전에 stale 이벤트를 거부한다', async () => {
+    const beforeMidnight = Date.parse('2026-07-22T14:59:59.999Z');
+    const afterMidnight = Date.parse('2026-07-22T15:00:00.000Z');
+    vi.mocked(Date.now).mockReturnValue(beforeMidnight);
+    const fixture = createState();
+    const store = new RateLimitMetricsStore(fixture.state);
+    let releaseAlarm: (() => void) | undefined;
+    const alarmGate = new Promise<void>((resolve) => {
+      releaseAlarm = resolve;
+    });
+    const ensureAlarm = vi.spyOn(store, 'ensureAlarm').mockReturnValue(alarmGate);
+    const statementsBeforeRecord = fixture.sql.executed.length;
+    const recordPromise = store.record({
+      ...event('rollover-event', '2026-07-22', 'cgv', 'opaque-id'),
+      occurredAt: beforeMidnight,
+    });
+    await vi.waitFor(() => expect(ensureAlarm).toHaveBeenCalledOnce());
+
+    vi.mocked(Date.now).mockReturnValue(afterMidnight);
+    releaseAlarm?.();
+
+    await expect(recordPromise).rejects.toMatchObject({ name: 'StaleRateLimitEventDayError' });
+    expect(fixture.sql.executed).toHaveLength(statementsBeforeRecord);
+    expect(fixture.readEvents()).toHaveLength(0);
+  });
+
+  it('KST 자정 직전의 현재 이벤트는 정상 기록한다', async () => {
+    const beforeMidnight = Date.parse('2026-07-22T14:59:59.999Z');
+    vi.mocked(Date.now).mockReturnValue(beforeMidnight);
+    const fixture = createState({ alarm: 1 });
+    const store = new RateLimitMetricsStore(fixture.state);
+    const blockedEvent = {
+      ...event('before-midnight', '2026-07-22', 'cgv', 'opaque-id'),
+      occurredAt: beforeMidnight,
+    };
+
+    await store.record(blockedEvent);
+
+    expect(fixture.readEvents()).toEqual([blockedEvent]);
+  });
+
   it('반복 호출 주체와 서비스별 호출 주체를 정확하고 결정적인 순서로 집계한다', async () => {
     const fixture = createState({ alarm: 1 });
     const store = new RateLimitMetricsStore(fixture.state);
@@ -112,10 +153,15 @@ describe('RateLimitMetricsStore', () => {
       event('event-1', '2026-07-22', 'cgv', 'shared-id'),
     ];
     for (const blockedEvent of events) {
+      vi.mocked(Date.now).mockReturnValue(blockedEvent.occurredAt);
       await store.record(blockedEvent);
     }
 
-    const stats = await store.query({ from: '2026-07-20', to: '2026-07-22' });
+    const stats = await store.query({
+      from: '2026-07-20',
+      to: '2026-07-22',
+      asOfDay: '2026-07-22',
+    });
 
     expect(stats).toEqual({
       totals: { blockedRequests: 5, uniqueIdentities: 3 },
@@ -148,13 +194,20 @@ describe('RateLimitMetricsStore', () => {
     await store.record(event('event-2', '2026-07-22', 'gs25', 'shared-id'));
 
     await expect(
-      store.query({ from: '2026-07-22', to: '2026-07-22', service: 'cgv' }),
+      store.query({
+        from: '2026-07-22',
+        to: '2026-07-22',
+        asOfDay: '2026-07-22',
+        service: 'cgv',
+      }),
     ).resolves.toEqual({
       totals: { blockedRequests: 1, uniqueIdentities: 1 },
       daily: [{ day: '2026-07-22', blockedRequests: 1, uniqueIdentities: 1 }],
       services: [{ day: '2026-07-22', service: 'cgv', blockedRequests: 1, uniqueIdentities: 1 }],
     });
-    await expect(store.query({ from: '2026-07-01', to: '2026-07-01' })).resolves.toEqual({
+    await expect(
+      store.query({ from: '2026-07-01', to: '2026-07-01', asOfDay: '2026-07-22' }),
+    ).resolves.toEqual({
       totals: { blockedRequests: 0, uniqueIdentities: 0 },
       daily: [],
       services: [],
@@ -169,16 +222,40 @@ describe('RateLimitMetricsStore', () => {
     const store = new RateLimitMetricsStore(fixture.state);
     fixture.seed([...expired, event('current', '2026-07-22', 'cgv', 'current-id')]);
 
-    await expect(store.query({ from: '2026-01-01', to: '2026-07-22' })).resolves.toEqual({
+    await expect(
+      store.query({ from: '2026-01-01', to: '2026-07-22', asOfDay: '2026-07-22' }),
+    ).resolves.toEqual({
       totals: { blockedRequests: 1, uniqueIdentities: 1 },
       daily: [{ day: '2026-07-22', blockedRequests: 1, uniqueIdentities: 1 }],
       services: [{ day: '2026-07-22', service: 'cgv', blockedRequests: 1, uniqueIdentities: 1 }],
     });
-    await expect(store.query({ from: '2026-01-01', to: '2026-01-31' })).resolves.toEqual({
+    await expect(
+      store.query({ from: '2026-01-01', to: '2026-01-31', asOfDay: '2026-07-22' }),
+    ).resolves.toEqual({
       totals: { blockedRequests: 0, uniqueIdentities: 0 },
       daily: [],
       services: [],
     });
+  });
+
+  it('조회 중 다음 KST 날짜가 되어도 전달받은 asOf 보관 경계로 집계한 뒤 물리 정리한다', async () => {
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-07-22T15:00:00.000Z'));
+    const fixture = createState({ alarm: 1 });
+    const store = new RateLimitMetricsStore(fixture.state);
+    fixture.seed([
+      event('as-of-boundary', '2026-06-23', 'cgv', 'boundary-id'),
+      event('as-of-current', '2026-07-22', 'cgv', 'current-id'),
+    ]);
+
+    const stats = await store.query({
+      from: '2026-06-23',
+      to: '2026-07-22',
+      asOfDay: '2026-07-22',
+    });
+
+    expect(stats.totals).toEqual({ blockedRequests: 2, uniqueIdentities: 2 });
+    expect(stats.daily[0]?.day).toBe('2026-06-23');
+    expect(fixture.readEvents().map(({ eventId }) => eventId)).toEqual(['as-of-current']);
   });
 
   it('허용 목록에 없는 서비스 필터는 SQL 실행 전에 거부한다', async () => {
@@ -190,6 +267,7 @@ describe('RateLimitMetricsStore', () => {
       store.query({
         from: '2026-07-22',
         to: '2026-07-22',
+        asOfDay: '2026-07-22',
         service: 'daiso' as RateLimitService,
       }),
     ).rejects.toThrow('지원하지 않는 서비스');

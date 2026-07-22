@@ -9,6 +9,7 @@ import {
   RateLimitMetricsStore,
   type BlockedRateLimitEvent,
 } from '../../src/durableObjects/rateLimitMetricsStore.js';
+import { INVALID_INTERNAL_STATS_PATHS } from '../helpers/dailyRateLimiterStatsCases.js';
 import { createRateLimitSqlState } from '../helpers/rateLimitSqlStorage.js';
 
 interface StoredCounter {
@@ -155,6 +156,40 @@ describe('DailyRateLimiter', () => {
     await expect(responsePromise).resolves.toMatchObject({ status: 204 });
   });
 
+  it('POST /blocked-events는 alarm 대기 중 날짜가 지난 이벤트를 본문 노출 없이 409로 거부한다', async () => {
+    const beforeMidnight = Date.parse('2026-07-22T14:59:59.999Z');
+    const afterMidnight = Date.parse('2026-07-22T15:00:00.000Z');
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(beforeMidnight);
+    const fixture = createState();
+    const limiter = new DailyRateLimiter(fixture.state);
+    let releaseAlarm: (() => void) | undefined;
+    const alarmGate = new Promise<void>((resolve) => {
+      releaseAlarm = resolve;
+    });
+    const ensureAlarm = vi
+      .spyOn(RateLimitMetricsStore.prototype, 'ensureAlarm')
+      .mockReturnValue(alarmGate);
+    const responsePromise = limiter.fetch(
+      request('/blocked-events', {
+        method: 'POST',
+        body: eventBody({ occurredAt: beforeMidnight }),
+      }),
+    );
+    await vi.waitFor(() => expect(ensureAlarm).toHaveBeenCalledOnce());
+
+    nowSpy.mockReturnValue(afterMidnight);
+    releaseAlarm?.();
+    const response = await responsePromise;
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toEqual({ error: '차단 이벤트 날짜가 만료되었습니다.' });
+    expect(JSON.stringify(body)).not.toContain('StaleRateLimitEventDayError');
+    expect(JSON.stringify(body)).not.toContain(VALID_EVENT.eventId);
+    expect(JSON.stringify(body)).not.toContain(VALID_IDENTITY_ID);
+    expect(fixture.readEvents()).toHaveLength(0);
+  });
+
   it.each([
     ['깨진 JSON', '{"eventId":'],
     ['null', 'null'],
@@ -202,11 +237,16 @@ describe('DailyRateLimiter', () => {
     const limiter = new DailyRateLimiter(fixture.state);
 
     const response = await limiter.fetch(
-      request('/stats?service=cgv&to=2026-07-22&from=2026-07-22'),
+      request('/stats?service=cgv&to=2026-07-22&asOf=2026-07-22&from=2026-07-22'),
     );
 
     expect(response.status).toBe(200);
-    expect(query).toHaveBeenCalledWith({ from: '2026-07-22', to: '2026-07-22', service: 'cgv' });
+    expect(query).toHaveBeenCalledWith({
+      from: '2026-07-22',
+      to: '2026-07-22',
+      asOfDay: '2026-07-22',
+      service: 'cgv',
+    });
     expect(await response.json()).toEqual({
       totals: { blockedRequests: 1, uniqueIdentities: 1 },
       daily: [{ day: '2026-07-22', blockedRequests: 1, uniqueIdentities: 1 }],
@@ -226,10 +266,16 @@ describe('DailyRateLimiter', () => {
     const query = vi.spyOn(RateLimitMetricsStore.prototype, 'query');
     const limiter = new DailyRateLimiter(fixture.state);
 
-    const response = await limiter.fetch(request('/stats?from=2026-07-21&to=2026-07-22'));
+    const response = await limiter.fetch(
+      request('/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22'),
+    );
 
     expect(response.status).toBe(200);
-    expect(query).toHaveBeenCalledWith({ from: '2026-07-21', to: '2026-07-22' });
+    expect(query).toHaveBeenCalledWith({
+      from: '2026-07-21',
+      to: '2026-07-22',
+      asOfDay: '2026-07-22',
+    });
   });
 
   it('같은 인스턴스는 계측 저장소를 재사용하고 다른 인스턴스와 상태를 공유하지 않는다', async () => {
@@ -238,12 +284,12 @@ describe('DailyRateLimiter', () => {
     const firstLimiter = new DailyRateLimiter(first.state);
 
     await firstLimiter.fetch(request('/blocked-events', { method: 'POST', body: eventBody() }));
-    await firstLimiter.fetch(request('/stats?from=2026-07-22&to=2026-07-22'));
+    await firstLimiter.fetch(request('/stats?from=2026-07-22&to=2026-07-22&asOf=2026-07-22'));
     await firstLimiter.alarm();
 
     const second = createState();
     const secondLimiter = new DailyRateLimiter(second.state);
-    await secondLimiter.fetch(request('/stats?from=2026-07-22&to=2026-07-22'));
+    await secondLimiter.fetch(request('/stats?from=2026-07-22&to=2026-07-22&asOf=2026-07-22'));
 
     expect(first.sql.executed.filter(({ query }) => query.startsWith('CREATE'))).toHaveLength(4);
     expect(second.sql.executed.filter(({ query }) => query.startsWith('CREATE'))).toHaveLength(4);
@@ -251,34 +297,40 @@ describe('DailyRateLimiter', () => {
     expect(second.readEvents()).toHaveLength(0);
   });
 
-  it.each([
-    ['from 누락', '/stats?to=2026-07-22'],
-    ['to 누락', '/stats?from=2026-07-22'],
-    ['정확하지 않은 from', '/stats?from=2026-7-21&to=2026-07-22'],
-    ['존재하지 않는 to', '/stats?from=2026-02-01&to=2026-02-30'],
-    ['역전된 기간', '/stats?from=2026-07-23&to=2026-07-22'],
-    ['빈 서비스', '/stats?from=2026-07-21&to=2026-07-22&service='],
-    ['지원하지 않는 서비스', '/stats?from=2026-07-21&to=2026-07-22&service=daiso'],
-    ['중복 from', '/stats?from=2026-07-21&from=2026-07-22&to=2026-07-22'],
-    ['중복 to', '/stats?from=2026-07-21&to=2026-07-21&to=2026-07-22'],
-    ['중복 서비스', '/stats?from=2026-07-21&to=2026-07-22&service=cgv&service=gs25'],
-    ['알 수 없는 키', '/stats?from=2026-07-21&to=2026-07-22&identityId=opaque'],
-  ])('%s 통계 요청은 400을 반환하고 조회하지 않는다', async (_, path) => {
+  it.each(INVALID_INTERNAL_STATS_PATHS)(
+    '%s 통계 요청은 400을 반환하고 조회하지 않는다',
+    async (_, path) => {
+      const fixture = createState();
+      const query = vi.spyOn(RateLimitMetricsStore.prototype, 'query');
+      const limiter = new DailyRateLimiter(fixture.state);
+
+      const response = await limiter.fetch(request(path));
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: expect.any(String) });
+      expect(query).not.toHaveBeenCalled();
+    },
+  );
+
+  it('현재 KST 날짜와 다른 asOf는 409를 반환하고 조회하지 않는다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-22T03:00:00+09:00'));
     const fixture = createState();
     const query = vi.spyOn(RateLimitMetricsStore.prototype, 'query');
     const limiter = new DailyRateLimiter(fixture.state);
 
-    const response = await limiter.fetch(request(path));
+    const response = await limiter.fetch(
+      request('/stats?from=2026-07-21&to=2026-07-21&asOf=2026-07-21'),
+    );
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: expect.any(String) });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: '통계 조회 기준 날짜가 만료되었습니다.' });
     expect(query).not.toHaveBeenCalled();
   });
 
   it.each([
     ['GET /consume', '/consume', { method: 'GET' }],
     ['GET /blocked-events', '/blocked-events', { method: 'GET' }],
-    ['POST /stats', '/stats?from=2026-07-21&to=2026-07-22', { method: 'POST' }],
+    ['POST /stats', '/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22', { method: 'POST' }],
     ['알 수 없는 경로', '/unknown', { method: 'POST' }],
   ])('%s는 일관된 JSON 404를 반환한다', async (_, path, init) => {
     const fixture = createState();
@@ -311,9 +363,9 @@ describe('DailyRateLimiter', () => {
       new Error('query unavailable'),
     );
 
-    await expect(limiter.fetch(request('/stats?from=2026-07-21&to=2026-07-22'))).rejects.toThrow(
-      'query unavailable',
-    );
+    await expect(
+      limiter.fetch(request('/stats?from=2026-07-21&to=2026-07-22&asOf=2026-07-22')),
+    ).rejects.toThrow('query unavailable');
   });
 
   it('alarm은 cleanup 성공 후 ensureAlarm을 호출한다', async () => {

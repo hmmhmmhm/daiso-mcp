@@ -15,7 +15,8 @@ export const KST_ROLLOVER_BEFORE_MS = Date.parse('2026-07-22T14:59:59.999Z');
 export const KST_ROLLOVER_AFTER_MS = Date.parse('2026-07-22T15:00:00.000Z');
 export const RATE_LIMIT_DAY = '2026-07-22';
 
-export type LedgerOutcome = 204 | 200 | 503 | 'throw' | 'malformed';
+export type LedgerOutcome =
+  204 | 200 | 503 | 'throw' | 'malformed' | ((request: Request) => Response | Promise<Response>);
 
 export interface DurableObjectCall {
   durableObjectId: string;
@@ -81,6 +82,11 @@ export function createRateLimitEnv(
       }
 
       order.push('record:started');
+      if (typeof ledgerOutcome === 'function') {
+        const response = await ledgerOutcome(request);
+        order.push('record:resolved');
+        return response;
+      }
       if (ledgerOutcome === 'throw') {
         throw new Error('민감한 원장 오류 203.0.113.10');
       }

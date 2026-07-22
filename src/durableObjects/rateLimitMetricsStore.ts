@@ -16,6 +16,13 @@ export interface BlockedRateLimitEvent {
   identityId: string;
 }
 
+export class StaleRateLimitEventDayError extends Error {
+  constructor() {
+    super('차단 이벤트 날짜가 만료되었습니다.');
+    this.name = 'StaleRateLimitEventDayError';
+  }
+}
+
 interface RateLimitAggregate {
   blockedRequests: number;
   uniqueIdentities: number;
@@ -49,17 +56,21 @@ function toKstDay(nowMs: number): string {
   return new Date(nowMs + KST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
-function retentionCutoffDay(nowMs: number): string {
-  const shifted = new Date(nowMs + KST_OFFSET_MS);
+function retainedCutoffDay(asOfDay: string): string {
+  const asOf = new Date(`${asOfDay}T00:00:00.000Z`);
   return new Date(
     Date.UTC(
-      shifted.getUTCFullYear(),
-      shifted.getUTCMonth(),
-      shifted.getUTCDate() - (RATE_LIMIT_METRICS_RETENTION_DAYS - 1),
+      asOf.getUTCFullYear(),
+      asOf.getUTCMonth(),
+      asOf.getUTCDate() - (RATE_LIMIT_METRICS_RETENTION_DAYS - 1),
     ),
   )
     .toISOString()
     .slice(0, 10);
+}
+
+function retentionCutoffDay(nowMs: number): string {
+  return retainedCutoffDay(toKstDay(nowMs));
 }
 
 function nextAlarmTime(nowMs: number): number {
@@ -96,7 +107,11 @@ export class RateLimitMetricsStore {
     }
 
     await this.ensureAlarm();
-    this.cleanupExpiredBatch(Date.now());
+    const commitNowMs = Date.now();
+    if (event.day !== toKstDay(commitNowMs)) {
+      throw new StaleRateLimitEventDayError();
+    }
+    this.cleanupExpiredBatch(commitNowMs);
     this.sql.exec(
       `INSERT OR IGNORE INTO blocked_events
         (event_id, occurred_at, day, service, identity_id)
@@ -112,15 +127,14 @@ export class RateLimitMetricsStore {
   async query(input: {
     from: string;
     to: string;
+    asOfDay: string;
     service?: RateLimitService;
   }): Promise<RateLimitStats> {
     if (input.service !== undefined && !isRateLimitService(input.service)) {
       throw new TypeError('지원하지 않는 서비스입니다.');
     }
 
-    const nowMs = Date.now();
-    const cutoffDay = retentionCutoffDay(nowMs);
-    this.cleanupExpiredBatch(nowMs);
+    const cutoffDay = retainedCutoffDay(input.asOfDay);
     const serviceClause = input.service === undefined ? '' : ' AND service = ?';
     const bindings =
       input.service === undefined
@@ -163,7 +177,7 @@ export class RateLimitMetricsStore {
       )
       .toArray();
 
-    return {
+    const stats = {
       totals: toAggregate(totals),
       daily: daily.map((row) => ({ day: row.day, ...toAggregate(row) })),
       services: services.map((row) => ({
@@ -172,6 +186,8 @@ export class RateLimitMetricsStore {
         ...toAggregate(row),
       })),
     };
+    this.cleanupExpiredBatch(Date.now());
+    return stats;
   }
 
   async cleanup(nowMs = Date.now()): Promise<void> {

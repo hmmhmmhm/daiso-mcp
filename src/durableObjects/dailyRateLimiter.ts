@@ -5,6 +5,7 @@
 import {
   RATE_LIMIT_SERVICES,
   RateLimitMetricsStore,
+  StaleRateLimitEventDayError,
   type BlockedRateLimitEvent,
   type RateLimitService,
 } from './rateLimitMetricsStore.js';
@@ -111,41 +112,45 @@ async function parseBlockedEvent(request: Request): Promise<BlockedRateLimitEven
 function hasStrictStatsParameters(searchParams: URLSearchParams): boolean {
   let fromCount = 0;
   let toCount = 0;
+  let asOfCount = 0;
   let serviceCount = 0;
   for (const [key] of searchParams) {
     if (key === 'from') {
       fromCount += 1;
     } else if (key === 'to') {
       toCount += 1;
+    } else if (key === 'asOf') {
+      asOfCount += 1;
     } else if (key === 'service') {
       serviceCount += 1;
     } else {
       return false;
     }
   }
-  return fromCount === 1 && toCount === 1 && serviceCount <= 1;
+  return fromCount === 1 && toCount === 1 && asOfCount === 1 && serviceCount <= 1;
 }
 
 function parseStatsInput(
   url: URL,
-): { from: string; to: string; service?: RateLimitService } | undefined {
+): { from: string; to: string; asOfDay: string; service?: RateLimitService } | undefined {
   if (!hasStrictStatsParameters(url.searchParams)) {
     return undefined;
   }
   const from = url.searchParams.get('from');
   const to = url.searchParams.get('to');
+  const asOfDay = url.searchParams.get('asOf');
   const service = url.searchParams.get('service');
-  if (!isExactDate(from) || !isExactDate(to) || from > to) {
+  if (!isExactDate(from) || !isExactDate(to) || !isExactDate(asOfDay) || from > to) {
     return undefined;
   }
   if (service !== null && !isRateLimitService(service)) {
     return undefined;
   }
 
-  return service === null ? { from, to } : { from, to, service };
+  return service === null ? { from, to, asOfDay } : { from, to, asOfDay, service };
 }
 
-function errorResponse(message: string, status: 400 | 404): Response {
+function errorResponse(message: string, status: 400 | 404 | 409): Response {
   return Response.json({ error: message }, { status });
 }
 
@@ -186,7 +191,14 @@ export class DailyRateLimiter {
         return errorResponse('차단 이벤트 형식이 올바르지 않습니다.', 400);
       }
       const store = this.getMetricsStore();
-      await store.record(event);
+      try {
+        await store.record(event);
+      } catch (error) {
+        if (error instanceof StaleRateLimitEventDayError) {
+          return errorResponse('차단 이벤트 날짜가 만료되었습니다.', 409);
+        }
+        throw error;
+      }
       return new Response(null, { status: 204 });
     }
 
@@ -194,6 +206,9 @@ export class DailyRateLimiter {
       const input = parseStatsInput(url);
       if (!input) {
         return errorResponse('통계 조회 조건이 올바르지 않습니다.', 400);
+      }
+      if (input.asOfDay !== toKstDay(Date.now())) {
+        return errorResponse('통계 조회 기준 날짜가 만료되었습니다.', 409);
       }
       const store = this.getMetricsStore();
       return Response.json(await store.query(input));

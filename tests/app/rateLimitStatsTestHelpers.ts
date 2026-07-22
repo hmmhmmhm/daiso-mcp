@@ -202,9 +202,13 @@ export function createStatsFixture(outcome: BackendOutcome = EMPTY_STATS) {
   const calls: Request[] = [];
   const ledgerId = { toString: () => 'reserved-ledger-id' } as unknown as DurableObjectId;
   const stubFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    calls.push(input instanceof Request ? input : new Request(input, init));
+    const request = input instanceof Request ? input : new Request(input, init);
+    calls.push(request);
     if (outcome === 'throw') {
       throw new Error('backend failed with test-secret and 203.0.113.10');
+    }
+    if (typeof outcome === 'function') {
+      return outcome(request) as Response | Promise<Response>;
     }
     return outcome instanceof Response ? outcome : Response.json(outcome);
   });
