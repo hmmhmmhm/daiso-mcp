@@ -2,24 +2,65 @@
  * 저장소 운영 설정 회귀 테스트
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+
+const setupNodeWorkflows = [
+  'ci.yml',
+  'coverage.yml',
+  'deploy.yml',
+  'external-smoke.yml',
+  'npm-publish.yml',
+  'sync-worker-secrets.yml',
+  'workers-invocations-chart.yml',
+];
 
 function readText(path: string): string {
   return readFileSync(path, 'utf8');
 }
 
 describe('repository maintenance configuration', () => {
-  it('Node 엔진 범위는 현재 LTS 이상을 허용한다', () => {
+  it('Node 엔진 범위는 Wrangler가 요구하는 버전과 일치한다', () => {
     const pkg = JSON.parse(readText('package.json')) as { engines?: { node?: string } };
 
-    expect(pkg.engines?.node).toBe('>=20');
+    expect(pkg.engines?.node).toBe('>=22');
   });
 
-  it('npm audit 경고가 난 ws 전이 의존성은 안전 버전으로 고정한다', () => {
-    const pkg = JSON.parse(readText('package.json')) as { overrides?: Record<string, string> };
+  it('.nvmrc는 현재 LTS를 사용한다', () => {
+    expect(readText('.nvmrc').trim()).toBe('24');
+  });
 
-    expect(pkg.overrides?.ws).toBe('8.21.0');
+  it('MCP SDK가 아직 선택하지 못하는 Hono Node 서버 보안 버전을 부모 범위로 고정한다', () => {
+    const pkg = JSON.parse(readText('package.json')) as {
+      overrides?: Record<string, string | Record<string, string>>;
+    };
+
+    expect(pkg.overrides?.['@modelcontextprotocol/sdk']).toEqual({
+      '@hono/node-server': '2.0.11',
+    });
+  });
+
+  it('Miniflare가 아직 선택하지 못하는 Sharp 보안 버전을 부모 범위로 고정한다', () => {
+    const pkg = JSON.parse(readText('package.json')) as {
+      overrides?: Record<string, string | Record<string, string>>;
+    };
+
+    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.3' });
+  });
+
+  it('모든 GitHub Actions workflow에서 setup-node v6을 사용하지 않는다', () => {
+    const workflows = readdirSync('.github/workflows')
+      .filter((file) => file.endsWith('.yml'))
+      .map((file) => readText(`.github/workflows/${file}`))
+      .join('\n');
+
+    expect(workflows).not.toContain('actions/setup-node@v6');
+  });
+
+  it('Node를 설정하는 일곱 workflow는 setup-node v7을 사용한다', () => {
+    for (const workflow of setupNodeWorkflows) {
+      expect(readText(`.github/workflows/${workflow}`)).toContain('actions/setup-node@v7');
+    }
   });
 
   it('release 문서는 git 기록을 npm publish보다 먼저 남기도록 안내한다', () => {
