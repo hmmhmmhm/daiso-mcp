@@ -490,6 +490,7 @@ describe('ServiceRegistry', () => {
         handler: async () => ({
           isError: true,
           content: [{ type: 'text', text: 'handled' }],
+          structuredContent: { error: 'must not use success output channel' },
         }),
       };
       registry.register(() => createMockService('test', [tool]));
@@ -501,15 +502,16 @@ describe('ServiceRegistry', () => {
       registry.applyToServer(mockServer as never);
       const registeredHandler = mockServer.registerTool.mock.calls[0][2];
 
-      await expect(registeredHandler({})).resolves.toEqual(
-        expect.objectContaining({
-          isError: true,
-          structuredContent: { text: 'handled' },
-        }),
-      );
+      const result = await registeredHandler({});
+
+      expect(result).toMatchObject({
+        isError: true,
+        content: [{ type: 'text', text: 'handled' }],
+      });
+      expect(result).not.toHaveProperty('structuredContent');
     });
 
-    it('도구 예외를 표준 MCP 에러 구조로 반환한다', async () => {
+    it('도구 예외를 text 기반 MCP 오류 결과로 반환한다', async () => {
       const tool: ToolRegistration = {
         ...createMockTool('error-tool'),
         handler: async () => {
@@ -531,19 +533,12 @@ describe('ServiceRegistry', () => {
         expect.objectContaining({
           isError: true,
           content: [{ type: 'text', text: 'upstream failed' }],
-          structuredContent: {
-            error: expect.objectContaining({
-              code: 'TOOL_EXECUTION_FAILED',
-              message: 'upstream failed',
-              operation: 'error-tool',
-              retryable: true,
-            }),
-          },
         }),
       );
+      expect(result).not.toHaveProperty('structuredContent');
     });
 
-    it('문자열 예외도 표준 MCP 에러 구조로 반환한다', async () => {
+    it('문자열 예외도 text 기반 MCP 오류 결과로 반환한다', async () => {
       const tool: ToolRegistration = {
         ...createMockTool('string-error-tool'),
         handler: async () => {
@@ -560,7 +555,11 @@ describe('ServiceRegistry', () => {
       const registeredHandler = mockServer.registerTool.mock.calls[0][2];
 
       const result = await registeredHandler({});
-      expect(result.structuredContent.error.message).toBe('알 수 없는 오류가 발생했습니다.');
+      expect(result).toMatchObject({
+        isError: true,
+        content: [{ type: 'text', text: '알 수 없는 오류가 발생했습니다.' }],
+      });
+      expect(result).not.toHaveProperty('structuredContent');
     });
   });
 
