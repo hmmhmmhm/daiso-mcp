@@ -121,6 +121,7 @@ describe('DailyRateLimiter', () => {
   });
 
   it('POST /blocked-events는 완전한 이벤트 저장이 끝난 뒤 빈 204를 반환한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(VALID_EVENT.occurredAt);
     const fixture = createState();
     const limiter = new DailyRateLimiter(fixture.state);
     const response = await limiter.fetch(
@@ -262,6 +263,7 @@ describe('DailyRateLimiter', () => {
   });
 
   it('GET /stats는 생략된 서비스 필터를 저장소에 전달하지 않는다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(VALID_EVENT.occurredAt);
     const fixture = createState();
     const query = vi.spyOn(RateLimitMetricsStore.prototype, 'query');
     const limiter = new DailyRateLimiter(fixture.state);
@@ -357,6 +359,7 @@ describe('DailyRateLimiter', () => {
   });
 
   it('통계 조회 실패를 0 집계로 바꾸지 않는다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(VALID_EVENT.occurredAt);
     const fixture = createState();
     const limiter = new DailyRateLimiter(fixture.state);
     vi.spyOn(RateLimitMetricsStore.prototype, 'query').mockRejectedValueOnce(

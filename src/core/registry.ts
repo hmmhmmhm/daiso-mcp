@@ -7,7 +7,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ServiceProvider, ServiceFactory } from './interfaces.js';
 import type { ServiceInfo, ToolRegistration } from './types.js';
-import { getErrorMessage, toStandardErrorDiagnostics } from './errors.js';
+import { getErrorMessage } from './errors.js';
 import { createToolOutputSchema } from './outputSchema.js';
 
 function parseJsonText(text: string): Record<string, unknown> | null {
@@ -231,29 +231,25 @@ export class ServiceRegistry {
         return {
           isError: true,
           content: [{ type: 'text' as const, text: message }],
-          structuredContent: {
-            error: toStandardErrorDiagnostics('TOOL_EXECUTION_FAILED', message, {
-              operation: tool.name,
-            }),
-          },
         };
       }
 
-      const response: {
-        content: Array<{ type: 'text'; text: string }>;
-        structuredContent?: Record<string, unknown>;
-        isError?: boolean;
-      } = {
-        content: result.content.map((item) => ({
-          type: item.type as 'text',
-          text: item.text,
-        })),
+      const content = result.content.map((item) => ({
+        type: item.type as 'text',
+        text: item.text,
+      }));
+
+      if (result.isError) {
+        return {
+          isError: true,
+          content,
+        };
+      }
+
+      return {
+        content,
         structuredContent: buildStructuredContent(result),
       };
-      if (result.isError) {
-        response.isError = true;
-      }
-      return response;
     });
   }
 
