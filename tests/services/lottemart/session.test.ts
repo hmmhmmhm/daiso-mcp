@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __testOnlyClearLotteMartSessionCache,
-  __testOnlyCreateLotteMartSocketResponse,
-  __testOnlyFetchLotteMartSocketResponse,
   fetchLotteMartHtml,
   fetchLotteMartPageWithSession,
   getCachedLotteMartSessionCookie,
   getFreshLotteMartSessionCookie,
   probeLotteMartRequest,
 } from '../../../src/services/lottemart/session.js';
+import {
+  __testOnlyCreateLotteMartSocketResponse,
+  __testOnlyFetchLotteMartSocketResponse,
+} from '../../../src/services/lottemart/socketTransport.js';
 
 const mockFetch = vi.fn();
 
