@@ -9,48 +9,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: external-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   external-smoke:
     runs-on: ubuntu-latest
-    name: ${{ matrix.suite }} smoke (${{ matrix.service }})
-    concurrency:
-      group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}
-      cancel-in-progress: false
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        include:
-          - suite: cli
-            service: daiso
-          - suite: cli
-            service: gs25
-          - suite: cli
-            service: seveneleven
-          - suite: cli
-            service: emart24
-          - suite: cli
-            service: lottemart
-          - suite: cli
-            service: oliveyoung
-          - suite: cli
-            service: megabox
-          - suite: cli
-            service: lottecinema
-          - suite: cli
-            service: cgv
-          - suite: cli
-            service: opinet
-          - suite: mcp
-            service: daiso
-          - suite: mcp
-            service: gs25
-          - suite: mcp
-            service: seveneleven
-          - suite: mcp
-            service: emart24
-          - suite: mcp
-            service: opinet
+    timeout-minutes: 60
+    name: Sequential external smoke
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -64,72 +31,74 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run external smoke
-        env:
-          SMOKE_SUITE: ${{ matrix.suite }}
-          SMOKE_SERVICE: ${{ matrix.service }}
-        run: |
-          write_summary() {
-            SMOKE_STATUS="$1" node <<'NODE'
-          const fs = require('node:fs');
-          const output = fs.existsSync('external-smoke-output.txt')
-            ? fs.readFileSync('external-smoke-output.txt', 'utf8')
-            : '';
-          const excerpt = output
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .slice(-8)
-            .join(' | ')
-            .slice(0, 1000);
-          const failure =
-            output
-              .split(/\r?\n/)
-              .map((line) => line.trim())
-              .find((line) =>
-                /(?:CLI smoke 실패|CLI smoke 검증 실패|MCP smoke 실패|HTTP \d{3}|error code: \d+)/.test(
-                  line,
-                ),
-              ) || 'unknown';
-          const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-          const summary = [
-            `status=${process.env.SMOKE_STATUS || 'failed'}`,
-            `suite=${process.env.SMOKE_SUITE}`,
-            `service=${process.env.SMOKE_SERVICE}`,
-            `failure=${failure.slice(0, 300)}`,
-            `run=${runUrl}`,
-            excerpt,
-          ].filter(Boolean).join(' ');
-          fs.writeFileSync('external-smoke-summary.txt', summary);
-          console.log(summary);
-          NODE
-          }
+      - name: Build once
+        run: npm run build
 
-          run_smoke() {
+      - name: Run external smoke sequentially
+        env:
+          CLI_SMOKE_SERVICES: daiso gs25 seveneleven emart24 lottemart oliveyoung megabox lottecinema cgv opinet
+          MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet
+        run: |
+          set +e
+          FAILURES=()
+
+          run_smoke_once() {
+            local SMOKE_SUITE="$1"
+            local SMOKE_SERVICE="$2"
+            local OUTPUT_FILE="$3"
+
             if [ "${SMOKE_SUITE}" = "cli" ]; then
-              npm run cli:smoke -- --service "${SMOKE_SERVICE}" 2>&1 | tee external-smoke-output.txt
+              npx tsx scripts/ops/cli-smoke.ts --service "${SMOKE_SERVICE}" 2>&1 | tee "${OUTPUT_FILE}"
               return "${PIPESTATUS[0]}"
             fi
 
-            npm run mcp:smoke -- --service "${SMOKE_SERVICE}" 2>&1 | tee external-smoke-output.txt
+            npx tsx scripts/ops/mcp-smoke.ts --service "${SMOKE_SERVICE}" 2>&1 | tee "${OUTPUT_FILE}"
             return "${PIPESTATUS[0]}"
           }
 
-          if ! run_smoke; then
-            if [ "${SMOKE_SUITE}" = "cli" ]; then
-              echo "CLI smoke failed; retrying after 15 seconds"
-            else
-              echo "MCP smoke failed; retrying after 15 seconds"
+          run_smoke_with_retry() {
+            local SMOKE_SUITE="$1"
+            local SMOKE_SERVICE="$2"
+            local OUTPUT_FILE="external-smoke-${SMOKE_SUITE}-${SMOKE_SERVICE}.txt"
+
+            if run_smoke_once "${SMOKE_SUITE}" "${SMOKE_SERVICE}" "${OUTPUT_FILE}"; then
+              return 0
             fi
+
+            echo "${SMOKE_SUITE}.${SMOKE_SERVICE} failed; retrying after 15 seconds"
             sleep 15
-            if ! run_smoke; then
-              write_summary "failed"
-              exit 1
+            if run_smoke_once "${SMOKE_SUITE}" "${SMOKE_SERVICE}" "${OUTPUT_FILE}"; then
+              return 0
             fi
+
+            local EXCERPT
+            EXCERPT="$(tail -n 8 "${OUTPUT_FILE}" | tr '\n' ' ' | cut -c1-1000)"
+            FAILURES+=("${SMOKE_SUITE}.${SMOKE_SERVICE}: ${EXCERPT:-unknown}")
+            return 1
+          }
+
+          for SMOKE_SERVICE in ${CLI_SMOKE_SERVICES}; do
+            run_smoke_with_retry "cli" "${SMOKE_SERVICE}" || true
+          done
+
+          for SMOKE_SERVICE in ${MCP_SMOKE_SERVICES}; do
+            run_smoke_with_retry "mcp" "${SMOKE_SERVICE}" || true
+          done
+
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [ "${#FAILURES[@]}" -gt 0 ]; then
+            {
+              printf 'status=failed failures=%s run=%s ' "${#FAILURES[@]}" "${RUN_URL}"
+              printf '%s | ' "${FAILURES[@]}"
+              printf '\n'
+            } | tee external-smoke-summary.txt
+            exit 1
           fi
 
+          echo "status=ok failures=0 run=${RUN_URL}" | tee external-smoke-summary.txt
+
       - name: Notify smoke failure
-        if: failure()
+        if: failure() && github.event_name == 'schedule'
         env:
           MOSHI_WEBHOOK_TOKEN: ${{ secrets.MOSHI_WEBHOOK_TOKEN }}
         run: |
@@ -138,7 +107,18 @@ jobs:
             exit 0
           fi
 
-          SUMMARY="$(cat external-smoke-summary.txt 2>/dev/null || echo 'external smoke command failed')"
-          curl -X POST https://api.getmoshi.app/api/webhook \
+          SUMMARY="$(cat external-smoke-summary.txt 2>/dev/null || echo 'external smoke command failed')" node <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync(
+            'moshi-payload.json',
+            JSON.stringify({
+              token: process.env.MOSHI_WEBHOOK_TOKEN,
+              title: 'External Smoke Failed',
+              message: `${process.env.GITHUB_REPOSITORY}: ${process.env.SUMMARY}`,
+            }),
+          );
+          NODE
+          curl --fail-with-body --silent --show-error \
+            -X POST https://api.getmoshi.app/api/webhook \
             -H "Content-Type: application/json" \
-            -d "{\"token\":\"${MOSHI_WEBHOOK_TOKEN}\",\"title\":\"External Smoke Failed\",\"message\":\"${GITHUB_REPOSITORY}: ${SUMMARY}\"}"
+            --data-binary @moshi-payload.json
