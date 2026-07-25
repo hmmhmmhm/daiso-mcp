@@ -65,6 +65,17 @@ describe('repository maintenance configuration', () => {
     expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.3' });
   });
 
+  it('brace-expansion은 취약점이 수정된 5.0.8 이상을 사용한다', () => {
+    const lock = JSON.parse(readText('package-lock.json')) as {
+      packages?: Record<string, { version?: string }>;
+    };
+    const version = lock.packages?.['node_modules/brace-expansion']?.version;
+    const [major = 0, minor = 0, patch = 0] = version?.split('.').map(Number) ?? [];
+
+    expect(version).toBeDefined();
+    expect(major * 1_000_000 + minor * 1_000 + patch).toBeGreaterThanOrEqual(5_000_008);
+  });
+
   it('모든 GitHub Actions workflow에서 setup-node v6을 사용하지 않는다', () => {
     const workflows = readdirSync('.github/workflows')
       .filter((file) => file.endsWith('.yml'))
