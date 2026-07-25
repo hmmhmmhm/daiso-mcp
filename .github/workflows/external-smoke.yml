@@ -38,6 +38,7 @@ jobs:
         env:
           CLI_SMOKE_SERVICES: daiso gs25 seveneleven emart24 lottemart oliveyoung megabox lottecinema cgv opinet
           MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet
+          SMOKE_ATTEMPT_TIMEOUT_SECONDS: 90
         run: |
           set +e
           FAILURES=()
@@ -48,11 +49,11 @@ jobs:
             local OUTPUT_FILE="$3"
 
             if [ "${SMOKE_SUITE}" = "cli" ]; then
-              npx tsx scripts/ops/cli-smoke.ts --service "${SMOKE_SERVICE}" 2>&1 | tee "${OUTPUT_FILE}"
+              timeout --signal=TERM --kill-after=10s "${SMOKE_ATTEMPT_TIMEOUT_SECONDS}s" npx tsx scripts/ops/cli-smoke.ts --service "${SMOKE_SERVICE}" 2>&1 | tee "${OUTPUT_FILE}"
               return "${PIPESTATUS[0]}"
             fi
 
-            npx tsx scripts/ops/mcp-smoke.ts --service "${SMOKE_SERVICE}" 2>&1 | tee "${OUTPUT_FILE}"
+            timeout --signal=TERM --kill-after=10s "${SMOKE_ATTEMPT_TIMEOUT_SECONDS}s" npx tsx scripts/ops/mcp-smoke.ts --service "${SMOKE_SERVICE}" 2>&1 | tee "${OUTPUT_FILE}"
             return "${PIPESTATUS[0]}"
           }
 
@@ -114,7 +115,7 @@ jobs:
             JSON.stringify({
               token: process.env.MOSHI_WEBHOOK_TOKEN,
               title: 'External Smoke Failed',
-              message: `${process.env.GITHUB_REPOSITORY}: ${process.env.SUMMARY}`,
+              message: `${process.env.GITHUB_REPOSITORY}: ${process.env.SUMMARY || ''}`.slice(0, 3500),
             }),
           );
           NODE

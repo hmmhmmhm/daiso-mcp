@@ -94,7 +94,7 @@ jobs:
             JSON.stringify({
               token: process.env.MOSHI_WEBHOOK_TOKEN,
               title: 'Health Checks Failed',
-              message: `${process.env.GITHUB_REPOSITORY}: ${process.env.SUMMARY}`,
+              message: `${process.env.GITHUB_REPOSITORY}: ${process.env.SUMMARY || ''}`.slice(0, 3500),
             }),
           );
           NODE

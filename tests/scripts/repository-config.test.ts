@@ -147,10 +147,15 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain(
       'MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet',
     );
+    expect(workflow).toContain('SMOKE_ATTEMPT_TIMEOUT_SECONDS: 90');
     expect(workflow).toContain('for SMOKE_SERVICE in ${CLI_SMOKE_SERVICES}; do');
     expect(workflow).toContain('for SMOKE_SERVICE in ${MCP_SMOKE_SERVICES}; do');
-    expect(workflow).toContain('npx tsx scripts/ops/cli-smoke.ts --service "${SMOKE_SERVICE}"');
-    expect(workflow).toContain('npx tsx scripts/ops/mcp-smoke.ts --service "${SMOKE_SERVICE}"');
+    expect(workflow).toContain(
+      'timeout --signal=TERM --kill-after=10s "${SMOKE_ATTEMPT_TIMEOUT_SECONDS}s" npx tsx scripts/ops/cli-smoke.ts',
+    );
+    expect(workflow).toContain(
+      'timeout --signal=TERM --kill-after=10s "${SMOKE_ATTEMPT_TIMEOUT_SECONDS}s" npx tsx scripts/ops/mcp-smoke.ts',
+    );
     expect(workflow).toContain('run_smoke_with_retry');
     expect(workflow).toContain('retrying after 15 seconds');
     expect(workflow).toContain('external-smoke-summary.txt');
@@ -158,6 +163,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('SUMMARY="$(cat external-smoke-summary.txt');
     expect(workflow).toContain('Notify smoke failure');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
+    expect(workflow).toContain('.slice(0, 3500)');
     expect(workflow).toContain("if: failure() && github.event_name == 'schedule'");
   });
 
