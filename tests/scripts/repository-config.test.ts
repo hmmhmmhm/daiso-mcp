@@ -101,6 +101,22 @@ describe('repository maintenance configuration', () => {
     expect(agents).toContain('수정 전 커밋의 과거 실패');
   });
 
+  it('450줄 제한은 npm과 CI에서 자동 검사한다', () => {
+    const pkg = JSON.parse(readText('package.json')) as { scripts: Record<string, string> };
+    const ci = readText('.github/workflows/ci.yml');
+    const agents = readText('AGENTS.md');
+    const contributing = readText('CONTRIBUTING.md');
+
+    expect(pkg.scripts['check:source-lines']).toContain(
+      'scripts/quality/check-source-line-limit.ts',
+    );
+    expect(pkg.scripts.check).toContain('npm run check:source-lines');
+    expect(ci).toContain('Source file line limit');
+    expect(ci).toContain('npm run check:source-lines');
+    expect(agents).toContain('450줄 제한은 CI에서 자동으로 강제');
+    expect(contributing).toContain('450줄 제한은 CI에서 자동으로 강제');
+  });
+
   it('external smoke workflow는 수동 및 야간 실행으로 CLI smoke를 수행한다', () => {
     const workflow = readText('.github/workflows/external-smoke.yml');
 

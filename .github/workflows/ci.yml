@@ -40,6 +40,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Source file line limit
+        run: npm run check:source-lines
+
       - name: Unit tests
         run: npm test
 

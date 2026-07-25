@@ -31,6 +31,7 @@
     "release:dry-run": "npm pack --dry-run",
     "publish:public": "npm publish --access public",
     "typecheck": "tsc --noEmit",
+    "check:source-lines": "npx tsx scripts/quality/check-source-line-limit.ts",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.ts\" \"vitest.config.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.ts\" \"vitest.config.ts\" --fix",
     "format": "prettier .github/**/*.md .github/**/*.yml README.md SECURITY.md AGENTS.md CONTRIBUTING.md package.json tsconfig.json .prettierrc.json .mcp.json eslint.config.ts --write",
@@ -39,7 +40,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check": "npm run format:check && npm run lint && npm run lint:biome && npm run typecheck && npm test",
+    "check": "npm run format:check && npm run lint && npm run lint:biome && npm run typecheck && npm run check:source-lines && npm test",
     "lint:biome": "biome lint"
   },
   "keywords": [
