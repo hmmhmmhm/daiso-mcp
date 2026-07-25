@@ -65,6 +65,17 @@ describe('repository maintenance configuration', () => {
     expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.3' });
   });
 
+  it('brace-expansion은 취약점이 수정된 5.0.8 이상을 사용한다', () => {
+    const lock = JSON.parse(readText('package-lock.json')) as {
+      packages?: Record<string, { version?: string }>;
+    };
+    const version = lock.packages?.['node_modules/brace-expansion']?.version;
+    const [major = 0, minor = 0, patch = 0] = version?.split('.').map(Number) ?? [];
+
+    expect(version).toBeDefined();
+    expect(major * 1_000_000 + minor * 1_000 + patch).toBeGreaterThanOrEqual(5_000_008);
+  });
+
   it('모든 GitHub Actions workflow에서 setup-node v6을 사용하지 않는다', () => {
     const workflows = readdirSync('.github/workflows')
       .filter((file) => file.endsWith('.yml'))
@@ -101,31 +112,59 @@ describe('repository maintenance configuration', () => {
     expect(agents).toContain('수정 전 커밋의 과거 실패');
   });
 
-  it('external smoke workflow는 수동 및 야간 실행으로 CLI smoke를 수행한다', () => {
+  it('450줄 제한은 npm과 CI에서 자동 검사한다', () => {
+    const pkg = JSON.parse(readText('package.json')) as { scripts: Record<string, string> };
+    const ci = readText('.github/workflows/ci.yml');
+    const agents = readText('AGENTS.md');
+    const contributing = readText('CONTRIBUTING.md');
+
+    expect(pkg.scripts['check:source-lines']).toContain(
+      'scripts/quality/check-source-line-limit.ts',
+    );
+    expect(pkg.scripts.check).toContain('npm run check:source-lines');
+    expect(ci).toContain('Source file line limit');
+    expect(ci).toContain('npm run check:source-lines');
+    expect(agents).toContain('450줄 제한은 CI에서 자동으로 강제');
+    expect(contributing).toContain('450줄 제한은 CI에서 자동으로 강제');
+  });
+
+  it('external smoke workflow는 한 runner에서 서비스를 순차 점검하고 야간 실패만 한 번 알린다', () => {
     const workflow = readText('.github/workflows/external-smoke.yml');
 
     expect(workflow).toContain('workflow_dispatch:');
     expect(workflow).toContain("cron: '40 15 * * *'");
-    expect(workflow).toContain(
-      'group: external-smoke-${{ github.ref }}-${{ matrix.suite }}-${{ matrix.service }}',
-    );
-    expect(workflow).toContain('fail-fast: false');
-    expect(workflow).toContain('max-parallel: 4');
-    expect(workflow).toContain('service: daiso');
-    expect(workflow).toContain('service: oliveyoung');
-    expect(workflow).toContain('service: opinet');
-    expect(workflow).toContain('suite: mcp');
+    expect(workflow).toContain('group: external-smoke-${{ github.ref }}');
+    expect(workflow).not.toContain('matrix:');
+    expect(workflow).not.toContain('matrix.');
+    expect(workflow).not.toContain('max-parallel:');
+    expect(workflow.match(/runs-on:/g)).toHaveLength(1);
+    expect(workflow).toContain('timeout-minutes: 60');
     expect(workflow).toContain("node-version: '24'");
-    expect(workflow).toContain('npm run cli:smoke -- --service "${SMOKE_SERVICE}"');
-    expect(workflow).toContain('npm run mcp:smoke -- --service "${SMOKE_SERVICE}"');
-    expect(workflow).toContain('CLI smoke failed; retrying after 15 seconds');
-    expect(workflow).toContain('MCP smoke failed; retrying after 15 seconds');
+    expect(workflow.match(/npm run build/g)).toHaveLength(1);
+    expect(workflow).toContain(
+      'CLI_SMOKE_SERVICES: daiso gs25 seveneleven emart24 lottemart oliveyoung megabox lottecinema cgv opinet',
+    );
+    expect(workflow).toContain(
+      'MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet',
+    );
+    expect(workflow).toContain('SMOKE_ATTEMPT_TIMEOUT_SECONDS: 90');
+    expect(workflow).toContain('for SMOKE_SERVICE in ${CLI_SMOKE_SERVICES}; do');
+    expect(workflow).toContain('for SMOKE_SERVICE in ${MCP_SMOKE_SERVICES}; do');
+    expect(workflow).toContain(
+      'timeout --signal=TERM --kill-after=10s "${SMOKE_ATTEMPT_TIMEOUT_SECONDS}s" npx tsx scripts/ops/cli-smoke.ts',
+    );
+    expect(workflow).toContain(
+      'timeout --signal=TERM --kill-after=10s "${SMOKE_ATTEMPT_TIMEOUT_SECONDS}s" npx tsx scripts/ops/mcp-smoke.ts',
+    );
+    expect(workflow).toContain('run_smoke_with_retry');
+    expect(workflow).toContain('retrying after 15 seconds');
     expect(workflow).toContain('external-smoke-summary.txt');
-    expect(workflow).toContain('failure=');
+    expect(workflow).toContain('failures=');
     expect(workflow).toContain('SUMMARY="$(cat external-smoke-summary.txt');
     expect(workflow).toContain('Notify smoke failure');
     expect(workflow).toContain('MOSHI_WEBHOOK_TOKEN');
-    expect(workflow).toContain('if: failure()');
+    expect(workflow).toContain('.slice(0, 3500)');
+    expect(workflow).toContain("if: failure() && github.event_name == 'schedule'");
   });
 
   it('deploy workflow는 배포 때마다 Worker secret을 다시 쓰지 않는다', () => {
@@ -200,6 +239,9 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('console.log(summary)');
     expect(workflow).toContain("payload.status === 'fail'");
     expect(workflow).toContain('Health Checks Failed');
+    expect(workflow).toContain(
+      "if: failure() && github.event_name == 'schedule' && github.event.schedule == '10 15 * * *'",
+    );
   });
 
   it('차트 자동 커밋은 불필요한 push workflow를 다시 실행하지 않는다', () => {

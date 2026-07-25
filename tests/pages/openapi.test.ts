@@ -12,8 +12,22 @@ import {
   createOpenApiYamlResponse,
   __testOnlyJsonToYaml,
 } from '../../src/pages/openapi.js';
+import { ACTION_QUERY_ACTIONS } from '../../src/api/actionsProxy.js';
+import { ACTION_QUERY_PARAMETERS } from '../../src/pages/openapiSpecActionParameters.js';
 
 describe('OpenAPI 페이지', () => {
+  it('Actions 파라미터 모듈은 필수 action enum 계약을 제공한다', () => {
+    const actionParameter = ACTION_QUERY_PARAMETERS.find(
+      (parameter) => parameter.name === 'action',
+    );
+
+    expect(actionParameter).toMatchObject({
+      in: 'query',
+      required: true,
+    });
+    expect(actionParameter?.schema.enum).toEqual(ACTION_QUERY_ACTIONS);
+  });
+
   it('OpenAI Actions용 OpenAPI 스펙 객체를 생성한다', () => {
     const spec = generateOpenApiSpec('https://example.com') as {
       openapi: string;

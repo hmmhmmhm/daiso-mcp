@@ -4,6 +4,11 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { isDirectExecution, runCli } from '../../src/cli.js';
+import {
+  COMMAND_DETAIL,
+  COMMAND_LIST,
+  COMMAND_SUMMARY,
+} from '../../src/cliHelpDefinitions.js';
 
 function createDeps() {
   const output: string[] = [];
@@ -30,6 +35,13 @@ function createDeps() {
 }
 
 describe('CLI', () => {
+  it('모든 명령은 요약과 상세 도움말 정의를 가진다', () => {
+    for (const command of COMMAND_LIST) {
+      expect(COMMAND_SUMMARY[command]).toBeTruthy();
+      expect(COMMAND_DETAIL[command].length).toBeGreaterThan(0);
+    }
+  });
+
   it('명령어 없이 TTY 환경이면 인터랙티브 모드를 실행한다', async () => {
     const { deps } = createDeps();
     deps.isInteractiveTerminal = () => true;

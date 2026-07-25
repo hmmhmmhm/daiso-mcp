@@ -1,14 +1,30 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   __testOnlyClearLotteMartSessionCache,
-  __testOnlyCreateLotteMartSocketResponse,
-  __testOnlyFetchLotteMartSocketResponse,
   fetchLotteMartHtml,
   fetchLotteMartPageWithSession,
   getCachedLotteMartSessionCookie,
   getFreshLotteMartSessionCookie,
   probeLotteMartRequest,
 } from '../../../src/services/lottemart/session.js';
+import {
+  __testOnlyCreateLotteMartSocketResponse,
+  __testOnlyFetchLotteMartSocketResponse,
+} from '../../../src/services/lottemart/socketTransport.js';
+
+const socketMocks = vi.hoisted(() => ({
+  fetchResponse: vi.fn(),
+}));
+
+vi.mock('../../../src/services/lottemart/socketTransport.js', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../../src/services/lottemart/socketTransport.js')
+  >('../../../src/services/lottemart/socketTransport.js');
+  return {
+    ...actual,
+    fetchLotteMartSocketResponse: socketMocks.fetchResponse,
+  };
+});
 
 const mockFetch = vi.fn();
 
@@ -29,6 +45,7 @@ function createZyteResponse(bodyText: string, status = 200) {
 
 beforeEach(() => {
   mockFetch.mockReset();
+  socketMocks.fetchResponse.mockReset().mockResolvedValue(null);
   __testOnlyClearLotteMartSessionCache();
   vi.stubGlobal('fetch', mockFetch);
 });
@@ -179,6 +196,16 @@ describe('lottemart session helpers', () => {
 
     expect(response?.status).toBe(200);
     await expect(response?.text()).resolves.toBe('socket ok');
+  });
+
+  it('소켓 전송이 응답하면 일반 fetch 없이 해당 응답을 사용한다', async () => {
+    socketMocks.fetchResponse.mockResolvedValueOnce(new Response('socket direct'));
+
+    await expect(
+      fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+    ).resolves.toBe('socket direct');
+
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('소켓 쓰기나 닫기가 멈추면 null을 반환한다', async () => {
@@ -541,6 +568,93 @@ describe('lottemart session helpers', () => {
         bodyPreview: 'ok body',
       }),
     ]);
+  });
+
+  it('probeLotteMartRequest는 실패 응답과 빈 본문을 요약한다', async () => {
+    mockFetch.mockResolvedValue(new Response('', { status: 500, statusText: 'Server Error' }));
+
+    await expect(
+      probeLotteMartRequest('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        used: 'direct',
+        success: false,
+        error: expect.stringContaining('API 요청 실패: 500 Server Error'),
+        bodyPreview: null,
+      }),
+    ]);
+  });
+
+  it('probeLotteMartRequest는 Error가 아닌 direct 실패도 기본 메시지로 요약한다', async () => {
+    mockFetch.mockRejectedValue('network unavailable');
+
+    await expect(
+      probeLotteMartRequest('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        used: 'direct',
+        success: false,
+        error: '알 수 없는 오류가 발생했습니다.',
+      }),
+    ]);
+  });
+
+  it('probeLotteMartRequest는 Zyte 성공 시 세션 쿠키 유무를 보존한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('direct ok'))
+      .mockResolvedValueOnce(createZyteResponse('zyte ok'))
+      .mockResolvedValueOnce(new Response('direct ok'))
+      .mockResolvedValueOnce(createZyteResponse('zyte ok'));
+
+    const withCookie = await probeLotteMartRequest(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      'ASPSESSIONID=PROBE',
+      'test-key',
+    );
+    const withoutCookie = await probeLotteMartRequest(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      '',
+      'test-key',
+    );
+
+    expect(withCookie[1]).toEqual(
+      expect.objectContaining({
+        used: 'zyte',
+        success: true,
+        sessionCookie: 'ASPSESSIONID=PROBE',
+      }),
+    );
+    expect(withoutCookie[1]).toEqual(
+      expect.objectContaining({
+        used: 'zyte',
+        success: true,
+        sessionCookie: null,
+      }),
+    );
+  });
+
+  it('probeLotteMartRequest는 Error가 아닌 Zyte 실패도 기본 메시지로 요약한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('direct ok')).mockRejectedValueOnce('zyte unavailable');
+
+    const result = await probeLotteMartRequest(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      '',
+      'test-key',
+    );
+
+    expect(result[1]).toEqual(
+      expect.objectContaining({
+        used: 'zyte',
+        success: false,
+        error: '알 수 없는 오류가 발생했습니다.',
+      }),
+    );
   });
 
   it('probeLotteMartRequest는 direct 실패와 zyte 실패를 함께 기록한다', async () => {

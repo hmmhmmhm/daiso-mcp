@@ -78,7 +78,7 @@ jobs:
           fi
 
       - name: Notify health failure
-        if: failure()
+        if: failure() && github.event_name == 'schedule' && github.event.schedule == '10 15 * * *'
         env:
           MOSHI_WEBHOOK_TOKEN: ${{ secrets.MOSHI_WEBHOOK_TOKEN }}
         run: |
@@ -87,7 +87,18 @@ jobs:
             exit 0
           fi
 
-          SUMMARY="$(cat health-check-summary.txt 2>/dev/null || echo 'health check command failed')"
-          curl -X POST https://api.getmoshi.app/api/webhook \
+          SUMMARY="$(cat health-check-summary.txt 2>/dev/null || echo 'health check command failed')" node <<'NODE'
+          const fs = require('node:fs');
+          fs.writeFileSync(
+            'moshi-payload.json',
+            JSON.stringify({
+              token: process.env.MOSHI_WEBHOOK_TOKEN,
+              title: 'Health Checks Failed',
+              message: `${process.env.GITHUB_REPOSITORY}: ${process.env.SUMMARY || ''}`.slice(0, 3500),
+            }),
+          );
+          NODE
+          curl --fail-with-body --silent --show-error \
+            -X POST https://api.getmoshi.app/api/webhook \
             -H "Content-Type: application/json" \
-            -d "{\"token\":\"${MOSHI_WEBHOOK_TOKEN}\",\"title\":\"Health Checks Failed\",\"message\":\"${GITHUB_REPOSITORY}: ${SUMMARY}\"}"
+            --data-binary @moshi-payload.json
