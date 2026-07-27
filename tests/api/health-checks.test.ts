@@ -3,6 +3,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { HEALTH_CHECKS } from '../../src/api/healthCheckDefinitions.js';
 import { __testOnlyClearHealthCheckCache, runHealthChecks } from '../../src/api/healthChecks.js';
 
 beforeEach(() => {
@@ -21,6 +22,27 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('runHealthChecks', () => {
+  it('편의점 상품·매장·재고 운영 체크 12개를 모두 정의한다', () => {
+    const convenienceCheckIds = HEALTH_CHECKS.filter((check) =>
+      ['cu', 'gs25', 'seveneleven', 'emart24'].includes(check.service),
+    ).map((check) => check.id);
+
+    expect(convenienceCheckIds).toEqual([
+      'cu.stores',
+      'emart24.products',
+      'emart24.stores',
+      'gs25.products',
+      'gs25.stores',
+      'seveneleven.products',
+      'seveneleven.stores',
+      'seveneleven.popwords',
+      'cu.inventory',
+      'emart24.inventory',
+      'gs25.inventory',
+      'seveneleven.inventory',
+    ]);
+  });
+
   it('선택된 체크가 없으면 skipped 상태를 반환한다', async () => {
     const fetchImpl = vi.fn();
 

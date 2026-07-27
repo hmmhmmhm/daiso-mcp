@@ -5,6 +5,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import {
+  CU_UPSTREAM_BLOCK_PATTERNS,
   EMART24_UPSTREAM_403_PATTERNS,
   SEVENELEVEN_UPSTREAM_403_PATTERNS,
 } from '../../src/api/healthCheckDefinitions.js';
@@ -20,6 +21,7 @@ type WriteFn = (message: string) => void;
 type Validator = (stdout: string, stderr: string) => string | null;
 type SmokeService =
   | 'daiso'
+  | 'cu'
   | 'gs25'
   | 'seveneleven'
   | 'emart24'
@@ -119,6 +121,13 @@ export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
     args: ['inventory', '1034604', '--store', '강남역점'],
     expectedExitCode: 1,
     validate: validateStderrContains('알 수 없는 옵션: --store'),
+  },
+  {
+    service: 'cu',
+    scenario: 'CU 매장 검색',
+    args: ['cu-stores', '강남', '--limit', '1', '--json'],
+    degradedFailurePatterns: CU_UPSTREAM_BLOCK_PATTERNS,
+    validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '강남')),
   },
   {
     service: 'gs25',
