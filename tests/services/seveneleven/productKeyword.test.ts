@@ -34,6 +34,33 @@ function makeProductResponse(query: string, products: Array<Record<string, unkno
   );
 }
 
+function makeZyteProductResponse(query: string, products: Array<Record<string, unknown>>) {
+  const body = {
+    success: true,
+    data: {
+      SearchQueryResult: {
+        query,
+        Collection: [
+          {
+            CollectionId: 'offline',
+            Documentset: {
+              totalCount: products.length,
+              Document: products,
+            },
+          },
+        ],
+      },
+    },
+  };
+  return new Response(
+    JSON.stringify({
+      statusCode: 200,
+      httpResponseBody: Buffer.from(JSON.stringify(body), 'utf8').toString('base64'),
+    }),
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   vi.stubGlobal('fetch', mockFetch);
@@ -139,6 +166,32 @@ describe('pickBestSevenElevenProduct', () => {
 });
 
 describe('searchSevenElevenProductsWithVariants', () => {
+  it('보정 검색에도 Worker Zyte 키를 전달한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        makeZyteProductResponse('핫식스', [
+          {
+            prdNo: '1',
+            itemCd: '111',
+            itemOnm: '핫식스',
+            onlinePrice: 1500,
+          },
+        ]),
+      );
+
+    const result = await searchSevenElevenProductsWithVariants('핫식스', {
+      size: 1,
+      zyteApiKey: 'worker-key',
+    });
+
+    expect(result.products[0].itemCode).toBe('111');
+    const zyteHeaders = new Headers(mockFetch.mock.calls[1][1]?.headers);
+    expect(zyteHeaders.get('Authorization')).toBe(
+      `Basic ${Buffer.from('worker-key:', 'utf8').toString('base64')}`,
+    );
+  });
+
   it('대체 질의 결과를 합쳐 가장 관련도 높은 상품을 앞에 둔다', async () => {
     mockFetch
       .mockResolvedValueOnce(makeProductResponse('후르츠산도', []))

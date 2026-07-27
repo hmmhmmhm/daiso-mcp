@@ -34,7 +34,7 @@ function isEncryptedStockFailure(
   return codeMatched || messageMatched;
 }
 
-async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
+async function checkInventory(args: CheckInventoryArgs, zyteApiKey?: string): Promise<McpToolResponse> {
   const {
     keyword,
     storeKeyword = '',
@@ -54,6 +54,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     },
     {
       timeout: timeoutMs,
+      zyteApiKey,
     },
   );
 
@@ -94,7 +95,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   };
 }
 
-export function createCheckInventoryTool(): ToolRegistration {
+export function createCheckInventoryTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'seveneleven_check_inventory',
     metadata: {
@@ -112,7 +113,7 @@ export function createCheckInventoryTool(): ToolRegistration {
         timeoutMs: z.number().optional().default(20000).describe('요청 제한 시간(ms, 기본값: 20000)'),
       },
     },
-    handler: checkInventory as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args: unknown) => checkInventory(args as CheckInventoryArgs, zyteApiKey),
   };
 }
 /* c8 ignore stop */

@@ -12,6 +12,7 @@ describe('runCliSmoke', () => {
         '상품명만 아는 사용자',
         '위치를 대강 말하는 사용자',
         '잘못된 옵션을 입력한 사용자',
+        'CU 매장 검색',
       ]),
     );
   });
@@ -20,6 +21,7 @@ describe('runCliSmoke', () => {
     expect(CLI_SMOKE_COMMANDS.map((command) => command.service)).toEqual(
       expect.arrayContaining([
         'daiso',
+        'cu',
         'gs25',
         'seveneleven',
         'emart24',
@@ -42,6 +44,7 @@ describe('runCliSmoke', () => {
 
       const stdoutByCommand: Record<string, unknown> = {
         stores: { success: true, data: { stores: [] } },
+        'cu-stores': { success: true, data: { keyword: '강남' } },
         'gs25-products': { success: true, data: { keyword: '콜라' } },
         'gs25-stores': { success: true, data: { keyword: '강남' } },
         'seveneleven-products': { success: true, data: { query: '커피' } },

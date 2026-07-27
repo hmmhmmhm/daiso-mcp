@@ -2,14 +2,16 @@
  * 세븐일레븐 상품 검색어 보정
  */
 
-import { searchSevenElevenProducts } from './client.js';
+import {
+  searchSevenElevenProducts,
+  type SevenElevenRequestOptions,
+} from './client.js';
 import type { SevenElevenProduct, SevenElevenSearchResult } from './types.js';
 
-interface SearchVariantOptions {
+interface SearchVariantOptions extends SevenElevenRequestOptions {
   page?: number;
   size?: number;
   sort?: string;
-  timeout?: number;
 }
 
 const SANDWICH_SUFFIX_FAMILY = ['샌드위치', '샌드', '산도'] as const;
@@ -135,7 +137,7 @@ export async function searchSevenElevenProductsWithVariants(
   query: string,
   options: SearchVariantOptions = {},
 ): Promise<SevenElevenSearchResult & { appliedQueries: string[] }> {
-  const { page = 1, size = 20, sort = 'recommend', timeout } = options;
+  const { page = 1, size = 20, sort = 'recommend', timeout, zyteApiKey } = options;
   const appliedQueries = buildSevenElevenProductKeywordVariants(query);
   const seenKeys = new Set<string>();
   const collectionIds = new Set<string>();
@@ -151,6 +153,7 @@ export async function searchSevenElevenProductsWithVariants(
       },
       {
         timeout,
+        zyteApiKey,
       },
     );
 

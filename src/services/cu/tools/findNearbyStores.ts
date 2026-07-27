@@ -12,6 +12,7 @@ interface FindNearbyStoresArgs {
   keyword?: string;
   limit?: number;
   timeoutMs?: number;
+  zyteApiKey?: string;
 }
 
 async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResponse> {
@@ -21,6 +22,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     keyword = '',
     limit = 20,
     timeoutMs = 15000,
+    zyteApiKey,
   } = args;
 
   const { totalCount, stores } = await fetchCuStores(
@@ -31,6 +33,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     },
     {
       timeout: timeoutMs,
+      apiKey: zyteApiKey,
     },
   );
 
@@ -59,7 +62,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   };
 }
 
-export function createFindNearbyStoresTool(): ToolRegistration {
+export function createFindNearbyStoresTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'cu_find_nearby_stores',
     metadata: {
@@ -73,6 +76,9 @@ export function createFindNearbyStoresTool(): ToolRegistration {
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: findNearbyStores as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args: FindNearbyStoresArgs) =>
+      findNearbyStores({ ...args, zyteApiKey: zyteApiKey ?? args.zyteApiKey })) as (
+      args: unknown,
+    ) => Promise<McpToolResponse>,
   };
 }

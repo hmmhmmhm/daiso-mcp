@@ -157,6 +157,51 @@ describe('handleCuFindStores', () => {
 });
 
 describe('handleCuCheckInventory', () => {
+  it('Worker Zyte 키로 재고 폴백을 시도하고 차단 상태를 성공 envelope로 반환한다', async () => {
+    const zyteBan = new Response(
+      JSON.stringify({
+        type: '/download/website-ban',
+        title: 'Website Ban',
+        status: 520,
+        detail: 'Zyte API could not get a ban-free response.',
+      }),
+      {
+        status: 520,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(zyteBan)
+      .mockResolvedValueOnce(zyteBan.clone());
+
+    const ctx = createMockContextWithEnv(
+      { keyword: '과자', storeCheck: 'false' },
+      { ZYTE_API_KEY: 'worker-key' },
+    );
+    await handleCuCheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          inventory: expect.objectContaining({
+            available: false,
+            unavailableReason: expect.stringContaining('Website Ban'),
+            totalCount: 0,
+            items: [],
+          }),
+        }),
+      }),
+    );
+
+    const zyteHeaders = new Headers(mockFetch.mock.calls[2][1]?.headers);
+    expect(zyteHeaders.get('Authorization')).toBe(
+      `Basic ${Buffer.from('worker-key:', 'utf8').toString('base64')}`,
+    );
+  });
+
   it('CU 재고 검색 결과를 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

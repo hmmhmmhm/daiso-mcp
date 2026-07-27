@@ -82,7 +82,7 @@ const createRegistry = (bindings?: AppBindings) => {
         googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
         zyteApiKey: bindings?.ZYTE_API_KEY,
       }),
-    createSevenElevenService,
+    () => createSevenElevenService({ zyteApiKey: bindings?.ZYTE_API_KEY }),
     createCompareService,
     () =>
       createFeedbackService({
@@ -99,7 +99,11 @@ const createRegistry = (bindings?: AppBindings) => {
         apiKey: bindings?.OPINET_API_KEY,
         googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
       }),
-    createCuService,
+    () =>
+      createCuService({
+        zyteApiKey: bindings?.ZYTE_API_KEY,
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+      }),
     createEmart24Service,
     () =>
       createLotteMartService({

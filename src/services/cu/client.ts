@@ -2,8 +2,9 @@
  * CU API 클라이언트
  */
 
-import { fetchJson } from '../../utils/http.js';
+import { fetchJson, HttpError } from '../../utils/http.js';
 import { decodeBase64, requestByZyte } from '../../utils/zyte.js';
+import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { CU_API } from './api.js';
 import type { CuStockItem, CuStockMainResponse, CuStore, CuStoreResponse } from './types.js';
 
@@ -105,12 +106,18 @@ function toStoreAddress(raw: {
   return [raw.addrFst || '', raw.addrDetail || ''].join(' ').trim();
 }
 
-async function requestCuJson<T>(path: string, body: Record<string, unknown>, timeout = 15000): Promise<T> {
-  return fetchJson<T>(`${CU_API.BASE_URL}${path}`, {
+async function requestCuJson<T>(
+  path: string,
+  body: Record<string, unknown>,
+  options: RequestOptions = {},
+): Promise<T> {
+  return fetchJsonWithZyteFallback<T>(`${CU_API.BASE_URL}${path}`, {
     method: 'POST',
-    timeout,
+    timeout: options.timeout,
     headers: CU_DEFAULT_HEADERS,
     body: JSON.stringify(body),
+    zyteApiKey: options.apiKey,
+    zyteTags: { service: 'cu' },
   });
 }
 
@@ -339,7 +346,7 @@ export async function fetchCuStores(
     onItemNo: params.onItemNo || '',
   };
 
-  const body = await requestCuJson<CuStoreResponse>(CU_API.STORE_PATH, payload, timeout);
+  const body = await requestCuJson<CuStoreResponse>(CU_API.STORE_PATH, payload, options);
   const stores = (body.storeList || []).map((store) => normalizeCuStore(store));
 
   return {
@@ -353,8 +360,12 @@ export async function fetchCuStores(
  * 정책 변경 시 사전 호출이 필요한 경우를 대비한 워밍업 요청입니다.
  */
 export async function primeCuStockDisplay(options: RequestOptions = {}): Promise<void> {
-  const { timeout = 15000 } = options;
-  await requestCuJson(CU_API.STOCK_DISPLAY_PATH, {}, timeout);
+  await fetchJson(`${CU_API.BASE_URL}${CU_API.STOCK_DISPLAY_PATH}`, {
+    method: 'POST',
+    timeout: options.timeout,
+    headers: CU_DEFAULT_HEADERS,
+    body: '{}',
+  });
 }
 
 /**
@@ -363,11 +374,15 @@ export async function primeCuStockDisplay(options: RequestOptions = {}): Promise
 export async function fetchCuStock(
   params: FetchCuStockParams,
   options: RequestOptions = {},
-): Promise<{ totalCount: number; spellModifyYn: string; items: CuStockItem[] }> {
-  const { timeout = 15000 } = options;
-
+): Promise<{
+  available: boolean;
+  unavailableReason: string | null;
+  totalCount: number;
+  spellModifyYn: string;
+  items: CuStockItem[];
+}> {
   try {
-    await primeCuStockDisplay({ timeout });
+    await primeCuStockDisplay(options);
   } catch {
     // 사전 워밍업 실패는 본 검색으로 재시도합니다.
   }
@@ -381,7 +396,28 @@ export async function fetchCuStock(
     searchSort: params.searchSort,
   };
 
-  const body = await requestCuJson<CuStockMainResponse>(CU_API.STOCK_MAIN_PATH, payload, timeout);
+  let body: CuStockMainResponse;
+  try {
+    body = await requestCuJson<CuStockMainResponse>(CU_API.STOCK_MAIN_PATH, payload, options);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const originBlocked = error instanceof HttpError && [400, 403, 429].includes(error.status);
+    const zyteBlocked =
+      message.includes('Zyte API 호출 실패: 520') ||
+      message.includes('Zyte 대상 응답 실패: 520');
+    if (originBlocked || zyteBlocked) {
+      return {
+        available: false,
+        unavailableReason: originBlocked
+          ? `CU 재고 API가 차단되었습니다 (${error.status} Request Blocked).`
+          : 'CU 재고 API가 차단되었습니다 (Zyte Website Ban 520).',
+        totalCount: 0,
+        spellModifyYn: 'N',
+        items: [],
+      };
+    }
+    throw error;
+  }
 
   const result = body.data?.stockResult?.result;
   const rows = result?.rows || [];
@@ -400,6 +436,8 @@ export async function fetchCuStock(
     }));
 
   return {
+    available: true,
+    unavailableReason: null,
     totalCount: toNumber(result?.total_count) || items.length,
     spellModifyYn: body.spellModifyYn || 'N',
     items,

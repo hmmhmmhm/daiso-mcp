@@ -11,11 +11,15 @@ interface GetSearchPopwordsArgs {
   timeoutMs?: number;
 }
 
-async function getSearchPopwords(args: GetSearchPopwordsArgs): Promise<McpToolResponse> {
+async function getSearchPopwords(
+  args: GetSearchPopwordsArgs,
+  zyteApiKey?: string,
+): Promise<McpToolResponse> {
   const { label = 'home', timeoutMs = 15000 } = args;
 
   const keywords = await fetchSevenElevenSearchPopwords(label, {
     timeout: timeoutMs,
+    zyteApiKey,
   });
 
   return {
@@ -41,7 +45,7 @@ async function getSearchPopwords(args: GetSearchPopwordsArgs): Promise<McpToolRe
   };
 }
 
-export function createGetSearchPopwordsTool(): ToolRegistration {
+export function createGetSearchPopwordsTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'seveneleven_get_search_popwords',
     metadata: {
@@ -52,6 +56,6 @@ export function createGetSearchPopwordsTool(): ToolRegistration {
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: getSearchPopwords as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args: unknown) => getSearchPopwords(args as GetSearchPopwordsArgs, zyteApiKey),
   };
 }

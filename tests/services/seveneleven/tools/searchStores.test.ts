@@ -91,4 +91,47 @@ describe('createSearchStoresTool', () => {
       }),
     );
   });
+
+  it('주입된 Zyte 키로 차단된 매장 API를 복구한다', async () => {
+    const payload = {
+      success: true,
+      data: {
+        SearchQueryResult: {
+          query: '강남',
+          Collection: [
+            {
+              CollectionId: 'store',
+              Documentset: {
+                totalCount: 1,
+                Document: [{ field: { storeCd: '1', storeNm: '강남점', addr1: '서울 강남구' } }],
+              },
+            },
+          ],
+        },
+      },
+    };
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: Buffer.from(JSON.stringify(payload)).toString('base64'),
+          }),
+        ),
+      );
+
+    const result = await createSearchStoresTool('worker-key').handler({ keyword: '강남' });
+
+    expect(JSON.parse(result.content[0].text).count).toBe(1);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.zyte.com/v1/extract',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from('worker-key:').toString('base64')}`,
+        }),
+      }),
+    );
+  });
 });

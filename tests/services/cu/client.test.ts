@@ -12,6 +12,31 @@ import {
 
 const mockFetch = vi.fn();
 
+function zyteJsonResponse(value: unknown): Response {
+  return new Response(
+    JSON.stringify({
+      statusCode: 200,
+      httpResponseBody: Buffer.from(JSON.stringify(value), 'utf8').toString('base64'),
+    }),
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
+function zyteWebsiteBanResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      type: '/download/website-ban',
+      title: 'Website Ban',
+      status: 520,
+      detail: 'Zyte API could not get a ban-free response.',
+    }),
+    {
+      status: 520,
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   vi.stubGlobal('fetch', mockFetch);
@@ -389,6 +414,159 @@ describe('primeCuStockDisplay', () => {
 });
 
 describe('fetchCuStock', () => {
+  it('선택적 워밍업이 차단되어도 Zyte는 본 재고 조회에만 사용한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('warmup blocked', { status: 403 }))
+      .mockResolvedValueOnce(new Response('stock blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        zyteJsonResponse({
+          spellModifyYn: 'N',
+          data: {
+            stockResult: {
+              result: {
+                total_count: 1,
+                rows: [{ fields: { item_cd: '8801', item_nm: '감자칩' } }],
+              },
+            },
+          },
+        }),
+      );
+
+    const result = await fetchCuStock(
+      { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+      { apiKey: 'test-key' },
+    );
+
+    expect(result.items[0].itemCode).toBe('8801');
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch.mock.calls[1][0]).toBe('https://www.pocketcu.co.kr/api/search/rest/stock/main');
+    expect(mockFetch.mock.calls[2][0]).toBe('https://api.zyte.com/v1/extract');
+  });
+
+  it('원본 재고 API가 차단되면 Zyte JSON 응답을 정규화한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        zyteJsonResponse({
+          spellModifyYn: 'N',
+          data: {
+            stockResult: {
+              result: {
+                total_count: 1,
+                rows: [
+                  {
+                    fields: {
+                      item_cd: '8801',
+                      item_nm: '감자칩',
+                      hyun_maega: '1700',
+                      pickup_yn: 'Y',
+                      deliv_yn: 'N',
+                      reserv_yn: 'N',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      );
+
+    const result = await fetchCuStock(
+      { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+      { apiKey: 'test-key' },
+    );
+
+    expect(result.available).toBe(true);
+    expect(result.unavailableReason).toBeNull();
+    expect(result.items[0].itemCode).toBe('8801');
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('원본 차단 후 Zyte Website Ban이면 재고를 unavailable로 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(zyteWebsiteBanResponse())
+      .mockResolvedValueOnce(zyteWebsiteBanResponse());
+
+    const result = await fetchCuStock(
+      { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+      { apiKey: 'test-key' },
+    );
+
+    expect(result).toEqual({
+      available: false,
+      unavailableReason: expect.stringContaining('Website Ban'),
+      totalCount: 0,
+      spellModifyYn: 'N',
+      items: [],
+    });
+  });
+
+  it('Zyte 키 없이 원본 재고가 차단되어도 unavailable로 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('Request Blocked', { status: 403 }));
+
+    const result = await fetchCuStock({
+      keyword: '과자',
+      limit: 1,
+      offset: 0,
+      searchSort: 'recom',
+    });
+
+    expect(result).toEqual({
+      available: false,
+      unavailableReason: expect.stringContaining('Request Blocked'),
+      totalCount: 0,
+      spellModifyYn: 'N',
+      items: [],
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('Zyte 대상 상태가 520이어도 재고를 unavailable로 반환한다', async () => {
+    const targetBan = new Response(
+      JSON.stringify({
+        statusCode: 520,
+        httpResponseBody: Buffer.from('{}').toString('base64'),
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(targetBan)
+      .mockResolvedValueOnce(targetBan.clone());
+
+    const result = await fetchCuStock(
+      { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+      { apiKey: 'test-key' },
+    );
+
+    expect(result).toEqual({
+      available: false,
+      unavailableReason: expect.stringContaining('Website Ban'),
+      totalCount: 0,
+      spellModifyYn: 'N',
+      items: [],
+    });
+  });
+
+  it('원본 500 오류는 unavailable로 숨기지 않는다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('origin error', { status: 500 }));
+
+    await expect(
+      fetchCuStock(
+        { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+        { apiKey: 'test-key' },
+      ),
+    ).rejects.toThrow('API 요청 실패: 500');
+  });
+
   it('재고 검색 결과를 정규화해서 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))

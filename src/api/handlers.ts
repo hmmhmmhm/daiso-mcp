@@ -293,6 +293,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
       },
       {
         timeout: 15000,
+        apiKey: c.env?.ZYTE_API_KEY,
       },
     );
 
@@ -381,6 +382,8 @@ export async function handleCuCheckInventory(c: ApiContext) {
           stores: storeResult.stores.slice(0, storeLimit),
         },
         inventory: {
+          available: stockResult.available,
+          unavailableReason: stockResult.unavailableReason,
           totalCount: stockResult.totalCount,
           spellModifyYn: stockResult.spellModifyYn,
           items: stockResult.items,

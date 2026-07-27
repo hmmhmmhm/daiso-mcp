@@ -164,6 +164,50 @@ describe('createSearchProductsTool', () => {
     });
   });
 
+  it('주입된 Zyte 키로 차단된 상품 API를 복구한다', async () => {
+    const zytePayload = {
+      success: true,
+      data: {
+        SearchQueryResult: {
+          query: '커피',
+          Collection: [
+            {
+              CollectionId: 'offline',
+              Documentset: {
+                totalCount: 1,
+                Document: [{ prdNo: '1', itemCd: '8801', itemOnm: '아메리카노' }],
+              },
+            },
+          ],
+        },
+      },
+    };
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: Buffer.from(JSON.stringify(zytePayload)).toString('base64'),
+          }),
+        ),
+      );
+
+    const tool = createSearchProductsTool('worker-key');
+    const result = await tool.handler({ query: '커피', size: 1 });
+
+    expect(result.structuredContent).toMatchObject({ query: '커피', count: 1 });
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.zyte.com/v1/extract',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from('worker-key:').toString('base64')}`,
+        }),
+      }),
+    );
+  });
+
   it('비 Error 예외도 output schema를 만족하는 degraded 응답으로 변환한다', async () => {
     mockFetch.mockRejectedValue('blocked');
 

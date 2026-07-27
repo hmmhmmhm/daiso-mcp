@@ -17,6 +17,50 @@ afterEach(() => {
 });
 
 describe('createCheckInventoryTool', () => {
+  it('주입된 Worker 키로 폴백하고 차단된 재고를 unavailable로 반환한다', async () => {
+    const zyteBanBody = JSON.stringify({
+      type: '/download/website-ban',
+      title: 'Website Ban',
+      status: 520,
+      detail: 'Zyte API could not get a ban-free response.',
+    });
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(zyteBanBody, {
+          status: 520,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 0, storeList: [] })));
+
+    const tool = createCheckInventoryTool({
+      zyteApiKey: 'worker-key',
+      googleMapsApiKey: 'maps-key',
+    });
+    const result = await tool.handler({
+      keyword: '과자',
+      latitude: 37.5,
+      longitude: 127,
+      storeLimit: 1,
+    });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.inventory).toEqual(
+      expect.objectContaining({
+        available: false,
+        unavailableReason: expect.stringContaining('Website Ban'),
+        totalCount: 0,
+        items: [],
+      }),
+    );
+    const zyteHeaders = new Headers(mockFetch.mock.calls[2][1]?.headers);
+    expect(zyteHeaders.get('Authorization')).toBe(
+      `Basic ${Buffer.from('worker-key:', 'utf8').toString('base64')}`,
+    );
+  });
+
   it('올바른 도구 정의를 반환한다', () => {
     const tool = createCheckInventoryTool();
 

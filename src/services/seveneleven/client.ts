@@ -3,7 +3,7 @@
  */
 /* c8 ignore start */
 
-import { fetchJson } from '../../utils/http.js';
+import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { SEVENELEVEN_API } from './api.js';
 import type {
   SevenElevenApiEnvelope,
@@ -16,8 +16,9 @@ import type {
   SevenElevenStoreSearchResult,
 } from './types.js';
 
-interface RequestOptions {
+export interface SevenElevenRequestOptions {
   timeout?: number;
+  zyteApiKey?: string;
 }
 
 interface SearchProductsParams {
@@ -182,24 +183,26 @@ async function requestSevenElevenJson<T>(
   path: string,
   method: 'GET' | 'POST',
   body: unknown,
-  options: RequestOptions = {},
+  options: SevenElevenRequestOptions = {},
 ): Promise<SevenElevenApiEnvelope<T>> {
-  const { timeout = 15000 } = options;
+  const { timeout = 15000, zyteApiKey } = options;
   const url = `${SEVENELEVEN_API.BASE_URL}${path}`;
 
-  return fetchJson<SevenElevenApiEnvelope<T>>(url, {
+  return fetchJsonWithZyteFallback<SevenElevenApiEnvelope<T>>(url, {
     ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
     method,
     retryUnsafeMethods: method === 'POST',
     timeout,
     headers: SEVENELEVEN_DEFAULT_HEADERS,
     body: method === 'POST' ? JSON.stringify(body || {}) : undefined,
+    zyteApiKey,
+    zyteTags: { service: 'seveneleven' },
   });
 }
 
 export async function searchSevenElevenProducts(
   params: SearchProductsParams,
-  options: RequestOptions = {},
+  options: SevenElevenRequestOptions = {},
 ): Promise<SevenElevenSearchResult> {
   const { query, page = 1, size = 20 } = params;
   const pageNo = Math.max(Math.trunc(page) - 1, 0);
@@ -244,7 +247,7 @@ export async function searchSevenElevenProducts(
 
 export async function fetchSevenElevenStoresByKeyword(
   params: SearchStoresParams,
-  options: RequestOptions = {},
+  options: SevenElevenRequestOptions = {},
 ): Promise<SevenElevenStoreSearchResult> {
   const { keyword, limit = 20 } = params;
   const query = normalizeStoreKeyword(keyword) || keyword.trim();
@@ -285,7 +288,7 @@ export async function fetchSevenElevenStoresByKeyword(
 
 export async function fetchSevenElevenSearchPopwords(
   label = 'home',
-  options: RequestOptions = {},
+  options: SevenElevenRequestOptions = {},
 ): Promise<string[]> {
   const encodedLabel = encodeURIComponent(label);
   const response = await requestSevenElevenJson<unknown>(
@@ -337,13 +340,13 @@ export async function fetchSevenElevenSearchPopwords(
 
 export async function fetchSevenElevenStockProductMeta(
   itemCode: string,
-  options: RequestOptions = {},
+  options: SevenElevenRequestOptions = {},
 ): Promise<SevenElevenStockProductMeta | null> {
   const { timeout = 15000 } = options;
   const encodedItemCode = encodeURIComponent(itemCode.trim());
   const url = `${SEVENELEVEN_API.BASE_URL}${SEVENELEVEN_API.PRODUCT_SEARCH_STOCK_PATH}?itemCd=${encodedItemCode}`;
 
-  const response = await fetchJson<StockProductData>(url, {
+  const response = await fetchJsonWithZyteFallback<StockProductData>(url, {
     ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
     method: 'GET',
     timeout,
@@ -351,6 +354,8 @@ export async function fetchSevenElevenStockProductMeta(
       Accept: SEVENELEVEN_DEFAULT_HEADERS.Accept,
       'User-Agent': SEVENELEVEN_DEFAULT_HEADERS['User-Agent'],
     },
+    zyteApiKey: options.zyteApiKey,
+    zyteTags: { service: 'seveneleven' },
   });
 
   const productMeta = normalizeStockProductMeta(response);
@@ -404,17 +409,24 @@ export async function fetchSevenElevenCatalogSnapshot(
     includeIssues?: boolean;
     includeExhibition?: boolean;
     timeout?: number;
+    zyteApiKey?: string;
   } = {},
 ): Promise<SevenElevenCatalogSnapshot> {
-  const { includeIssues = true, includeExhibition = true, timeout = 15000 } = options;
+  const { includeIssues = true, includeExhibition = true, timeout = 15000, zyteApiKey } = options;
 
   const tasks: Array<Promise<SevenElevenApiEnvelope<unknown>>> = [
-    requestSevenElevenJson<unknown>(SEVENELEVEN_API.PRODUCT_PAGES_PATH, 'GET', null, { timeout }),
+    requestSevenElevenJson<unknown>(SEVENELEVEN_API.PRODUCT_PAGES_PATH, 'GET', null, { timeout, zyteApiKey }),
     includeIssues
-      ? requestSevenElevenJson<unknown>(SEVENELEVEN_API.PRODUCT_ISSUES_PATH, 'GET', null, { timeout })
+      ? requestSevenElevenJson<unknown>(SEVENELEVEN_API.PRODUCT_ISSUES_PATH, 'GET', null, {
+          timeout,
+          zyteApiKey,
+        })
       : Promise.resolve({ data: { content: [] } }),
     includeExhibition
-      ? requestSevenElevenJson<unknown>(SEVENELEVEN_API.EXHIBITION_MAIN_PATH, 'GET', null, { timeout })
+      ? requestSevenElevenJson<unknown>(SEVENELEVEN_API.EXHIBITION_MAIN_PATH, 'GET', null, {
+          timeout,
+          zyteApiKey,
+        })
       : Promise.resolve({ data: [] }),
   ];
 
