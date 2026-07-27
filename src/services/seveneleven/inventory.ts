@@ -6,11 +6,13 @@
  */
 /* c8 ignore start */
 
-import { fetchJson, HttpError } from '../../utils/http.js';
+import { HttpError } from '../../utils/http.js';
+import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { SEVENELEVEN_API } from './api.js';
 import {
   fetchSevenElevenStockProductMeta,
   fetchSevenElevenStoresByKeyword,
+  type SevenElevenRequestOptions,
 } from './client.js';
 import { pickBestSevenElevenProduct, searchSevenElevenProductsWithVariants } from './productKeyword.js';
 import type {
@@ -21,10 +23,6 @@ import type {
   SevenElevenStockStore,
   SevenElevenStore,
 } from './types.js';
-
-interface RequestOptions {
-  timeout?: number;
-}
 
 interface CheckInventoryParams {
   productKeyword: string;
@@ -257,7 +255,7 @@ function filterStoresByKeyword<T extends { storeName: string; address: string }>
 async function tryStockApi(
   stockProduct: SevenElevenStockProductMeta,
   stores: SevenElevenStore[],
-  options: RequestOptions = {},
+  options: SevenElevenRequestOptions = {},
 ): Promise<StockApiAttemptResult> {
   const { timeout = 15000 } = options;
   const url = `${SEVENELEVEN_API.BASE_URL}${SEVENELEVEN_API.REAL_STOCK_MULTI_PATH}/01/stocks`;
@@ -274,11 +272,13 @@ async function tryStockApi(
   }
 
   try {
-    const response = await fetchJson<SevenElevenApiEnvelope<StockApiData>>(url, {
+    const response = await fetchJsonWithZyteFallback<SevenElevenApiEnvelope<StockApiData>>(url, {
       method: 'POST',
       timeout,
       headers: SEVENELEVEN_DEFAULT_HEADERS,
       body: JSON.stringify(payload),
+      zyteApiKey: options.zyteApiKey,
+      zyteTags: { service: 'seveneleven', operation: 'inventory' },
     });
 
     const responseError = normalizeEnvelopeError(response);
@@ -305,7 +305,7 @@ async function tryStockApi(
 
 export async function checkSevenElevenInventory(
   params: CheckInventoryParams,
-  options: RequestOptions = {},
+  options: SevenElevenRequestOptions = {},
 ): Promise<SevenElevenStockResult> {
   const { productKeyword, storeKeyword, storeLimit = 20 } = params;
 

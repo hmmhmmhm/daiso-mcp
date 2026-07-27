@@ -82,7 +82,7 @@ const createRegistry = (bindings?: AppBindings) => {
         googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
         zyteApiKey: bindings?.ZYTE_API_KEY,
       }),
-    createSevenElevenService,
+    () => createSevenElevenService({ zyteApiKey: bindings?.ZYTE_API_KEY }),
     createCompareService,
     () =>
       createFeedbackService({

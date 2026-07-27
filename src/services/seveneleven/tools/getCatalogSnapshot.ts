@@ -13,13 +13,17 @@ interface GetCatalogSnapshotArgs {
   timeoutMs?: number;
 }
 
-async function getCatalogSnapshot(args: GetCatalogSnapshotArgs): Promise<McpToolResponse> {
+async function getCatalogSnapshot(
+  args: GetCatalogSnapshotArgs,
+  zyteApiKey?: string,
+): Promise<McpToolResponse> {
   const { includeIssues = true, includeExhibition = true, limit = 20, timeoutMs = 15000 } = args;
 
   const result = await fetchSevenElevenCatalogSnapshot({
     includeIssues,
     includeExhibition,
     timeout: timeoutMs,
+    zyteApiKey,
   });
 
   return {
@@ -54,7 +58,7 @@ async function getCatalogSnapshot(args: GetCatalogSnapshotArgs): Promise<McpTool
   };
 }
 
-export function createGetCatalogSnapshotTool(): ToolRegistration {
+export function createGetCatalogSnapshotTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'seveneleven_get_catalog_snapshot',
     metadata: {
@@ -67,6 +71,6 @@ export function createGetCatalogSnapshotTool(): ToolRegistration {
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: getCatalogSnapshot as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args: unknown) => getCatalogSnapshot(args as GetCatalogSnapshotArgs, zyteApiKey),
   };
 }

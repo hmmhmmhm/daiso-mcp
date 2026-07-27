@@ -21,7 +21,7 @@ function buildTextResponse(payload: Record<string, unknown>): McpToolResponse {
   };
 }
 
-async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse> {
+async function searchProducts(args: SearchProductsArgs, zyteApiKey?: string): Promise<McpToolResponse> {
   const { query, page = 1, size = 20, sort = 'recommend', timeoutMs = 15000 } = args;
 
   if (!query || query.trim().length === 0) {
@@ -34,6 +34,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
       size,
       sort,
       timeout: timeoutMs,
+      zyteApiKey,
     });
 
     return buildTextResponse({
@@ -78,7 +79,7 @@ const searchProductsOutputSchema = {
   message: z.string().optional().describe('degraded 상태의 원인 메시지'),
 };
 
-export function createSearchProductsTool(): ToolRegistration {
+export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'seveneleven_search_products',
     metadata: {
@@ -97,6 +98,6 @@ export function createSearchProductsTool(): ToolRegistration {
       },
       outputSchema: searchProductsOutputSchema,
     },
-    handler: searchProducts as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args: unknown) => searchProducts(args as SearchProductsArgs, zyteApiKey),
   };
 }

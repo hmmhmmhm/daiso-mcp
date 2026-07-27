@@ -476,4 +476,66 @@ describe('createCheckInventoryTool', () => {
       }),
     );
   });
+
+  it('주입된 Zyte 키로 차단된 실재고 API를 복구한다', async () => {
+    const stockPayload = {
+      success: true,
+      data: {
+        smCd: '201051',
+        storeList: [{ storeCd: '54928', stock: 4, stokMngQty: 0 }],
+      },
+      message: '성공',
+      code: 200,
+    };
+    mockFetch
+      .mockResolvedValueOnce(
+        makeProductResponse([
+          {
+            prdNo: '100',
+            itemCd: '8801234567890',
+            itemOnm: '핫식스',
+            onlinePrice: 1500,
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeStoreResponse([
+          {
+            field: {
+              storeCd: '54928',
+              storeNm: '안산중앙일번가점',
+              addr1: '경기 안산시',
+              storeLat: '37.3156',
+              storeLon: '126.8384',
+            },
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(makeStockProductMetaResponse())
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: Buffer.from(JSON.stringify(stockPayload)).toString('base64'),
+          }),
+        ),
+      );
+
+    const result = await createCheckInventoryTool('worker-key').handler({
+      keyword: '핫식스',
+      storeKeyword: '안산',
+    });
+
+    expect(JSON.parse(result.content[0].text).stockAvailable).toBe(true);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      5,
+      'https://api.zyte.com/v1/extract',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from('worker-key:').toString('base64')}`,
+        }),
+      }),
+    );
+  });
 });

@@ -12,7 +12,7 @@ interface SearchStoresArgs {
   timeoutMs?: number;
 }
 
-async function searchStores(args: SearchStoresArgs): Promise<McpToolResponse> {
+async function searchStores(args: SearchStoresArgs, zyteApiKey?: string): Promise<McpToolResponse> {
   const { keyword, limit = 20, timeoutMs = 15000 } = args;
 
   if (!keyword || keyword.trim().length === 0) {
@@ -26,6 +26,7 @@ async function searchStores(args: SearchStoresArgs): Promise<McpToolResponse> {
     },
     {
       timeout: timeoutMs,
+      zyteApiKey,
     },
   );
 
@@ -48,7 +49,7 @@ async function searchStores(args: SearchStoresArgs): Promise<McpToolResponse> {
   };
 }
 
-export function createSearchStoresTool(): ToolRegistration {
+export function createSearchStoresTool(zyteApiKey?: string): ToolRegistration {
   return {
     name: 'seveneleven_search_stores',
     metadata: {
@@ -60,6 +61,6 @@ export function createSearchStoresTool(): ToolRegistration {
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: searchStores as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args: unknown) => searchStores(args as SearchStoresArgs, zyteApiKey),
   };
 }

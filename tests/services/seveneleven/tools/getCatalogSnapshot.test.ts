@@ -72,4 +72,37 @@ describe('createGetCatalogSnapshotTool', () => {
     expect(parsed.exhibitions.totalCount).toBe(1);
     expect(parsed.exhibitions.items[0].productCount).toBe(2);
   });
+
+  it('주입된 Zyte 키로 차단된 카탈로그 API를 복구한다', async () => {
+    const payload = {
+      success: true,
+      data: { content: [{ prdNo: '1', itemCd: '111', itemOnm: '상품A' }] },
+    };
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: Buffer.from(JSON.stringify(payload)).toString('base64'),
+          }),
+        ),
+      );
+
+    const result = await createGetCatalogSnapshotTool('worker-key').handler({
+      includeIssues: false,
+      includeExhibition: false,
+    });
+
+    expect(JSON.parse(result.content[0].text).pages.totalCount).toBe(1);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.zyte.com/v1/extract',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from('worker-key:').toString('base64')}`,
+        }),
+      }),
+    );
+  });
 });

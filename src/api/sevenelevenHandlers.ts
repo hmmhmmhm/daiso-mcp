@@ -43,12 +43,15 @@ export async function handleSevenElevenSearchProducts(c: ApiContext) {
   }
 
   try {
-    const result = await searchSevenElevenProducts({
-      query,
-      page,
-      size,
-      sort,
-    });
+    const result = await searchSevenElevenProducts(
+      {
+        query,
+        page,
+        size,
+        sort,
+      },
+      { zyteApiKey: c.env?.ZYTE_API_KEY },
+    );
 
     return successResponse(
       c,
@@ -85,10 +88,13 @@ export async function handleSevenElevenSearchStores(c: ApiContext) {
   }
 
   try {
-    const result = await fetchSevenElevenStoresByKeyword({
-      keyword,
-      limit: safeLimit,
-    });
+    const result = await fetchSevenElevenStoresByKeyword(
+      {
+        keyword,
+        limit: safeLimit,
+      },
+      { zyteApiKey: c.env?.ZYTE_API_KEY },
+    );
 
     return successResponse(
       c,
@@ -135,6 +141,7 @@ export async function handleSevenElevenCheckInventory(c: ApiContext) {
       },
       {
         timeout: safeTimeoutMs,
+        zyteApiKey: c.env?.ZYTE_API_KEY,
       },
     );
 
@@ -179,7 +186,9 @@ export async function handleSevenElevenGetSearchPopwords(c: ApiContext) {
   const label = c.req.query('label') || 'home';
 
   try {
-    const keywords = await fetchSevenElevenSearchPopwords(label);
+    const keywords = await fetchSevenElevenSearchPopwords(label, {
+      zyteApiKey: c.env?.ZYTE_API_KEY,
+    });
 
     return successResponse(c, {
       label,
@@ -210,6 +219,7 @@ export async function handleSevenElevenGetCatalogSnapshot(c: ApiContext) {
     const result = await fetchSevenElevenCatalogSnapshot({
       includeIssues,
       includeExhibition,
+      zyteApiKey: c.env?.ZYTE_API_KEY,
     });
 
     return successResponse(c, {

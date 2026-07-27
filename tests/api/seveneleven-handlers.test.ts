@@ -22,9 +22,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function createMockContext(query: Record<string, string> = {}) {
+function createMockContext(
+  query: Record<string, string> = {},
+  env: Record<string, string> = {},
+) {
   return {
-    env: {},
+    env,
     req: {
       query: (key: string) => query[key],
       param: () => undefined,
@@ -80,6 +83,55 @@ describe('handleSevenElevenSearchProducts', () => {
       expect.objectContaining({
         success: true,
         data: expect.objectContaining({ count: 1 }),
+      }),
+    );
+  });
+
+  it('원본 API가 차단되면 Worker Zyte 키로 상품을 조회한다', async () => {
+    const zytePayload = {
+      success: true,
+      data: {
+        SearchQueryResult: {
+          query: '삼각김밥',
+          Collection: [
+            {
+              CollectionId: 'offline',
+              Documentset: {
+                totalCount: 1,
+                Document: [{ prdNo: '1', itemCd: '8801', itemOnm: '참치마요' }],
+              },
+            },
+          ],
+        },
+      },
+    };
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: Buffer.from(JSON.stringify(zytePayload)).toString('base64'),
+          }),
+        ),
+      );
+
+    const ctx = createMockContext({ query: '삼각김밥' }, { ZYTE_API_KEY: 'worker-key' });
+    await handleSevenElevenSearchProducts(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({ count: 1 }),
+      }),
+    );
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.zyte.com/v1/extract',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from('worker-key:').toString('base64')}`,
+        }),
       }),
     );
   });

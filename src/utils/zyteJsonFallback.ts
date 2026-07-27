@@ -48,6 +48,15 @@ function assertSuccessfulTarget(result: ZyteExtractResponse): void {
   }
 }
 
+function hasZyteApiKey(apiKey?: string): boolean {
+  if (apiKey?.trim()) {
+    return true;
+  }
+
+  /* c8 ignore next */
+  return typeof process !== 'undefined' && Boolean(process.env?.ZYTE_API_KEY?.trim());
+}
+
 export async function fetchJsonWithZyteFallback<T>(
   url: string,
   options: ZyteJsonFallbackOptions = {},
@@ -58,6 +67,9 @@ export async function fetchJsonWithZyteFallback<T>(
     return await fetchJson<T>(url, directOptions);
   } catch (error) {
     if (!(error instanceof HttpError) || !ZYTE_FALLBACK_STATUSES.has(error.status)) {
+      throw error;
+    }
+    if (!hasZyteApiKey(zyteApiKey)) {
       throw error;
     }
   }

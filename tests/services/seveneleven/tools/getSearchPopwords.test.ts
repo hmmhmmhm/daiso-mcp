@@ -54,4 +54,34 @@ describe('createGetSearchPopwordsTool', () => {
     expect(parsed.count).toBe(0);
     expect(parsed.note).toContain('찾지 못했습니다');
   });
+
+  it('주입된 Zyte 키로 차단된 인기 검색어 API를 복구한다', async () => {
+    const payload = {
+      success: true,
+      data: { list: [{ keyword: '도시락' }] },
+    };
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: Buffer.from(JSON.stringify(payload)).toString('base64'),
+          }),
+        ),
+      );
+
+    const result = await createGetSearchPopwordsTool('worker-key').handler({ label: 'home' });
+
+    expect(JSON.parse(result.content[0].text).keywords).toEqual(['도시락']);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.zyte.com/v1/extract',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from('worker-key:').toString('base64')}`,
+        }),
+      }),
+    );
+  });
 });
