@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   delete process.env.ZYTE_API_KEY;
 });
@@ -600,10 +601,11 @@ describe('fetchOliveyoungProducts', () => {
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({
-        statusCode: 200,
-        httpResponseBody: encodedBody,
-      }),
+      text: async () =>
+        JSON.stringify({
+          statusCode: 200,
+          httpResponseBody: encodedBody,
+        }),
     });
 
     await expect(

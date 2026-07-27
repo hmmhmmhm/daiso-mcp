@@ -62,6 +62,20 @@ describe('requestByZyte', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
+  it('Zyte API가 평문 520 오류를 반환해도 상태와 본문을 보존한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('error code: 520', { status: 520 }));
+
+    await expect(
+      requestByZyte({
+        apiKey: 'test-key',
+        url: 'https://example.com/api',
+        retries: 0,
+      }),
+    ).rejects.toThrow('Zyte API 호출 실패: 520 error code: 520');
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('대상 사이트 5xx 응답이면 한 번 재시도한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 520, httpResponseBody: 'e30=' })))
