@@ -54,6 +54,8 @@ const CU_DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
   Accept: 'application/json, text/javascript, */*; q=0.01',
   'X-Requested-With': 'XMLHttpRequest',
+  'User-Agent':
+    'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/138.0.0.0 Mobile Safari/537.36;BGFCU',
 } as const;
 
 const CU_WEB_DEFAULT_HEADERS = {

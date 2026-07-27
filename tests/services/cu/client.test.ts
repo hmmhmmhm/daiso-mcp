@@ -411,6 +411,16 @@ describe('primeCuStockDisplay', () => {
       expect.objectContaining({ method: 'POST' }),
     );
   });
+
+  it('공식 앱 식별자가 포함된 User-Agent를 전송한다', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ areaList: [] })));
+
+    await primeCuStockDisplay();
+
+    const options = mockFetch.mock.calls[0][1] as RequestInit;
+    const userAgent = new Headers(options.headers).get('user-agent') || '';
+    expect(userAgent).toMatch(/;BGFCU$/);
+  });
 });
 
 describe('fetchCuStock', () => {
