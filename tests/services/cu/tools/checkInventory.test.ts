@@ -17,6 +17,80 @@ afterEach(() => {
 });
 
 describe('createCheckInventoryTool', () => {
+  it('storeLimit이 0이면 차단된 재고 뒤의 매장 조회를 생략한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(new Response('error code: 520', { status: 520 }));
+
+    const tool = createCheckInventoryTool({ zyteApiKey: 'worker-key' });
+    const result = await tool.handler({ keyword: '커피', storeLimit: 0 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.inventory).toEqual(
+      expect.objectContaining({
+        available: false,
+        items: [],
+      }),
+    );
+    expect(parsed.nearbyStores).toEqual(
+      expect.objectContaining({
+        totalCount: 0,
+        count: 0,
+        stores: [],
+      }),
+    );
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('기본 매장 조회까지 차단되어도 degraded 결과를 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('stock blocked', { status: 403 }))
+      .mockResolvedValueOnce(new Response('error code: 520', { status: 520 }))
+      .mockResolvedValueOnce(new Response('store blocked', { status: 403 }))
+      .mockResolvedValueOnce(new Response('error code: 520', { status: 520 }));
+
+    const tool = createCheckInventoryTool({ zyteApiKey: 'worker-key' });
+    const result = await tool.handler({ keyword: '커피' });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.inventory.available).toBe(false);
+    expect(parsed.nearbyStores).toEqual(
+      expect.objectContaining({
+        available: false,
+        unavailableReason: expect.stringContaining('520'),
+        totalCount: 0,
+        stores: [],
+      }),
+    );
+    expect(mockFetch).toHaveBeenCalledTimes(5);
+  });
+
+  it('매장 조회가 비 Error 값으로 실패해도 안전한 원인을 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            spellModifyYn: 'N',
+            data: { stockResult: { result: { total_count: 0, rows: [] } } },
+          }),
+        ),
+      )
+      .mockRejectedValueOnce('blocked');
+
+    const result = await createCheckInventoryTool().handler({ keyword: '커피' });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.nearbyStores).toEqual(
+      expect.objectContaining({
+        available: false,
+        unavailableReason: 'CU 매장 조회 중 알 수 없는 오류가 발생했습니다.',
+      }),
+    );
+  });
+
   it('주입된 Worker 키로 폴백하고 차단된 재고를 unavailable로 반환한다', async () => {
     const zyteBanBody = JSON.stringify({
       type: '/download/website-ban',
