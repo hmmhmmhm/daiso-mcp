@@ -85,6 +85,16 @@ function isRetryableError(error: unknown): boolean {
   return isAbortError(error) || error instanceof RetryableZyteError;
 }
 
+function parseZyteResponseBody(text: string): ZyteExtractResponse {
+  try {
+    return JSON.parse(text) as ZyteExtractResponse;
+  } catch {
+    return {
+      detail: text.trim().replace(/\s+/g, ' ').slice(0, 300),
+    };
+  }
+}
+
 function wait(ms: number): Promise<void> {
   if (ms <= 0) {
     return Promise.resolve();
@@ -139,7 +149,7 @@ export async function requestByZyte(options: ZyteExtractOptions): Promise<ZyteEx
         throw error;
       }
 
-      const result = (await response.json()) as ZyteExtractResponse;
+      const result = parseZyteResponseBody(await response.text());
 
       if (!response.ok) {
         const message = `Zyte API 호출 실패: ${response.status} ${result.detail || result.title || ''}`.trim();
