@@ -12,6 +12,31 @@ import {
 
 const mockFetch = vi.fn();
 
+function zyteJsonResponse(value: unknown): Response {
+  return new Response(
+    JSON.stringify({
+      statusCode: 200,
+      httpResponseBody: Buffer.from(JSON.stringify(value), 'utf8').toString('base64'),
+    }),
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
+function zyteWebsiteBanResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      type: '/download/website-ban',
+      title: 'Website Ban',
+      status: 520,
+      detail: 'Zyte API could not get a ban-free response.',
+    }),
+    {
+      status: 520,
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
+}
+
 beforeEach(() => {
   mockFetch.mockReset();
   vi.stubGlobal('fetch', mockFetch);
@@ -389,6 +414,80 @@ describe('primeCuStockDisplay', () => {
 });
 
 describe('fetchCuStock', () => {
+  it('원본 재고 API가 차단되면 Zyte JSON 응답을 정규화한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        zyteJsonResponse({
+          spellModifyYn: 'N',
+          data: {
+            stockResult: {
+              result: {
+                total_count: 1,
+                rows: [
+                  {
+                    fields: {
+                      item_cd: '8801',
+                      item_nm: '감자칩',
+                      hyun_maega: '1700',
+                      pickup_yn: 'Y',
+                      deliv_yn: 'N',
+                      reserv_yn: 'N',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      );
+
+    const result = await fetchCuStock(
+      { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+      { apiKey: 'test-key' },
+    );
+
+    expect(result.available).toBe(true);
+    expect(result.unavailableReason).toBeNull();
+    expect(result.items[0].itemCode).toBe('8801');
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('원본 차단 후 Zyte Website Ban이면 재고를 unavailable로 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(zyteWebsiteBanResponse())
+      .mockResolvedValueOnce(zyteWebsiteBanResponse());
+
+    const result = await fetchCuStock(
+      { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+      { apiKey: 'test-key' },
+    );
+
+    expect(result).toEqual({
+      available: false,
+      unavailableReason: expect.stringContaining('Website Ban'),
+      totalCount: 0,
+      spellModifyYn: 'N',
+      items: [],
+    });
+  });
+
+  it('원본 500 오류는 unavailable로 숨기지 않는다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('origin error', { status: 500 }));
+
+    await expect(
+      fetchCuStock(
+        { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+        { apiKey: 'test-key' },
+      ),
+    ).rejects.toThrow('API 요청 실패: 500');
+  });
+
   it('재고 검색 결과를 정규화해서 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))

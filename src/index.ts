@@ -99,7 +99,11 @@ const createRegistry = (bindings?: AppBindings) => {
         apiKey: bindings?.OPINET_API_KEY,
         googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
       }),
-    createCuService,
+    () =>
+      createCuService({
+        zyteApiKey: bindings?.ZYTE_API_KEY,
+        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+      }),
     createEmart24Service,
     () =>
       createLotteMartService({

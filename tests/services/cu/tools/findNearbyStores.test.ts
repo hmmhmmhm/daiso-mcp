@@ -17,6 +17,37 @@ afterEach(() => {
 });
 
 describe('createFindNearbyStoresTool', () => {
+  it('주입된 Worker Zyte 키로 차단된 매장 검색을 복구한다', async () => {
+    const html = `
+      <table>
+        <tbody>
+          <tr><td><span class="name">강남점</span></td></tr>
+        </tbody>
+      </table>
+    `;
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 400 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 200,
+            httpResponseBody: Buffer.from(html, 'utf8').toString('base64'),
+          }),
+          { headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+
+    const tool = createFindNearbyStoresTool('worker-key');
+    const result = await tool.handler({ keyword: '강남', limit: 1 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.stores[0].storeName).toBe('강남점');
+    const zyteHeaders = new Headers(mockFetch.mock.calls[1][1]?.headers);
+    expect(zyteHeaders.get('Authorization')).toBe(
+      `Basic ${Buffer.from('worker-key:', 'utf8').toString('base64')}`,
+    );
+  });
+
   it('올바른 도구 정의를 반환한다', () => {
     const tool = createFindNearbyStoresTool();
 

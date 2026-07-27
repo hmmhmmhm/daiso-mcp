@@ -16,6 +16,13 @@ interface CheckInventoryArgs {
   searchSort?: string;
   storeLimit?: number;
   timeoutMs?: number;
+  zyteApiKey?: string;
+  googleMapsApiKey?: string;
+}
+
+interface CuInventoryToolOptions {
+  zyteApiKey?: string;
+  googleMapsApiKey?: string;
 }
 
 async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
@@ -29,6 +36,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     searchSort = 'recom',
     storeLimit = 10,
     timeoutMs = 15000,
+    zyteApiKey,
+    googleMapsApiKey,
   } = args;
 
   if (!keyword || keyword.trim().length === 0) {
@@ -44,6 +53,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     },
     {
       timeout: timeoutMs,
+      apiKey: zyteApiKey,
     },
   );
 
@@ -61,14 +71,14 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       },
       {
         timeout: timeoutMs,
+        apiKey: zyteApiKey,
       },
     );
     const firstAddress = keywordStoreResult.stores.find((store) => store.address.trim().length > 0)?.address || '';
     if (firstAddress.length > 0) {
-      const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
       const geocoded = await geocodeCuAddress(firstAddress, {
         timeout: timeoutMs,
-        googleMapsApiKey,
+        googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
       });
       if (geocoded) {
         const hasStockSeed = !!firstStockItem?.itemCode;
@@ -86,6 +96,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
           },
           {
             timeout: timeoutMs,
+            apiKey: zyteApiKey,
           },
         );
       }
@@ -109,6 +120,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       },
       {
         timeout: timeoutMs,
+        apiKey: zyteApiKey,
       },
     );
   }
@@ -135,6 +147,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       stores: limitedStores,
     },
     inventory: {
+      available: stockResult.available,
+      unavailableReason: stockResult.unavailableReason,
       totalCount: stockResult.totalCount,
       count: stockResult.items.length,
       spellModifyYn: stockResult.spellModifyYn,
@@ -147,7 +161,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   };
 }
 
-export function createCheckInventoryTool(): ToolRegistration {
+export function createCheckInventoryTool(options: CuInventoryToolOptions = {}): ToolRegistration {
   return {
     name: 'cu_check_inventory',
     metadata: {
@@ -165,6 +179,11 @@ export function createCheckInventoryTool(): ToolRegistration {
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: checkInventory as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args: CheckInventoryArgs) =>
+      checkInventory({
+        ...args,
+        zyteApiKey: options.zyteApiKey ?? args.zyteApiKey,
+        googleMapsApiKey: options.googleMapsApiKey ?? args.googleMapsApiKey,
+      })) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

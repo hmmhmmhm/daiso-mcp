@@ -14,16 +14,29 @@ const CU_METADATA: ServiceMetadata = {
   description: 'CU 매장 탐색 및 상품 재고 조회 서비스',
 };
 
+export interface CuServiceOptions {
+  zyteApiKey?: string;
+  googleMapsApiKey?: string;
+}
+
 class CuService implements ServiceProvider {
   readonly metadata = CU_METADATA;
 
+  constructor(private readonly options: CuServiceOptions = {}) {}
+
   getTools(): ToolRegistration[] {
-    return [createFindNearbyStoresTool(), createCheckInventoryTool()];
+    return [
+      createFindNearbyStoresTool(this.options.zyteApiKey),
+      createCheckInventoryTool({
+        zyteApiKey: this.options.zyteApiKey,
+        googleMapsApiKey: this.options.googleMapsApiKey,
+      }),
+    ];
   }
 }
 
-export function createCuService(): ServiceProvider {
-  return new CuService();
+export function createCuService(options: CuServiceOptions = {}): ServiceProvider {
+  return new CuService(options);
 }
 
 export * from './types.js';
