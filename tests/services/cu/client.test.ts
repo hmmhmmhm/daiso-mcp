@@ -504,6 +504,26 @@ describe('fetchCuStock', () => {
     });
   });
 
+  it('Zyte가 평문 HTTP 520을 반환해도 재고를 unavailable로 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(new Response('error code: 520', { status: 520 }));
+
+    const result = await fetchCuStock(
+      { keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' },
+      { apiKey: 'test-key' },
+    );
+
+    expect(result).toEqual({
+      available: false,
+      unavailableReason: expect.stringContaining('Website Ban'),
+      totalCount: 0,
+      spellModifyYn: 'N',
+      items: [],
+    });
+  });
+
   it('Zyte 키 없이 원본 재고가 차단되어도 unavailable로 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))

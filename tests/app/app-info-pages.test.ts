@@ -294,7 +294,10 @@ describe('기본 페이지', () => {
     expect(data.status).toBe('ok');
     expect(data.config).toEqual({
       googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
-      zyteApiKey: { configured: false, usedBy: expect.arrayContaining(['oliveyoung', 'cgv']) },
+      zyteApiKey: {
+        configured: false,
+        usedBy: expect.arrayContaining(['oliveyoung', 'cgv', 'cu', 'seveneleven']),
+      },
       naverLocalSearch: { configured: false, usedBy: ['places'] },
       opinetApiKey: { configured: false, usedBy: ['opinet'] },
       supabaseFeedback: { configured: false, usedBy: ['feedback'] },

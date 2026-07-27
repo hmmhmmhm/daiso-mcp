@@ -26,7 +26,7 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
     },
     zyteApiKey: {
       configured: isConfigured(bindings?.ZYTE_API_KEY),
-      usedBy: ['oliveyoung', 'gs25', 'lottemart', 'cgv'],
+      usedBy: ['oliveyoung', 'gs25', 'cu', 'seveneleven', 'lottemart', 'cgv'],
     },
     naverLocalSearch: {
       configured:
