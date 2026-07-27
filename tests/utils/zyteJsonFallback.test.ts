@@ -114,6 +114,19 @@ describe('fetchJsonWithZyteFallback', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  it('Zyte가 지원하지 않는 메서드는 차단 응답 이후 명확히 거부한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+
+    await expect(
+      fetchJsonWithZyteFallback('https://example.com/api', {
+        method: 'HEAD',
+        zyteApiKey: 'test-key',
+      }),
+    ).rejects.toThrow('Zyte에서 지원하지 않는 HTTP 메서드입니다: HEAD');
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('Zyte 대상 응답이 성공이 아니면 상태 코드를 포함해 실패한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
@@ -124,6 +137,22 @@ describe('fetchJsonWithZyteFallback', () => {
         zyteApiKey: 'test-key',
       }),
     ).rejects.toThrow('Zyte 대상 응답 실패: 403');
+  });
+
+  it('Zyte 대상 상태 코드가 없으면 알 수 없음으로 실패한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ httpResponseBody: encodeJson({}) }), {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    await expect(
+      fetchJsonWithZyteFallback('https://example.com/api', {
+        zyteApiKey: 'test-key',
+      }),
+    ).rejects.toThrow('Zyte 대상 응답 실패: 알 수 없음');
   });
 
   it('Zyte 응답 본문이 없으면 실패한다', async () => {
