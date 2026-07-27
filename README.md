@@ -1,3 +1,5 @@
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fhmmhmmhm%2Fdaiso-mcp.svg)](https://mcptoplist.com/server/glama%2Fhmmhmmhm%2Fdaiso-mcp)
+
 <div align="center">
 
 <img src="./assets/logo.svg" alt="Daiso MCP" width="120" height="120">
