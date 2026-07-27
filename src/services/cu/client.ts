@@ -2,7 +2,7 @@
  * CU API 클라이언트
  */
 
-import { fetchJson } from '../../utils/http.js';
+import { fetchJson, HttpError } from '../../utils/http.js';
 import { decodeBase64, requestByZyte } from '../../utils/zyte.js';
 import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { CU_API } from './api.js';
@@ -360,7 +360,12 @@ export async function fetchCuStores(
  * 정책 변경 시 사전 호출이 필요한 경우를 대비한 워밍업 요청입니다.
  */
 export async function primeCuStockDisplay(options: RequestOptions = {}): Promise<void> {
-  await requestCuJson(CU_API.STOCK_DISPLAY_PATH, {}, options);
+  await fetchJson(`${CU_API.BASE_URL}${CU_API.STOCK_DISPLAY_PATH}`, {
+    method: 'POST',
+    timeout: options.timeout,
+    headers: CU_DEFAULT_HEADERS,
+    body: '{}',
+  });
 }
 
 /**
@@ -396,10 +401,16 @@ export async function fetchCuStock(
     body = await requestCuJson<CuStockMainResponse>(CU_API.STOCK_MAIN_PATH, payload, options);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
-    if (message.includes('Zyte API 호출 실패: 520')) {
+    const originBlocked = error instanceof HttpError && [400, 403, 429].includes(error.status);
+    const zyteBlocked =
+      message.includes('Zyte API 호출 실패: 520') ||
+      message.includes('Zyte 대상 응답 실패: 520');
+    if (originBlocked || zyteBlocked) {
       return {
         available: false,
-        unavailableReason: 'CU 재고 API가 차단되었습니다 (Zyte Website Ban 520).',
+        unavailableReason: originBlocked
+          ? `CU 재고 API가 차단되었습니다 (${error.status} Request Blocked).`
+          : 'CU 재고 API가 차단되었습니다 (Zyte Website Ban 520).',
         totalCount: 0,
         spellModifyYn: 'N',
         items: [],

@@ -33,12 +33,6 @@ describe('createCheckInventoryTool', () => {
           headers: { 'Content-Type': 'application/json' },
         }),
       )
-      .mockResolvedValueOnce(
-        new Response(zyteBanBody, {
-          status: 520,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      )
       .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 0, storeList: [] })));
 
     const tool = createCheckInventoryTool({

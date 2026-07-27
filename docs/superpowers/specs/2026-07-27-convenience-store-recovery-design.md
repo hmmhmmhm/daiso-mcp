@@ -63,8 +63,9 @@ CU와 세븐일레븐 클라이언트는 기존 헤더, 메서드, 요청 본문
 ### CU
 
 - `requestCuJson`이 `RequestOptions.apiKey`를 받고 차단 응답에 Zyte를 시도한다.
-- `fetchCuStores`, `primeCuStockDisplay`, `fetchCuStock`이 같은 옵션을 끝까지 전달한다.
+- `fetchCuStores`와 본 재고 요청은 같은 옵션을 끝까지 전달한다.
 - API 핸들러는 `c.env.ZYTE_API_KEY`를 재고 조회에도 전달한다.
+- 선택적 워밍업은 실패해도 무시되는 호출이므로 원본 직결만 사용해 불필요한 Zyte 비용을 막는다.
 - 워밍업 요청 실패는 기존처럼 본 요청을 막지 않지만, 본 재고 요청의 폴백 실패는 호출자에게 전달한다.
 - 본 재고 요청도 확인된 `400`/`403`/Zyte `520` 차단이면 빈 항목, `available: false`, 비민감 오류 설명을 반환한다. 매장 검색이 가능하면 매장 결과는 계속 제공한다.
 - MCP 도구에는 요청 컨텍스트의 Zyte 및 Google Maps 바인딩을 생성자 옵션으로 주입한다.

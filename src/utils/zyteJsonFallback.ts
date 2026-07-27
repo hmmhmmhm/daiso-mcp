@@ -78,6 +78,7 @@ export async function fetchJsonWithZyteFallback<T>(
     apiKey: zyteApiKey,
     url,
     timeout: directOptions.timeout,
+    retries: 0,
     method: normalizeMethod(directOptions.method),
     headers: toZyteHeaders(directOptions.headers),
     bodyText: typeof directOptions.body === 'string' ? directOptions.body : undefined,

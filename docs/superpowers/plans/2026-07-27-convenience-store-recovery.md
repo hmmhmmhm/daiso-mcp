@@ -186,6 +186,8 @@ interface CuStockResult {
 }
 ```
 
+Keep the optional stock-display warmup direct-only because its failure is ignored and a paid fallback cannot share session state with the main request.
+
 Only convert verified block signatures (`HttpError` 400/403/429 or Zyte 520 Website Ban) to `available: false`; preserve all other errors.
 
 - [ ] **Step 4: Inject CU bindings into REST and MCP**

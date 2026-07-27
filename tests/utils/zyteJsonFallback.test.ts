@@ -139,6 +139,21 @@ describe('fetchJsonWithZyteFallback', () => {
     ).rejects.toThrow('Zyte 대상 응답 실패: 403');
   });
 
+  it('Zyte 대상 520에서도 유료 폴백은 한 번만 시도한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
+      .mockResolvedValueOnce(zyteResponse({ error: 'website ban' }, 520))
+      .mockResolvedValueOnce(zyteResponse({ error: 'website ban' }, 520));
+
+    await expect(
+      fetchJsonWithZyteFallback('https://example.com/api', {
+        zyteApiKey: 'test-key',
+      }),
+    ).rejects.toThrow('Zyte 대상 응답 실패: 520');
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
   it('Zyte 대상 상태 코드가 없으면 알 수 없음으로 실패한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response('blocked', { status: 403 }))
