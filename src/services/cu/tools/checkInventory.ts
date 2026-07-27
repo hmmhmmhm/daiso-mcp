@@ -61,70 +61,80 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   const hasInputLocation = typeof latitude === 'number' && typeof longitude === 'number';
   const resolvedLatitude = hasInputLocation ? latitude : undefined;
   const resolvedLongitude = hasInputLocation ? longitude : undefined;
-  let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null = null;
+  let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null =
+    storeLimit <= 0 ? { totalCount: 0, stores: [] } : null;
+  let storeUnavailableReason: string | null = null;
 
-  // 좌표 미입력 + 매장 키워드 입력 시, 키워드 기반 매장 검색 결과를 우선 사용합니다.
-  if (!hasInputLocation && storeKeyword.trim().length > 0) {
-    const keywordStoreResult = await fetchCuStores(
-      {
-        searchWord: storeKeyword,
-      },
-      {
-        timeout: timeoutMs,
-        apiKey: zyteApiKey,
-      },
-    );
-    const firstAddress = keywordStoreResult.stores.find((store) => store.address.trim().length > 0)?.address || '';
-    if (firstAddress.length > 0) {
-      const geocoded = await geocodeCuAddress(firstAddress, {
-        timeout: timeoutMs,
-        googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
-      });
-      if (geocoded) {
-        const hasStockSeed = !!firstStockItem?.itemCode;
-        storeResult = await fetchCuStores(
-          {
-            latitude: geocoded.latitude,
-            longitude: geocoded.longitude,
-            searchWord: storeKeyword,
-            itemCd: firstStockItem?.itemCode || '',
-            onItemNo: firstStockItem?.onItemNo || '',
-            jipCd: firstStockItem?.itemCode || '',
-            isRecommend: hasStockSeed ? 'Y' : '',
-            recommendId: hasStockSeed ? 'stock' : '',
-            pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
-          },
-          {
-            timeout: timeoutMs,
-            apiKey: zyteApiKey,
-          },
-        );
+  try {
+    // 좌표 미입력 + 매장 키워드 입력 시, 키워드 기반 매장 검색 결과를 우선 사용합니다.
+    if (!storeResult && !hasInputLocation && storeKeyword.trim().length > 0) {
+      const keywordStoreResult = await fetchCuStores(
+        {
+          searchWord: storeKeyword,
+        },
+        {
+          timeout: timeoutMs,
+          apiKey: zyteApiKey,
+        },
+      );
+      const firstAddress =
+        keywordStoreResult.stores.find((store) => store.address.trim().length > 0)?.address || '';
+      if (firstAddress.length > 0) {
+        const geocoded = await geocodeCuAddress(firstAddress, {
+          timeout: timeoutMs,
+          googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
+        });
+        if (geocoded) {
+          const hasStockSeed = !!firstStockItem?.itemCode;
+          storeResult = await fetchCuStores(
+            {
+              latitude: geocoded.latitude,
+              longitude: geocoded.longitude,
+              searchWord: storeKeyword,
+              itemCd: firstStockItem?.itemCode || '',
+              onItemNo: firstStockItem?.onItemNo || '',
+              jipCd: firstStockItem?.itemCode || '',
+              isRecommend: hasStockSeed ? 'Y' : '',
+              recommendId: hasStockSeed ? 'stock' : '',
+              pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
+            },
+            {
+              timeout: timeoutMs,
+              apiKey: zyteApiKey,
+            },
+          );
+        }
       }
+      storeResult ||= keywordStoreResult;
     }
-    storeResult ||= keywordStoreResult;
+
+    if (!storeResult) {
+      const hasStockSeed = !!firstStockItem?.itemCode;
+      storeResult = await fetchCuStores(
+        {
+          latitude: resolvedLatitude,
+          longitude: resolvedLongitude,
+          searchWord: storeKeyword,
+          itemCd: firstStockItem?.itemCode || '',
+          onItemNo: firstStockItem?.onItemNo || '',
+          jipCd: firstStockItem?.itemCode || '',
+          isRecommend: hasStockSeed ? 'Y' : '',
+          recommendId: hasStockSeed ? 'stock' : '',
+          pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
+        },
+        {
+          timeout: timeoutMs,
+          apiKey: zyteApiKey,
+        },
+      );
+    }
+  } catch (error) {
+    storeUnavailableReason =
+      error instanceof Error ? error.message : 'CU 매장 조회 중 알 수 없는 오류가 발생했습니다.';
+    storeResult = { totalCount: 0, stores: [] };
   }
 
-  if (!storeResult) {
-    const hasStockSeed = !!firstStockItem?.itemCode;
-    storeResult = await fetchCuStores(
-      {
-        latitude: resolvedLatitude,
-        longitude: resolvedLongitude,
-        searchWord: storeKeyword,
-        itemCd: firstStockItem?.itemCode || '',
-        onItemNo: firstStockItem?.onItemNo || '',
-        jipCd: firstStockItem?.itemCode || '',
-        isRecommend: hasStockSeed ? 'Y' : '',
-        recommendId: hasStockSeed ? 'stock' : '',
-        pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
-      },
-      {
-        timeout: timeoutMs,
-        apiKey: zyteApiKey,
-      },
-    );
-  }
-
+  storeResult ||= { totalCount: 0, stores: [] };
   const limitedStores = storeResult.stores.slice(0, storeLimit);
 
   const result = {
@@ -140,6 +150,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         ? { latitude: resolvedLatitude, longitude: resolvedLongitude }
         : null,
     nearbyStores: {
+      available: storeUnavailableReason === null,
+      unavailableReason: storeUnavailableReason,
       totalCount: storeResult.totalCount,
       count: limitedStores.length,
       stockItemCode: firstStockItem?.itemCode || null,
