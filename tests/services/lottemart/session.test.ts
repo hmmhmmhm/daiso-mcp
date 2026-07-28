@@ -266,6 +266,20 @@ describe('lottemart session helpers', () => {
     );
   });
 
+  it('일반 fetch와 소켓 전송이 모두 실패하면 원래 fetch 오류를 유지한다', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('direct unavailable'));
+    socketMocks.fetchResponse.mockRejectedValueOnce(new Error('socket unavailable'));
+
+    await expect(
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
+    ).rejects.toThrow('direct unavailable');
+  });
+
   it('소켓 쓰기나 닫기가 멈추면 null을 반환한다', async () => {
     const never = new Promise<void>(() => {});
     const writableWithStalledWrite = new WritableStream<Uint8Array>({

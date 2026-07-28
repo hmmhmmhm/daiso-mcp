@@ -75,6 +75,35 @@ describe('fetchGs25Stores', () => {
     );
   });
 
+  it('Zyte 대상이 인증을 거부하면 명시적인 upstream unavailable 오류를 던진다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403, statusText: 'Forbidden' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 403,
+            httpResponseBody: Buffer.from('forbidden').toString('base64'),
+          }),
+        ),
+      );
+
+    await expect(
+      fetchGs25Stores({ useCache: false }, { zyteApiKey: 'test-zyte-key' }),
+    ).rejects.toBeInstanceOf(Gs25UpstreamUnavailableError);
+  });
+
+  it('Zyte 호출 자체가 실패해도 명시적인 upstream unavailable 오류를 던진다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403, statusText: 'Forbidden' }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: 'account suspended' }), { status: 403 }),
+      );
+
+    await expect(
+      fetchGs25Stores({ useCache: false }, { zyteApiKey: 'test-zyte-key' }),
+    ).rejects.toBeInstanceOf(Gs25UpstreamUnavailableError);
+  });
+
   it('store/stock 403이어도 Zyte 키가 없으면 원본 에러를 반환한다', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response('forbidden', { status: 403, statusText: 'Forbidden' }),

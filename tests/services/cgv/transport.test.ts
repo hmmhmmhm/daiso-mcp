@@ -87,6 +87,40 @@ describe('requestCgv', () => {
     ).rejects.toBeInstanceOf(CgvUpstreamUnavailableError);
   });
 
+  it('직접 요청이 401이어도 명시적인 upstream unavailable 오류를 던진다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('unauthorized', { status: 401 }));
+
+    await expect(
+      requestCgv('/cnm/atkt/searchRegnList', new URLSearchParams({ coCd: 'A420' }), 1000),
+    ).rejects.toBeInstanceOf(CgvUpstreamUnavailableError);
+  });
+
+  it.each([401, 403])(
+    'Zyte 대상 응답이 %i이면 명시적인 upstream unavailable 오류를 던진다',
+    async (statusCode) => {
+      mockFetch
+        .mockResolvedValueOnce(new Response('forbidden', { status: 403 }))
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              statusCode,
+              httpResponseBody: Buffer.from('forbidden').toString('base64'),
+            }),
+            { status: 200 },
+          ),
+        );
+
+      await expect(
+        requestCgv(
+          '/cnm/atkt/searchRegnList',
+          new URLSearchParams({ coCd: 'A420' }),
+          1000,
+          'test-key',
+        ),
+      ).rejects.toBeInstanceOf(CgvUpstreamUnavailableError);
+    },
+  );
+
   it('Zyte 계정이 중지된 경우 원문 대신 명시적인 upstream unavailable 오류를 던진다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response('forbidden', { status: 403 }))
