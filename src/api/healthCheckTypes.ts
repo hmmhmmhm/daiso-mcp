@@ -19,10 +19,12 @@ export interface HealthCheckDefinition {
     | 'movies'
     | 'showtimes'
     | 'inventoryProducts'
-    | 'inventoryItems';
+    | 'inventoryItems'
+    | 'inventoryStores';
   requiredFields?: string[];
   timeoutMs?: number;
   degradedFailurePatterns?: string[];
+  allowEmpty?: boolean;
 }
 
 export interface HealthCheckResult {

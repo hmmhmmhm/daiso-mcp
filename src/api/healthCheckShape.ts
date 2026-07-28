@@ -23,7 +23,7 @@ export function toCount(data: unknown): number | null {
 
   if (record.inventory && typeof record.inventory === 'object') {
     const inventory = record.inventory as Record<string, unknown>;
-    for (const key of ['products', 'items']) {
+    for (const key of ['products', 'items', 'stores']) {
       const value = inventory[key];
       if (Array.isArray(value)) {
         return value.length;
@@ -46,7 +46,15 @@ export function toFirstName(data: unknown): string | undefined {
       continue;
     }
     const item = value[0] as Record<string, unknown>;
-    for (const nameKey of ['productName', 'itemName', 'goodsName', 'name', 'storeName', 'theaterName', 'movieName']) {
+    for (const nameKey of [
+      'productName',
+      'itemName',
+      'goodsName',
+      'name',
+      'storeName',
+      'theaterName',
+      'movieName',
+    ]) {
       if (typeof item[nameKey] === 'string' && item[nameKey].trim().length > 0) {
         return item[nameKey].trim();
       }
@@ -55,13 +63,13 @@ export function toFirstName(data: unknown): string | undefined {
 
   if (record.inventory && typeof record.inventory === 'object') {
     const inventory = record.inventory as Record<string, unknown>;
-    for (const key of ['products', 'items']) {
+    for (const key of ['products', 'items', 'stores']) {
       const value = inventory[key];
       if (!Array.isArray(value) || !value[0] || typeof value[0] !== 'object') {
         continue;
       }
       const item = value[0] as Record<string, unknown>;
-      for (const nameKey of ['productName', 'itemName', 'goodsName', 'name']) {
+      for (const nameKey of ['productName', 'itemName', 'goodsName', 'name', 'storeName']) {
         if (typeof item[nameKey] === 'string' && item[nameKey].trim().length > 0) {
           return item[nameKey].trim();
         }
@@ -72,18 +80,30 @@ export function toFirstName(data: unknown): string | undefined {
   return undefined;
 }
 
-function getCollectionItems(data: unknown, collectionKey?: HealthCheckDefinition['collectionKey']): unknown[] {
+function getCollectionItems(
+  data: unknown,
+  collectionKey?: HealthCheckDefinition['collectionKey'],
+): unknown[] {
   if (!data || typeof data !== 'object') {
     return [];
   }
 
   const record = data as Record<string, unknown>;
-  if (collectionKey === 'inventoryProducts' || collectionKey === 'inventoryItems') {
+  if (
+    collectionKey === 'inventoryProducts' ||
+    collectionKey === 'inventoryItems' ||
+    collectionKey === 'inventoryStores'
+  ) {
     const inventory = record.inventory;
     if (!inventory || typeof inventory !== 'object') {
       return [];
     }
-    const key = collectionKey === 'inventoryProducts' ? 'products' : 'items';
+    const key =
+      collectionKey === 'inventoryProducts'
+        ? 'products'
+        : collectionKey === 'inventoryStores'
+          ? 'stores'
+          : 'items';
     const value = (inventory as Record<string, unknown>)[key];
     return Array.isArray(value) ? value : [];
   }
@@ -114,7 +134,7 @@ export function hasRequiredRepresentativeFields(
 
   const items = getCollectionItems(data, collectionKey);
   if (items.length === 0) {
-    return true;
+    return false;
   }
 
   const first = items[0];
@@ -125,6 +145,8 @@ export function hasRequiredRepresentativeFields(
   const record = first as Record<string, unknown>;
   return requiredFields.some((field) => {
     const value = record[field];
-    return typeof value === 'string' ? value.trim().length > 0 : value !== undefined && value !== null;
+    return typeof value === 'string'
+      ? value.trim().length > 0
+      : value !== undefined && value !== null;
   });
 }
