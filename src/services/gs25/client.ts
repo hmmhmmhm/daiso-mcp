@@ -7,7 +7,7 @@ import { fetchJson, fetchWithTimeout, HttpError } from '../../utils/http.js';
 import { GS25_API } from './api.js';
 import { normalizeStore, toNumber } from './storeUtils.js';
 import { fetchGs25StoreStockResponse } from './storeStockTransport.js';
-import type { Gs25Store, Gs25StoreStockResponse } from './types.js';
+import type { Gs25Store } from './types.js';
 
 export {
   fetchGs25NormalizedKeyword,
