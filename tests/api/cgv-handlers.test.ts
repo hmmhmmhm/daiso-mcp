@@ -35,6 +35,24 @@ function createMockContext(query: Record<string, string> = {}, env: Record<strin
 }
 
 describe('handleCgvFindTheaters', () => {
+  it('CGV 원본과 Zyte를 사용할 수 없으면 명시적인 503을 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('forbidden', { status: 403 }));
+
+    const ctx = createMockContext({ playDate: '20260304' });
+    await handleCgvFindTheaters(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'CGV_UPSTREAM_UNAVAILABLE',
+          message: 'CGV 원본 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.',
+        },
+      }),
+      503,
+    );
+  });
+
   it('CGV 극장 목록을 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
@@ -137,7 +155,10 @@ describe('handleCgvFindTheaters', () => {
         ),
       );
 
-    const ctx = createMockContext({ playDate: '20260315', keyword: '안산 중앙역' }, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    const ctx = createMockContext(
+      { playDate: '20260315', keyword: '안산 중앙역' },
+      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+    );
     await handleCgvFindTheaters(ctx);
 
     const payload = (ctx.json as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
@@ -255,6 +276,21 @@ describe('handleCgvFindTheaters', () => {
 });
 
 describe('handleCgvSearchMovies', () => {
+  it('CGV 원본과 Zyte를 사용할 수 없으면 명시적인 503을 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('forbidden', { status: 403 }));
+
+    const ctx = createMockContext({ playDate: '20260304', theaterCode: '0056' });
+    await handleCgvSearchMovies(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: expect.objectContaining({ code: 'CGV_UPSTREAM_UNAVAILABLE' }),
+      }),
+      503,
+    );
+  });
+
   it('CGV 영화 목록을 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
@@ -370,7 +406,10 @@ describe('handleCgvSearchMovies', () => {
         ),
       );
 
-    const ctx = createMockContext({ playDate: '20260315', keyword: '안산 중앙역' }, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    const ctx = createMockContext(
+      { playDate: '20260315', keyword: '안산 중앙역' },
+      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+    );
     await handleCgvSearchMovies(ctx);
 
     const payload = (ctx.json as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
@@ -446,6 +485,25 @@ describe('handleCgvSearchMovies', () => {
 });
 
 describe('handleCgvGetTimetable', () => {
+  it('CGV 원본과 Zyte를 사용할 수 없으면 명시적인 503을 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('forbidden', { status: 403 }));
+
+    const ctx = createMockContext({
+      playDate: '20260304',
+      theaterCode: '0056',
+      movieCode: '30000985',
+    });
+    await handleCgvGetTimetable(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: expect.objectContaining({ code: 'CGV_UPSTREAM_UNAVAILABLE' }),
+      }),
+      503,
+    );
+  });
+
   it('CGV 시간표를 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
@@ -735,7 +793,10 @@ describe('handleCgvGetTimetable', () => {
         ),
       );
 
-    const ctx = createMockContext({ playDate: '20260315', keyword: '안산 중앙역' }, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    const ctx = createMockContext(
+      { playDate: '20260315', keyword: '안산 중앙역' },
+      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+    );
     await handleCgvGetTimetable(ctx);
 
     const payload = (ctx.json as ReturnType<typeof vi.fn>).mock.calls[0][0] as {

@@ -2,7 +2,13 @@
  * CGV GET API 핸들러
  */
 
-import { fetchCgvMovies, fetchCgvTheaters, fetchCgvTimetable, toYyyymmdd } from '../services/cgv/client.js';
+import {
+  fetchCgvMovies,
+  fetchCgvTheaters,
+  fetchCgvTimetable,
+  toYyyymmdd,
+} from '../services/cgv/client.js';
+import { isCgvUpstreamUnavailableError } from '../services/cgv/errors.js';
 import { fetchCgvNearbyTheaters, resolveCgvNearestTheater } from '../services/cgv/location.js';
 import { filterAndSortTimetable } from '../services/cgv/timetable.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
@@ -75,6 +81,9 @@ export async function handleCgvFindTheaters(c: ApiContext) {
       { total: sliced.length, pageSize: limit },
     );
   } catch (error) {
+    if (isCgvUpstreamUnavailableError(error)) {
+      return errorResponse(c, 'CGV_UPSTREAM_UNAVAILABLE', error.message, 503);
+    }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'CGV_THEATER_SEARCH_FAILED', message, 500);
   }
@@ -95,7 +104,10 @@ export async function handleCgvSearchMovies(c: ApiContext) {
   try {
     let resolvedTheater = null;
 
-    if (!theaterCode && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+    if (
+      !theaterCode &&
+      (keyword || typeof latitude === 'number' || typeof longitude === 'number')
+    ) {
       const resolved = await resolveCgvNearestTheater(
         {
           playDate,
@@ -141,6 +153,9 @@ export async function handleCgvSearchMovies(c: ApiContext) {
       { total: movies.length },
     );
   } catch (error) {
+    if (isCgvUpstreamUnavailableError(error)) {
+      return errorResponse(c, 'CGV_UPSTREAM_UNAVAILABLE', error.message, 503);
+    }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'CGV_MOVIE_SEARCH_FAILED', message, 500);
   }
@@ -163,7 +178,10 @@ export async function handleCgvGetTimetable(c: ApiContext) {
   try {
     let resolvedTheater = null;
 
-    if (!theaterCode && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+    if (
+      !theaterCode &&
+      (keyword || typeof latitude === 'number' || typeof longitude === 'number')
+    ) {
       const resolved = await resolveCgvNearestTheater(
         {
           playDate,
@@ -218,6 +236,9 @@ export async function handleCgvGetTimetable(c: ApiContext) {
       { total: filtered.length, pageSize: limit },
     );
   } catch (error) {
+    if (isCgvUpstreamUnavailableError(error)) {
+      return errorResponse(c, 'CGV_UPSTREAM_UNAVAILABLE', error.message, 503);
+    }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'CGV_TIMETABLE_FETCH_FAILED', message, 500);
   }
