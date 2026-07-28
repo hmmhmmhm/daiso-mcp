@@ -15,6 +15,7 @@ import {
   geocodeGs25Address,
   sortGs25Stores,
 } from '../../../src/services/gs25/client.js';
+import { Gs25UpstreamUnavailableError } from '../../../src/services/gs25/errors.js';
 import { normalizeStore, toNumber } from '../../../src/services/gs25/storeUtils.js';
 
 const mockFetch = vi.fn();
@@ -74,14 +75,71 @@ describe('fetchGs25Stores', () => {
     );
   });
 
+  it('Zyte 대상이 인증을 거부하면 명시적인 upstream unavailable 오류를 던진다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403, statusText: 'Forbidden' }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            statusCode: 403,
+            httpResponseBody: Buffer.from('forbidden').toString('base64'),
+          }),
+        ),
+      );
+
+    await expect(
+      fetchGs25Stores({ useCache: false }, { zyteApiKey: 'test-zyte-key' }),
+    ).rejects.toBeInstanceOf(Gs25UpstreamUnavailableError);
+  });
+
+  it('Zyte 호출 자체가 실패해도 명시적인 upstream unavailable 오류를 던진다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403, statusText: 'Forbidden' }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: 'account suspended' }), { status: 403 }),
+      );
+
+    await expect(
+      fetchGs25Stores({ useCache: false }, { zyteApiKey: 'test-zyte-key' }),
+    ).rejects.toBeInstanceOf(Gs25UpstreamUnavailableError);
+  });
+
   it('store/stock 403이어도 Zyte 키가 없으면 원본 에러를 반환한다', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response('forbidden', { status: 403, statusText: 'Forbidden' }),
     );
 
-    await expect(fetchGs25Stores({ useCache: false })).rejects.toThrow(
-      'API 요청 실패: 403 Forbidden - forbidden',
+    await expect(fetchGs25Stores({ useCache: false })).rejects.toBeInstanceOf(
+      Gs25UpstreamUnavailableError,
     );
+  });
+
+  it('GS25 API 키가 있으면 store/stock 요청에만 전달한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ stores: [{ storeCode: 'VE463', storeName: '강남역점' }] })),
+    );
+
+    await fetchGs25Stores({ useCache: false }, { apiKey: 'test-gs25-key' });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Api-Key': 'test-gs25-key',
+        }),
+      }),
+    );
+  });
+
+  it('store/stock 인증 거부를 명시적인 upstream unavailable 오류로 변환한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response('authentication required', { status: 401, statusText: 'Unauthorized' }),
+    );
+
+    await expect(fetchGs25Stores({ useCache: false })).rejects.toMatchObject({
+      name: 'Gs25UpstreamUnavailableError',
+      message: expect.not.stringContaining('authentication required'),
+    });
   });
 
   it('GS25 매장 목록을 정규화해 반환한다', async () => {
@@ -194,7 +252,12 @@ describe('fetchGs25Stores', () => {
   it('기본 store/stock 요청에는 차단되는 페이지 파라미터를 넣지 않는다', async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ stores: [] })));
 
-    await fetchGs25Stores({ itemCode: '8801056038861', latitude: 37.5, longitude: 127, useCache: false });
+    await fetchGs25Stores({
+      itemCode: '8801056038861',
+      latitude: 37.5,
+      longitude: 127,
+      useCache: false,
+    });
 
     const calledUrl = new URL(String(mockFetch.mock.calls[0][0]));
     expect(calledUrl.searchParams.has('pageNumber')).toBe(false);
@@ -217,14 +280,11 @@ describe('fetchGs25WebStores', () => {
   it('GS25 웹 매장 검색 응답을 정규화한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
-        new Response(
-          '<form><input type="hidden" name="CSRFToken" value="csrf-token" /></form>',
-          {
-            headers: {
-              'Set-Cookie': 'JSESSIONID=session-id; Path=/; HttpOnly',
-            },
+        new Response('<form><input type="hidden" name="CSRFToken" value="csrf-token" /></form>', {
+          headers: {
+            'Set-Cookie': 'JSESSIONID=session-id; Path=/; HttpOnly',
           },
-        ),
+        }),
       )
       .mockResolvedValueOnce(
         new Response(

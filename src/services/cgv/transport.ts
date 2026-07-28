@@ -7,6 +7,7 @@
 import { createTimeoutController } from '../../utils/http.js';
 import { decodeZyteHttpBody, requestByZyte } from '../../utils/zyte.js';
 import { CGV_API } from './api.js';
+import { CgvUpstreamUnavailableError } from './errors.js';
 
 function toBase64(bytes: Uint8Array): string {
   if (typeof Buffer !== 'undefined') {
@@ -25,7 +26,11 @@ function toBase64(bytes: Uint8Array): string {
   throw new Error('Base64 인코딩을 지원하지 않는 런타임입니다.');
 }
 
-async function createSignature(pathname: string, bodyText: string, timestamp: string): Promise<string> {
+async function createSignature(
+  pathname: string,
+  bodyText: string,
+  timestamp: string,
+): Promise<string> {
   const payload = `${timestamp}|${pathname}|${bodyText}`;
   const encoder = new TextEncoder();
 
@@ -73,6 +78,9 @@ async function requestByZyteCgv<TResponse>(
     tags: { service: 'cgv' },
   });
 
+  if (result.statusCode === 401 || result.statusCode === 403) {
+    throw new CgvUpstreamUnavailableError();
+  }
   return decodeZyteHttpBody<TResponse>(result);
 }
 
@@ -103,8 +111,20 @@ export async function requestCgv<TResponse>(
       return await parseJsonResponse<TResponse>(response);
     }
 
-    if (response.status === 403 && zyteApiKey) {
-      return await requestByZyteCgv<TResponse>(path, searchParams, timeout, zyteApiKey);
+    if (response.status === 401 || response.status === 403) {
+      const normalizedZyteApiKey = zyteApiKey?.trim();
+      if (!normalizedZyteApiKey) {
+        throw new CgvUpstreamUnavailableError();
+      }
+
+      try {
+        return await requestByZyteCgv<TResponse>(path, searchParams, timeout, normalizedZyteApiKey);
+      } catch (fallbackError) {
+        if (fallbackError instanceof CgvUpstreamUnavailableError) {
+          throw fallbackError;
+        }
+        throw new CgvUpstreamUnavailableError();
+      }
     }
 
     throw new Error(`CGV API 호출 실패: ${response.status}`);

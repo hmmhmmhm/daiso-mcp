@@ -32,8 +32,15 @@ export function formatTime(raw: string | undefined): string {
 }
 
 export function toYyyymmdd(value: Date = new Date()): string {
-  const year = value.getFullYear();
-  const month = `${value.getMonth() + 1}`.padStart(2, '0');
-  const day = `${value.getDate()}`.padStart(2, '0');
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const year = byType.year;
+  const month = byType.month;
+  const day = byType.day;
   return `${year}${month}${day}`;
 }

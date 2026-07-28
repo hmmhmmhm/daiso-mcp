@@ -114,7 +114,9 @@ describe('GET /api/health/checks', () => {
     );
 
     expect(res.status).toBe(200);
-    expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/daiso-mcp\.example\.workers\.dev\/api\/lottemart\/products/);
+    expect(String(mockFetch.mock.calls[0][0])).toMatch(
+      /^https:\/\/daiso-mcp\.example\.workers\.dev\/api\/lottemart\/products/,
+    );
   });
 
   it('기본 internal transport는 같은 앱으로 내부 체크를 dispatch한다', async () => {
@@ -164,7 +166,9 @@ describe('GET /api/health/checks', () => {
           meta: { total: 1 },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ success: false, error: { message: 'upstream fail' } }, 500));
+      .mockResolvedValueOnce(
+        jsonResponse({ success: false, error: { message: 'upstream fail' } }, 500),
+      );
 
     const res = await app.request(
       '/api/health/checks?service=gs25&fresh=true&transport=network',
@@ -179,7 +183,10 @@ describe('GET /api/health/checks', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe('fail');
-    expect(data.checks.map((check: { id: string }) => check.id)).toEqual(['gs25.products', 'gs25.stores']);
+    expect(data.checks.map((check: { id: string }) => check.id)).toEqual([
+      'gs25.products',
+      'gs25.stores',
+    ]);
     expect(data.checks.map((check: { status: string }) => check.status)).toEqual(['ok', 'fail']);
   });
 
@@ -221,7 +228,9 @@ describe('GET /api/health/checks', () => {
       jsonResponse(
         {
           success: false,
-          error: { message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>' },
+          error: {
+            message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>',
+          },
         },
         502,
       ),
@@ -326,7 +335,9 @@ describe('GET /api/health/checks', () => {
       jsonResponse(
         {
           success: false,
-          error: { message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>' },
+          error: {
+            message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>',
+          },
         },
         502,
       ),
@@ -361,13 +372,20 @@ describe('GET /api/health/checks', () => {
           ? jsonResponse(
               {
                 success: false,
-                error: { message: 'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>' },
+                error: {
+                  message:
+                    'API 요청 실패: 403 Forbidden - <!DOCTYPE html><title>403 Forbidden</title>',
+                },
               },
               502,
             )
           : String(input).includes('/health')
             ? jsonResponse({ status: 'ok' })
-            : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+            : jsonResponse({
+                success: true,
+                data: { products: [{ name: '상품' }] },
+                meta: { total: 1 },
+              }),
       ),
     );
 
@@ -409,7 +427,11 @@ describe('GET /api/health/checks', () => {
             )
           : String(input).includes('/health')
             ? jsonResponse({ status: 'ok' })
-            : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+            : jsonResponse({
+                success: true,
+                data: { products: [{ name: '상품' }] },
+                meta: { total: 1 },
+              }),
       ),
     );
 
@@ -476,8 +498,16 @@ describe('GET /api/health/checks', () => {
     };
     const env = { HEALTH_CHECK_SECRET: 'test-secret', HEALTH_CHECK_TRANSPORT: 'network' };
 
-    const first = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
-    const second = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
+    const first = await app.request(
+      '/api/health/checks?check=daiso.products&fresh=true',
+      requestInit,
+      env,
+    );
+    const second = await app.request(
+      '/api/health/checks?check=daiso.products&fresh=true',
+      requestInit,
+      env,
+    );
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
@@ -502,8 +532,16 @@ describe('GET /api/health/checks', () => {
     };
     const env = { HEALTH_CHECK_SECRET: 'test-secret', HEALTH_CHECK_TRANSPORT: 'network' };
 
-    const first = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
-    const second = await app.request('/api/health/checks?check=daiso.products&fresh=true', requestInit, env);
+    const first = await app.request(
+      '/api/health/checks?check=daiso.products&fresh=true',
+      requestInit,
+      env,
+    );
+    const second = await app.request(
+      '/api/health/checks?check=daiso.products&fresh=true',
+      requestInit,
+      env,
+    );
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
@@ -531,11 +569,37 @@ describe('GET /api/health/checks', () => {
   });
 
   it('deep 모드와 y 플래그를 파싱하고 CLI 계약 체크를 실행한다', async () => {
+    const representative = {
+      id: '1',
+      code: '1',
+      name: '상품',
+      productCode: 'P1',
+      productName: '상품',
+      branchCode: 'B1',
+      branchName: '강남점',
+      storeCode: 'S1',
+      storeName: '강남점',
+      theaterCode: 'T1',
+      theaterName: '강남점',
+    };
     mockFetch.mockImplementation((input: RequestInfo | URL) =>
       Promise.resolve(
         String(input).includes('/health')
           ? jsonResponse({ status: 'ok' })
-          : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+          : jsonResponse({
+              success: true,
+              data: {
+                products: [representative],
+                stores: [representative],
+                theaters: [representative],
+                inventory: {
+                  products: [representative],
+                  items: [representative],
+                  stores: [representative],
+                },
+              },
+              meta: { total: 1 },
+            }),
       ),
     );
 
@@ -572,7 +636,11 @@ describe('GET /api/health/checks', () => {
       Promise.resolve(
         String(input).includes('/health')
           ? jsonResponse({ status: 'ok' })
-          : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+          : jsonResponse({
+              success: true,
+              data: { products: [{ name: '상품' }] },
+              meta: { total: 1 },
+            }),
       ),
     );
 
@@ -591,11 +659,15 @@ describe('GET /api/health/checks', () => {
     const data = await res.json();
     expect(data.filters.mode).toBe('full');
     expect(mockFetch).toHaveBeenCalled();
-    expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/daiso-mcp\.example\.workers\.dev\//);
-    expect(String(mockFetch.mock.calls[0][0])).toContain('_healthCheck=');
-    expect(new Headers((mockFetch.mock.calls[0][1] as RequestInit | undefined)?.headers).get('x-health-check-key')).toBe(
-      'test-secret',
+    expect(String(mockFetch.mock.calls[0][0])).toMatch(
+      /^https:\/\/daiso-mcp\.example\.workers\.dev\//,
     );
+    expect(String(mockFetch.mock.calls[0][0])).toContain('_healthCheck=');
+    expect(
+      new Headers((mockFetch.mock.calls[0][1] as RequestInit | undefined)?.headers).get(
+        'x-health-check-key',
+      ),
+    ).toBe('test-secret');
   });
 
   it('baseUrl 쿼리가 있으면 헬스 체크 기준 URL로 우선 사용한다', async () => {
@@ -621,9 +693,13 @@ describe('GET /api/health/checks', () => {
     );
 
     expect(res.status).toBe(200);
-    expect(String(mockFetch.mock.calls[0][0])).toMatch(/^https:\/\/probe\.example\.com\/api\/daiso\/products/);
+    expect(String(mockFetch.mock.calls[0][0])).toMatch(
+      /^https:\/\/probe\.example\.com\/api\/daiso\/products/,
+    );
     expect(
-      new Headers((mockFetch.mock.calls[0][1] as RequestInit | undefined)?.headers).get('x-health-check-key'),
+      new Headers((mockFetch.mock.calls[0][1] as RequestInit | undefined)?.headers).get(
+        'x-health-check-key',
+      ),
     ).toBeNull();
   });
 

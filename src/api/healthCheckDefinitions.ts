@@ -10,15 +10,9 @@ export const GS25_CLOUDFRONT_403_PATTERNS = [
   '403 ERROR',
 ];
 
-export const EMART24_UPSTREAM_403_PATTERNS = [
-  '403 Forbidden',
-  '<title>403 Forbidden</title>',
-];
+export const EMART24_UPSTREAM_403_PATTERNS = ['403 Forbidden', '<title>403 Forbidden</title>'];
 
-export const CU_UPSTREAM_BLOCK_PATTERNS = [
-  '400 Bad Request',
-  'Request Blocked',
-];
+export const CU_UPSTREAM_BLOCK_PATTERNS = ['400 Bad Request', 'Request Blocked'];
 
 export const SEVENELEVEN_UPSTREAM_403_PATTERNS = [
   '403 Forbidden',
@@ -119,6 +113,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     mode: 'quick',
     path: '/api/seveneleven/popwords?label=home',
     degradedFailurePatterns: SEVENELEVEN_UPSTREAM_403_PATTERNS,
+    allowEmpty: true,
   },
   {
     id: 'lottemart.products',
@@ -182,8 +177,8 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'inventory',
     mode: 'deep',
     path: '/api/emart24/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'inventoryItems',
-    requiredFields: ['pluCd', 'goodsName', 'itemName', 'name'],
+    collectionKey: 'stores',
+    requiredFields: ['storeCode', 'storeName', 'name'],
     degradedFailurePatterns: EMART24_UPSTREAM_403_PATTERNS,
   },
   {
@@ -192,8 +187,8 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'inventory',
     mode: 'deep',
     path: '/api/gs25/inventory?keyword=%EC%BD%9C%EB%9D%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
-    collectionKey: 'inventoryItems',
-    requiredFields: ['itemCode', 'itemName', 'name'],
+    collectionKey: 'inventoryStores',
+    requiredFields: ['storeCode', 'storeName', 'name'],
     degradedFailurePatterns: [
       '401 Unauthorized',
       '인증키가 제공되지 않음',
@@ -206,8 +201,8 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     target: 'inventory',
     mode: 'deep',
     path: '/api/seveneleven/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&size=1',
-    collectionKey: 'inventoryItems',
-    requiredFields: ['itemCode', 'itemName', 'productNo', 'name'],
+    collectionKey: 'inventoryStores',
+    requiredFields: ['storeCode', 'storeName', 'name'],
     degradedFailurePatterns: SEVENELEVEN_UPSTREAM_403_PATTERNS,
   },
   {

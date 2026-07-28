@@ -4,10 +4,10 @@
 /* c8 ignore start */
 
 import { fetchJson, fetchWithTimeout, HttpError } from '../../utils/http.js';
-import { decodeZyteHttpBody, requestByZyte } from '../../utils/zyte.js';
 import { GS25_API } from './api.js';
 import { normalizeStore, toNumber } from './storeUtils.js';
-import type { Gs25Store, Gs25StoreStockResponse } from './types.js';
+import { fetchGs25StoreStockResponse } from './storeStockTransport.js';
+import type { Gs25Store } from './types.js';
 
 export {
   fetchGs25NormalizedKeyword,
@@ -27,6 +27,7 @@ interface RequestOptions {
   timeout?: number;
   googleMapsApiKey?: string;
   zyteApiKey?: string;
+  apiKey?: string;
 }
 
 interface FetchGs25StoresParams {
@@ -140,36 +141,6 @@ function normalizeGs25WebStore(raw: Gs25WebLocationStore): Gs25Store {
     })),
     distanceM: null,
   };
-}
-
-async function fetchGs25StoreStock(
-  url: string,
-  options: RequestOptions,
-): Promise<Gs25StoreStockResponse> {
-  try {
-    return await fetchJson<Gs25StoreStockResponse>(url, {
-      ...GS25_DEFAULT_FETCH_OPTIONS,
-      method: 'GET',
-      timeout: options.timeout,
-      headers: GS25_DEFAULT_HEADERS,
-    });
-  } catch (error) {
-    const zyteApiKey = options.zyteApiKey?.trim();
-    if (!(error instanceof HttpError) || error.status !== 403 || !zyteApiKey) {
-      throw error;
-    }
-
-    const result = await requestByZyte({
-      apiKey: zyteApiKey,
-      url,
-      method: 'GET',
-      timeout: options.timeout,
-      retries: 1,
-      headers: Object.entries(GS25_DEFAULT_HEADERS).map(([name, value]) => ({ name, value })),
-      tags: { service: 'gs25' },
-    });
-    return decodeZyteHttpBody<Gs25StoreStockResponse>(result);
-  }
 }
 
 function buildCacheKey(
@@ -407,10 +378,15 @@ export async function fetchGs25Stores(
     endpoint.searchParams.set('isGs25DlvyStoreSelected', 'N');
   }
 
-  const body = await fetchGs25StoreStock(endpoint.toString(), {
-    timeout,
-    zyteApiKey: options.zyteApiKey,
-  });
+  const body = await fetchGs25StoreStockResponse(
+    endpoint.toString(),
+    {
+      timeout,
+      zyteApiKey: options.zyteApiKey,
+      apiKey: options.apiKey,
+    },
+    GS25_DEFAULT_HEADERS,
+  );
 
   const stores = (body.stores || [])
     .map(normalizeStore)

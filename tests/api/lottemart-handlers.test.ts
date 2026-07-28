@@ -13,7 +13,8 @@ import {
 } from '../../src/api/lottemartHandlers.js';
 
 const mockFetch = vi.fn();
-const createSessionResponse = () => new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
+const createSessionResponse = () =>
+  new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=TEST; path=/' } });
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -130,7 +131,10 @@ describe('handleLotteMartFindStores', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: { code: 'LOTTEMART_STORE_SEARCH_FAILED', message: '지원하지 않는 지역입니다: 잘못된지역' },
+        error: {
+          code: 'LOTTEMART_STORE_SEARCH_FAILED',
+          message: '지원하지 않는 지역입니다: 잘못된지역',
+        },
       }),
       500,
     );
@@ -176,7 +180,10 @@ describe('handleLotteMartSearchProducts', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: { code: 'MISSING_STORE', message: 'storeCode 또는 storeName 중 하나를 입력해주세요.' },
+        error: {
+          code: 'MISSING_STORE',
+          message: 'storeCode 또는 storeName 중 하나를 입력해주세요.',
+        },
       }),
       400,
     );
@@ -260,7 +267,12 @@ describe('handleLotteMartSearchProducts', () => {
   });
 
   it('지원하지 않는 source는 400을 반환한다', async () => {
-    const ctx = createMockContext({ area: '서울', storeCode: '2301', keyword: '콜라', source: 'bad' });
+    const ctx = createMockContext({
+      area: '서울',
+      storeCode: '2301',
+      keyword: '콜라',
+      source: 'bad',
+    });
     await handleLotteMartSearchProducts(ctx);
 
     expect(ctx.json).toHaveBeenCalledWith(
@@ -285,13 +297,18 @@ describe('handleLotteMartSearchProducts', () => {
       products: [],
     });
 
-    const ctx = createMockContext({ area: '서울', storeCode: '2301', keyword: '콜라', timeoutMs: '0' });
+    const ctx = createMockContext({
+      area: '서울',
+      storeCode: '2301',
+      keyword: '콜라',
+      timeoutMs: '0',
+    });
     await handleLotteMartSearchProducts(ctx);
 
     expect(searchSpy).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        timeout: 45000,
+        timeout: 15000,
       }),
     );
   });
@@ -375,7 +392,7 @@ describe('handleLotteMartDebug', () => {
         method: 'POST',
         url: 'https://company.lottemart.com/mobiledowa/market/search_shop.asp',
         bodyText: 'm_area=4401',
-        timeout: 45000,
+        timeout: 15000,
         hasZyteApiKey: false,
       },
       attempts: [
@@ -431,7 +448,9 @@ describe('handleLotteMartDebug', () => {
   });
 
   it('예외 발생 시 debug 에러를 반환한다', async () => {
-    vi.spyOn(lotteMartDebug, 'probeLotteMartUpstream').mockRejectedValueOnce(new Error('debug fail'));
+    vi.spyOn(lotteMartDebug, 'probeLotteMartUpstream').mockRejectedValueOnce(
+      new Error('debug fail'),
+    );
 
     const ctx = createMockContext({ target: 'stores' });
     await handleLotteMartDebug(ctx);

@@ -98,22 +98,46 @@ describe('runHealthChecks', () => {
       expect.stringContaining('/api/lottemart/products?'),
       expect.any(Object),
     );
-    const oliveyoungCall = fetchImpl.mock.calls.find((call) => String(call[0]).includes('/api/oliveyoung/products?'));
+    const oliveyoungCall = fetchImpl.mock.calls.find((call) =>
+      String(call[0]).includes('/api/oliveyoung/products?'),
+    );
     expect(String(oliveyoungCall?.[0])).toContain('timeoutMs=5000');
   });
 
   it('full 모드에서 quick과 deep 체크를 함께 실행한다', async () => {
+    const representative = {
+      id: 'A1',
+      name: '상품',
+      productName: '상품',
+      itemCode: 'A1',
+      itemName: '상품',
+      goodsNumber: 'A1',
+      goodsName: '상품',
+      pluCd: 'A1',
+      productNo: 'A1',
+      storeCode: 'S1',
+      storeName: '매장',
+      theaterCode: 'T1',
+      theaterName: '극장',
+    };
     const fetchImpl = vi.fn((input: RequestInfo | URL) =>
       Promise.resolve(
         String(input).includes('/health')
           ? jsonResponse({ status: 'ok' })
-          : String(input).includes('/inventory')
-            ? jsonResponse({
-                success: true,
-                data: { inventory: { products: [{ name: '상품' }], items: [{ name: '상품' }] } },
-                meta: { total: 1 },
-              })
-            : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } }),
+          : jsonResponse({
+              success: true,
+              data: {
+                products: [representative],
+                stores: [representative],
+                theaters: [representative],
+                inventory: {
+                  products: [representative],
+                  items: [representative],
+                  stores: [representative],
+                },
+              },
+              meta: { total: 1 },
+            }),
       ),
     );
 
@@ -142,7 +166,11 @@ describe('runHealthChecks', () => {
 
       return String(input).includes('/health')
         ? jsonResponse({ status: 'ok' })
-        : jsonResponse({ success: true, data: { products: [{ name: '상품' }] }, meta: { total: 1 } });
+        : jsonResponse({
+            success: true,
+            data: { products: [{ name: '상품' }] },
+            meta: { total: 1 },
+          });
     });
 
     const result = await runHealthChecks({
@@ -281,6 +309,64 @@ describe('runHealthChecks', () => {
     expect(String(fetchImpl.mock.calls[0][0])).toContain('storeCheck=false');
   });
 
+  it('GS25 inventory stores 응답에서 개수와 매장 이름을 읽는다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          inventory: {
+            stores: [{ storeCode: 'G1', storeName: '강남점' }],
+          },
+        },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'gs25.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+      includeSamples: true,
+    });
+
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        message: '1 item(s) returned',
+        sample: { first: '강남점' },
+      }),
+    );
+  });
+
+  it('이마트24 inventory의 top-level stores 응답을 읽는다', async () => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        data: {
+          stores: [{ storeCode: 'E1', storeName: '강남점' }],
+        },
+      }),
+    );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'emart24.inventory',
+      mode: 'deep',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'ok',
+        message: '1 item(s) returned',
+      }),
+    );
+  });
+
   it('CU 재고 조회 Request Blocked 400은 degraded로 처리한다', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse(
@@ -315,7 +401,7 @@ describe('runHealthChecks', () => {
     );
   });
 
-  it('inventory 컬렉션 값이 배열이 아니면 빈 컬렉션으로 처리한다', async () => {
+  it('필수 inventory 컬렉션 값이 배열이 아니면 degraded로 처리한다', async () => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         success: true,
@@ -338,14 +424,18 @@ describe('runHealthChecks', () => {
 
     expect(result.checks[0]).toEqual(
       expect.objectContaining({
-        status: 'ok',
-        message: 'response ok',
+        status: 'degraded',
+        message: 'response count unavailable',
       }),
     );
   });
 
   it('느린 성공 응답은 degraded로 표시한다', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }),
+      );
     const timestamps = [0, 1000, 7000, 7000];
 
     const result = await runHealthChecks({
@@ -368,7 +458,11 @@ describe('runHealthChecks', () => {
   });
 
   it('cacheBust가 켜지면 체크 URL에 캐시 우회 파라미터를 붙인다', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }),
+      );
 
     await runHealthChecks({
       baseUrl: 'https://example.com',
@@ -466,7 +560,9 @@ describe('runHealthChecks', () => {
       if (this !== globalThis) {
         throw new Error('invalid fetch this');
       }
-      return Promise.resolve(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+      return Promise.resolve(
+        jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }),
+      );
     });
     vi.stubGlobal('fetch', globalFetch);
 
@@ -482,7 +578,9 @@ describe('runHealthChecks', () => {
   });
 
   it('빈 결과는 degraded 상태로 집계한다', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [] } }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [] } }));
 
     const result = await runHealthChecks({
       baseUrl: 'https://example.com',
@@ -501,8 +599,10 @@ describe('runHealthChecks', () => {
     );
   });
 
-  it('카운트를 알 수 없는 성공 응답은 ok로 처리한다', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { pong: true } }));
+  it('카운트를 알 수 없는 성공 응답은 degraded로 처리한다', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { pong: true } }));
 
     const result = await runHealthChecks({
       baseUrl: 'https://example.com',
@@ -512,12 +612,38 @@ describe('runHealthChecks', () => {
       fresh: true,
     });
 
-    expect(result.status).toBe('ok');
-    expect(result.checks[0].message).toBe('response ok');
+    expect(result.status).toBe('degraded');
+    expect(result.checks[0].message).toBe('response count unavailable');
+  });
+
+  it('선택적 인기 검색어가 비면 skipped로 처리한다', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { available: false, count: 0, keywords: [] } }),
+      );
+
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com',
+      check: 'seveneleven.popwords',
+      fetchImpl,
+      now: () => 1000,
+      fresh: true,
+    });
+
+    expect(result.status).toBe('skipped');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'skipped',
+        message: 'optional data unavailable',
+      }),
+    );
   });
 
   it('data.count 값을 결과 개수로 사용한다', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { count: 2 } }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: { count: 2 } }));
 
     const result = await runHealthChecks({
       baseUrl: 'https://example.com',
@@ -527,7 +653,12 @@ describe('runHealthChecks', () => {
       fresh: true,
     });
 
-    expect(result.checks[0].message).toBe('2 item(s) returned');
+    expect(result.checks[0]).toEqual(
+      expect.objectContaining({
+        status: 'degraded',
+        message: expect.stringContaining('response missing required fields'),
+      }),
+    );
   });
 
   it('대표 필드가 숫자로 내려와도 shape를 통과한다', async () => {
@@ -572,7 +703,9 @@ describe('runHealthChecks', () => {
   it('대표 컬렉션 필드가 바뀌면 degraded 메시지를 반환한다', async () => {
     const fetchImpl = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ unexpected: 'value' }] } }));
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { products: [{ unexpected: 'value' }] } }),
+      );
 
     const result = await runHealthChecks({
       baseUrl: 'https://example.com',
@@ -857,7 +990,9 @@ describe('runHealthChecks', () => {
   });
 
   it('timeoutMs를 기본값과 최대값으로 보정한다', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
 
     await runHealthChecks({
       baseUrl: 'https://example.com',
@@ -881,7 +1016,11 @@ describe('runHealthChecks', () => {
   });
 
   it('timeoutMs가 1보다 작으면 기본값으로 보정한다', async () => {
-    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }));
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }),
+      );
 
     await runHealthChecks({
       baseUrl: 'https://example.com',

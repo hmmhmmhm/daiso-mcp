@@ -61,14 +61,11 @@ describe('handleGs25FindStores', () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
       .mockResolvedValueOnce(
-        new Response(
-          '<form><input type="hidden" name="CSRFToken" value="csrf-token" /></form>',
-          {
-            headers: {
-              'Set-Cookie': 'JSESSIONID=session-id; Path=/; HttpOnly',
-            },
+        new Response('<form><input type="hidden" name="CSRFToken" value="csrf-token" /></form>', {
+          headers: {
+            'Set-Cookie': 'JSESSIONID=session-id; Path=/; HttpOnly',
           },
-        ),
+        }),
       )
       .mockResolvedValueOnce(
         new Response(
@@ -117,7 +114,11 @@ describe('handleGs25FindStores', () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
+        new Response(
+          JSON.stringify({
+            stores: [{ storeCode: '1', storeName: '강남역점', storeAddress: '서울 강남구' }],
+          }),
+        ),
       );
 
     await handleGs25FindStores(ctx);
@@ -277,6 +278,41 @@ describe('handleGs25SearchProducts', () => {
 });
 
 describe('handleGs25CheckInventory', () => {
+  it('GS25 재고 인증이 거부되면 명시적인 503을 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response('authentication required', { status: 401, statusText: 'Unauthorized' }),
+    );
+
+    const ctx = createMockContext({ itemCode: '123' });
+    await handleGs25CheckInventory(ctx);
+
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: {
+          code: 'GS25_UPSTREAM_UNAVAILABLE',
+          message: 'GS25 재고 서비스 인증을 사용할 수 없습니다. 잠시 후 다시 시도해주세요.',
+        },
+      }),
+      503,
+    );
+  });
+
+  it('Worker의 GS25 API 키를 재고 요청에 전달한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })));
+
+    const ctx = createMockContext({ itemCode: '123' });
+    (ctx as { env: Record<string, string> }).env = { GS25_API_KEY: 'test-gs25-key' };
+    await handleGs25CheckInventory(ctx);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'Api-Key': 'test-gs25-key' }),
+      }),
+    );
+  });
+
   it('keyword가 없으면 에러를 반환한다', async () => {
     const ctx = createMockContext({});
     await handleGs25CheckInventory(ctx);
@@ -358,7 +394,9 @@ describe('handleGs25CheckInventory', () => {
       new Response(
         JSON.stringify({
           SearchQueryResult: {
-            Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+            Collection: [
+              { Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } },
+            ],
           },
         }),
       ),
@@ -397,7 +435,9 @@ describe('handleGs25CheckInventory', () => {
     const zyteBody = Buffer.from(
       JSON.stringify({
         SearchQueryResult: {
-          Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+          Collection: [
+            { Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } },
+          ],
         },
       }),
       'utf8',
@@ -455,7 +495,9 @@ describe('handleGs25CheckInventory', () => {
         new Response(
           JSON.stringify({
             SearchQueryResult: {
-              Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+              Collection: [
+                { Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } },
+              ],
             },
           }),
         ),
@@ -463,7 +505,14 @@ describe('handleGs25CheckInventory', () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            stores: [{ storeCode: '1', storeName: '강남역점', searchItemName: '오감자', realStockQuantity: 1 }],
+            stores: [
+              {
+                storeCode: '1',
+                storeName: '강남역점',
+                searchItemName: '오감자',
+                realStockQuantity: 1,
+              },
+            ],
           }),
         ),
       );
@@ -487,7 +536,11 @@ describe('handleGs25CheckInventory', () => {
     mockFetch
       // 1. storeKeyword 기준 매장 조회 (지오코딩 주소 획득용)
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }] })),
+        new Response(
+          JSON.stringify({
+            stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }],
+          }),
+        ),
       )
       // 2. 지오코딩 실패
       .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ZERO_RESULTS', results: [] })))
@@ -496,14 +549,22 @@ describe('handleGs25CheckInventory', () => {
         new Response(
           JSON.stringify({
             SearchQueryResult: {
-              Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } }],
+              Collection: [
+                { Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } },
+              ],
             },
           }),
         ),
       )
       // 4. store/stock API (기본 좌표 사용)
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ stores: [{ storeCode: '1', storeName: '강남역점', searchItemName: '', realStockQuantity: 0 }] })),
+        new Response(
+          JSON.stringify({
+            stores: [
+              { storeCode: '1', storeName: '강남역점', searchItemName: '', realStockQuantity: 0 },
+            ],
+          }),
+        ),
       );
 
     await handleGs25CheckInventory(ctx);

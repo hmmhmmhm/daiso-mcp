@@ -28,6 +28,7 @@ interface FindNearbyStoresArgs {
   timeoutMs?: number;
   googleMapsApiKey?: string;
   zyteApiKey?: string;
+  apiKey?: string;
 }
 
 async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResponse> {
@@ -40,6 +41,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     timeoutMs = 20000,
     googleMapsApiKey = getProcessEnvValue('GOOGLE_MAPS_API_KEY'),
     zyteApiKey = getProcessEnvValue('ZYTE_API_KEY'),
+    apiKey = getProcessEnvValue('GS25_API_KEY'),
   } = args;
 
   let resolvedLatitude = latitude;
@@ -70,6 +72,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     {
       timeout: timeoutMs,
       zyteApiKey,
+      apiKey,
     },
   );
   let fallbackUsed = false;
@@ -92,6 +95,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
         {
           timeout: timeoutMs,
           zyteApiKey,
+          apiKey,
         },
       );
 
@@ -149,6 +153,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
 export function createFindNearbyStoresTool(
   googleMapsApiKey?: string,
   zyteApiKey?: string,
+  apiKey?: string,
 ): ToolRegistration {
   return {
     name: 'gs25_find_nearby_stores',
@@ -173,6 +178,7 @@ export function createFindNearbyStoresTool(
         ...args,
         googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
         zyteApiKey: args.zyteApiKey || zyteApiKey,
+        apiKey: args.apiKey || apiKey,
       })) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

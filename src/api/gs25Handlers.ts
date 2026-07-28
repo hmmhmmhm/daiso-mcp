@@ -14,6 +14,7 @@ import {
   selectGs25StoresForKeyword,
   sortGs25Stores,
 } from '../services/gs25/client.js';
+import { isGs25UpstreamUnavailableError } from '../services/gs25/errors.js';
 
 const GS25_FALLBACK_STORE_LOOKUP_ITEM_CODE = '8801117752804';
 
@@ -62,6 +63,7 @@ export async function handleGs25FindStores(c: ApiContext) {
       {
         timeout: 20000,
         zyteApiKey: c.env?.ZYTE_API_KEY,
+        apiKey: c.env?.GS25_API_KEY,
       },
     );
     let fallbackUsed = false;
@@ -84,6 +86,7 @@ export async function handleGs25FindStores(c: ApiContext) {
           {
             timeout: 20000,
             zyteApiKey: c.env?.ZYTE_API_KEY,
+            apiKey: c.env?.GS25_API_KEY,
           },
         );
 
@@ -242,6 +245,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           {
             timeout: 20000,
             zyteApiKey: c.env?.ZYTE_API_KEY,
+            apiKey: c.env?.GS25_API_KEY,
           },
         );
 
@@ -284,6 +288,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         {
           timeout: 20000,
           zyteApiKey: c.env?.ZYTE_API_KEY,
+          apiKey: c.env?.GS25_API_KEY,
         },
       );
     } else {
@@ -309,6 +314,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           {
             timeout: 20000,
             zyteApiKey: c.env?.ZYTE_API_KEY,
+            apiKey: c.env?.GS25_API_KEY,
           },
         );
       } else {
@@ -324,6 +330,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           {
             timeout: 20000,
             zyteApiKey: c.env?.ZYTE_API_KEY,
+            apiKey: c.env?.GS25_API_KEY,
           },
         );
       }
@@ -378,6 +385,9 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       },
     });
   } catch (error) {
+    if (isGs25UpstreamUnavailableError(error)) {
+      return errorResponse(c, 'GS25_UPSTREAM_UNAVAILABLE', error.message, 503);
+    }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'GS25_INVENTORY_CHECK_FAILED', message, 500);
   }

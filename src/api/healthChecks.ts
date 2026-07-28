@@ -78,7 +78,9 @@ function createCacheKey(params: HealthCheckCacheKeyParams): string {
   ].join('|');
 }
 
-function selectChecks(params: Pick<RunHealthChecksParams, 'service' | 'check' | 'mode'>): HealthCheckDefinition[] {
+function selectChecks(
+  params: Pick<RunHealthChecksParams, 'service' | 'check' | 'mode'>,
+): HealthCheckDefinition[] {
   const mode = params.mode || 'quick';
   return HEALTH_CHECKS.filter((check) => {
     if (mode !== 'full' && check.mode !== mode) {
@@ -126,6 +128,9 @@ function aggregateStatus(checks: HealthCheckResult[]): HealthCheckStatus {
   if (checks.some((check) => check.status === 'degraded')) {
     return 'degraded';
   }
+  if (checks.every((check) => check.status === 'skipped')) {
+    return 'skipped';
+  }
   return 'ok';
 }
 
@@ -146,7 +151,10 @@ function shouldDegradeCliContractPath(path: string, message: string): boolean {
   return false;
 }
 
-function resolveCheckTimeoutMs(check: Pick<HealthCheckDefinition, 'timeoutMs'>, timeoutMs: number): number {
+function resolveCheckTimeoutMs(
+  check: Pick<HealthCheckDefinition, 'timeoutMs'>,
+  timeoutMs: number,
+): number {
   if (check.timeoutMs === undefined) {
     return timeoutMs;
   }
@@ -160,7 +168,12 @@ function resolveCliContractTimeoutMs(path: string, timeoutMs: number): number {
   return timeoutMs;
 }
 
-function buildCheckUrl(baseUrl: string, check: HealthCheckDefinition, timeoutMs: number, cacheBustValue?: number): string {
+function buildCheckUrl(
+  baseUrl: string,
+  check: HealthCheckDefinition,
+  timeoutMs: number,
+  cacheBustValue?: number,
+): string {
   const url = new URL(check.path, baseUrl);
   url.searchParams.set('timeoutMs', String(timeoutMs));
   if (typeof cacheBustValue === 'number') {
@@ -210,9 +223,12 @@ async function runCliContractCheck(
     const checkTimeoutMs = resolveCliContractTimeoutMs(path, params.timeoutMs);
     const syntheticCheck = { ...check, path };
     try {
-      const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, syntheticCheck, checkTimeoutMs, cacheBustValue), {
-        signal: AbortSignal.timeout(checkTimeoutMs),
-      });
+      const response = await params.fetchImpl(
+        buildCheckUrl(params.baseUrl, syntheticCheck, checkTimeoutMs, cacheBustValue),
+        {
+          signal: AbortSignal.timeout(checkTimeoutMs),
+        },
+      );
       const body = (await response.json().catch(() => ({}))) as {
         success?: boolean;
         status?: string;
@@ -275,9 +291,12 @@ async function runSingleCheck(
   const cacheBustValue = params.cacheBust ? startedAt : undefined;
 
   try {
-    const response = await params.fetchImpl(buildCheckUrl(params.baseUrl, check, timeoutMs, cacheBustValue), {
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    const response = await params.fetchImpl(
+      buildCheckUrl(params.baseUrl, check, timeoutMs, cacheBustValue),
+      {
+        signal: AbortSignal.timeout(timeoutMs),
+      },
+    );
     const body = (await response.json().catch(() => ({}))) as {
       success?: boolean;
       data?: unknown;
@@ -300,19 +319,31 @@ async function runSingleCheck(
     }
 
     const count = typeof body.meta?.total === 'number' ? body.meta.total : toCount(body.data);
-    const shapeOk = hasRequiredRepresentativeFields(body.data, check.collectionKey, check.requiredFields);
+    const shapeOk = hasRequiredRepresentativeFields(
+      body.data,
+      check.collectionKey,
+      check.requiredFields,
+    );
     const slowThresholdMs = params.slowThresholdMs || DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS;
     const slow = slowThresholdMs > 0 && durationMs > slowThresholdMs;
-    const status: HealthCheckStatus = count === 0 || !shapeOk || slow ? 'degraded' : 'ok';
+    const optionalEmpty = check.allowEmpty === true && count === 0;
+    const status: HealthCheckStatus = slow
+      ? 'degraded'
+      : optionalEmpty
+        ? 'skipped'
+        : count === null || count === 0 || !shapeOk
+          ? 'degraded'
+          : 'ok';
     const first = params.includeSamples ? toFirstName(body.data) : undefined;
-    const message =
-      slow
-        ? `slow response: ${durationMs}ms > ${slowThresholdMs}ms`
-        : !shapeOk && count !== 0
-        ? `response missing required fields: ${check.requiredFields!.join(', ')}`
+    const message = slow
+      ? `slow response: ${durationMs}ms > ${slowThresholdMs}ms`
+      : optionalEmpty
+        ? 'optional data unavailable'
         : count === null
-          ? 'response ok'
-          : `${count} item(s) returned`;
+          ? 'response count unavailable'
+          : !shapeOk && count !== 0
+            ? `response missing required fields: ${check.requiredFields!.join(', ')}`
+            : `${count} item(s) returned`;
 
     return {
       id: check.id,
@@ -345,7 +376,13 @@ export async function runHealthChecks(params: RunHealthChecksParams): Promise<He
     Number.isFinite(params.slowThresholdMs) && params.slowThresholdMs && params.slowThresholdMs > 0
       ? Math.trunc(params.slowThresholdMs)
       : DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS;
-  const cacheKey = createCacheKey({ ...params, mode, timeoutMs, slowThresholdMs, baseUrl: params.baseUrl });
+  const cacheKey = createCacheKey({
+    ...params,
+    mode,
+    timeoutMs,
+    slowThresholdMs,
+    baseUrl: params.baseUrl,
+  });
   const cached = healthCheckCache.get(cacheKey);
   const startedAt = now();
 
@@ -356,7 +393,10 @@ export async function runHealthChecks(params: RunHealthChecksParams): Promise<He
     };
   }
 
-  const checks = await mapWithConcurrency(selectChecks(params), DEFAULT_HEALTH_CHECK_CONCURRENCY, (check) =>
+  const checks = await mapWithConcurrency(
+    selectChecks(params),
+    DEFAULT_HEALTH_CHECK_CONCURRENCY,
+    (check) =>
       runSingleCheck(check, {
         baseUrl: params.baseUrl,
         fetchImpl,

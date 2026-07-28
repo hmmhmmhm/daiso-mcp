@@ -9,6 +9,7 @@ import {
   fetchCgvTimetable,
   toYyyymmdd,
 } from '../../../src/services/cgv/client.js';
+import { CgvUpstreamUnavailableError } from '../../../src/services/cgv/errors.js';
 
 const mockFetch = vi.fn();
 
@@ -171,9 +172,7 @@ describe('fetchCgvMovies', () => {
           JSON.stringify({
             statusCode: 0,
             statusMessage: '조회 되었습니다.',
-            data: [
-              { regnGrpCd: '01', siteList: [{ siteNo: '0056', siteNm: '강남' }] },
-            ],
+            data: [{ regnGrpCd: '01', siteList: [{ siteNo: '0056', siteNm: '강남' }] }],
           }),
         ),
       )
@@ -606,8 +605,8 @@ describe('fetchCgvTimetable', () => {
         ),
       );
 
-    await expect(fetchCgvTheaters({ zyteApiKey: 'test-key' })).rejects.toThrow(
-      'Zyte API 호출 실패: 400 zyte fail',
+    await expect(fetchCgvTheaters({ zyteApiKey: 'test-key' })).rejects.toBeInstanceOf(
+      CgvUpstreamUnavailableError,
     );
   });
 
@@ -623,8 +622,8 @@ describe('fetchCgvTimetable', () => {
         ),
       );
 
-    await expect(fetchCgvTheaters({ zyteApiKey: 'test-key' })).rejects.toThrow(
-      'Zyte HTTP 응답 본문이 비어 있습니다.',
+    await expect(fetchCgvTheaters({ zyteApiKey: 'test-key' })).rejects.toBeInstanceOf(
+      CgvUpstreamUnavailableError,
     );
   });
 
@@ -634,8 +633,8 @@ describe('fetchCgvTimetable', () => {
 
     mockFetch.mockResolvedValue(new Response('forbidden', { status: 403 }));
 
-    await expect(fetchCgvTheaters({ zyteApiKey: '   ' })).rejects.toThrow(
-      'ZYTE_API_KEY가 설정되지 않았습니다.',
+    await expect(fetchCgvTheaters({ zyteApiKey: '   ' })).rejects.toBeInstanceOf(
+      CgvUpstreamUnavailableError,
     );
 
     process.env.ZYTE_API_KEY = original;
@@ -938,7 +937,6 @@ describe('fetchCgvTimetable', () => {
     const result = await fetchCgvTimetable({ playDate: '20260304' });
     expect(result).toEqual([]);
   });
-
 });
 
 describe('toYyyymmdd', () => {
