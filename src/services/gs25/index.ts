@@ -18,6 +18,7 @@ const GS25_METADATA: ServiceMetadata = {
 interface Gs25ServiceOptions {
   googleMapsApiKey?: string;
   zyteApiKey?: string;
+  apiKey?: string;
 }
 
 class Gs25Service implements ServiceProvider {
@@ -27,9 +28,17 @@ class Gs25Service implements ServiceProvider {
 
   getTools(): ToolRegistration[] {
     return [
-      createFindNearbyStoresTool(this.options.googleMapsApiKey, this.options.zyteApiKey),
+      createFindNearbyStoresTool(
+        this.options.googleMapsApiKey,
+        this.options.zyteApiKey,
+        this.options.apiKey,
+      ),
       createSearchProductsTool(this.options.zyteApiKey),
-      createCheckInventoryTool(this.options.googleMapsApiKey, this.options.zyteApiKey),
+      createCheckInventoryTool(
+        this.options.googleMapsApiKey,
+        this.options.zyteApiKey,
+        this.options.apiKey,
+      ),
     ];
   }
 }

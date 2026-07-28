@@ -30,6 +30,7 @@ interface CheckInventoryArgs {
   timeoutMs?: number;
   googleMapsApiKey?: string;
   zyteApiKey?: string;
+  apiKey?: string;
 }
 
 async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
@@ -44,6 +45,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     timeoutMs = 20000,
     googleMapsApiKey = getProcessEnvValue('GOOGLE_MAPS_API_KEY'),
     zyteApiKey = getProcessEnvValue('ZYTE_API_KEY'),
+    apiKey = getProcessEnvValue('GS25_API_KEY'),
   } = args;
 
   if (!keyword || keyword.trim().length === 0) {
@@ -68,6 +70,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       {
         timeout: timeoutMs,
         zyteApiKey,
+        apiKey,
       },
     );
     const firstAddress =
@@ -118,6 +121,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       {
         timeout: timeoutMs,
         zyteApiKey,
+        apiKey,
       },
     );
   } else {
@@ -144,6 +148,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         {
           timeout: timeoutMs,
           zyteApiKey,
+          apiKey,
         },
       );
     } else {
@@ -160,6 +165,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         {
           timeout: timeoutMs,
           zyteApiKey,
+          apiKey,
         },
       );
     }
@@ -233,6 +239,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
 export function createCheckInventoryTool(
   googleMapsApiKey?: string,
   zyteApiKey?: string,
+  apiKey?: string,
 ): ToolRegistration {
   return {
     name: 'gs25_check_inventory',
@@ -273,6 +280,7 @@ export function createCheckInventoryTool(
         ...args,
         googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
         zyteApiKey: args.zyteApiKey || zyteApiKey,
+        apiKey: args.apiKey || apiKey,
       })) as (args: unknown) => Promise<McpToolResponse>,
   };
 }
