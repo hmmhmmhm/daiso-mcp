@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as session from '../../../src/services/lottemart/session.js';
-import { buildLotteMartDebugRequest, probeLotteMartUpstream } from '../../../src/services/lottemart/debug.js';
+import {
+  buildLotteMartDebugRequest,
+  probeLotteMartUpstream,
+} from '../../../src/services/lottemart/debug.js';
 
 describe('buildLotteMartDebugRequest', () => {
   it('market-options 요청을 만든다', () => {
@@ -26,7 +29,9 @@ describe('buildLotteMartDebugRequest', () => {
     });
 
     expect(request.method).toBe('POST');
-    expect(request.bodyText).toBe('m_area=%EC%84%9C%EC%9A%B8&m_market=2301&m_schWord=%EA%B0%95%EB%B3%80');
+    expect(request.bodyText).toBe(
+      'm_area=%EC%84%9C%EC%9A%B8&m_market=2301&m_schWord=%EA%B0%95%EB%B3%80',
+    );
   });
 
   it('products 요청을 만든다', () => {
@@ -38,7 +43,9 @@ describe('buildLotteMartDebugRequest', () => {
     });
 
     expect(request.method).toBe('POST');
-    expect(request.bodyText).toBe('p_area=%EA%B2%BD%EA%B8%B0&p_market=2415&p_schWord=%ED%95%AB%EC%8B%9D%EC%8A%A4');
+    expect(request.bodyText).toBe(
+      'p_area=%EA%B2%BD%EA%B8%B0&p_market=2415&p_schWord=%ED%95%AB%EC%8B%9D%EC%8A%A4',
+    );
   });
 
   it('product-page 요청을 만든다', () => {
@@ -73,7 +80,9 @@ describe('buildLotteMartDebugRequest', () => {
     expect(marketOptions.url).toContain('p_area=%EA%B2%BD%EA%B8%B0');
     expect(marketOptions.url).toContain('p_type=1');
     expect(stores.bodyText).toBe('m_area=%EA%B2%BD%EA%B8%B0');
-    expect(products.bodyText).toBe('p_area=%EA%B2%BD%EA%B8%B0&p_market=2415&p_schWord=%ED%95%AB%EC%8B%9D%EC%8A%A4');
+    expect(products.bodyText).toBe(
+      'p_area=%EA%B2%BD%EA%B8%B0&p_market=2415&p_schWord=%ED%95%AB%EC%8B%9D%EC%8A%A4',
+    );
     expect(productPage.url).toContain('p_market=2415');
     expect(productPage.url).toContain('p_schWord=%ED%95%AB%EC%8B%9D%EC%8A%A4');
     expect(productPage.url).toContain('page=2');
@@ -140,7 +149,7 @@ describe('probeLotteMartUpstream', () => {
           'X-Requested-With': 'XMLHttpRequest',
         }),
       }),
-      45000,
+      15000,
       '',
       undefined,
     );

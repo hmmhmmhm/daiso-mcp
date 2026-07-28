@@ -62,7 +62,9 @@ describe('lottemart session helpers', () => {
 
   it('빈 바디와 세션 쿠키를 받으면 같은 요청을 한 번 더 시도한다', async () => {
     mockFetch
-      .mockResolvedValueOnce(new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=A; path=/' } }))
+      .mockResolvedValueOnce(
+        new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=A; path=/' } }),
+      )
       .mockResolvedValueOnce(new Response('ok'));
 
     await expect(
@@ -83,7 +85,9 @@ describe('lottemart session helpers', () => {
   });
 
   it('정상 HTML 응답의 세션 쿠키를 캐시에 반영한다', async () => {
-    mockFetch.mockResolvedValue(new Response('ok', { headers: { 'set-cookie': 'ASPSESSIONID=B; path=/' } }));
+    mockFetch.mockResolvedValue(
+      new Response('ok', { headers: { 'set-cookie': 'ASPSESSIONID=B; path=/' } }),
+    );
 
     await expect(
       fetchLotteMartHtml(
@@ -100,15 +104,29 @@ describe('lottemart session helpers', () => {
   });
 
   it('강제 새로고침이면 캐시를 비운다', async () => {
-    mockFetch.mockResolvedValue(new Response('ok', { headers: { 'set-cookie': 'ASPSESSIONID=C; path=/' } }));
-    await fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, '');
+    mockFetch.mockResolvedValue(
+      new Response('ok', { headers: { 'set-cookie': 'ASPSESSIONID=C; path=/' } }),
+    );
+    await fetchLotteMartHtml(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      '',
+    );
 
     await expect(getCachedLotteMartSessionCookie(1000, true)).resolves.toBe('');
   });
 
   it('getFreshLotteMartSessionCookie는 캐시를 비운 뒤 빈 문자열을 반환한다', async () => {
-    mockFetch.mockResolvedValue(new Response('ok', { headers: { 'set-cookie': 'ASPSESSIONID=C; path=/' } }));
-    await fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, '');
+    mockFetch.mockResolvedValue(
+      new Response('ok', { headers: { 'set-cookie': 'ASPSESSIONID=C; path=/' } }),
+    );
+    await fetchLotteMartHtml(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      '',
+    );
 
     await expect(getFreshLotteMartSessionCookie(1000)).resolves.toBe('');
   });
@@ -119,15 +137,24 @@ describe('lottemart session helpers', () => {
     headers.getSetCookie = () => ['ASPSESSIONID=D; path=/', 'other=value; path=/'];
     mockFetch.mockResolvedValue(response);
 
-    await fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, '');
+    await fetchLotteMartHtml(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      '',
+    );
 
     await expect(getCachedLotteMartSessionCookie(1000)).resolves.toBe('ASPSESSIONID=D');
   });
 
   it('소켓 raw 응답에 HTTP 헤더 경계가 없으면 fallback 가능하도록 null을 반환한다', async () => {
     expect(__testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode(''))).toBeNull();
-    expect(__testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode('not-http'))).toBeNull();
-    expect(__testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode('not-http\r\n\r\nbody'))).toBeNull();
+    expect(
+      __testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode('not-http')),
+    ).toBeNull();
+    expect(
+      __testOnlyCreateLotteMartSocketResponse(new TextEncoder().encode('not-http\r\n\r\nbody')),
+    ).toBeNull();
   });
 
   it('소켓 raw HTTP 응답을 Response로 변환한다', async () => {
@@ -174,7 +201,9 @@ describe('lottemart session helpers', () => {
   });
 
   it('소켓 응답을 정상 HTTP Response로 변환한다', async () => {
-    const raw = new TextEncoder().encode('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nsocket ok');
+    const raw = new TextEncoder().encode(
+      'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nsocket ok',
+    );
     const connect = vi.fn(() => ({
       readable: new ReadableStream<Uint8Array>({
         start(controller) {
@@ -198,14 +227,43 @@ describe('lottemart session helpers', () => {
     await expect(response?.text()).resolves.toBe('socket ok');
   });
 
-  it('소켓 전송이 응답하면 일반 fetch 없이 해당 응답을 사용한다', async () => {
+  it('일반 fetch가 응답하면 소켓 전송을 사용하지 않는다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('fetch direct'));
     socketMocks.fetchResponse.mockResolvedValueOnce(new Response('socket direct'));
 
     await expect(
-      fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
-    ).resolves.toBe('socket direct');
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
+    ).resolves.toBe('fetch direct');
 
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(socketMocks.fetchResponse).not.toHaveBeenCalled();
+  });
+
+  it('일반 fetch가 실패하면 짧은 제한 시간으로 소켓 전송을 시도한다', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('direct unavailable'));
+    socketMocks.fetchResponse.mockResolvedValueOnce(new Response('socket fallback'));
+
+    await expect(
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        20000,
+        '',
+      ),
+    ).resolves.toBe('socket fallback');
+
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(socketMocks.fetchResponse).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      '',
+      5000,
+    );
   });
 
   it('소켓 쓰기나 닫기가 멈추면 null을 반환한다', async () => {
@@ -282,7 +340,12 @@ describe('lottemart session helpers', () => {
       text: async () => 'ok',
     } as Response);
 
-    await fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, '');
+    await fetchLotteMartHtml(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      '',
+    );
 
     await expect(getCachedLotteMartSessionCookie(1000)).resolves.toBe('ASPSESSIONID=E');
   });
@@ -298,7 +361,12 @@ describe('lottemart session helpers', () => {
       text: async () => 'ok',
     } as Response);
 
-    await fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, '');
+    await fetchLotteMartHtml(
+      'https://company.lottemart.com/mobiledowa/test',
+      { method: 'GET' },
+      1000,
+      '',
+    );
 
     await expect(getCachedLotteMartSessionCookie(1000)).resolves.toBe('');
   });
@@ -346,17 +414,31 @@ describe('lottemart session helpers', () => {
     mockFetch.mockResolvedValue(new Response('boom', { status: 500, statusText: 'Server Error' }));
 
     await expect(
-      fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
     ).rejects.toThrow('API 요청 실패: 500 Server Error');
   });
 
   it('재시도 응답이 실패면 HttpError를 던진다', async () => {
     mockFetch
-      .mockResolvedValueOnce(new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=E; path=/' } }))
-      .mockResolvedValueOnce(new Response('retry boom', { status: 500, statusText: 'Server Error' }));
+      .mockResolvedValueOnce(
+        new Response('', { headers: { 'set-cookie': 'ASPSESSIONID=E; path=/' } }),
+      )
+      .mockResolvedValueOnce(
+        new Response('retry boom', { status: 500, statusText: 'Server Error' }),
+      );
 
     await expect(
-      fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
     ).rejects.toThrow('API 요청 실패: 500 Server Error');
   });
 
@@ -376,7 +458,12 @@ describe('lottemart session helpers', () => {
       .mockResolvedValueOnce(new Response('retry ok'));
 
     await expect(
-      fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
     ).resolves.toBe('retry ok');
 
     const retriedHeaders = mockFetch.mock.calls[1]?.[1]?.headers as Headers;
@@ -396,10 +483,17 @@ describe('lottemart session helpers', () => {
           throw new Error('broken stream');
         },
       } as Response)
-      .mockResolvedValueOnce(new Response('retry boom', { status: 500, statusText: 'Server Error' }));
+      .mockResolvedValueOnce(
+        new Response('retry boom', { status: 500, statusText: 'Server Error' }),
+      );
 
     await expect(
-      fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
     ).rejects.toThrow('API 요청 실패: 500 Server Error');
   });
 
@@ -417,7 +511,12 @@ describe('lottemart session helpers', () => {
     } as Response);
 
     await expect(
-      fetchLotteMartHtml('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, 'ASPSESSIONID=EXIST'),
+      fetchLotteMartHtml(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        'ASPSESSIONID=EXIST',
+      ),
     ).rejects.toThrow('broken stream');
   });
 
@@ -466,7 +565,9 @@ describe('lottemart session helpers', () => {
     };
     expect(zyteBody.httpRequestText).toBe('keyword=%ED%95%AB%EC%8B%9D%EC%8A%A4&page=2');
     expect(zyteBody.customHttpRequestHeaders).toEqual(
-      expect.arrayContaining([{ name: 'content-type', value: 'application/x-www-form-urlencoded' }]),
+      expect.arrayContaining([
+        { name: 'content-type', value: 'application/x-www-form-urlencoded' },
+      ]),
     );
   });
 
@@ -523,15 +624,13 @@ describe('lottemart session helpers', () => {
   });
 
   it('Zyte 응답 본문이 비어 있으면 에러를 던진다', async () => {
-    mockFetch
-      .mockRejectedValueOnce(new Error('The operation was aborted'))
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ statusCode: 200 }), {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }),
-      );
+    mockFetch.mockRejectedValueOnce(new Error('The operation was aborted')).mockResolvedValueOnce(
+      new Response(JSON.stringify({ statusCode: 200 }), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    );
 
     await expect(
       fetchLotteMartHtml(
@@ -551,14 +650,21 @@ describe('lottemart session helpers', () => {
       fetchLotteMartPageWithSession('/mobiledowa/search_shop.asp', { method: 'POST' }, 1000, ''),
     ).resolves.toBe('page ok');
 
-    expect(String(mockFetch.mock.calls[0]?.[0])).toBe('https://company.lottemart.com/mobiledowa/search_shop.asp');
+    expect(String(mockFetch.mock.calls[0]?.[0])).toBe(
+      'https://company.lottemart.com/mobiledowa/search_shop.asp',
+    );
   });
 
   it('probeLotteMartRequest는 direct 결과를 요약한다', async () => {
     mockFetch.mockResolvedValue(new Response('ok body', { status: 200, statusText: 'OK' }));
 
     await expect(
-      probeLotteMartRequest('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+      probeLotteMartRequest(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
     ).resolves.toEqual([
       expect.objectContaining({
         used: 'direct',
@@ -574,7 +680,12 @@ describe('lottemart session helpers', () => {
     mockFetch.mockResolvedValue(new Response('', { status: 500, statusText: 'Server Error' }));
 
     await expect(
-      probeLotteMartRequest('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+      probeLotteMartRequest(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
     ).resolves.toEqual([
       expect.objectContaining({
         used: 'direct',
@@ -589,7 +700,12 @@ describe('lottemart session helpers', () => {
     mockFetch.mockRejectedValue('network unavailable');
 
     await expect(
-      probeLotteMartRequest('https://company.lottemart.com/mobiledowa/test', { method: 'GET' }, 1000, ''),
+      probeLotteMartRequest(
+        'https://company.lottemart.com/mobiledowa/test',
+        { method: 'GET' },
+        1000,
+        '',
+      ),
     ).resolves.toEqual([
       expect.objectContaining({
         used: 'direct',
@@ -638,7 +754,9 @@ describe('lottemart session helpers', () => {
   });
 
   it('probeLotteMartRequest는 Error가 아닌 Zyte 실패도 기본 메시지로 요약한다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('direct ok')).mockRejectedValueOnce('zyte unavailable');
+    mockFetch
+      .mockResolvedValueOnce(new Response('direct ok'))
+      .mockRejectedValueOnce('zyte unavailable');
 
     const result = await probeLotteMartRequest(
       'https://company.lottemart.com/mobiledowa/test',
@@ -658,16 +776,14 @@ describe('lottemart session helpers', () => {
   });
 
   it('probeLotteMartRequest는 direct 실패와 zyte 실패를 함께 기록한다', async () => {
-    mockFetch
-      .mockRejectedValueOnce(new Error('The operation was aborted'))
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ title: 'Website Ban', detail: 'ban', status: 520 }), {
-          status: 520,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }),
-      );
+    mockFetch.mockRejectedValueOnce(new Error('The operation was aborted')).mockResolvedValueOnce(
+      new Response(JSON.stringify({ title: 'Website Ban', detail: 'ban', status: 520 }), {
+        status: 520,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    );
 
     const result = await probeLotteMartRequest(
       'https://company.lottemart.com/mobiledowa/test',

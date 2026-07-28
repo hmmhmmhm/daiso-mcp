@@ -30,7 +30,15 @@ export const OPENAPI_PATHS_LOTTEMART = {
           description: '브랜드 변형 필터',
           schema: {
             type: 'string',
-            enum: ['lottemart', 'toysrus', 'max', 'bottlebunker', 'mealguru', 'grandgrocery', 'other'],
+            enum: [
+              'lottemart',
+              'toysrus',
+              'max',
+              'bottlebunker',
+              'mealguru',
+              'grandgrocery',
+              'other',
+            ],
           },
         },
         {
@@ -124,7 +132,7 @@ export const OPENAPI_PATHS_LOTTEMART = {
           in: 'query',
           required: false,
           description: '요청 제한 시간(ms)',
-          schema: { type: 'integer', default: 45000, minimum: 1 },
+          schema: { type: 'integer', default: 15000, minimum: 1 },
         },
       ],
       responses: {

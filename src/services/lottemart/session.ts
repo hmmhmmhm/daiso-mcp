@@ -18,6 +18,7 @@ export {
 } from './socketTransport.js';
 
 const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
+const FALLBACK_TIMEOUT_MS = 5000;
 let sessionCache: { expiresAt: number; cookie: string } | null = null;
 
 function extractSessionCookie(response: Response): string {
@@ -87,22 +88,32 @@ async function fetchLotteMartResponse(
   timeout: number,
   sessionCookie: string,
 ): Promise<Response> {
-  const socketResponse = await fetchLotteMartSocketResponse(url, init, sessionCookie, timeout);
-  if (socketResponse) {
-    return socketResponse;
-  }
+  const headers = withLotteMartSessionCookie(
+    {
+      Accept: 'text/html, */*; q=0.01',
+      ...init.headers,
+    },
+    sessionCookie,
+  );
 
-  return fetchWithTimeout(url, {
-    ...init,
-    timeout,
-    headers: withLotteMartSessionCookie(
-      {
-        Accept: 'text/html, */*; q=0.01',
-        ...init.headers,
-      },
+  try {
+    return await fetchWithTimeout(url, {
+      ...init,
+      timeout,
+      headers,
+    });
+  } catch (directError) {
+    const socketResponse = await fetchLotteMartSocketResponse(
+      url,
+      init,
       sessionCookie,
-    ),
-  });
+      Math.min(timeout, FALLBACK_TIMEOUT_MS),
+    ).catch(() => null);
+    if (socketResponse) {
+      return socketResponse;
+    }
+    throw directError;
+  }
 }
 
 function toZyteHeaders(headers: Headers): Array<{ name: string; value: string }> {
@@ -162,7 +173,9 @@ export async function probeLotteMartRequest(
       success: response.ok,
       status: response.status,
       statusText: response.statusText,
-      error: response.ok ? null : new HttpError(response.status, response.statusText, bodyText).message,
+      error: response.ok
+        ? null
+        : new HttpError(response.status, response.statusText, bodyText).message,
       bodyPreview: toBodyPreview(bodyText),
       sessionCookie: extractSessionCookie(response) || null,
     });
@@ -180,7 +193,13 @@ export async function probeLotteMartRequest(
 
   if (zyteApiKey) {
     try {
-      const bodyText = await fetchLotteMartHtmlByZyte(url, init, timeout, sessionCookie, zyteApiKey);
+      const bodyText = await fetchLotteMartHtmlByZyte(
+        url,
+        init,
+        timeout,
+        sessionCookie,
+        zyteApiKey,
+      );
       attempts.push({
         used: 'zyte',
         success: true,
@@ -237,7 +256,11 @@ export async function fetchLotteMartHtml(
       throw new HttpError(response.status, response.statusText, bodyText);
     }
 
-    if (bodyText.trim().length === 0 && sessionCookie.trim().length === 0 && cachedCookie.length > 0) {
+    if (
+      bodyText.trim().length === 0 &&
+      sessionCookie.trim().length === 0 &&
+      cachedCookie.length > 0
+    ) {
       const retried = await fetchLotteMartResponse(url, init, timeout, cachedCookie);
       cacheSessionCookieFromResponse(retried);
       const retriedBodyText = await retried.text();
@@ -251,7 +274,13 @@ export async function fetchLotteMartHtml(
   } catch (error) {
     if (zyteApiKey && error instanceof Error && !error.message.includes('Zyte')) {
       const fallbackCookie = await getCachedLotteMartSessionCookie(timeout);
-      return fetchLotteMartHtmlByZyte(url, init, timeout, fallbackCookie || sessionCookie, zyteApiKey);
+      return fetchLotteMartHtmlByZyte(
+        url,
+        init,
+        Math.min(timeout, FALLBACK_TIMEOUT_MS),
+        fallbackCookie || sessionCookie,
+        zyteApiKey,
+      );
     }
 
     throw error;
@@ -265,7 +294,13 @@ export async function fetchLotteMartPageWithSession(
   sessionCookie: string,
   zyteApiKey?: string,
 ): Promise<string> {
-  return fetchLotteMartHtml(new URL(path, LOTTEMART_API.BASE_URL).toString(), init, timeout, sessionCookie, zyteApiKey);
+  return fetchLotteMartHtml(
+    new URL(path, LOTTEMART_API.BASE_URL).toString(),
+    init,
+    timeout,
+    sessionCookie,
+    zyteApiKey,
+  );
 }
 
 export function __testOnlyClearLotteMartSessionCache(): void {
