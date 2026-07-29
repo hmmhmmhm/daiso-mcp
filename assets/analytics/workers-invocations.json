@@ -12,37 +12,33 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-06-29",
-  "endDate": "2026-07-28",
-  "updatedAt": "2026-07-28T16:01:53.523Z",
-  "renderedAt": "2026-07-28T16:01:53.523Z",
-  "total": 18778439,
-  "average": 625948,
+  "startDate": "2026-06-30",
+  "endDate": "2026-07-29",
+  "updatedAt": "2026-07-29T15:57:03.347Z",
+  "renderedAt": "2026-07-29T15:57:03.347Z",
+  "total": 20337469,
+  "average": 677916,
   "median": 57656,
   "peak": {
-    "date": "2026-07-28",
-    "requests": 3456009
+    "date": "2026-07-29",
+    "requests": 3534239
   },
-  "recent7Total": 17505381,
-  "recent7Average": 2500769,
-  "previous7Total": 437390,
-  "weekOverWeekDiff": 17067991,
-  "weekOverWeekPercent": 3902.2362193923045,
+  "recent7Total": 19041625,
+  "recent7Average": 2720232,
+  "previous7Total": 423772,
+  "weekOverWeekDiff": 18617853,
+  "weekOverWeekPercent": 4393.365536184552,
   "latest": {
-    "date": "2026-07-28",
-    "requests": 3456009
+    "date": "2026-07-29",
+    "requests": 3534239
   },
   "previous": {
-    "date": "2026-07-27",
-    "requests": 2858610
+    "date": "2026-07-28",
+    "requests": 3456009
   },
-  "dayOverDayDiff": 597399,
-  "dayOverDayPercent": 20.898233756965798,
+  "dayOverDayDiff": 78230,
+  "dayOverDayPercent": 2.263593642261927,
   "points": [
-    {
-      "date": "2026-06-29",
-      "requests": 30686
-    },
     {
       "date": "2026-06-30",
       "requests": 31069
@@ -133,11 +129,11 @@
     },
     {
       "date": "2026-07-22",
-      "requests": 1926777
+      "requests": 53472
     },
     {
       "date": "2026-07-23",
-      "requests": 2195612
+      "requests": 2124360
     },
     {
       "date": "2026-07-24",
@@ -145,7 +141,7 @@
     },
     {
       "date": "2026-07-25",
-      "requests": 2145988
+      "requests": 2146022
     },
     {
       "date": "2026-07-26",
@@ -158,6 +154,10 @@
     {
       "date": "2026-07-28",
       "requests": 3456009
+    },
+    {
+      "date": "2026-07-29",
+      "requests": 3534239
     }
   ]
 }
