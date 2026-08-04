@@ -12,37 +12,33 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-07-05",
-  "endDate": "2026-08-03",
-  "updatedAt": "2026-08-03T16:08:01.707Z",
-  "renderedAt": "2026-08-03T16:08:01.707Z",
-  "total": 24039498,
-  "average": 801317,
-  "median": 57656,
+  "startDate": "2026-07-06",
+  "endDate": "2026-08-04",
+  "updatedAt": "2026-08-04T16:03:25.200Z",
+  "renderedAt": "2026-08-04T16:03:25.200Z",
+  "total": 23628081,
+  "average": 787603,
+  "median": 58045,
   "peak": {
-    "date": "2026-07-29",
-    "requests": 3534239
-  },
-  "recent7Total": 22654822,
-  "recent7Average": 3236403,
-  "previous7Total": 344014,
-  "weekOverWeekDiff": 22310808,
-  "weekOverWeekPercent": 6485.436057834856,
-  "latest": {
-    "date": "2026-08-03",
-    "requests": 2866280
-  },
-  "previous": {
     "date": "2026-08-02",
     "requests": 3431701
   },
-  "dayOverDayDiff": -565421,
-  "dayOverDayPercent": -16.476406306959728,
+  "recent7Total": 22206195,
+  "recent7Average": 3172314,
+  "previous7Total": 346213,
+  "weekOverWeekDiff": 21859982,
+  "weekOverWeekPercent": 6314.026914067352,
+  "latest": {
+    "date": "2026-08-04",
+    "requests": 3080450
+  },
+  "previous": {
+    "date": "2026-08-03",
+    "requests": 2866280
+  },
+  "dayOverDayDiff": 214170,
+  "dayOverDayPercent": 7.472054370124343,
   "points": [
-    {
-      "date": "2026-07-05",
-      "requests": 20179
-    },
     {
       "date": "2026-07-06",
       "requests": 33170
@@ -133,19 +129,19 @@
     },
     {
       "date": "2026-07-28",
-      "requests": 3358616
+      "requests": 57389
     },
     {
       "date": "2026-07-29",
-      "requests": 3534239
+      "requests": 3363784
     },
     {
       "date": "2026-07-30",
-      "requests": 3429118
+      "requests": 3429043
     },
     {
       "date": "2026-07-31",
-      "requests": 2827424
+      "requests": 2827493
     },
     {
       "date": "2026-08-01",
@@ -158,6 +154,10 @@
     {
       "date": "2026-08-03",
       "requests": 2866280
+    },
+    {
+      "date": "2026-08-04",
+      "requests": 3080450
     }
   ]
 }
