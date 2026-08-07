@@ -12,41 +12,33 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-07-07",
-  "endDate": "2026-08-05",
-  "updatedAt": "2026-08-05T16:05:21.278Z",
-  "renderedAt": "2026-08-05T16:05:21.278Z",
-  "total": 23399304,
-  "average": 779977,
+  "startDate": "2026-07-09",
+  "endDate": "2026-08-07",
+  "updatedAt": "2026-08-07T16:10:11.916Z",
+  "renderedAt": "2026-08-07T16:10:11.916Z",
+  "total": 21901581,
+  "average": 730053,
   "median": 59208,
   "peak": {
     "date": "2026-08-02",
     "requests": 3431701
   },
-  "recent7Total": 21931869,
-  "recent7Average": 3133124,
-  "previous7Total": 371460,
-  "weekOverWeekDiff": 21560409,
-  "weekOverWeekPercent": 5804.234372476175,
+  "recent7Total": 20591172,
+  "recent7Average": 2941596,
+  "previous7Total": 407923,
+  "weekOverWeekDiff": 20183249,
+  "weekOverWeekPercent": 4947.8085324926515,
   "latest": {
-    "date": "2026-08-05",
-    "requests": 3201619
+    "date": "2026-08-07",
+    "requests": 2064609
   },
   "previous": {
-    "date": "2026-08-04",
-    "requests": 3080450
+    "date": "2026-08-06",
+    "requests": 2909847
   },
-  "dayOverDayDiff": 121169,
-  "dayOverDayPercent": 3.9334837442581443,
+  "dayOverDayDiff": -845238,
+  "dayOverDayPercent": -29.04750662148216,
   "points": [
-    {
-      "date": "2026-07-07",
-      "requests": 102868
-    },
-    {
-      "date": "2026-07-08",
-      "requests": 189386
-    },
     {
       "date": "2026-07-09",
       "requests": 132539
@@ -133,15 +125,15 @@
     },
     {
       "date": "2026-07-30",
-      "requests": 3316951
+      "requests": 62061
     },
     {
       "date": "2026-07-31",
-      "requests": 2827424
+      "requests": 73167
     },
     {
       "date": "2026-08-01",
-      "requests": 3207444
+      "requests": 3036666
     },
     {
       "date": "2026-08-02",
@@ -158,6 +150,14 @@
     {
       "date": "2026-08-05",
       "requests": 3201619
+    },
+    {
+      "date": "2026-08-06",
+      "requests": 2909847
+    },
+    {
+      "date": "2026-08-07",
+      "requests": 2064609
     }
   ]
 }
