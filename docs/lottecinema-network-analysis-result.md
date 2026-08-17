@@ -20,7 +20,8 @@
   - `GetPlaySequence`에서 날짜/극장/영화 조합별 회차 실데이터 확보
 - 남은 좌석 수 조회: `가능`
   - `GetPlaySequence`의 `TotalSeatCount`, `BookingSeatCount`로 계산 가능
-  - 실측 기준 `remainingSeats = TotalSeatCount - BookingSeatCount`
+  - 실측 기준 `remainingSeats = BookingSeatCount`
+  - `bookedSeats = TotalSeatCount - BookingSeatCount`
 - 좌석 맵 상세 조회: `조건부 가능`
   - `GetSeats`로 좌석 맵은 조회되나, `BookingSeats`/`ScreenSeatInfo.BookingCount`와
     `GetPlaySequence.BookingSeatCount`의 의미 차이가 있어
@@ -218,21 +219,25 @@
   - `EndTime=12:47`
   - `ScreenNameKR=1관 샤롯데`
   - `TotalSeatCount=32`
-  - `BookingSeatCount=28`
-  - `남은 좌석수 = 4`
+  - `BookingSeatCount=28` (예매 가능/잔여 좌석)
+  - `남은 좌석수 = 28`
+  - `예매 좌석수 = 4`
 
 #### 잔여 좌석 계산식
 
 ```text
-remainingSeats = TotalSeatCount - BookingSeatCount
+remainingSeats = BookingSeatCount
+bookedSeats = TotalSeatCount - BookingSeatCount
 ```
+
+`BookingSeatCount` 필드명은 예매된 수처럼 보이지만, 공식 예매 화면과 `GetSeats` 점유 좌석 수와 대조하면 **예매 가능 좌석 수**다.
 
 #### 실측 회차 예시
 
-- `10:40-12:47`, 총 32석, 예매 28석, 잔여 4석
-- `13:20-15:27`, 총 32석, 예매 27석, 잔여 5석
-- `16:00-18:07`, 총 32석, 예매 32석, 잔여 0석
-- `18:40-20:47`, 총 32석, 예매 22석, 잔여 10석
+- `10:40-12:47`, 총 32석, 잔여 28석, 예매 4석
+- `13:20-15:27`, 총 32석, 잔여 27석, 예매 5석
+- `16:00-18:07`, 총 32석, 잔여 32석, 예매 0석
+- `18:40-20:47`, 총 32석, 잔여 22석, 예매 10석
 
 ### 2.3 `POST /LCWS/Ticketing/TicketingData.aspx` + `MethodName=GetInvisibleMoviePlayInfo`
 
@@ -300,11 +305,10 @@ remainingSeats = TotalSeatCount - BookingSeatCount
 #### 주의점
 
 - 동일 조건에서:
-  - `GetPlaySequence.BookingSeatCount = 28`
-  - `GetSeats.ScreenSeatInfo.BookingCount = 4`
-- 따라서 현재 시점에서는 `GetSeats`의 `BookingSeats`/`BookingCount` 의미가
-  "최종 판매 좌석 수"와 다를 가능성이 큼
-- 잔여 좌석 기능은 `GetPlaySequence` 기반으로 구현하는 편이 안전함
+  - `GetPlaySequence.BookingSeatCount = 28` (잔여/예매 가능)
+  - `GetSeats.ScreenSeatInfo.BookingCount = 4` (실제 점유)
+- 두 값은 모순이 아니라 의미가 다르다. `32 - 28 = 4`로 맞는다.
+- 잔여 좌석 기능은 `GetPlaySequence.BookingSeatCount`를 그대로 쓰면 된다.
 
 ### 2.5 `POST /LCWS/Common/MainData.aspx` + `MethodName=GetPopupMessageOnLine`
 

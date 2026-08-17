@@ -100,7 +100,8 @@ describe('createGetRemainingSeatsTool', () => {
 
     expect(parsed.count).toBe(2);
     expect(parsed.seats[0].startTime).toBe('10:40');
-    expect(parsed.seats[0].remainingSeats).toBe(4);
+    expect(parsed.seats[0].remainingSeats).toBe(28);
+    expect(parsed.seats[0].bookedSeats).toBe(4);
   });
 
   it('동일 시작 시간은 극장명으로 정렬한다', async () => {
@@ -303,6 +304,7 @@ describe('createGetRemainingSeatsTool', () => {
 
     expect(parsed.filters.theaterId).toBe('9001');
     expect(parsed.resolvedTheater.theaterName).toBe('안산중앙');
-    expect(parsed.seats[0].remainingSeats).toBe(4);
+    expect(parsed.seats[0].remainingSeats).toBe(28);
+    expect(parsed.seats[0].bookedSeats).toBe(4);
   });
 });

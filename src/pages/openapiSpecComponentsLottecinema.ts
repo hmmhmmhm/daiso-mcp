@@ -50,8 +50,8 @@ export const OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS = {
       startTime: { type: 'string', example: '10:40' },
       endTime: { type: 'string', example: '12:47' },
       totalSeats: { type: 'integer', example: 32 },
-      bookedSeats: { type: 'integer', example: 28 },
-      remainingSeats: { type: 'integer', example: 4 },
+      bookedSeats: { type: 'integer', example: 4 },
+      remainingSeats: { type: 'integer', example: 28 },
     },
   },
   LotteCinemaTheaterSearchResponse: {
