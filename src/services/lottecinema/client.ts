@@ -160,7 +160,9 @@ async function fetchPlaySequenceByPair(
     .filter((item) => item.CinemaID && item.RepresentationMovieCode && item.ScreenID && item.PlaySequence)
     .map((item) => {
       const totalSeats = toNumber(item.TotalSeatCount);
-      const bookedSeats = toNumber(item.BookingSeatCount);
+      // 공식 BookingSeatCount는 예매된 수가 아니라 예매 가능(잔여) 좌석 수다.
+      const remainingSeats = toNumber(item.BookingSeatCount);
+      const bookedSeats = Math.max(totalSeats - remainingSeats, 0);
       const normalizedPlayDate = normalizeDateForOutput(item.PlayDt || playDate);
       const theaterId = String(item.CinemaID);
       const screenId = String(item.ScreenID);
@@ -179,7 +181,7 @@ async function fetchPlaySequenceByPair(
         endTime: formatTime(item.EndTime),
         totalSeats,
         bookedSeats,
-        remainingSeats: Math.max(totalSeats - bookedSeats, 0),
+        remainingSeats,
       };
     });
 }

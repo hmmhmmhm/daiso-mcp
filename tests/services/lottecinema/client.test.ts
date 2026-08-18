@@ -245,7 +245,10 @@ describe('fetchLotteCinemaNowShowing', () => {
     expect(result.theaters).toHaveLength(1);
     expect(result.movies).toHaveLength(1);
     expect(result.showtimes[0].scheduleId).toBe('20260310-1016-1201-1');
-    expect(result.showtimes[0].remainingSeats).toBe(4);
+    // BookingSeatCount는 예매 가능(잔여) 좌석 수다.
+    expect(result.showtimes[0].remainingSeats).toBe(28);
+    expect(result.showtimes[0].bookedSeats).toBe(4);
+    expect(result.showtimes[0].totalSeats).toBe(32);
   });
 
   it('movieId만 있으면 여러 극장을 순회해 회차를 모은다', async () => {

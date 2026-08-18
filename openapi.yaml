@@ -1920,10 +1920,10 @@ components:
           example: 32
         bookedSeats:
           type: integer
-          example: 28
+          example: 4
         remainingSeats:
           type: integer
-          example: 4
+          example: 28
     LotteCinemaTheaterSearchResponse:
       type: object
       properties:
