@@ -1,5 +1,5 @@
 /**
- * 디트릭스 극장 카탈로그 테스트
+ * 디트릭스 극장 레지스트리 테스트
  */
 
 import { describe, expect, it } from 'vitest';
@@ -7,9 +7,9 @@ import {
   DTRYX_CINEMAS,
   findCinemaByCode,
   findCinemasByKeyword,
-} from '../../../src/services/dtryx/catalog.js';
+} from '../../../src/services/dtryx/location.js';
 
-describe('디트릭스 극장 카탈로그', () => {
+describe('디트릭스 극장 레지스트리', () => {
   it('극장 코드가 중복되지 않는다', () => {
     const codes = DTRYX_CINEMAS.map((cinema) => cinema.cinemaCode);
     expect(new Set(codes).size).toBe(codes.length);

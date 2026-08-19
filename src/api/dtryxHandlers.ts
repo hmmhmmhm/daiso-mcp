@@ -6,7 +6,7 @@ import {
   DTRYX_CINEMAS,
   findCinemaByCode,
   findCinemasByKeyword,
-} from '../services/dtryx/catalog.js';
+} from '../services/dtryx/location.js';
 import {
   fetchDtryxNowShowing,
   fetchDtryxPlayDates,

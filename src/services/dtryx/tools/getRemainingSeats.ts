@@ -4,7 +4,7 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import { DTRYX_CINEMAS, findCinemaByCode, findCinemasByKeyword } from '../catalog.js';
+import { DTRYX_CINEMAS, findCinemaByCode, findCinemasByKeyword } from '../location.js';
 import { fetchDtryxTimetable, toYyyymmdd } from '../client.js';
 import type { DtryxCinema, DtryxShowtime } from '../types.js';
 

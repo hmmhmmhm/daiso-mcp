@@ -4,7 +4,7 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import { DTRYX_CINEMAS, findCinemasByKeyword } from '../catalog.js';
+import { DTRYX_CINEMAS, findCinemasByKeyword } from '../location.js';
 
 interface ListCinemasArgs {
   keyword?: string;
