@@ -12,41 +12,33 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-07-20",
-  "endDate": "2026-08-18",
-  "updatedAt": "2026-08-18T15:49:52.296Z",
-  "renderedAt": "2026-08-18T15:49:52.296Z",
-  "total": 17623111,
-  "average": 587437,
-  "median": 81164,
+  "startDate": "2026-07-22",
+  "endDate": "2026-08-20",
+  "updatedAt": "2026-08-20T15:50:40.380Z",
+  "renderedAt": "2026-08-20T15:50:40.380Z",
+  "total": 17821473,
+  "average": 594049,
+  "median": 92088,
   "peak": {
     "date": "2026-08-14",
-    "requests": 3063834
+    "requests": 3012807
   },
-  "recent7Total": 15869904,
-  "recent7Average": 2267129,
-  "previous7Total": 765072,
-  "weekOverWeekDiff": 15104832,
-  "weekOverWeekPercent": 1974.3020264759393,
+  "recent7Total": 15875145,
+  "recent7Average": 2267878,
+  "previous7Total": 888771,
+  "weekOverWeekDiff": 14986374,
+  "weekOverWeekPercent": 1686.190706042389,
   "latest": {
-    "date": "2026-08-18",
-    "requests": 2157416
+    "date": "2026-08-20",
+    "requests": 2533868
   },
   "previous": {
-    "date": "2026-08-17",
-    "requests": 1273637
+    "date": "2026-08-19",
+    "requests": 2508367
   },
-  "dayOverDayDiff": 883779,
-  "dayOverDayPercent": 69.39017946243709,
+  "dayOverDayDiff": 25501,
+  "dayOverDayPercent": 1.0166375175562428,
   "points": [
-    {
-      "date": "2026-07-20",
-      "requests": 59716
-    },
-    {
-      "date": "2026-07-21",
-      "requests": 55190
-    },
     {
       "date": "2026-07-22",
       "requests": 53472
@@ -133,15 +125,15 @@
     },
     {
       "date": "2026-08-12",
-      "requests": 2390604
+      "requests": 137894
     },
     {
       "date": "2026-08-13",
-      "requests": 2595363
+      "requests": 170133
     },
     {
       "date": "2026-08-14",
-      "requests": 3063834
+      "requests": 3012807
     },
     {
       "date": "2026-08-15",
@@ -158,6 +150,14 @@
     {
       "date": "2026-08-18",
       "requests": 2157416
+    },
+    {
+      "date": "2026-08-19",
+      "requests": 2508367
+    },
+    {
+      "date": "2026-08-20",
+      "requests": 2533868
     }
   ]
 }
