@@ -136,52 +136,46 @@ export async function handleDtryxGetRemainingSeats(c: ApiContext) {
     );
   }
 
-  try {
-    const settled = await Promise.allSettled(
-      cinemas.map((cinema) =>
-        fetchDtryxTimetable({
-          brandCode: cinema.brandCode,
-          cinemaCode: cinema.cinemaCode,
-          playDate,
-          timeout: timeoutMs,
-        }),
-      ),
-    );
-    const failedCinemas = cinemas
-      .filter((_, index) => settled[index]?.status === 'rejected')
-      .map((cinema) => cinema.cinemaName || cinema.cinemaCode);
-    const normalize = (value: string) => value.replace(/\s+/g, '').toLowerCase();
-    const showtimes = settled
-      .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-      .filter((item) =>
-        movieName ? normalize(item.movieName).includes(normalize(movieName)) : true,
-      )
-      .sort((a, b) =>
-        a.startTime === b.startTime
-          ? a.cinemaName.localeCompare(b.cinemaName)
-          : a.startTime.localeCompare(b.startTime),
-      )
-      .slice(0, limit);
-
-    return successResponse(
-      c,
-      {
+  // Promise.allSettled 로 극장별 실패를 흡수하므로 여기서 예외가 전파되지 않습니다.
+  const settled = await Promise.allSettled(
+    cinemas.map((cinema) =>
+      fetchDtryxTimetable({
+        brandCode: cinema.brandCode,
+        cinemaCode: cinema.cinemaCode,
         playDate,
-        filters: {
-          cinemaCode: cinemaCode || null,
-          keyword: keyword || null,
-          region: region || null,
-          movieName: movieName || null,
-        },
-        searchedCinemaCount: cinemas.length,
-        failedCinemas,
-        count: showtimes.length,
-        showtimes,
+        timeout: timeoutMs,
+      }),
+    ),
+  );
+  const failedCinemas = cinemas
+    .filter((_, index) => settled[index]?.status === 'rejected')
+    .map((cinema) => cinema.cinemaName || cinema.cinemaCode);
+  const normalize = (value: string) => value.replace(/\s+/g, '').toLowerCase();
+  const showtimes = settled
+    .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+    .filter((item) => (movieName ? normalize(item.movieName).includes(normalize(movieName)) : true))
+    .sort((a, b) =>
+      a.startTime === b.startTime
+        ? a.cinemaName.localeCompare(b.cinemaName)
+        : a.startTime.localeCompare(b.startTime),
+    )
+    .slice(0, limit);
+
+  return successResponse(
+    c,
+    {
+      playDate,
+      filters: {
+        cinemaCode: cinemaCode || null,
+        keyword: keyword || null,
+        region: region || null,
+        movieName: movieName || null,
       },
-      { total: showtimes.length, pageSize: limit },
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-    return errorResponse(c, 'DTRYX_SEATS_FETCH_FAILED', message, 500);
-  }
+      searchedCinemaCount: cinemas.length,
+      failedCinemas,
+      count: showtimes.length,
+      showtimes,
+    },
+    { total: showtimes.length, pageSize: limit },
+  );
 }
