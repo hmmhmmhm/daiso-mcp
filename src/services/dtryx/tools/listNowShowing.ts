@@ -24,7 +24,13 @@ function resolveCinema(args: ListNowShowingArgs): DtryxCinema | undefined {
     }
 
     return args.brandCode
-      ? { brandCode: args.brandCode, cinemaCode: args.cinemaCode, cinemaName: '' }
+      ? {
+          brandCode: args.brandCode,
+          cinemaCode: args.cinemaCode,
+          cinemaName: '',
+          region: '',
+          address: '',
+        }
       : undefined;
   }
 

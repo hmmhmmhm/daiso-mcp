@@ -60,6 +60,12 @@ describe('dtryx_list_cinemas', () => {
     expect((payload.cinemas as Array<{ cinemaName: string }>)[0]?.cinemaName).toBe('라이카시네마');
   });
 
+  it('지역으로 걸러낸다', async () => {
+    const payload = parsePayload(await createListCinemasTool().handler({ region: '서울' }));
+
+    expect(payload.count).toBe(7);
+  });
+
   it('limit 으로 개수를 제한한다', async () => {
     const payload = parsePayload(await createListCinemasTool().handler({ limit: 3 }));
 
@@ -136,6 +142,16 @@ describe('dtryx_get_remaining_seats', () => {
     );
 
     expect(payload.count).toBe(0);
+  });
+
+  it('지역 지정 시 해당 지역만 조회한다', async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ Recordset: [] }));
+
+    const payload = parsePayload(
+      await createGetRemainingSeatsTool().handler({ region: '경기', playDate: '20260820' }),
+    );
+
+    expect(payload.searchedCinemaCount).toBe(3);
   });
 
   it('극장 미지정이면 카탈로그 전체를 조회한다', async () => {

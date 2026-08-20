@@ -7,6 +7,10 @@ export interface DtryxCinema {
   brandCode: string;
   cinemaCode: string;
   cinemaName: string;
+  /** 광역 지역명 (예: 서울, 경기, 부산) */
+  region: string;
+  /** 도로명 주소 */
+  address: string;
 }
 
 /** 상영 가능 날짜 */

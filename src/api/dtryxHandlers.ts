@@ -6,6 +6,7 @@ import {
   DTRYX_CINEMAS,
   findCinemaByCode,
   findCinemasByKeyword,
+  findCinemasByRegion,
 } from '../services/dtryx/location.js';
 import {
   fetchDtryxNowShowing,
@@ -21,6 +22,7 @@ function resolveCinemas(
   cinemaCode: string | undefined,
   keyword: string | undefined,
   brandCode: string | undefined,
+  region?: string,
 ): DtryxCinema[] {
   if (cinemaCode) {
     const known = findCinemaByCode(cinemaCode);
@@ -28,11 +30,15 @@ function resolveCinemas(
       return [known];
     }
 
-    return brandCode ? [{ brandCode, cinemaCode, cinemaName: '' }] : [];
+    return brandCode ? [{ brandCode, cinemaCode, cinemaName: '', region: '', address: '' }] : [];
   }
 
   if (keyword) {
     return findCinemasByKeyword(keyword);
+  }
+
+  if (region) {
+    return findCinemasByRegion(region);
   }
 
   return [...DTRYX_CINEMAS];
@@ -40,17 +46,25 @@ function resolveCinemas(
 
 export async function handleDtryxListCinemas(c: ApiContext) {
   const keyword = c.req.query('keyword') || undefined;
+  const region = c.req.query('region') || undefined;
   const brandCode = c.req.query('brandCode') || undefined;
   const limit = parseInt(c.req.query('limit') || '50', 10);
+  const normalizedRegion = (region || '').replace(/\s+/g, '');
 
   const cinemas = (keyword ? findCinemasByKeyword(keyword) : [...DTRYX_CINEMAS])
+    .filter((cinema) => (normalizedRegion ? cinema.region.includes(normalizedRegion) : true))
     .filter((cinema) => (brandCode ? cinema.brandCode === brandCode : true))
     .slice(0, limit);
 
   return successResponse(
     c,
     {
-      filters: { keyword: keyword || null, brandCode: brandCode || null, limit },
+      filters: {
+        keyword: keyword || null,
+        region: region || null,
+        brandCode: brandCode || null,
+        limit,
+      },
       count: cinemas.length,
       cinemas,
     },
@@ -108,9 +122,10 @@ export async function handleDtryxGetRemainingSeats(c: ApiContext) {
   const keyword = c.req.query('keyword') || undefined;
   const brandCode = c.req.query('brandCode') || undefined;
   const movieName = c.req.query('movieName') || undefined;
+  const region = c.req.query('region') || undefined;
   const limit = parseInt(c.req.query('limit') || '50', 10);
   const timeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
-  const cinemas = resolveCinemas(cinemaCode, keyword, brandCode);
+  const cinemas = resolveCinemas(cinemaCode, keyword, brandCode, region);
 
   if (cinemas.length === 0) {
     return errorResponse(
@@ -155,6 +170,7 @@ export async function handleDtryxGetRemainingSeats(c: ApiContext) {
         filters: {
           cinemaCode: cinemaCode || null,
           keyword: keyword || null,
+          region: region || null,
           movieName: movieName || null,
         },
         searchedCinemaCount: cinemas.length,

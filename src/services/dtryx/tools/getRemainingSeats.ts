@@ -4,7 +4,12 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import { DTRYX_CINEMAS, findCinemaByCode, findCinemasByKeyword } from '../location.js';
+import {
+  DTRYX_CINEMAS,
+  findCinemaByCode,
+  findCinemasByKeyword,
+  findCinemasByRegion,
+} from '../location.js';
 import { fetchDtryxTimetable, toYyyymmdd } from '../client.js';
 import type { DtryxCinema, DtryxShowtime } from '../types.js';
 
@@ -12,6 +17,7 @@ interface GetRemainingSeatsArgs {
   playDate?: string;
   cinemaCode?: string;
   keyword?: string;
+  region?: string;
   brandCode?: string;
   movieName?: string;
   limit?: number;
@@ -27,12 +33,24 @@ function resolveCinemas(args: GetRemainingSeatsArgs): DtryxCinema[] {
     }
 
     return args.brandCode
-      ? [{ brandCode: args.brandCode, cinemaCode: args.cinemaCode, cinemaName: '' }]
+      ? [
+          {
+            brandCode: args.brandCode,
+            cinemaCode: args.cinemaCode,
+            cinemaName: '',
+            region: '',
+            address: '',
+          },
+        ]
       : [];
   }
 
   if (args.keyword) {
     return findCinemasByKeyword(args.keyword);
+  }
+
+  if (args.region) {
+    return findCinemasByRegion(args.region);
   }
 
   return [...DTRYX_CINEMAS];
@@ -106,6 +124,7 @@ async function getRemainingSeats(args: GetRemainingSeatsArgs): Promise<McpToolRe
             filters: {
               cinemaCode: args.cinemaCode || null,
               keyword: args.keyword || null,
+              region: args.region || null,
               movieName: movieName || null,
               limit,
             },
@@ -136,6 +155,10 @@ export function createGetRemainingSeatsTool(): ToolRegistration {
           .describe('조회 날짜(YYYYMMDD 또는 YYYY-MM-DD, 기본값: 오늘)'),
         cinemaCode: z.string().optional().describe('극장 코드 (예: 000067)'),
         keyword: z.string().optional().describe('극장명 키워드 (예: 모모, 광주)'),
+        region: z
+          .string()
+          .optional()
+          .describe('광역 지역명으로 조회 범위를 좁힙니다 (예: 서울, 경기)'),
         brandCode: z
           .string()
           .optional()
