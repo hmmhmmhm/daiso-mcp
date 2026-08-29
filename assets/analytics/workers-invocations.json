@@ -12,40 +12,36 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-07-29",
-  "endDate": "2026-08-27",
-  "updatedAt": "2026-08-28T00:26:11.341Z",
-  "renderedAt": "2026-08-28T00:26:11.341Z",
-  "total": 14192058,
-  "average": 473069,
-  "median": 154626,
+  "startDate": "2026-07-30",
+  "endDate": "2026-08-28",
+  "updatedAt": "2026-08-29T00:01:21.208Z",
+  "renderedAt": "2026-08-29T00:01:21.208Z",
+  "total": 14046217,
+  "average": 468207,
+  "median": 169614,
   "peak": {
     "date": "2026-08-24",
-    "requests": 2281256
+    "requests": 2281357
   },
-  "recent7Total": 11195682,
-  "recent7Average": 1599383,
-  "previous7Total": 1397270,
-  "weekOverWeekDiff": 9798412,
-  "weekOverWeekPercent": 701.2540167612559,
+  "recent7Total": 10943024,
+  "recent7Average": 1563289,
+  "previous7Total": 1374820,
+  "weekOverWeekDiff": 9568204,
+  "weekOverWeekPercent": 695.9604893731542,
   "latest": {
+    "date": "2026-08-28",
+    "requests": 1932412
+  },
+  "previous": {
     "date": "2026-08-27",
     "requests": 1750102
   },
-  "previous": {
-    "date": "2026-08-26",
-    "requests": 1811819
-  },
-  "dayOverDayDiff": -61717,
-  "dayOverDayPercent": -3.406355712132393,
+  "dayOverDayDiff": 182310,
+  "dayOverDayPercent": 10.41710711718517,
   "points": [
     {
-      "date": "2026-07-29",
-      "requests": 77710
-    },
-    {
       "date": "2026-07-30",
-      "requests": 62061
+      "requests": 62740
     },
     {
       "date": "2026-07-31",
@@ -133,11 +129,11 @@
     },
     {
       "date": "2026-08-21",
-      "requests": 1941431
+      "requests": 183848
     },
     {
       "date": "2026-08-22",
-      "requests": 837045
+      "requests": 593422
     },
     {
       "date": "2026-08-23",
@@ -145,11 +141,11 @@
     },
     {
       "date": "2026-08-24",
-      "requests": 2281256
+      "requests": 2281357
     },
     {
       "date": "2026-08-25",
-      "requests": 1701102
+      "requests": 1700985
     },
     {
       "date": "2026-08-26",
@@ -158,6 +154,10 @@
     {
       "date": "2026-08-27",
       "requests": 1750102
+    },
+    {
+      "date": "2026-08-28",
+      "requests": 1932412
     }
   ]
 }
