@@ -12,37 +12,33 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-07-31",
-  "endDate": "2026-08-29",
-  "updatedAt": "2026-08-29T18:34:33.706Z",
-  "renderedAt": "2026-08-29T18:34:33.706Z",
-  "total": 15479282,
-  "average": 515976,
-  "median": 170099,
+  "startDate": "2026-08-01",
+  "endDate": "2026-08-30",
+  "updatedAt": "2026-08-30T18:38:58.530Z",
+  "renderedAt": "2026-08-30T18:38:58.530Z",
+  "total": 15790846,
+  "average": 526362,
+  "median": 176991,
   "peak": {
     "date": "2026-08-24",
-    "requests": 2281357
+    "requests": 2012543
   },
-  "recent7Total": 12251743,
-  "recent7Average": 1750249,
-  "previous7Total": 1392744,
-  "weekOverWeekDiff": 10858999,
-  "weekOverWeekPercent": 779.6837753384685,
+  "recent7Total": 12449559,
+  "recent7Average": 1778508,
+  "previous7Total": 1409594,
+  "weekOverWeekDiff": 11039965,
+  "weekOverWeekPercent": 783.2017588043083,
   "latest": {
-    "date": "2026-08-29",
-    "requests": 1991193
+    "date": "2026-08-30",
+    "requests": 1250744
   },
   "previous": {
-    "date": "2026-08-28",
-    "requests": 1932412
+    "date": "2026-08-29",
+    "requests": 1990954
   },
-  "dayOverDayDiff": 58781,
-  "dayOverDayPercent": 3.0418461487508877,
+  "dayOverDayDiff": -740210,
+  "dayOverDayPercent": -37.178659074996204,
   "points": [
-    {
-      "date": "2026-07-31",
-      "requests": 73167
-    },
     {
       "date": "2026-08-01",
       "requests": 72412
@@ -133,11 +129,11 @@
     },
     {
       "date": "2026-08-23",
-      "requests": 783833
+      "requests": 186915
     },
     {
       "date": "2026-08-24",
-      "requests": 2281357
+      "requests": 2012543
     },
     {
       "date": "2026-08-25",
@@ -145,7 +141,7 @@
     },
     {
       "date": "2026-08-26",
-      "requests": 1811861
+      "requests": 1811819
     },
     {
       "date": "2026-08-27",
@@ -157,7 +153,11 @@
     },
     {
       "date": "2026-08-29",
-      "requests": 1991193
+      "requests": 1990954
+    },
+    {
+      "date": "2026-08-30",
+      "requests": 1250744
     }
   ]
 }
