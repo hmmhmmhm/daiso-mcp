@@ -12,37 +12,33 @@
   },
   "timezone": "Asia/Seoul",
   "days": 30,
-  "startDate": "2026-08-09",
-  "endDate": "2026-09-07",
-  "updatedAt": "2026-09-07T19:12:36.789Z",
-  "renderedAt": "2026-09-07T19:12:36.789Z",
-  "total": 15520195,
-  "average": 517340,
+  "startDate": "2026-08-10",
+  "endDate": "2026-09-08",
+  "updatedAt": "2026-09-08T18:45:16.570Z",
+  "renderedAt": "2026-09-08T18:45:16.570Z",
+  "total": 16546459,
+  "average": 551549,
   "median": 187001,
   "peak": {
-    "date": "2026-09-07",
-    "requests": 2071954
+    "date": "2026-09-08",
+    "requests": 2820280
   },
-  "recent7Total": 11556189,
-  "recent7Average": 1650884,
-  "previous7Total": 1105104,
-  "weekOverWeekDiff": 10451085,
-  "weekOverWeekPercent": 945.7105394605394,
+  "recent7Total": 12596889,
+  "recent7Average": 1799556,
+  "previous7Total": 1020439,
+  "weekOverWeekDiff": 11576450,
+  "weekOverWeekPercent": 1134.4578166847798,
   "latest": {
-    "date": "2026-09-07",
-    "requests": 2071954
+    "date": "2026-09-08",
+    "requests": 2820280
   },
   "previous": {
-    "date": "2026-09-06",
-    "requests": 1297625
+    "date": "2026-09-07",
+    "requests": 2071954
   },
-  "dayOverDayDiff": 774329,
-  "dayOverDayPercent": 59.67278682207879,
+  "dayOverDayDiff": 748326,
+  "dayOverDayPercent": 36.116921514666835,
   "points": [
-    {
-      "date": "2026-08-09",
-      "requests": 113850
-    },
     {
       "date": "2026-08-10",
       "requests": 140090
@@ -133,11 +129,11 @@
     },
     {
       "date": "2026-09-01",
-      "requests": 1594731
+      "requests": 99414
     },
     {
       "date": "2026-09-02",
-      "requests": 1829109
+      "requests": 1644260
     },
     {
       "date": "2026-09-03",
@@ -158,6 +154,10 @@
     {
       "date": "2026-09-07",
       "requests": 2071954
+    },
+    {
+      "date": "2026-09-08",
+      "requests": 2820280
     }
   ]
 }
