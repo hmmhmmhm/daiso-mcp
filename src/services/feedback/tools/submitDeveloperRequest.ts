@@ -11,7 +11,8 @@ const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
     z.boolean(),
     z.null(),
     z.array(jsonValueSchema),
-    z.record(z.string(), jsonValueSchema),
+    // JSON 객체의 키는 항상 문자열이므로 HA가 지원하지 않는 중복 제약만 생략한다.
+    z.record(z.string(), jsonValueSchema).meta({ propertyNames: undefined }),
   ]),
 );
 
@@ -47,6 +48,7 @@ export function createSubmitDeveloperRequestTool(config: DeveloperRequestConfig)
           .describe('요청 출처'),
         userContext: z
           .record(z.string(), jsonValueSchema)
+          .meta({ propertyNames: undefined })
           .optional()
           .describe('추가 컨텍스트 JSON'),
       },
