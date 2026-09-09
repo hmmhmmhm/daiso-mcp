@@ -21,7 +21,7 @@ describe('createFeedbackService', () => {
     expect(service.getTools().map((tool) => tool.name)).toEqual(['submit_developer_request']);
   });
 
-  it('Home Assistant가 변환할 수 있는 userContext JSON Schema를 생성한다', () => {
+  it('userContext JSON Schema에 재귀 JSON 값 정의를 포함한다', () => {
     const service = createFeedbackService();
     const tool = service.getTools()[0];
     if (!tool) throw new Error('submit_developer_request 도구가 없습니다.');

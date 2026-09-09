@@ -2,6 +2,42 @@ import { buildKstDateRangeBetween, parseKstDateText } from './workers-chart-help
 
 const DEFAULT_ROOT_REQUESTS_RETENTION_MS = 7 * 86400000;
 
+// 보존기간 밖의 날짜는 같은 지표를 완전히 관측한 스냅샷에서만 복구합니다.
+function findCompleteCachedPoint(payload, window, source, requiredRootStart) {
+  if (
+    !source.accountId ||
+    payload?.accountId !== source.accountId ||
+    payload?.scriptName !== source.scriptName ||
+    payload?.timezone !== 'Asia/Seoul' ||
+    payload?.metric !== 'workersInvocationsAdaptive.requests + httpRequestsAdaptiveGroups.count' ||
+    payload?.rootRedirect?.zoneId !== source.zoneId ||
+    payload?.rootRedirect?.host !== source.rootRedirectHost ||
+    payload?.rootRedirect?.path !== source.rootRedirectPath ||
+    payload?.rootRedirect?.start !== source.rootRedirectStart.toISOString()
+  )
+    return undefined;
+
+  const point = Array.isArray(payload.points)
+    ? payload.points.find((point) => point.date === window.date)
+    : undefined;
+  if (!point || !Number.isFinite(point.requests) || point.requests < 0) return undefined;
+
+  if (payload.coverageVersion === 1) return { date: window.date, requests: point.requests };
+  if (payload.coverageVersion !== undefined) return undefined;
+
+  // 기존 형식은 기록 당시 하루 전체가 보존기간 안에 있었는지 검증합니다.
+  const observedAt = new Date(payload.updatedAt).getTime();
+  const retentionDays = payload.rootRedirect.rootRequestsRetentionDays;
+  if (
+    Number.isFinite(retentionDays) &&
+    retentionDays > 0 &&
+    observedAt >= window.end.getTime() &&
+    observedAt - retentionDays * 86400000 <= requiredRootStart.getTime()
+  )
+    return { date: window.date, requests: point.requests };
+  return undefined;
+}
+
 const WORKER_INVOCATIONS_QUERY = `
   query WorkerInvocations($accountTag: string, $scriptName: string, $start: Time!, $end: Time!) {
     viewer {
@@ -228,6 +264,7 @@ export async function fetchRootGetRequestsForWindow({
  * @param {string} [params.rootRedirectPath]
  * @param {Date} [params.rootRedirectStart]
  * @param {Date} [params.rootRequestsRetentionStart]
+ * @param {object} [params.previousPayload]
  * @param {number} [params.concurrency]
  * @param {typeof fetch} [params.fetchImpl]
  * @returns {Promise<Array<{date: string, requests: number}>>}
@@ -245,6 +282,7 @@ export async function fetchDailyWorkerInvocations({
   rootRedirectPath = '/',
   rootRedirectStart,
   rootRequestsRetentionStart = new Date(Date.now() - DEFAULT_ROOT_REQUESTS_RETENTION_MS),
+  previousPayload,
   concurrency = 4,
   fetchImpl = fetch,
 }) {
@@ -258,6 +296,33 @@ export async function fetchDailyWorkerInvocations({
       const index = nextIndex;
       nextIndex += 1;
       const window = windows[index];
+      const requiredRootStart = rootRedirectStart > window.start ? rootRedirectStart : window.start;
+      if (
+        rootRedirectStart &&
+        requiredRootStart < window.end &&
+        (!zoneId || rootRequestsRetentionStart > requiredRootStart)
+      ) {
+        const cachedPoint = findCompleteCachedPoint(
+          previousPayload,
+          window,
+          {
+            accountId,
+            scriptName,
+            zoneId,
+            rootRedirectHost,
+            rootRedirectPath,
+            rootRedirectStart,
+          },
+          requiredRootStart,
+        );
+        if (!cachedPoint) {
+          throw new Error(
+            `Incomplete daily traffic: ${window.date}; complete root GET history is unavailable.`,
+          );
+        }
+        points[index] = cachedPoint;
+        continue;
+      }
       const requests = await fetchWorkerInvocationsForWindow({
         accountId,
         apiToken,
@@ -268,11 +333,8 @@ export async function fetchDailyWorkerInvocations({
         end: window.end,
         fetchImpl,
       });
-      const redirectStart = [window.start, rootRedirectStart, rootRequestsRetentionStart]
-        .filter((date) => date instanceof Date)
-        .reduce((latest, date) => (date > latest ? date : latest), window.start);
       const redirectedRootRequests =
-        zoneId && rootRedirectStart && redirectStart < window.end
+        zoneId && rootRedirectStart && requiredRootStart < window.end
           ? await fetchRootGetRequestsForWindow({
               apiToken,
               apiEmail,
@@ -280,7 +342,7 @@ export async function fetchDailyWorkerInvocations({
               zoneId,
               host: rootRedirectHost,
               path: rootRedirectPath,
-              start: redirectStart,
+              start: requiredRootStart,
               end: window.end,
               fetchImpl,
             })

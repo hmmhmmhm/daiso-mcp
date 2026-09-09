@@ -285,14 +285,23 @@ export function calculateSummary(points) {
   };
 }
 
-export function buildReadmeSection({ scriptName, updatedAt, days, startDate, endDate, cacheKey }) {
+export function buildReadmeSection({
+  scriptName,
+  updatedAt,
+  days,
+  startDate,
+  endDate,
+  cacheKey,
+  includesRootRedirect = false,
+}) {
   return [
     '<!-- WORKERS_INVOCATIONS_CHART:START -->',
-    `<h3>Cloudflare Workers 호출량 (${startDate} ~ ${endDate}, ${days}일)</h3>`,
+    `<h3>Cloudflare 요청 수 (${startDate} ~ ${endDate}, ${days}일)</h3>`,
     '',
-    `<img src="./assets/analytics/workers-invocations.png?v=${cacheKey}" alt="Cloudflare Workers 호출량 그래프 (${startDate} ~ ${endDate})" width="100%">`,
+    `<img src="./assets/analytics/workers-invocations.png?v=${cacheKey}" alt="Cloudflare 요청 수 그래프 (${startDate} ~ ${endDate})" width="100%">`,
     '',
     `<sub>기준 워커: <code>${scriptName}</code> · 마지막 갱신: ${updatedAt}</sub>`,
+    `<br><sub>집계: ${includesRootRedirect ? 'Worker 실행 + 루트 GET 리디렉션 요청' : 'Worker 실행'} · 사용자 수와 다릅니다.</sub>`,
     '',
     '</div>',
     '',
