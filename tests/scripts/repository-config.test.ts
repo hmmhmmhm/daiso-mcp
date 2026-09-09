@@ -16,7 +16,7 @@ const setupNodeWorkflows = [
 ];
 
 function readText(path: string): string {
-  return readFileSync(path, 'utf8');
+  return readFileSync(path, 'utf8').replaceAll('\r\n', '\n');
 }
 
 describe('repository maintenance configuration', () => {
@@ -62,7 +62,7 @@ describe('repository maintenance configuration', () => {
       overrides?: Record<string, string | Record<string, string>>;
     };
 
-    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.3' });
+    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.4', undici: '7.29.1' });
   });
 
   it('brace-expansion은 취약점이 수정된 5.0.8 이상을 사용한다', () => {
