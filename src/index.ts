@@ -13,6 +13,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { ServiceRegistry } from './core/registry.js';
 import { createDaisoService } from './services/daiso/index.js';
 import { createOliveyoungService } from './services/oliveyoung/index.js';
+import { createDtryxService } from './services/dtryx/index.js';
 import { createMegaboxService } from './services/megabox/index.js';
 import { createCgvService } from './services/cgv/index.js';
 import { createLotteCinemaService } from './services/lottecinema/index.js';
@@ -35,21 +36,8 @@ import {
 import { createPrivacyResponse } from './pages/privacy.js';
 import type { AppBindings } from './api/response.js';
 import { buildActionQueryTargetUrl } from './api/actionsProxy.js';
-import { registerDaisoRoutes } from './api/routes/daisoRoutes.js';
-import { registerOliveyoungRoutes } from './api/routes/oliveyoungRoutes.js';
-import { registerMegaboxRoutes } from './api/routes/megaboxRoutes.js';
-import { registerCgvRoutes } from './api/routes/cgvRoutes.js';
-import { registerLotteCinemaRoutes } from './api/routes/lottecinemaRoutes.js';
-import { registerLotteMartRoutes } from './api/routes/lottemartRoutes.js';
-import { registerCuRoutes } from './api/routes/cuRoutes.js';
-import { registerEmart24Routes } from './api/routes/emart24Routes.js';
-import { registerGs25Routes } from './api/routes/gs25Routes.js';
-import { registerSevenElevenRoutes } from './api/routes/sevenelevenRoutes.js';
-import { registerPlacesRoutes } from './api/routes/placesRoutes.js';
-import { registerOpinetRoutes } from './api/routes/opinetRoutes.js';
-import { registerCompareRoutes } from './api/routes/compareRoutes.js';
-import { registerFeedbackRoutes } from './api/routes/feedbackRoutes.js';
 import { registerHealthRoutes } from './api/routes/healthRoutes.js';
+import { registerServiceRoutes } from './api/routes/registerServiceRoutes.js';
 import { registerRateLimitStatsRoutes } from './api/routes/rateLimitStatsRoutes.js';
 import { buildConfigStatus } from './api/configStatus.js';
 import { createDailyRateLimitMiddleware } from './middleware/dailyRateLimit.js';
@@ -112,6 +100,7 @@ const createRegistry = (bindings?: AppBindings) => {
         zyteApiKey: bindings?.ZYTE_API_KEY,
       }),
     createMegaboxService,
+    createDtryxService,
     () =>
       createLotteCinemaService({
         googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
@@ -354,6 +343,7 @@ app.on(['POST', 'DELETE'], '/', handleRootMcpRequest);
 app.get('/health', (c) => c.json({ status: 'ok', config: buildConfigStatus(c.env) }));
 registerHealthRoutes(app);
 registerRateLimitStatsRoutes(app);
+registerServiceRoutes(app);
 
 // 프롬프트 페이지 (MCP 미지원 에이전트용)
 app.get('/prompt', (c) => {
@@ -389,20 +379,6 @@ app.get('/privacy', (c) => {
 });
 
 // GET API 엔드포인트 (MCP 미지원 에이전트용)
-registerDaisoRoutes(app);
-registerGs25Routes(app);
-registerSevenElevenRoutes(app);
-registerCompareRoutes(app);
-registerFeedbackRoutes(app);
-registerPlacesRoutes(app);
-registerOpinetRoutes(app);
-registerCuRoutes(app);
-registerEmart24Routes(app);
-registerLotteMartRoutes(app);
-registerOliveyoungRoutes(app);
-registerMegaboxRoutes(app);
-registerLotteCinemaRoutes(app);
-registerCgvRoutes(app);
 
 app.get('/api/actions/query', async (c) => {
   try {
