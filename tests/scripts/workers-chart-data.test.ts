@@ -353,7 +353,9 @@ describe('fetchDailyWorkerInvocations', () => {
             viewer: {
               accounts: [
                 {
-                  workersInvocationsAdaptive: [{ sum: { requests: start.includes('06-03') ? 100 : 200 } }],
+                  workersInvocationsAdaptive: [
+                    { sum: { requests: start.includes('06-03') ? 100 : 200 } },
+                  ],
                 },
               ],
             },
@@ -371,12 +373,26 @@ describe('fetchDailyWorkerInvocations', () => {
       zoneId: 'zone-id',
       rootRedirectStart: new Date('2026-05-27T07:24:50.000Z'),
       rootRequestsRetentionStart: new Date('2026-06-04T15:00:00.000Z'),
+      previousPayload: {
+        accountId: 'account-id',
+        scriptName: 'daiso-mcp',
+        timezone: 'Asia/Seoul',
+        coverageVersion: 1,
+        metric: 'workersInvocationsAdaptive.requests + httpRequestsAdaptiveGroups.count',
+        rootRedirect: {
+          zoneId: 'zone-id',
+          host: 'mcp.aka.page',
+          path: '/',
+          start: '2026-05-27T07:24:50.000Z',
+        },
+        points: [{ date: '2026-06-04', requests: 999 }],
+      },
       fetchImpl: mockFetch,
       concurrency: 1,
     });
 
     expect(points).toEqual([
-      { date: '2026-06-04', requests: 100 },
+      { date: '2026-06-04', requests: 999 },
       { date: '2026-06-05', requests: 225 },
     ]);
 

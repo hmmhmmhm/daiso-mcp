@@ -42,7 +42,10 @@ const CHART_START_DATE = process.env.WORKERS_CHART_START_DATE?.trim() || undefin
 const CHART_DAYS = Number.parseInt(process.env.WORKERS_CHART_DAYS ?? '30', 10);
 const CHART_CONCURRENCY = Number.parseInt(process.env.WORKERS_CHART_CONCURRENCY ?? '4', 10);
 const INPUT_JSON_PATH = process.env.WORKERS_CHART_INPUT_JSON;
-const ROOT_REQUESTS_RETENTION_DAYS = Number.parseInt(process.env.WORKERS_CHART_ROOT_REQUESTS_RETENTION_DAYS ?? '7', 10);
+const ROOT_REQUESTS_RETENTION_DAYS = Number.parseInt(
+  process.env.WORKERS_CHART_ROOT_REQUESTS_RETENTION_DAYS ?? '7',
+  10,
+);
 const ROOT_REDIRECT_START = process.env.WORKERS_CHART_ROOT_REDIRECT_START
   ? new Date(process.env.WORKERS_CHART_ROOT_REDIRECT_START)
   : undefined;
@@ -143,7 +146,9 @@ function renderRecent14Panel(points, chartArea) {
   const innerBottom = y + height - 20;
   const toX = (index) => x + 18 + (index / Math.max(recent.length - 1, 1)) * (width - 36);
   const toY = (value) => innerBottom - ((value - min) / range) * (innerBottom - innerTop);
-  const recentPath = linePath(recent.map((point, index) => ({ x: toX(index), y: toY(point.requests) })));
+  const recentPath = linePath(
+    recent.map((point, index) => ({ x: toX(index), y: toY(point.requests) })),
+  );
   const latest = recent[recent.length - 1];
 
   return `
@@ -211,7 +216,7 @@ async function renderChart(points, summary, metadata) {
       .recent-label { font-size: 12px; font-weight: 700; fill: ${WORKERS_CHART_ACCENT_COLORS.recent14Label}; }
     </style>
     <rect width="${width}" height="${height}" fill="#ffffff" />
-    <text x="${width / 2}" y="42" text-anchor="middle" class="title">${escapeXml(`Cloudflare Workers Invocations (${metadata.startDate} ~ ${metadata.endDate}, ${labels.length} days)`)}</text>
+    <text x="${width / 2}" y="42" text-anchor="middle" class="title">${escapeXml(`Cloudflare Requests (${metadata.startDate} ~ ${metadata.endDate}, ${labels.length} days)`)}</text>
     <text x="${width / 2}" y="66" text-anchor="middle" class="subtitle">${escapeXml(`Updated: ${metadata.updatedAtText}`)}</text>
     <rect x="920" y="82" width="16" height="10" fill="rgba(244,129,32,0.25)" stroke="#f48120" />
     <text x="944" y="91" class="legend">Requests</text>
@@ -270,8 +275,12 @@ async function renderChart(points, summary, metadata) {
 }
 
 async function updateReadme(section) {
-  const readme = await fs.readFile(README_PATH, 'utf8');
+  const readme = (await fs.readFile(README_PATH, 'utf8')).replaceAll('\r\n', '\n');
   const pattern = new RegExp(`${README_START}[\\s\\S]*?${README_END}`, 'm');
+  if (pattern.test(readme)) {
+    await fs.writeFile(README_PATH, readme.replace(pattern, section), 'utf8');
+    return;
+  }
   const withoutSection = readme.replace(pattern, '').replace(/\n{3,}/g, '\n\n');
   const badgesAnchor = '\n\n<br>\n\n<br>\n\n<img src="https://i.imgur.com/mPwS4Kv.png"';
 
@@ -293,9 +302,10 @@ async function main() {
   let startDate = CHART_START_DATE;
   let endDate: string;
   let updatedAt = renderedAt.toISOString();
+  let inputPayload: Awaited<ReturnType<typeof readInputPayload>>;
 
   if (INPUT_JSON_PATH) {
-    const inputPayload = await readInputPayload(INPUT_JSON_PATH);
+    inputPayload = await readInputPayload(INPUT_JSON_PATH);
     points = inputPayload.points;
     scriptName = inputPayload.scriptName ?? scriptName;
     startDate = inputPayload.startDate ?? points[0]?.date ?? startDate;
@@ -306,7 +316,14 @@ async function main() {
     const endDateExclusive = parseKstDateText(todayKstDate);
     endDate = formatKstDate(new Date(endDateExclusive.getTime() - 86400000));
     startDate = startDate ?? calculateStartDateFromDays(endDate, CHART_DAYS);
-    const rootRequestsRetentionStart = calculateRetentionStart(renderedAt, ROOT_REQUESTS_RETENTION_DAYS);
+    const rootRequestsRetentionStart = calculateRetentionStart(
+      renderedAt,
+      ROOT_REQUESTS_RETENTION_DAYS,
+    );
+    const previousPayload = await readInputPayload(DATA_PATH).catch((error) => {
+      if (error.code === 'ENOENT') return undefined;
+      throw error;
+    });
 
     points = await fetchDailyWorkerInvocations({
       accountId: ACCOUNT_ID,
@@ -321,6 +338,7 @@ async function main() {
       rootRedirectPath: ROOT_REDIRECT_PATH,
       rootRedirectStart: ROOT_REDIRECT_START,
       rootRequestsRetentionStart,
+      previousPayload,
       concurrency:
         Number.isFinite(CHART_CONCURRENCY) && CHART_CONCURRENCY > 0 ? CHART_CONCURRENCY : 4,
     });
@@ -334,15 +352,15 @@ async function main() {
   });
   await fs.writeFile(CHART_PATH, chartBuffer);
   const payload = {
+    accountId: ACCOUNT_ID,
     scriptName,
     metric: ROOT_REDIRECT_START
       ? 'workersInvocationsAdaptive.requests + httpRequestsAdaptiveGroups.count'
       : 'workersInvocationsAdaptive.requests',
     aggregation: ROOT_REDIRECT_START ? 'script-level plus redirected root GET' : 'script-level',
-    includedTraffic:
-      ROOT_REDIRECT_START
-        ? `Worker invocations for ${scriptName} plus redirected GET ${ROOT_REDIRECT_PATH} traffic on ${ROOT_REDIRECT_HOST} where zone analytics retention permits.`
-        : 'All invocations for this Worker script are counted across routes and domains, including GET / on mcp.aka.page.',
+    includedTraffic: ROOT_REDIRECT_START
+      ? `Worker invocations for ${scriptName} plus redirected GET ${ROOT_REDIRECT_PATH} traffic on ${ROOT_REDIRECT_HOST}, retaining complete historical daily totals.`
+      : 'All invocations for this Worker script are counted across routes and domains, including GET / on mcp.aka.page.',
     rootRedirect:
       ROOT_REDIRECT_START && ZONE_ID
         ? {
@@ -354,6 +372,19 @@ async function main() {
           }
         : null,
     timezone: 'Asia/Seoul',
+    coverageVersion: 1,
+    // 오프라인 렌더링에서는 원본 지표와 완전성 정보를 그대로 유지합니다.
+    ...(inputPayload
+      ? {
+          accountId: inputPayload.accountId,
+          metric: inputPayload.metric,
+          aggregation: inputPayload.aggregation,
+          includedTraffic: inputPayload.includedTraffic,
+          rootRedirect: inputPayload.rootRedirect,
+          timezone: inputPayload.timezone,
+          coverageVersion: inputPayload.coverageVersion,
+        }
+      : {}),
     days: points.length,
     startDate,
     endDate,
@@ -366,11 +397,12 @@ async function main() {
 
   const section = buildReadmeSection({
     scriptName,
-    updatedAt: formatKstDateTime(renderedAt),
+    updatedAt: formatKstDateTime(new Date(updatedAt)),
     days: points.length,
     startDate,
     endDate,
     cacheKey: payload.renderedAt,
+    includesRootRedirect: Boolean(payload.rootRedirect),
   });
   await updateReadme(section);
 
