@@ -3,6 +3,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { isDirectExecution, runCli } from '../../src/cli.js';
 import {
   COMMAND_DETAIL,
@@ -1286,8 +1288,10 @@ describe('CLI', () => {
   });
 
   it('직접 실행 여부를 올바르게 판별한다', () => {
-    expect(isDirectExecution('', 'file:///tmp/test.js')).toBe(false);
-    expect(isDirectExecution('/tmp/test.js', 'file:///tmp/test.js')).toBe(true);
-    expect(isDirectExecution('/tmp/other.js', 'file:///tmp/test.js')).toBe(false);
+    const scriptPath = resolve('tmp/test.js');
+    const scriptUrl = pathToFileURL(scriptPath).href;
+    expect(isDirectExecution('', scriptUrl)).toBe(false);
+    expect(isDirectExecution(scriptPath, scriptUrl)).toBe(true);
+    expect(isDirectExecution(resolve('tmp/other.js'), scriptUrl)).toBe(false);
   });
 });
