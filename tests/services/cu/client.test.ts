@@ -12,6 +12,27 @@ import {
 
 const mockFetch = vi.fn();
 
+it('CU 조회 실패 응답을 빈 재고로 처리하지 않는다', async () => {
+  mockFetch.mockResolvedValueOnce(new Response('{}')).mockResolvedValueOnce(new Response(
+    JSON.stringify({ resp_cd: '3000', resp_msg: '재고조회 조회 실패' }),
+  ));
+  await expect(fetchCuStock({ keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' }))
+    .rejects.toThrow('CU 재고 API가 조회 실패 응답을 반환했습니다 (3000).');
+});
+
+it('재고 HTML 응답은 빈 재고 성공 대신 사용 불가로 반환한다', async () => {
+  mockFetch
+    .mockResolvedValueOnce(new Response('{}'))
+    .mockResolvedValueOnce(new Response('\r\n<!DOCTYPE html><html>upstream page</html>'));
+  const result = await fetchCuStock({ keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' });
+  expect(result).toMatchObject({
+    available: false,
+    unavailableReason: 'CU 재고 API가 JSON 대신 HTML을 반환하여 재고를 확인할 수 없습니다.',
+    items: [],
+  });
+  expect(mockFetch).toHaveBeenCalledTimes(2);
+});
+
 function zyteJsonResponse(value: unknown): Response {
   return new Response(
     JSON.stringify({
@@ -376,20 +397,9 @@ describe('fetchCuStores', () => {
   });
 
   it('비정상 숫자/문자 값은 0으로 보정하고 storeCode 기본값을 사용한다', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        totalCnt: 1,
-        storeList: [
-          {
-            storeNm: '테스트점',
-            latVal: Number.POSITIVE_INFINITY,
-            longVal: Number.NaN,
-            stock: 'abc',
-          },
-        ],
-      }),
-    } as unknown as Response);
+    mockFetch.mockResolvedValue(new Response(
+      '{"totalCnt":1,"storeList":[{"storeNm":"테스트점","latVal":1e400,"longVal":-1e400,"stock":"abc"}]}',
+    ));
 
     const result = await fetchCuStores({ latitude: 37.5, longitude: 127.0 });
 

@@ -22,6 +22,23 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('runHealthChecks', () => {
+  it.each([
+    ['CU 재고 API가 JSON 대신 HTML을 반환하여 재고를 확인할 수 없습니다.', 'CU 재고 API가 JSON 대신 HTML을 반환하여 재고를 확인할 수 없습니다.'],
+    [null, 'inventory unavailable'],
+    [' ', 'inventory unavailable'],
+  ])('CU 재고 unavailable 응답은 사유를 보존하여 degraded로 보고한다', async (unavailableReason, message) => {
+    const fetchImpl = vi.fn().mockResolvedValueOnce(jsonResponse({
+      success: true,
+      data: { inventory: { available: false, unavailableReason, items: [{ itemName: '커피' }] } },
+      meta: { total: 1 },
+    }));
+    const result = await runHealthChecks({
+      baseUrl: 'https://example.com', check: 'cu.inventory', mode: 'deep', fetchImpl, fresh: true,
+    });
+    expect(result.checks[0]).toMatchObject({ status: 'degraded', httpStatus: 200, message });
+    expect(result.status).toBe('degraded');
+  });
+
   it('편의점 상품·매장·재고 운영 체크 12개를 모두 정의한다', () => {
     const convenienceCheckIds = HEALTH_CHECKS.filter((check) =>
       ['cu', 'gs25', 'seveneleven', 'emart24'].includes(check.service),
@@ -101,7 +118,7 @@ describe('runHealthChecks', () => {
     const oliveyoungCall = fetchImpl.mock.calls.find((call) =>
       String(call[0]).includes('/api/oliveyoung/products?'),
     );
-    expect(String(oliveyoungCall?.[0])).toContain('timeoutMs=5000');
+    expect(String(oliveyoungCall?.[0])).toContain('timeoutMs=7000');
   });
 
   it('full 모드에서 quick과 deep 체크를 함께 실행한다', async () => {
@@ -216,10 +233,10 @@ describe('runHealthChecks', () => {
     );
     expect(String(fetchImpl.mock.calls[0][0])).toContain('/api/oliveyoung/inventory?');
     expect(String(fetchImpl.mock.calls[0][0])).toContain('stockCheckLimit=0');
-    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=5000');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=7000');
   });
 
-  it('올리브영 체크는 전역 timeout이 커도 짧은 서비스 timeout을 사용한다', async () => {
+  it.each([5000, 20000])('올리브영 체크는 요청한 %i ms 제한을 사용한다', async (timeoutMs) => {
     const fetchImpl = vi.fn().mockResolvedValueOnce(
       jsonResponse({
         success: true,
@@ -233,14 +250,14 @@ describe('runHealthChecks', () => {
     const result = await runHealthChecks({
       baseUrl: 'https://example.com',
       check: 'oliveyoung.products',
-      timeoutMs: 20000,
+      timeoutMs,
       fetchImpl,
       now: () => 1000,
       fresh: true,
     });
 
     expect(result.status).toBe('ok');
-    expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=5000');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain(`timeoutMs=${timeoutMs}`);
     expect(fetchImpl.mock.calls[0][1]).toEqual(
       expect.objectContaining({
         signal: expect.any(AbortSignal),

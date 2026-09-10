@@ -54,6 +54,7 @@ export async function handleGs25FindStores(c: ApiContext) {
       }
     }
 
+    let fallbackUsed = false;
     let storeResult = await fetchGs25Stores(
       {
         serviceCode,
@@ -65,11 +66,15 @@ export async function handleGs25FindStores(c: ApiContext) {
         zyteApiKey: c.env?.ZYTE_API_KEY,
         apiKey: c.env?.GS25_API_KEY,
       },
-    );
-    let fallbackUsed = false;
+    ).catch(async (error: unknown) => {
+      if (!isGs25UpstreamUnavailableError(error) || keyword.trim().length === 0) throw error;
+      const webStoreResult = await fetchGs25WebStores(keyword, { timeout: 20000 });
+      fallbackUsed = true;
+      return { ...webStoreResult, cacheHit: false };
+    });
 
     if (
-      storeResult.stores.length === 0 &&
+      !fallbackUsed && storeResult.stores.length === 0 &&
       typeof latitude === 'number' &&
       typeof longitude === 'number'
     ) {
@@ -99,23 +104,10 @@ export async function handleGs25FindStores(c: ApiContext) {
       }
     }
 
-    if (storeResult.stores.length === 0 && keyword.trim().length > 0) {
-      try {
-        const webStoreResult = await fetchGs25WebStores(keyword, {
-          timeout: 20000,
-        });
-
-        if (webStoreResult.stores.length > 0) {
-          storeResult = {
-            totalCount: webStoreResult.totalCount,
-            stores: webStoreResult.stores,
-            cacheHit: false,
-          };
-          fallbackUsed = true;
-        }
-      } catch {
-        fallbackUsed = false;
-      }
+    if (!fallbackUsed && storeResult.stores.length === 0 && keyword.trim().length > 0) {
+      const webStoreResult = await fetchGs25WebStores(keyword, { timeout: 20000 });
+      storeResult = { ...webStoreResult, cacheHit: false };
+      fallbackUsed = true;
     }
 
     const selected = selectGs25StoresForKeyword(storeResult.stores, keyword, {

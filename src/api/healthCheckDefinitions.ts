@@ -132,7 +132,6 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/oliveyoung/products?keyword=%EB%A6%BD%EB%B0%A4&size=1',
     collectionKey: 'products',
     requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
-    timeoutMs: 5000,
   },
   {
     id: 'megabox.theaters',
@@ -213,6 +212,5 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     path: '/api/oliveyoung/inventory?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&storeKeyword=%EB%AA%85%EB%8F%99&size=1&storeLimit=1&stockCheckLimit=0',
     collectionKey: 'inventoryProducts',
     requiredFields: ['goodsNumber', 'goodsName', 'productNo', 'productName', 'name'],
-    timeoutMs: 5000,
   },
 ];

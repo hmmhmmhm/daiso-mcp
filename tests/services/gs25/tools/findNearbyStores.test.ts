@@ -19,6 +19,45 @@ afterEach(() => {
 });
 
 describe('createFindNearbyStoresTool', () => {
+  it('재고 API 인증 실패 시 공개 키워드 검색으로 복구한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{}', { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([
+        { shopCode: 'VY010', shopName: 'GS25강남', posX: 127.02, posY: 37.49 },
+      ])));
+    const response = await createFindNearbyStoresTool().handler({ keyword: '강남' });
+    expect(JSON.parse(response.content[0].text)).toMatchObject({
+      fallbackUsed: true, stores: [{ storeCode: 'VY010' }],
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([401, 200])('원본 %s 이후 공개 검색 실패를 호출자에게 전달한다', async (status) => {
+    mockFetch.mockResolvedValueOnce(new Response('{"stores":[]}', { status }))
+      .mockImplementation(() => Promise.resolve(new Response('public unavailable', { status: 503 })));
+    await expect(createFindNearbyStoresTool().handler({ keyword: '강남' })).rejects.toThrow('503');
+  });
+
+  it('좌표만 주어진 인증 실패는 공개 검색으로 숨기지 않는다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{}', { status: 401 }));
+    await expect(createFindNearbyStoresTool().handler({ latitude: 37.5, longitude: 127 }))
+      .rejects.toThrow('인증');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('일반 전송 오류는 공개 검색으로 숨기지 않는다', async () => {
+    mockFetch.mockRejectedValue(new Error('network failed'));
+    await expect(createFindNearbyStoresTool().handler({ keyword: '강남' })).rejects.toThrow('network failed');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('인증 실패 후 공개 검색이 비면 추가 재고 조회 없이 빈 결과를 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{}', { status: 401 }))
+      .mockResolvedValueOnce(new Response('[]'));
+    const response = await createFindNearbyStoresTool().handler({ keyword: '강남', latitude: 37.5, longitude: 127 });
+    expect(JSON.parse(response.content[0].text)).toMatchObject({ count: 0, fallbackUsed: true });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
   it('올바른 도구 정의를 반환한다', () => {
     const tool = createFindNearbyStoresTool();
 
@@ -200,13 +239,15 @@ describe('createFindNearbyStoresTool', () => {
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
-      .mockRejectedValueOnce(new Error('fallback stock unavailable'));
+      .mockRejectedValueOnce(new Error('fallback stock unavailable'))
+      .mockRejectedValueOnce(new Error('fallback stock unavailable'))
+      .mockResolvedValueOnce(new Response('[]'));
 
     const tool = createFindNearbyStoresTool();
     const result = await tool.handler({ keyword: '강남', limit: 3 });
 
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.fallbackUsed).toBe(false);
+    expect(parsed.fallbackUsed).toBe(true);
     expect(parsed.count).toBe(0);
 
     process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
@@ -226,13 +267,14 @@ describe('createFindNearbyStoresTool', () => {
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
+      .mockResolvedValueOnce(new Response('[]'));
 
     const tool = createFindNearbyStoresTool();
     const result = await tool.handler({ keyword: '강남', limit: 3 });
 
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.fallbackUsed).toBe(false);
+    expect(parsed.fallbackUsed).toBe(true);
     expect(parsed.count).toBe(0);
 
     process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;

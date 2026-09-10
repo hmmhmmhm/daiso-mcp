@@ -39,6 +39,14 @@ export class HttpError extends Error {
   }
 }
 
+/** HTML 원문을 노출하지 않고 예상하지 못한 응답 형식을 구분합니다. */
+export class UnexpectedHtmlResponseError extends Error {
+  constructor(readonly status: number, readonly contentType: string) {
+    super(`JSON 대신 HTML 응답을 받았습니다 (HTTP ${status}).`);
+    this.name = 'UnexpectedHtmlResponseError';
+  }
+}
+
 export function createTimeoutController(
   timeout: number,
 ): { controller: AbortController; timeoutId: ReturnType<typeof setTimeout> } {
@@ -163,7 +171,11 @@ export async function fetchJson<T>(url: string, options: FetchOptions = {}): Pro
     throw new HttpError(response.status, response.statusText, await response.text());
   }
 
-  return response.json() as Promise<T>;
+  const body = await response.text();
+  if (/^\s*(?:<!doctype\s+html\b|<html\b)/i.test(body)) {
+    throw new UnexpectedHtmlResponseError(response.status, response.headers.get('content-type') || '');
+  }
+  return JSON.parse(body) as T;
 }
 
 export async function fetchText(url: string, options: FetchOptions = {}): Promise<string> {

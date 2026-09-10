@@ -22,7 +22,6 @@ export interface HealthCheckDefinition {
     | 'inventoryItems'
     | 'inventoryStores';
   requiredFields?: string[];
-  timeoutMs?: number;
   degradedFailurePatterns?: string[];
   allowEmpty?: boolean;
 }

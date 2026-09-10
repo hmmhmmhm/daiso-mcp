@@ -323,3 +323,22 @@ describe('handleEmart24CheckInventory', () => {
     );
   });
 });
+
+
+describe.each([
+  ['stores', handleEmart24FindStores],
+  ['products', handleEmart24SearchProducts],
+] as const)('%s timeoutMs', (_name, handler) => {
+  it.each([
+    ['2345', 2345],
+    ['20000', 20000],
+    ['invalid', 15000],
+    ['0', 15000],
+    ['-1', 15000],
+  ])('요청 제한 %s를 %i ms로 적용한다', async (timeoutMs, expected) => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 0, data: [] })));
+    const timer = vi.spyOn(globalThis, 'setTimeout');
+    await handler(createMockContext({ keyword: '강남', timeoutMs }));
+    expect(timer).toHaveBeenCalledWith(expect.any(Function), expected);
+  });
+});

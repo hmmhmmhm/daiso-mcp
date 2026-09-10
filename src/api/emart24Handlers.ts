@@ -17,6 +17,8 @@ export async function handleEmart24FindStores(c: ApiContext) {
   const service24h = c.req.query('service24h') === 'true';
   const page = parseInt(c.req.query('page') || '1', 10);
   const limit = parseInt(c.req.query('limit') || '20', 10);
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
   const rawLat = c.req.query('lat');
   const rawLng = c.req.query('lng');
   const parsedLat = rawLat ? parseFloat(rawLat) : undefined;
@@ -34,7 +36,7 @@ export async function handleEmart24FindStores(c: ApiContext) {
         service24h,
       },
       {
-        timeout: 15000,
+        timeout: timeoutMs,
       },
     );
 
@@ -86,6 +88,8 @@ export async function handleEmart24SearchProducts(c: ApiContext) {
   const sortType =
     (c.req.query('sortType') as 'SALE' | 'LATEST' | 'PRICE_ASC' | 'PRICE_DESC' | null) || 'SALE';
   const saleProductYn = (c.req.query('saleProductYn') as 'Y' | 'N' | null) || 'N';
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
 
   if (keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
@@ -101,7 +105,7 @@ export async function handleEmart24SearchProducts(c: ApiContext) {
         saleProductYn,
       },
       {
-        timeout: 15000,
+        timeout: timeoutMs,
       },
     );
 

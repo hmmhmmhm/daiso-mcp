@@ -50,6 +50,20 @@ describe('GET /api/cu/stores', () => {
 });
 
 describe('GET /api/cu/inventory', () => {
+  it('HTML 응답은 재고 확인 불가 사유를 API 응답에 보존한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{}')).mockResolvedValueOnce(
+      new Response('<!DOCTYPE html><html>private upstream page</html>'),
+    );
+    const res = await app.request('/api/cu/inventory?keyword=과자&storeCheck=false');
+    const body = await res.json();
+    expect(body.data.inventory).toMatchObject({
+      available: false,
+      unavailableReason: 'CU 재고 API가 JSON 대신 HTML을 반환하여 재고를 확인할 수 없습니다.',
+      items: [],
+    });
+    expect(JSON.stringify(body)).not.toContain('private upstream page');
+  });
+
   it('CU 재고 검색 결과를 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(

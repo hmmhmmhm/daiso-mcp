@@ -151,23 +151,6 @@ function shouldDegradeCliContractPath(path: string, message: string): boolean {
   return false;
 }
 
-function resolveCheckTimeoutMs(
-  check: Pick<HealthCheckDefinition, 'timeoutMs'>,
-  timeoutMs: number,
-): number {
-  if (check.timeoutMs === undefined) {
-    return timeoutMs;
-  }
-  return Math.min(timeoutMs, Math.trunc(check.timeoutMs));
-}
-
-function resolveCliContractTimeoutMs(path: string, timeoutMs: number): number {
-  if (path.startsWith('/api/oliveyoung/')) {
-    return Math.min(timeoutMs, 5000);
-  }
-  return timeoutMs;
-}
-
 function buildCheckUrl(
   baseUrl: string,
   check: HealthCheckDefinition,
@@ -220,7 +203,7 @@ async function runCliContractCheck(
   const degradedMessages: string[] = [];
 
   for (const path of CLI_CONTRACT_PATHS) {
-    const checkTimeoutMs = resolveCliContractTimeoutMs(path, params.timeoutMs);
+    const checkTimeoutMs = params.timeoutMs;
     const syntheticCheck = { ...check, path };
     try {
       const response = await params.fetchImpl(
@@ -286,7 +269,7 @@ async function runSingleCheck(
     return runCliContractCheck(check, params);
   }
 
-  const timeoutMs = resolveCheckTimeoutMs(check, params.timeoutMs);
+  const timeoutMs = params.timeoutMs;
   const startedAt = params.now();
   const cacheBustValue = params.cacheBust ? startedAt : undefined;
 
@@ -315,6 +298,20 @@ async function runSingleCheck(
         durationMs,
         httpStatus: response.status,
         message,
+      };
+    }
+
+    const inventory = (body.data as { inventory?: { available?: boolean; unavailableReason?: unknown } } | undefined)?.inventory;
+    if (check.id === 'cu.inventory' && inventory?.available === false) {
+      const reason = inventory.unavailableReason;
+      return {
+        id: check.id,
+        service: check.service,
+        target: check.target,
+        status: 'degraded',
+        durationMs,
+        httpStatus: response.status,
+        message: typeof reason === 'string' && reason.trim() ? reason.trim() : 'inventory unavailable',
       };
     }
 
