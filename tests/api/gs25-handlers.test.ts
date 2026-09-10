@@ -37,6 +37,30 @@ function createMockContext(query: Record<string, string> = {}) {
 }
 
 describe('handleGs25FindStores', () => {
+  it('재고 API 인증 실패 시 키워드 공개 검색으로 복구한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{}', { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([
+        { shopCode: 'VY010', shopName: 'GS25강남', posX: 127.02, posY: 37.49 },
+      ])));
+    const ctx = createMockContext({ keyword: '강남' });
+    await handleGs25FindStores(ctx);
+    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true, data: expect.objectContaining({ fallbackUsed: true,
+        stores: [expect.objectContaining({ storeCode: 'VY010' })] }),
+    }));
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([401, 200])('원본 %s 이후 공개 매장 검색 실패를 숨기지 않는다', async (status) => {
+    mockFetch.mockResolvedValueOnce(new Response('{"stores":[]}', { status }))
+      .mockImplementation(() => Promise.resolve(new Response('public unavailable', { status: 503 })));
+    const ctx = createMockContext({ keyword: '강남' });
+    await handleGs25FindStores(ctx);
+    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false, error: expect.objectContaining({ message: expect.stringContaining('503') }),
+    }), 500);
+  });
+
   it('매장 검색 결과를 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(
@@ -60,30 +84,9 @@ describe('handleGs25FindStores', () => {
   it('store/stock 매장 조회가 0건이면 GS25 웹 매장 검색으로 fallback한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
-      .mockResolvedValueOnce(
-        new Response('<form><input type="hidden" name="CSRFToken" value="csrf-token" /></form>', {
-          headers: {
-            'Set-Cookie': 'JSESSIONID=session-id; Path=/; HttpOnly',
-          },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify(
-            JSON.stringify({
-              results: [
-                {
-                  shopCode: 'VY010',
-                  shopName: 'GS25S강남역1호점',
-                  address: '서울 강남구 강남대로390',
-                  longs: '37.4978492897333',
-                  lat: '127.028648954517',
-                },
-              ],
-            }),
-          ),
-        ),
-      );
+      .mockResolvedValueOnce(new Response(JSON.stringify([
+        { shopCode: 'VY010', shopName: 'GS25강남', address: '서울', posY: 37.49, posX: 127.02 },
+      ])));
 
     const ctx = createMockContext({ keyword: '강남', limit: '1' });
     await handleGs25FindStores(ctx);

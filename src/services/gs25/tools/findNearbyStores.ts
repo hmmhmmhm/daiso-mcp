@@ -4,9 +4,11 @@
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
+import { isGs25UpstreamUnavailableError } from '../errors.js';
 import {
   attachDistanceToGs25Stores,
   fetchGs25Stores,
+  fetchGs25WebStores,
   geocodeGs25Address,
   selectGs25StoresForKeyword,
   sortGs25Stores,
@@ -63,6 +65,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     }
   }
 
+  let fallbackUsed = false;
   let result = await fetchGs25Stores(
     {
       serviceCode,
@@ -74,11 +77,15 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
       zyteApiKey,
       apiKey,
     },
-  );
-  let fallbackUsed = false;
+  ).catch(async (error: unknown) => {
+    if (!isGs25UpstreamUnavailableError(error) || keyword.trim().length === 0) throw error;
+    const webResult = await fetchGs25WebStores(keyword, { timeout: timeoutMs });
+    fallbackUsed = true;
+    return { ...webResult, cacheHit: false };
+  });
 
   if (
-    result.stores.length === 0 &&
+    !fallbackUsed && result.stores.length === 0 &&
     typeof resolvedLatitude === 'number' &&
     typeof resolvedLongitude === 'number'
   ) {
@@ -106,6 +113,12 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     } catch {
       fallbackUsed = false;
     }
+  }
+
+  if (!fallbackUsed && result.stores.length === 0 && keyword.trim().length > 0) {
+    const webResult = await fetchGs25WebStores(keyword, { timeout: timeoutMs });
+    result = { ...webResult, cacheHit: false };
+    fallbackUsed = true;
   }
 
   const selected = selectGs25StoresForKeyword(result.stores, keyword, {

@@ -64,6 +64,7 @@ interface CuStockRow {
 }
 
 export interface CuStockMainResponse {
+  resp_cd?: string;
   spellModifyYn?: string;
   data?: {
     stockResult?: {

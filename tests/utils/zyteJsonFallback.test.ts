@@ -34,6 +34,14 @@ afterEach(() => {
 });
 
 describe('fetchJsonWithZyteFallback', () => {
+  it('HTML 성공 응답은 유료 재시도 없이 형식 오류를 전달한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('<!DOCTYPE html><html>page</html>'));
+    await expect(fetchJsonWithZyteFallback('https://example.com/api', {
+      zyteApiKey: 'test-key',
+    })).rejects.toMatchObject({ name: 'UnexpectedHtmlResponseError' });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('원본 요청이 성공하면 Zyte를 호출하지 않는다', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ success: true }), {
