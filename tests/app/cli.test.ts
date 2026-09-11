@@ -630,6 +630,87 @@ describe('CLI', () => {
     );
   });
 
+  it('megabox-theaters 명령은 메가박스 주변 지점 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['megabox-theaters', '--lat', '37.5125', '--lng', '127.0589', '--limit', '5'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/megabox/theaters?lat=37.5125&lng=127.0589&limit=5',
+    );
+  });
+
+  it('megabox-theaters 명령은 위치 검색어를 positional 인자로 받는다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: { theaters: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(['megabox-theaters', '강남', '--limit', '5'], deps);
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/megabox/theaters?limit=5&keyword=%EA%B0%95%EB%82%A8',
+    );
+  });
+
+  it('megabox-movies 명령은 메가박스 영화/회차 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: { movies: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['megabox-movies', '--playDate', '20260310', '--theaterId', '1372'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/megabox/movies?playDate=20260310&theaterId=1372',
+    );
+  });
+
+  it('megabox-seats 명령은 메가박스 잔여 좌석 API를 호출한다', async () => {
+    const { deps } = createDeps();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: vi
+        .fn()
+        .mockResolvedValue({ success: true, data: { seats: [] }, meta: { total: 0 } }),
+    } as unknown as Response);
+    deps.fetchImpl = fetchImpl;
+
+    const exitCode = await runCli(
+      ['megabox-seats', '--playDate', '20260310', '--theaterId', '1372', '--movieId', '23816'],
+      deps,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://mcp.aka.page/api/megabox/seats?playDate=20260310&theaterId=1372&movieId=23816',
+    );
+  });
+
   it('lottecinema-movies 명령은 롯데시네마 영화/회차 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
@@ -1147,6 +1228,9 @@ describe('CLI', () => {
     ['lottecinema-theaters', ['lottecinema-theaters', '잠실']],
     ['lottecinema-movies', ['lottecinema-movies', '잠실']],
     ['lottecinema-seats', ['lottecinema-seats', '잠실']],
+    ['megabox-theaters', ['megabox-theaters', '강남']],
+    ['megabox-movies', ['megabox-movies', '강남']],
+    ['megabox-seats', ['megabox-seats', '강남']],
     ['emart24-stores', ['emart24-stores', '강남']],
     ['emart24-products', ['emart24-products', '두바이']],
     ['emart24-inventory', ['emart24-inventory', '8800244010504', '--bizNoArr', '28339']],

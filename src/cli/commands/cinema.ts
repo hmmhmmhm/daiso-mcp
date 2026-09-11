@@ -43,6 +43,36 @@ export async function handleLottecinemaSeats(options: string[], deps: CliDeps): 
   });
 }
 
+export async function handleMegaboxTheaters(options: string[], deps: CliDeps): Promise<number> {
+  return await runApiCommand({
+    command: 'megabox-theaters',
+    options,
+    deps,
+    path: '/api/megabox/theaters',
+    configure: applyKeywordPositional,
+  });
+}
+
+export async function handleMegaboxMovies(options: string[], deps: CliDeps): Promise<number> {
+  return await runApiCommand({
+    command: 'megabox-movies',
+    options,
+    deps,
+    path: '/api/megabox/movies',
+    configure: applyKeywordPositional,
+  });
+}
+
+export async function handleMegaboxSeats(options: string[], deps: CliDeps): Promise<number> {
+  return await runApiCommand({
+    command: 'megabox-seats',
+    options,
+    deps,
+    path: '/api/megabox/seats',
+    configure: applyKeywordPositional,
+  });
+}
+
 export async function handleCgvTheaters(options: string[], deps: CliDeps): Promise<number> {
   return await runApiCommand({
     command: 'cgv-theaters',

@@ -24,6 +24,9 @@ export type CommandName =
   | 'lottecinema-theaters'
   | 'lottecinema-movies'
   | 'lottecinema-seats'
+  | 'megabox-theaters'
+  | 'megabox-movies'
+  | 'megabox-seats'
   | 'lottemart-stores'
   | 'lottemart-products'
   | 'emart24-stores'
@@ -60,6 +63,9 @@ export const COMMAND_LIST: CommandName[] = [
   'lottecinema-theaters',
   'lottecinema-movies',
   'lottecinema-seats',
+  'megabox-theaters',
+  'megabox-movies',
+  'megabox-seats',
   'lottemart-stores',
   'lottemart-products',
   'emart24-stores',
@@ -97,6 +103,9 @@ export const COMMAND_SUMMARY: Record<CommandName, string> = {
   'lottecinema-theaters': '롯데시네마 주변 지점 조회',
   'lottecinema-movies': '롯데시네마 영화/회차 조회',
   'lottecinema-seats': '롯데시네마 잔여 좌석 조회',
+  'megabox-theaters': '메가박스 주변 지점 조회',
+  'megabox-movies': '메가박스 영화/회차 조회',
+  'megabox-seats': '메가박스 잔여 좌석 조회',
   'lottemart-stores': '롯데마트 매장 검색',
   'lottemart-products': '롯데마트 상품 검색',
   'emart24-stores': '이마트24 매장 검색',
@@ -270,6 +279,30 @@ export const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '옵션: --playDate, --theaterId, --movieId, --keyword, --lat, --lng, --limit, --json',
     '예시: daiso lottecinema-seats 잠실 --playDate 20260310 --movieId 23816',
     '예시: daiso lottecinema-seats --playDate 20260310 --keyword "안산 중앙역" --movieId 23816',
+  ],
+  'megabox-theaters': [
+    '명령: megabox-theaters',
+    '설명: 메가박스 주변 지점 API를 호출합니다.',
+    '사용법: daiso megabox-theaters [keyword] [--lat 값] [--lng 값] [--playDate YYYYMMDD] [--areaCode 값] [--limit N] [--json]',
+    '옵션: --keyword, --lat, --lng, --playDate, --areaCode, --limit, --json',
+    '예시: daiso megabox-theaters 강남 --limit 5',
+    '예시: daiso megabox-theaters --keyword "코엑스" --limit 5',
+  ],
+  'megabox-movies': [
+    '명령: megabox-movies',
+    '설명: 메가박스 영화/회차 API를 호출합니다.',
+    '사용법: daiso megabox-movies [keyword] [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--areaCode 값] [--lat 값] [--lng 값] [--json]',
+    '옵션: --playDate, --theaterId, --movieId, --keyword, --areaCode, --lat, --lng, --json',
+    '예시: daiso megabox-movies 강남 --playDate 20260310',
+    '예시: daiso megabox-movies --playDate 20260310 --keyword "코엑스"',
+  ],
+  'megabox-seats': [
+    '명령: megabox-seats',
+    '설명: 메가박스 잔여 좌석 API를 호출합니다.',
+    '사용법: daiso megabox-seats [keyword] [--playDate YYYYMMDD] [--theaterId 값] [--movieId 값] [--areaCode 값] [--lat 값] [--lng 값] [--limit N] [--json]',
+    '옵션: --playDate, --theaterId, --movieId, --keyword, --areaCode, --lat, --lng, --limit, --json',
+    '예시: daiso megabox-seats 강남 --playDate 20260310 --movieId 23816',
+    '예시: daiso megabox-seats --playDate 20260310 --keyword "코엑스" --movieId 23816',
   ],
   'lottemart-stores': [
     '명령: lottemart-stores',

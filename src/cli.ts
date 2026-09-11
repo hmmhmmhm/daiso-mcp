@@ -48,6 +48,9 @@ import {
   handleLottecinemaTheaters,
   handleLottecinemaMovies,
   handleLottecinemaSeats,
+  handleMegaboxTheaters,
+  handleMegaboxMovies,
+  handleMegaboxSeats,
 } from './cli/commands/cinema.js';
 
 export type { CliDeps } from './cli/types.js';
@@ -179,6 +182,10 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     return await handleLottecinemaTheaters(options, resolvedDeps);
   if (command === 'lottecinema-movies') return await handleLottecinemaMovies(options, resolvedDeps);
   if (command === 'lottecinema-seats') return await handleLottecinemaSeats(options, resolvedDeps);
+  if (command === 'megabox-theaters')
+    return await handleMegaboxTheaters(options, resolvedDeps);
+  if (command === 'megabox-movies') return await handleMegaboxMovies(options, resolvedDeps);
+  if (command === 'megabox-seats') return await handleMegaboxSeats(options, resolvedDeps);
   if (command === 'emart24-stores') return await handleEmart24Stores(options, resolvedDeps);
   if (command === 'emart24-products') return await handleEmart24Products(options, resolvedDeps);
   if (command === 'emart24-inventory') return await handleEmart24Inventory(options, resolvedDeps);

@@ -73,6 +73,9 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - Lotte Cinema theaters: `npx daiso lottecinema-theaters 잠실 --limit 10 --json`
 - Lotte Cinema movies: `npx daiso get /api/lottecinema/movies --theaterId <theaterId> --json`
 - Lotte Cinema seats: `npx daiso get /api/lottecinema/seats --theaterId <theaterId> --movieId <movieId> --playDate <YYYYMMDD> --json`
+- Megabox theaters: `npx daiso megabox-theaters 강남 --limit 10 --json`
+- Megabox movies: `npx daiso megabox-movies --theaterId <theaterId> --playDate <YYYYMMDD> --json`
+- Megabox seats: `npx daiso megabox-seats --theaterId <theaterId> --movieId <movieId> --playDate <YYYYMMDD> --json`
 - CGV theaters: `npx daiso cgv-theaters 강남 --limit 10 --json`
 - CGV movies: `npx daiso cgv-movies --playDate <YYYYMMDD> --theaterCode <theaterCode> --json`
 - CGV timetable: `npx daiso cgv-timetable --playDate <YYYYMMDD> --theaterCode <theaterCode> --json`
