@@ -548,10 +548,10 @@ describe('geocodeCuAddress', () => {
   });
 });
 
-it.each([400, 403, 429])('웹 매장 %i 차단 후 유료 호출 없이 비용 정책을 안내한다', async (status) => {
-  mockFetch.mockResolvedValueOnce(new Response('blocked', { status }));
+it.each([[400, 'Bad Request'], [403, 'Forbidden'], [429, 'Too Many Requests']] as const)('웹 매장 %i 차단 후 유료 호출 없이 원본 오류를 반환한다', async (status, statusText) => {
+  mockFetch.mockResolvedValueOnce(new Response('blocked', { status, statusText }));
   await expect(fetchCuStores({ searchWord: '강남' }, { apiKey: 'remaining-key' }))
-    .rejects.toThrow('비용 정책');
+    .rejects.toThrow(`API 요청 실패: ${status} ${statusText}`);
   expect(mockFetch).toHaveBeenCalledTimes(1);
   expect(String(mockFetch.mock.calls[0][0])).toContain('cu.bgfretail.com');
 });
@@ -560,7 +560,11 @@ it('재고 원본 차단 후 Zyte 요청을 보내지 않는다', async () => {
   mockFetch.mockResolvedValueOnce(new Response('{}'))
     .mockResolvedValueOnce(new Response('blocked', { status: 403 }));
   await expect(fetchCuStock({ keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' }, { apiKey: 'remaining-key' }))
-    .rejects.toThrow('비용 정책');
+    .resolves.toMatchObject({
+      available: false,
+      unavailableReason: expect.stringContaining('403 Request Blocked'),
+      items: [],
+    });
   expect(mockFetch).toHaveBeenCalledTimes(2);
   expect(mockFetch.mock.calls.every(([url]) => new URL(String(url)).hostname !== 'api.zyte.com')).toBe(true);
 });

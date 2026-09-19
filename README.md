@@ -460,6 +460,10 @@ curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
 - `timeoutMs=20000`: 체크별 요청 제한 시간
 - `slowThresholdMs=9000`: 지정 시간보다 느린 성공 응답을 degraded로 표시
 
+Health Checks 알림은 모든 실패·저하 서비스 ID를 상세 오류보다 먼저 표시합니다. 푸시 알림은 3,500자로 제한되며 전체 오류와 샘플은 해당 실행의 GitHub Actions 요약에 남습니다. 올리브영 릴레이의 설정 완전성은 `config.oliveyoungRelay`로 확인할 수 있습니다. 이 값은 연결 성공을 뜻하지 않으며, [설정 진단 문서](./docs/oliveyoung-free-relay.md#설정-진단)를 참고하세요.
+
+Zyte 유료 요청은 키 설정 여부와 관계없이 비활성화되어 있습니다. 직접 JSON 요청이 실패하면 원래 HTTP 상태와 오류를 유지합니다.
+
 상태 기준:
 
 - `ok`: 필수 응답 구조와 최소 결과가 정상입니다.

@@ -157,11 +157,26 @@ describe('handleCuFindStores', () => {
 });
 
 describe('handleCuCheckInventory', () => {
-  it('원본 차단은 유료 호출 없이 비재시도 오류로 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('{}')).mockResolvedValueOnce(new Response('blocked',{status:403}));
-    const ctx=createMockContextWithEnv({keyword:'과자',storeCheck:'false'},{ZYTE_API_KEY:'worker-key'});
+  it('원본 차단은 유료 호출 없이 재고 이용 불가로 반환한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('{}'))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+    const ctx = createMockContextWithEnv(
+      { keyword: '과자', storeCheck: 'false' },
+      { ZYTE_API_KEY: 'worker-key' },
+    );
     await handleCuCheckInventory(ctx);
-    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({success:false,diagnostics:expect.objectContaining({retryable:false})}),500);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          inventory: expect.objectContaining({
+            available: false,
+            unavailableReason: expect.stringContaining('403 Request Blocked'),
+          }),
+        }),
+      }),
+    );
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -204,7 +219,9 @@ describe('handleCuCheckInventory', () => {
         new Response(
           JSON.stringify({
             totalCnt: 1,
-            storeList: [{ storeCd: '1', storeNm: '강남점', latVal: 37.5, longVal: 127.0, stock: '5' }],
+            storeList: [
+              { storeCd: '1', storeNm: '강남점', latVal: 37.5, longVal: 127.0, stock: '5' },
+            ],
           }),
         ),
       );
@@ -341,7 +358,11 @@ describe('handleCuCheckInventory', () => {
           }),
         ),
       )
-      .mockResolvedValueOnce(new Response('<table><tbody><tr><td><span class="name">안산중앙점</span></td></tr></tbody></table>'));
+      .mockResolvedValueOnce(
+        new Response(
+          '<table><tbody><tr><td><span class="name">안산중앙점</span></td></tr></tbody></table>',
+        ),
+      );
 
     const ctx = createMockContext({ keyword: '치킨', storeKeyword: '안산 중앙역' });
     await handleCuCheckInventory(ctx);

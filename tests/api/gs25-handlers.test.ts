@@ -228,17 +228,16 @@ describe('handleGs25SearchProducts', () => {
     );
   });
 
-  it('handleGs25SearchProducts는 차단 시 유료 호출 없이 비용 정책 오류를 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+  it('handleGs25SearchProducts는 차단 시 유료 호출 없이 원본 오류를 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403, statusText: 'Forbidden' }));
     const ctx = createMockContext({ keyword: '오감자' });
     (ctx as { env: Record<string, string> }).env = { ZYTE_API_KEY: 'test-key' };
     await handleGs25SearchProducts(ctx);
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        diagnostics: expect.objectContaining({
-          retryable: false,
-          hint: expect.stringContaining('비용 정책'),
+        error: expect.objectContaining({
+          message: 'API 요청 실패: 403 Forbidden - blocked',
         }),
       }),
       500,
@@ -432,17 +431,16 @@ describe('handleGs25CheckInventory', () => {
     );
   });
 
-  it('handleGs25CheckInventory는 차단 시 유료 호출 없이 비용 정책 오류를 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+  it('handleGs25CheckInventory는 차단 시 유료 호출 없이 원본 오류를 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403, statusText: 'Forbidden' }));
     const ctx = createMockContext({ keyword: '오감자' });
     (ctx as { env: Record<string, string> }).env = { ZYTE_API_KEY: 'test-key' };
     await handleGs25CheckInventory(ctx);
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        diagnostics: expect.objectContaining({
-          retryable: false,
-          hint: expect.stringContaining('비용 정책'),
+        error: expect.objectContaining({
+          message: 'API 요청 실패: 403 Forbidden - blocked',
         }),
       }),
       500,

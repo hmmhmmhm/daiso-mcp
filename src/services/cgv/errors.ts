@@ -5,8 +5,9 @@
 import { ZYTE_COST_POLICY_MESSAGE } from '../../core/errors.js';
 
 export class CgvUpstreamUnavailableError extends Error {
-  constructor() {
-    super(`CGV 원본 서비스에 연결할 수 없습니다. ${ZYTE_COST_POLICY_MESSAGE}`);
+  constructor(readonly upstreamStatus?: number) {
+    const statusSuffix = upstreamStatus === undefined ? '' : ` (HTTP ${upstreamStatus})`;
+    super(`CGV 원본 서비스에 연결할 수 없습니다. ${ZYTE_COST_POLICY_MESSAGE}${statusSuffix}`);
     this.name = 'CgvUpstreamUnavailableError';
   }
 }

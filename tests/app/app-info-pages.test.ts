@@ -293,6 +293,17 @@ describe('기본 페이지', () => {
     const data = await res.json();
     expect(data.status).toBe('ok');
     expect(data.config).toEqual({
+      oliveyoungRelay: {
+        configured: false,
+        urlConfigured: false,
+        urlValid: false,
+        tokenConfigured: false,
+        accessClientIdConfigured: false,
+        accessClientSecretConfigured: false,
+        accessConfigured: false,
+        accessPairValid: true,
+        usedBy: ['oliveyoung'],
+      },
       googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
       zyteApiKey: {
         configured: false,

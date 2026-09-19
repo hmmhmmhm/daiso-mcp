@@ -166,13 +166,13 @@ describe('createSearchProductsTool', () => {
     });
   });
 
-  it('키가 있어도 상품 차단 시 비용 정책을 포함한 degraded 결과를 반환한다', async () => {
+  it('키가 있어도 상품 차단 시 원본 HTTP 오류를 포함한 degraded 결과를 반환한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     const result = await createSearchProductsTool('worker-key').handler({ query: '커피', size: 1 });
     expect(result.structuredContent).toMatchObject({
       count: 0,
       status: 'degraded',
-      message: expect.stringContaining('비용 정책'),
+      message: expect.stringContaining('API 요청 실패: 403'),
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });

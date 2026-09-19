@@ -3,8 +3,7 @@
  */
 /* c8 ignore start */
 
-import { fetchJson, HttpError } from '../../utils/http.js';
-import { requestByZyte } from '../../utils/zyte.js';
+import { fetchJson } from '../../utils/http.js';
 import { GS25_API } from './api.js';
 import { toNumber } from './storeUtils.js';
 
@@ -72,23 +71,14 @@ async function fetchGs25TotalSearchResponse(
   const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
   const bodyText = JSON.stringify({ query });
 
-  try {
-    return await fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
-      ...GS25_DEFAULT_FETCH_OPTIONS,
-      method: 'POST',
-      retryUnsafeMethods: true,
-      timeout,
-      headers: GS25_TOTAL_SEARCH_HEADERS,
-      body: bodyText,
-    });
-  } catch (error) {
-    const zyteApiKey = options.zyteApiKey?.trim();
-    if (!(error instanceof HttpError) || error.status !== 403 || !zyteApiKey) {
-      throw error;
-    }
-
-    return requestByZyte({ apiKey: zyteApiKey, url: endpoint.toString() });
-  }
+  return fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
+    ...GS25_DEFAULT_FETCH_OPTIONS,
+    method: 'POST',
+    retryUnsafeMethods: true,
+    timeout,
+    headers: GS25_TOTAL_SEARCH_HEADERS,
+    body: bodyText,
+  });
 }
 
 export async function fetchGs25NormalizedKeyword(

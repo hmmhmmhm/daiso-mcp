@@ -26,6 +26,14 @@ Cloudflare Worker에서 쓰려면 승인된 별도 연결 경로가 필요합니
 
 이 값은 Worker 바인딩에서 REST 핸들러와 MCP 서비스로 전달됩니다. MCP 도구 사용자 인자로 설정할 수 없습니다. 릴레이가 설정되어 있으면 먼저 릴레이를 호출하고, 없으면 공식 API에 직접 요청합니다. 직접 요청 실패 시 운영자에게 릴레이 설정 안내를 반환합니다. 어느 경로도 Zyte를 호출하지 않습니다.
 
+### 설정 진단
+
+`GET /health` 응답의 `config.oliveyoungRelay`는 URL·토큰 값 없이 설정 여부만 보여 줍니다. `urlConfigured`/`tokenConfigured`는 공백을 제외한 값의 존재, `urlValid`는 실제 전송과 같은 URL 검증 결과입니다. HTTPS와 localhost/127.0.0.1의 HTTP만 허용하며 URL 안의 인증 정보·쿼리·프래그먼트는 거부합니다.
+
+`accessClientIdConfigured`/`accessClientSecretConfigured`는 Access 설정 각각의 존재, `accessConfigured`는 두 값의 완전성을 뜻합니다. `accessPairValid`는 둘 다 미지정이거나 둘 다 유효한 값일 때만 참입니다. 빈 문자열을 명시하면 미지정으로 취급하지 않습니다. `configured`는 유효한 URL·토큰·Access 쌍 조건을 모두 만족한다는 뜻이며, 연결 가능 여부나 브라우저 세션의 정상 여부는 보장하지 않습니다. 실제 복구는 fresh health check로 확인합니다.
+
+GitHub Actions의 `Sync Worker Secrets`는 위 네 OY secrets를 동기화하며, 비어 있는 GitHub secret은 기존 Worker 값을 지우지 않고 건너뜁니다.
+
 ## 허용 요청
 
 `POST /v1/oliveyoung/{operation}`에 JSON 본문과 `Authorization: Bearer …`를 보냅니다. 대상 호스트는 `https://www.oliveyoung.co.kr`로 고정하며 임의 URL은 받지 않습니다.
