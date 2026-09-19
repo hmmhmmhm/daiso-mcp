@@ -3,7 +3,6 @@
  */
 
 import { fetchJson } from '../../utils/http.js';
-import { ZYTE_COST_POLICY_MESSAGE } from '../../core/errors.js';
 import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { CU_API } from './api.js';
 import { cuStockUnavailableReason } from './upstreamError.js';
@@ -142,10 +141,6 @@ async function requestCuWebHtml(
 
   if (response.ok) {
     return response.text();
-  }
-
-  if (response.status === 400 || response.status === 403 || response.status === 429) {
-    throw new Error(ZYTE_COST_POLICY_MESSAGE);
   }
 
   throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);

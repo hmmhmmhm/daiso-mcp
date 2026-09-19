@@ -39,7 +39,9 @@
 
 ## 실행 결과
 
-- Node 24.15.0에서 1,956개 테스트, coverage 네 지표 100%, check/build/audit 통과. 독립 spec/quality 리뷰 승인.
+- Node 24.15.0에서 1,958개 테스트, coverage 네 지표 100%, check/build/audit 통과. 독립 spec/quality 리뷰 승인.
 - Vitest 및 coverage-v8 5.0.1 갱신 검증 완료. TypeScript 7은 peer 지원 범위 밖으로 유지.
 - 디트릭스 443 시험 실패로 PR #188 반영 보류, 기존 포트 유지. 임시 Worker 삭제 완료.
 - Mac 실제 조회 2건 성공, 부모 SIGKILL 후 추적 Chrome/crashpad 12개 잔여 0. 상시 설치는 전용 계정 및 관리자/Cloudflare 인증 대기.
+
+- 추가 점검에서 CU 웹 매장·GS25 검색의 별도 오류 덮기를 제거하고 CGV 상태 코드를 보존했습니다. 회귀 검사와 독립 delta 리뷰를 적용했습니다.

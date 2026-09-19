@@ -83,7 +83,7 @@ export async function requestCgv<TResponse>(
     }
 
     if (response.status === 401 || response.status === 403) {
-      throw new CgvUpstreamUnavailableError();
+      throw new CgvUpstreamUnavailableError(response.status);
     }
 
     throw new Error(`CGV API 호출 실패: ${response.status}`);

@@ -548,10 +548,10 @@ describe('geocodeCuAddress', () => {
   });
 });
 
-it.each([400, 403, 429])('웹 매장 %i 차단 후 유료 호출 없이 비용 정책을 안내한다', async (status) => {
-  mockFetch.mockResolvedValueOnce(new Response('blocked', { status }));
+it.each([[400, 'Bad Request'], [403, 'Forbidden'], [429, 'Too Many Requests']] as const)('웹 매장 %i 차단 후 유료 호출 없이 원본 오류를 반환한다', async (status, statusText) => {
+  mockFetch.mockResolvedValueOnce(new Response('blocked', { status, statusText }));
   await expect(fetchCuStores({ searchWord: '강남' }, { apiKey: 'remaining-key' }))
-    .rejects.toThrow('비용 정책');
+    .rejects.toThrow(`API 요청 실패: ${status} ${statusText}`);
   expect(mockFetch).toHaveBeenCalledTimes(1);
   expect(String(mockFetch.mock.calls[0][0])).toContain('cu.bgfretail.com');
 });

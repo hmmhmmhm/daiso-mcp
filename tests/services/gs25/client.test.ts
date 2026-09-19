@@ -256,10 +256,10 @@ describe('fetchGs25SearchProducts', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('상품 검색 차단 시 유료 호출 없이 비용 정책을 알린다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+  it('상품 검색 차단 시 유료 호출 없이 원본 오류를 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403, statusText: 'Forbidden' }));
     await expect(fetchGs25SearchProducts('콜라', { zyteApiKey: 'test-key' })).rejects.toThrow(
-      '비용 정책',
+      'API 요청 실패: 403 Forbidden - blocked',
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
