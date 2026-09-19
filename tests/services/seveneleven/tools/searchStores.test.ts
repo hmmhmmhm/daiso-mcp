@@ -99,9 +99,11 @@ describe('createSearchStoresTool', () => {
   it('키가 있어도 차단된 매장 요청에 유료 호출을 보내지 않는다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(createSearchStoresTool('worker-key').handler({ keyword: '강남' })).rejects.toThrow(
-      '비용 정책',
+      'API 요청 실패: 403',
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 });

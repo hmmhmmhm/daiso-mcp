@@ -13,6 +13,25 @@ export interface OliveyoungRequestOptions {
   accessClientSecret?: string;
 }
 
+/** 설정 진단과 실제 요청에 같은 릴레이 URL 규칙을 적용합니다. */
+export function isValidOliveyoungRelayUrl(value: string | undefined): boolean {
+  if (!value?.trim()) return false;
+  let relay: URL;
+  try {
+    relay = new URL(value);
+  } catch {
+    return false;
+  }
+  return !(
+    relay.username ||
+    relay.password ||
+    relay.search ||
+    relay.hash ||
+    (relay.protocol !== 'https:' &&
+      !(relay.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(relay.hostname)))
+  );
+}
+
 export async function requestOliveyoung(
   path: string,
   body: Record<string, unknown>,
@@ -26,20 +45,7 @@ export async function requestOliveyoung(
   };
   let url = `${OLIVEYOUNG_API.BASE_URL}${path}`;
   if (relayUrl) {
-    let relay: URL;
-    try {
-      relay = new URL(relayUrl);
-    } catch {
-      throw new Error('올리브영 릴레이 URL은 HTTPS 또는 로컬 HTTP 주소여야 합니다.');
-    }
-    if (
-      relay.username ||
-      relay.password ||
-      relay.search ||
-      relay.hash ||
-      (relay.protocol !== 'https:' &&
-        !(relay.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(relay.hostname)))
-    ) {
+    if (!isValidOliveyoungRelayUrl(relayUrl)) {
       throw new Error('올리브영 릴레이 URL은 HTTPS 또는 로컬 HTTP 주소여야 합니다.');
     }
     if (!relayToken?.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');

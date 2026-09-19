@@ -60,10 +60,13 @@ jobs:
             `status=${payload.status || 'unknown'}`,
             `failed=${failedChecks.length}`,
             `degraded=${degradedChecks.length}`,
+            `failedIds=${failedChecks.map((check) => check.id).join(',') || 'none'}`,
+            `degradedIds=${degradedChecks.map((check) => check.id).join(',') || 'none'}`,
             `run=${runUrl}`,
-            lines.slice(0, 6).join(' | '),
+            lines.join(' | '),
           ].filter(Boolean).join(' ');
           fs.writeFileSync('health-check-summary.txt', summary);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Service health checks\n\n${summary}\n\n`);
           console.log(summary);
           if (failedChecks.length > 0 || payload.status === 'fail') {
             process.exitCode = 1;

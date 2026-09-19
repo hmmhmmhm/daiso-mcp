@@ -560,7 +560,11 @@ it('재고 원본 차단 후 Zyte 요청을 보내지 않는다', async () => {
   mockFetch.mockResolvedValueOnce(new Response('{}'))
     .mockResolvedValueOnce(new Response('blocked', { status: 403 }));
   await expect(fetchCuStock({ keyword: '과자', limit: 1, offset: 0, searchSort: 'recom' }, { apiKey: 'remaining-key' }))
-    .rejects.toThrow('비용 정책');
+    .resolves.toMatchObject({
+      available: false,
+      unavailableReason: expect.stringContaining('403 Request Blocked'),
+      items: [],
+    });
   expect(mockFetch).toHaveBeenCalledTimes(2);
   expect(mockFetch.mock.calls.every(([url]) => new URL(String(url)).hostname !== 'api.zyte.com')).toBe(true);
 });
