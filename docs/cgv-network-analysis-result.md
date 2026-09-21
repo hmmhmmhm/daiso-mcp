@@ -1,5 +1,34 @@
 # CGV 네트워크 분석 결과 (실측 업데이트)
 
+## 직접 호출 복구 (2026-09-21, KST)
+
+현재 비용 정책에서는 Zyte 유료 호출을 사용하지 않습니다. 아래 과거 기록의 Zyte fallback 전략은 현재 구현 지침이 아닙니다.
+
+### 원인과 최소 수정
+
+기존 서명 헤더로 극장 목록을 호출하면 Cloudflare HTML 403이 발생했습니다. 같은 서명과 URL에서 헤더만 바꾼 통제 실험 결과는 다음과 같습니다.
+
+| 추가 헤더 | 실측 결과 |
+| --- | --- |
+| 없음 | HTTP 403 HTML |
+| Chrome 140의 전체 User-Agent, Origin, Referer | HTTP 200 JSON |
+| Chrome 140의 전체 User-Agent만 | HTTP 200, statusCode 0, 9개 지역 / 176개 극장 |
+| Origin, Referer만 | HTTP 403 HTML |
+| 일반 `Mozilla/5.0` User-Agent만 | HTTP 403 HTML |
+
+기존 HMAC 키와 서명 규칙은 그대로 승인되었습니다. 확인된 원인은 기본 fetch User-Agent에 민감한 upstream 필터이며, `transport.ts`에 실측한 전체 브라우저 User-Agent만 추가했습니다. 서명·엔드포인트·차단 오류 처리 및 유료 호출 비활성화 정책은 유지합니다. 헤더의 특정 토큰까지 분해해 필터 규칙을 추측하지는 않았습니다.
+
+### 검증
+
+- 신규 회귀 테스트가 수정 전 HTTP 403으로 실패하는 것을 확인한 뒤 구현했습니다.
+- `npx vitest run tests/services/cgv`: 8개 파일, 87개 테스트 통과.
+- 수정된 실제 클라이언트 함수의 로컬 직접 호출: 극장 176개, 강남(`0056`) 영화 9개, 2026-09-21 시간표 29개.
+- `wrangler dev --remote` Cloudflare 미리보기에서 수정된 앱 경로 호출: `/api/cgv/theaters?limit=3`, `/api/cgv/movies?theaterCode=0056&playDate=20260921`, `/api/cgv/timetable?theaterCode=0056&playDate=20260921&limit=3` 모두 HTTP 200, 비어 있지 않은 결과 확인.
+- Cloudflare 미리보기에서도 User-Agent를 잠시 제거한 대조군은 원본 HTTP 403 / 앱 HTTP 503, 복원한 실험군은 HTTP 200 / 극장 3개로 확인했습니다. 경로의 24시간 edge cache 영향을 배제하기 위해 매 요청에 서로 다른 `probe` 쿼리를 사용했습니다. 처음 동일 URL로 비교한 캐시 응답은 원인 판단에서 제외했습니다.
+- 미리보기 성공은 해당 Cloudflare 실행 환경의 근거입니다. 실제 운영 배포나 GitHub Actions 실행은 이 조사에서 수행하지 않았으므로 모든 IP의 접근을 보장하지 않습니다.
+
+---
+
 작성일: 2026-03-04 (KST)
 대상:
 - `https://www.cgv.co.kr`

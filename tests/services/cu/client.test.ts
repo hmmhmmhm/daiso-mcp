@@ -79,6 +79,7 @@ describe('fetchCuStores', () => {
         headers: expect.objectContaining({
           'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
           'X-Requested-With': 'XMLHttpRequest',
+          'User-Agent': 'Mozilla/5.0',
         }),
       }),
     );

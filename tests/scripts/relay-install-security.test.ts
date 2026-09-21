@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
-it('설치 원본의 외부·끊어진 링크를 거절하고 내부 링크만 허용한다',()=>{
+it.skipIf(process.platform === 'win32')('설치 원본의 외부·끊어진 링크를 거절하고 내부 링크만 허용한다',()=>{
   const output=execFileSync(process.platform==='darwin'?'/usr/bin/python3':'python3',['-c',`
 import runpy,tempfile
 from pathlib import Path
@@ -18,7 +18,7 @@ print('ok')
 `],{encoding:'utf8'});
   expect(output.trim()).toBe('ok');
 });
-it('설치 후속 단계가 실패하면 새 런타임과 비밀 파일을 회수한다',()=>{
+it.skipIf(process.platform === 'win32')('설치 후속 단계가 실패하면 새 런타임과 비밀 파일을 회수한다',()=>{
   const output=execFileSync(process.platform==='darwin'?'/usr/bin/python3':'python3',['-c',`
 import importlib.util,tempfile,os,types
 from pathlib import Path

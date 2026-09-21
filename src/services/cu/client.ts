@@ -59,6 +59,8 @@ const CU_DEFAULT_HEADERS = {
 } as const;
 
 const CU_WEB_DEFAULT_HEADERS = {
+  // Workers의 기본 요청에는 User-Agent가 없어 공식 웹이 400을 반환합니다.
+  'User-Agent': 'Mozilla/5.0',
   'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
   'X-Requested-With': 'XMLHttpRequest',
   Accept: 'text/html, */*; q=0.01',

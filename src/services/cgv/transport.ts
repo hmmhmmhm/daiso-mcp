@@ -72,6 +72,8 @@ export async function requestCgv<TResponse>(
       headers: {
         Accept: 'application/json',
         'Accept-Language': 'ko-KR',
+        // 기본 fetch User-Agent는 CGV 앞단에서 403으로 차단된다.
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
         'X-TIMESTAMP': timestamp,
         'X-SIGNATURE': signature,
       },

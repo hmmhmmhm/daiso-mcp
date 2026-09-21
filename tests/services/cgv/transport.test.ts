@@ -20,6 +20,21 @@ afterEach(() => {
 });
 
 describe('requestCgv', () => {
+  it('CGV가 허용하는 브라우저 User-Agent로 직접 요청한다', async () => {
+    mockFetch.mockImplementationOnce((_url: string, init: RequestInit) => {
+      const userAgent = new Headers(init.headers).get('User-Agent');
+      if (userAgent !== 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36') {
+        return Promise.resolve(new Response('blocked', { status: 403 }));
+      }
+      return Promise.resolve(Response.json({ statusCode: 0, data: [{ regnGrpCd: '01' }] }));
+    });
+
+    await expect(
+      requestCgv('/cnm/atkt/searchRegnList', new URLSearchParams({ coCd: 'A420' }), 1000),
+    ).resolves.toEqual({ statusCode: 0, data: [{ regnGrpCd: '01' }] });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('정상 응답을 JSON으로 파싱한다', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ statusCode: 0, data: [] }), { status: 200 }),
