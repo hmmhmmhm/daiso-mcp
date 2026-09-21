@@ -2,6 +2,23 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { fetchOliveyoungStores } from '../../../src/services/oliveyoung/client.js';
 const params = { latitude: 37.5, longitude: 127, pageIdx: 1, searchWords: '' };
 afterEach(() => vi.unstubAllGlobals());
+it('Workers에서 지원하는 수동 리다이렉트 모드로 직접 요청한다', async () => {
+  const fetch = vi.fn(async (_url: string, options: RequestInit) => {
+    if (options.redirect === 'error') throw new TypeError('Invalid redirect value');
+    return Response.json({ status: 'SUCCESS', data: {} });
+  });
+  vi.stubGlobal('fetch', fetch);
+  const { requestOliveyoung } = await import('../../../src/services/oliveyoung/transport.js');
+  await expect(requestOliveyoung('/p', {})).resolves.toMatchObject({ status: 'SUCCESS' });
+  expect(fetch.mock.calls[0][1].redirect).toBe('manual');
+});
+it.each([301, 302, 303, 307, 308])('직접 요청의 HTTP %i는 SUCCESS 본문이어도 거절한다', async (status) => {
+  const fetch = vi.fn().mockResolvedValue(Response.json({ status: 'SUCCESS' }, { status }));
+  vi.stubGlobal('fetch', fetch);
+  const { requestOliveyoung } = await import('../../../src/services/oliveyoung/transport.js');
+  await expect(requestOliveyoung('/p', {})).rejects.toThrow('직접 요청 실패');
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
 it('키 없이 공식 API JSON을 직접 읽고 Zyte를 호출하지 않는다', async () => {
   const fetch = vi
     .fn()
@@ -11,6 +28,12 @@ it('키 없이 공식 API JSON을 직접 읽고 Zyte를 호출하지 않는다',
   expect(fetch.mock.calls[0][0]).toBe(
     'https://www.oliveyoung.co.kr/oystore/api/storeFinder/find-store',
   );
+  expect(fetch.mock.calls[0][1].headers).toMatchObject({
+    'User-Agent': expect.stringContaining('Mozilla/5.0'),
+    Origin: 'https://www.oliveyoung.co.kr',
+    Referer: 'https://www.oliveyoung.co.kr/',
+    'Accept-Language': 'ko-KR,ko;q=0.9',
+  });
 });
 it('신뢰한 옵션의 릴레이를 우선 사용하고 토큰을 전달한다', async () => {
   const fetch = vi
@@ -23,8 +46,14 @@ it('신뢰한 옵션의 릴레이를 우선 사용하고 토큰을 전달한다'
   ).toBe(8);
   expect(fetch).toHaveBeenCalledWith(
     'https://relay.example/v1/oliveyoung/find-store',
-    expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test' }) }),
+    expect.objectContaining({
+      redirect: 'manual',
+      headers: expect.objectContaining({ Authorization: 'Bearer test' }),
+    }),
   );
+  for (const name of ['User-Agent', 'Origin', 'Referer', 'Accept-Language']) {
+    expect(fetch.mock.calls[0][1].headers).not.toHaveProperty(name);
+  }
 });
 it('HTTP201의 SUCCESS 본문도 정상 응답으로 처리하지 않는다', async () => {
   vi.stubGlobal(

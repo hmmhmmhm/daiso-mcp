@@ -28,9 +28,11 @@ it('원래 그룹의 정체를 확인할 수 없으면 강제 종료하지 않�
   await expect(closeOwnedGroup(root, async () => {}, snapshot, kill)).rejects.toThrow('identity');
   expect(kill).not.toHaveBeenCalled();
 });
-it('실제 OS 스냅샷을 읽고 잘못된 형식과 이미 사라진 그룹을 처리한다', async () => {
+it.skipIf(process.platform === 'win32')('실제 POSIX 스냅샷에서 현재 프로세스를 찾는다', async () => {
   const { processSnapshot } = await import('../../scripts/relay/ownership.js');
   expect((await processSnapshot()).some((row) => row.pid === process.pid)).toBe(true);
+});
+it('잘못된 형식과 이미 사라진 그룹을 처리한다', async () => {
   expect(() => parseProcesses('bad')).toThrow('Invalid');
   const close = vi.fn().mockResolvedValue(undefined);
   await closeOwnedGroup(root, close, async () => [], vi.fn());

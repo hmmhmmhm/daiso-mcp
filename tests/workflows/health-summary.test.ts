@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
-const workflow = readFileSync('.github/workflows/health-checks.yml', 'utf8');
+const workflow = readFileSync('.github/workflows/health-checks.yml', 'utf8').replace(/\r\n/g, '\n');
 const script = workflow.split("node <<'NODE'\n")[1].split('\n          NODE')[0];
 
 describe('Health Checks 알림 요약', () => {

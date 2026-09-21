@@ -59,12 +59,20 @@ export async function requestOliveyoung(
       headers['CF-Access-Client-Id'] = accessClientId;
       headers['CF-Access-Client-Secret'] = accessClientSecret;
     }
+  } else {
+    // 공식 사이트 직접 조회용 헤더는 운영자 릴레이에 전달하지 않습니다.
+    headers['User-Agent'] =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36';
+    headers.Origin = OLIVEYOUNG_API.BASE_URL;
+    headers.Referer = `${OLIVEYOUNG_API.BASE_URL}/`;
+    headers['Accept-Language'] = 'ko-KR,ko;q=0.9';
   }
   let result: OliveyoungApiResponse;
   try {
     result = await fetchJson<OliveyoungApiResponse>(url, {
       method: 'POST',
-      redirect: 'error',
+      // Workers는 error 모드를 지원하지 않으므로 따라가지 않고 아래 200 검사로 거절합니다.
+      redirect: 'manual',
       headers,
       body: JSON.stringify(body),
       timeout,

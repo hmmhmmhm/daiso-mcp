@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
-it('macOS 설치 설정은 GUI 전용 계정과 제한된 Node 메모리·재시작을 사용한다',()=>{
+it.skipIf(process.platform === 'win32')('macOS 설치 설정은 GUI 전용 계정과 제한된 Node 메모리·재시작을 사용한다',()=>{
   const output=execFileSync(process.platform === 'darwin' ? '/usr/bin/python3' : 'python3',['-c',`
 import runpy,json
 from pathlib import Path

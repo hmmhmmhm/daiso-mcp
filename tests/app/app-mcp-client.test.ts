@@ -152,6 +152,6 @@ it('MCP 올리브영 요청은 운영 바인딩의 Access 자격증명만 사용
   try {
     const result=await client.callTool({name:'oliveyoung_search_products',arguments:{keyword:'팩',accessClientSecret:'evil'}});
     expect(result.isError).not.toBe(true);
-    expect(mockFetch).toHaveBeenCalledWith('https://relay.example/v1/oliveyoung/product-search-v3',expect.objectContaining({redirect:'error',headers:expect.objectContaining({'CF-Access-Client-Id':'access-test-id','CF-Access-Client-Secret':'access-test-secret'})}));
+    expect(mockFetch).toHaveBeenCalledWith('https://relay.example/v1/oliveyoung/product-search-v3',expect.objectContaining({redirect:'manual',headers:expect.objectContaining({'CF-Access-Client-Id':'access-test-id','CF-Access-Client-Secret':'access-test-secret'})}));
   }finally{await client.close();}
 });
