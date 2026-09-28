@@ -5,6 +5,8 @@
  * 다이소, 편의점, 백화점 등 다양한 서비스를 확장할 수 있습니다.
  */
 
+import { dtryxTransportFromBindings } from './services/dtryx/transport.js';
+
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -100,7 +102,7 @@ const createRegistry = (bindings?: AppBindings) => {
         zyteApiKey: bindings?.ZYTE_API_KEY,
       }),
     createMegaboxService,
-    createDtryxService,
+    () => createDtryxService(dtryxTransportFromBindings(bindings)),
     () =>
       createLotteCinemaService({
         googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,

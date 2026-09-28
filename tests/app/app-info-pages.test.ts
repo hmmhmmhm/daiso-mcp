@@ -304,6 +304,17 @@ describe('기본 페이지', () => {
         accessPairValid: true,
         usedBy: ['oliveyoung'],
       },
+      dtryxRelay: {
+        configured: false,
+        urlConfigured: false,
+        urlValid: false,
+        tokenConfigured: false,
+        accessClientIdConfigured: false,
+        accessClientSecretConfigured: false,
+        accessConfigured: false,
+        accessPairValid: true,
+        usedBy: ['dtryx'],
+      },
       googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
       zyteApiKey: {
         configured: false,

@@ -2,6 +2,8 @@
  * 디트릭스 상영시간표·잔여 좌석 조회 도구
  */
 
+import type { DtryxTransportOptions } from '../transport.js';
+
 import * as z from 'zod';
 import {
   DTRYX_INVALID_INPUT,
@@ -35,7 +37,10 @@ function matchesMovie(showtime: DtryxShowtime, movieName?: string): boolean {
   return normalize(showtime.movieName).includes(normalize(movieName));
 }
 
-async function getRemainingSeats(args: GetRemainingSeatsArgs): Promise<McpToolResponse> {
+async function getRemainingSeats(
+  args: GetRemainingSeatsArgs,
+  options: DtryxTransportOptions,
+): Promise<McpToolResponse> {
   if (hasInvalidDtryxOptions(args)) {
     return { isError: true, content: [{ type: 'text', text: DTRYX_INVALID_INPUT }] };
   }
@@ -64,12 +69,15 @@ async function getRemainingSeats(args: GetRemainingSeatsArgs): Promise<McpToolRe
 
   const settled = await Promise.allSettled(
     cinemas.map((cinema) =>
-      fetchDtryxTimetable({
-        brandCode: cinema.brandCode,
-        cinemaCode: cinema.cinemaCode,
-        playDate,
-        timeout: timeoutMs,
-      }),
+      fetchDtryxTimetable(
+        {
+          brandCode: cinema.brandCode,
+          cinemaCode: cinema.cinemaCode,
+          playDate,
+          timeout: timeoutMs,
+        },
+        options,
+      ),
     ),
   );
 
@@ -125,7 +133,7 @@ async function getRemainingSeats(args: GetRemainingSeatsArgs): Promise<McpToolRe
   };
 }
 
-export function createGetRemainingSeatsTool(): ToolRegistration {
+export function createGetRemainingSeatsTool(options: DtryxTransportOptions = {}): ToolRegistration {
   return {
     name: 'dtryx_get_remaining_seats',
     metadata: {
@@ -154,7 +162,7 @@ export function createGetRemainingSeatsTool(): ToolRegistration {
           .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => getRemainingSeats(args as GetRemainingSeatsArgs)) as (
+    handler: ((args) => getRemainingSeats(args as GetRemainingSeatsArgs, options)) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

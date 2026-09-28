@@ -2,6 +2,9 @@
  * 디트릭스 GET API 핸들러
  */
 
+import { ServiceError } from '../core/errors.js';
+import { dtryxTransportFromBindings } from '../services/dtryx/transport.js';
+
 import { resolveDtryxCinemas } from '../services/dtryx/location.js';
 import { DTRYX_INVALID_INPUT, hasInvalidDtryxOptions } from '../services/dtryx/validation.js';
 import {
@@ -10,7 +13,12 @@ import {
   fetchDtryxTimetable,
   toYyyymmdd,
 } from '../services/dtryx/client.js';
-import { type ApiContext, errorResponse, successResponse } from './response.js';
+import {
+  type ApiContext,
+  errorResponse,
+  serviceErrorResponse,
+  successResponse,
+} from './response.js';
 
 export async function handleDtryxListCinemas(c: ApiContext) {
   const keyword = c.req.query('keyword') || undefined;
@@ -66,8 +74,10 @@ export async function handleDtryxListNowShowing(c: ApiContext) {
       timeout: timeoutMs,
     };
     const [movies, playDates] = await Promise.all([
-      fetchDtryxNowShowing(request),
-      includePlayDates ? fetchDtryxPlayDates(request) : Promise.resolve([]),
+      fetchDtryxNowShowing(request, dtryxTransportFromBindings(c.env)),
+      includePlayDates
+        ? fetchDtryxPlayDates(request, dtryxTransportFromBindings(c.env))
+        : Promise.resolve([]),
     ]);
 
     return successResponse(
@@ -81,6 +91,7 @@ export async function handleDtryxListNowShowing(c: ApiContext) {
       { total: movies.length },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'now_showing');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'DTRYX_NOW_SHOWING_FAILED', message, 500);
   }
@@ -112,12 +123,15 @@ export async function handleDtryxGetRemainingSeats(c: ApiContext) {
   // Promise.allSettled 로 극장별 실패를 흡수하므로 여기서 예외가 전파되지 않습니다.
   const settled = await Promise.allSettled(
     cinemas.map((cinema) =>
-      fetchDtryxTimetable({
-        brandCode: cinema.brandCode,
-        cinemaCode: cinema.cinemaCode,
-        playDate,
-        timeout: timeoutMs,
-      }),
+      fetchDtryxTimetable(
+        {
+          brandCode: cinema.brandCode,
+          cinemaCode: cinema.cinemaCode,
+          playDate,
+          timeout: timeoutMs,
+        },
+        dtryxTransportFromBindings(c.env),
+      ),
     ),
   );
   const failedCinemas = cinemas
