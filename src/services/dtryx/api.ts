@@ -6,7 +6,11 @@
  */
 
 export const DTRYX_API = {
-  BASE_URL: 'https://api.dtryx.com:30443',
+  /**
+   * 두 포트의 공개 조회 응답이 동일함을 확인해 표준 HTTPS 포트를 사용합니다.
+   * Worker의 간헐 연결 실패는 양쪽 포트에서 관측되어 별도로 추적합니다(#187).
+   */
+  BASE_URL: 'https://api.dtryx.com',
   THIRDPARTY_PATH: '/dtryx/cms/thirdparty/movie',
   CHANNEL_CODE: 'homepage',
   ENDPOINTS: {
