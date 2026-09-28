@@ -1,5 +1,13 @@
 # 올리브영 무료 브라우저 릴레이
 
+## 2026-09-28 운영 연결과 용량 보호
+
+Mac GUI 중계 → Tunnel → Access Service Auth → 운영 Worker 연결에서 상품·매장·재고와 MCP 상품 조회를 확인했습니다. 무인증은 Access403, Access 인증만 있는 요청은 릴레이401로 거절합니다. 설치 호스트가 재부팅되면 GUI 로그인이 필요합니다. 설치용 Cloudflare API 토큰의 만료와 상시 실행용 Tunnel/Access 자격증명의 수명은 별개입니다.
+
+재고 보강은 요청당 최대 5개 상품에 적용하고 상품 2개씩 처리합니다. 더 큰 `stockCheckLimit`도 5로 제한합니다. 확인하지 못한 상품의 온라인 재고를 매장 재고로 바꾸지 않으며 `stockCheckedCount`/`stockUncheckedCount`로 구분합니다. 여러 사용자 요청을 합친 전체 중계 용량과 쿼터는 아래 제한을 따릅니다.
+
+릴레이 HTTP429·502·503은 API 상태 및 `diagnostics.upstreamStatus`에 보존합니다. timeout은504, 네트워크/잘못된 응답은502로 분류하며 `retryable`을 함께 제공합니다. 인증/리다이렉트/응답 형식 오류는 자동 재시도 대상으로 표시하지 않습니다. MCP는 `isError`와 text의 JSON 오류 진단을 반환하고 성공 스키마용 `structuredContent`는 넣지 않습니다. 응답 원문과 인증 토큰은 오류에 포함하지 않습니다. 자동 재시도나 유료 대체 경로는 추가하지 않았습니다.
+
 ## 2026-09-21 Windows 로컬 검증
 
 Windows 11의 설치된 Chrome을 별도 임시 컨텍스트로 실행하여 기존 `createBrowserRunner`와 `createOliveyoungRelay`를 검증했습니다. 개인 프로필·로그인 정보는 사용하지 않았습니다. Node 클라이언트가 `127.0.0.1`의 임시 포트에 생성한 인증 릴레이를 거쳐 브라우저에서 조회하는 전체 경로를 확인했습니다.
@@ -27,6 +35,7 @@ Workers가 지원하지 않는 `redirect: 'error'` 대신 `manual`을 사용하�
 export OY_RELAY_TOKEN='<전용 임의 토큰>'
 # 선택 사항: 기본 포트 4319, Playwright 기본 Chromium 사용
 export OY_RELAY_PORT=4319
+export OY_RELAY_STATE_DIR="$HOME/Library/Application Support/DaisoRelay/state"
 # export OY_BROWSER_EXECUTABLE='/absolute/path/to/chromium'
 npx tsx scripts/relay/start.ts
 ```
@@ -77,7 +86,7 @@ GitHub Actions의 `Sync Worker Secrets`는 위 네 OY secrets를 동기화하며
 
 ## 상시 운영 보강
 
-중계는 한 브라우저·한 컨텍스트·한 페이지를 재사용합니다. 요청마다 탭을 만들지 않습니다. 추가 페이지는 즉시 회수하며 회수 실패·페이지 crash·Node 측 watchdog timeout에는 소유한 브라우저 세션을 폐기합니다. 200회 조회 또는 30분 사용 후 유휴 경계에서 정리하고 다음 요청에 새 세션을 만듭니다.
+중계는 한 브라우저·한 컨텍스트·한 페이지를 재사용합니다. 요청마다 탭을 만들지 않습니다. 추가 페이지는 즉시 회수하며 회수 실패·페이지 crash·Node 측 watchdog timeout에는 소유한 브라우저 세션을 폐기합니다. 200회 조회 또는 30분 사용 후 유휴 경계에서 정리하고 교체 세션을 한 번 미리 준비합니다. RSS 한도 회수도 같은 준비 경로를 사용합니다. 이전 소유 프로세스의 회수가 완료된 다음 새 브라우저를 띄우므로 브라우저 두 개를 겹쳐 유지하지 않습니다. 준비 중 health 상태는 `starting`입니다. 준비 실패 시 무한 재시도하지 않고 다음 명시적 요청을 기다립니다. 준비 중 도착한 요청은 여전히 준비 시간을 기다릴 수 있으므로 항상 15초 이내 응답을 보장하는 것은 아닙니다.
 
 브라우저는 별도 guard 프로세스가 소유합니다. 중계 부모가 SIGKILL로 종료되어도 IPC 단절을 감지해 회수합니다. PID·생성 시각·프로세스 그룹을 확인한 소유 프로세스만 종료합니다. macOS에서 별도 그룹으로 분리되는 crashpad 보조 프로세스도 실행별 고유 경로로 식별해 메모리 집계와 회수에 포함합니다. 브라우저에는 GUI 실행에 필요한 환경만 전달하고 운영 토큰은 제외합니다. 정상 종료가 지연되면 확인된 그룹을 강제 종료하고 실제 소멸을 확인합니다. 개인 Chrome을 프로세스 이름으로 일괄 종료하지 않습니다. guard까지 강제 종료되거나 소유권 확인이 실패한 경우 소유 마커를 유지하여 재시작을 차단합니다. 이 경우 운영자가 잔존 프로세스를 확인해야 합니다. 소유 확인 없이 마커 파일을 지우면 안 됩니다.
 
@@ -88,6 +97,10 @@ GitHub Actions의 `Sync Worker Secrets`는 위 네 OY secrets를 동기화하며
 모든 중계 호출은 전체 분당 30회, UTC 하루 3,000회로 제한합니다. MCP·REST 모두 같은 중계를 거치므로 호출 경로로 우회할 수 없습니다. 원장을 `OY_RELAY_STATE_DIR`에 원자적으로 저장하며 저장 실패·손상은 조회 거절로 처리합니다. 본문 업로드 중인 요청도 최대 8개 슬롯에 포함합니다. 실패한 원본 요청도 이미 소비한 예산을 돌려주지 않습니다.
 
 Cloudflare Access 사용 시 Worker secrets에 `OY_ACCESS_CLIENT_ID`와 `OY_ACCESS_CLIENT_SECRET`을 함께 설정합니다. 기존 `OY_RELAY_TOKEN`과 별개입니다. 사용자 도구 입력으로 전달하거나 덮어쓸 수 없습니다. Access 비밀이 다른 주소로 전달되지 않도록 리다이렉트를 거절합니다. Access 정책은 해당 서비스 토큰만 허용하는 Service Auth로 구성하며, Tunnel은 localhost:4319와 최종 404 경로만 연결합니다. 브라우저 디버깅 주소와 개인 네트워크 경로는 연결하지 않습니다.
+
+### 실행 계정 선택
+
+전용 표준 계정은 개인 파일과 실행 권한을 분리하는 권장 구성입니다. 운영자가 격리 차이를 이해하고 선택하면 현재 로그인 계정의 사용자 LaunchAgent와 사용자 Library 경로로 실행할 수도 있습니다. 이 경우 개인 브라우저 프로필을 사용하지 않아도 프로세스의 파일 접근 권한은 해당 계정과 같습니다. 아래 설치 도구는 전용 계정용이며 현재 계정 설치를 자동 수행하지 않습니다.
 
 ### macOS 전용 계정 설치
 

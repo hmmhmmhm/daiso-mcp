@@ -7,7 +7,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ServiceProvider, ServiceFactory } from './interfaces.js';
 import type { ServiceInfo, ToolRegistration } from './types.js';
-import { getErrorMessage } from './errors.js';
+import { getErrorMessage, ServiceError, toServiceErrorDiagnostics } from './errors.js';
 import { createToolOutputSchema } from './outputSchema.js';
 
 function parseJsonText(text: string): Record<string, unknown> | null {
@@ -227,7 +227,12 @@ export class ServiceRegistry {
       try {
         result = await tool.handler(args);
       } catch (error) {
-        const message = getErrorMessage(error);
+        const message = error instanceof ServiceError
+          ? JSON.stringify({
+            error: { code: error.code, message: error.message },
+            diagnostics: toServiceErrorDiagnostics(error, tool.name.replace(/^[^_]+_/, '')),
+          })
+          : getErrorMessage(error);
         return {
           isError: true,
           content: [{ type: 'text' as const, text: message }],

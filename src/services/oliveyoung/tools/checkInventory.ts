@@ -150,7 +150,7 @@ export function createCheckInventoryTool(apiKey?: string, transport: OliveyoungR
           .number()
           .optional()
           .default(5)
-          .describe('주변 매장별 재고를 보강할 상품 수 (기본값: 5, 낮출수록 빠름)'),
+          .describe('주변 매장별 재고를 보강할 상품 수 (기본값: 5, 최대: 5, 낮출수록 빠름)'),
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
