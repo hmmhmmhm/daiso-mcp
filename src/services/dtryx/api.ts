@@ -7,9 +7,8 @@
 
 export const DTRYX_API = {
   /**
-   * 극장 홈페이지에는 비표준 포트(:30443)가 적혀 있지만 표준 포트에서도
-   * 같은 응답을 받습니다. Cloudflare Workers 배포 환경에서 비표준 포트로
-   * 나가는 호출이 간헐적으로 실패해 표준 포트를 사용합니다.
+   * 두 포트의 공개 조회 응답이 동일함을 확인해 표준 HTTPS 포트를 사용합니다.
+   * Worker의 간헐 연결 실패는 양쪽 포트에서 관측되어 별도로 추적합니다(#187).
    */
   BASE_URL: 'https://api.dtryx.com',
   THIRDPARTY_PATH: '/dtryx/cms/thirdparty/movie',

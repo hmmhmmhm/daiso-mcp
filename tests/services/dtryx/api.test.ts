@@ -19,8 +19,7 @@ describe('디트릭스 API 상수', () => {
   });
 
   it('비표준 포트를 포함하지 않는다', () => {
-    // Cloudflare Workers 배포 환경에서 비표준 포트로 나가는 호출이
-    // 간헐적으로 실패해 표준 포트를 유지해야 합니다.
+    // 검증된 표준 HTTPS 주소가 비표준 포트로 되돌아가지 않도록 확인합니다.
     expect(DTRYX_API.BASE_URL).not.toMatch(/:\d+$/);
   });
 });
@@ -40,6 +39,7 @@ describe('디트릭스 요청 URL', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
