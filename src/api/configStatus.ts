@@ -1,3 +1,4 @@
+import { isValidDtryxRelayUrl } from '../services/dtryx/transport.js';
 import { isValidOliveyoungRelayUrl } from '../services/oliveyoung/transport.js';
 import type { AppBindings } from './response.js';
 
@@ -16,6 +17,7 @@ export interface ConfigStatus {
     accessConfigured: boolean;
     accessPairValid: boolean;
   };
+  dtryxRelay: ConfigStatus['oliveyoungRelay'];
   googleMapsApiKey: ConfigStatusItem;
   zyteApiKey: ConfigStatusItem & { enabled: false };
   naverLocalSearch: ConfigStatusItem;
@@ -39,6 +41,20 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
       bindings?.OY_ACCESS_CLIENT_SECRET === undefined) ||
     accessConfigured;
 
+  const dtryxId = isConfigured(bindings?.DTRYX_ACCESS_CLIENT_ID);
+  const dtryxSecret = isConfigured(bindings?.DTRYX_ACCESS_CLIENT_SECRET);
+  const dtryx = {
+    urlValid: isValidDtryxRelayUrl(bindings?.DTRYX_RELAY_URL),
+    tokenConfigured: isConfigured(bindings?.DTRYX_RELAY_TOKEN),
+    accessClientIdConfigured: dtryxId,
+    accessClientSecretConfigured: dtryxSecret,
+    accessConfigured: dtryxId && dtryxSecret,
+    accessPairValid:
+      (bindings?.DTRYX_ACCESS_CLIENT_ID === undefined &&
+        bindings?.DTRYX_ACCESS_CLIENT_SECRET === undefined) ||
+      (dtryxId && dtryxSecret),
+  };
+
   return {
     oliveyoungRelay: {
       configured: urlValid && tokenConfigured && accessPairValid,
@@ -50,6 +66,17 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
       accessConfigured,
       accessPairValid,
       usedBy: ['oliveyoung'],
+    },
+    dtryxRelay: {
+      configured: dtryx.urlValid && dtryx.tokenConfigured && dtryx.accessPairValid,
+      urlConfigured: isConfigured(bindings?.DTRYX_RELAY_URL),
+      urlValid: dtryx.urlValid,
+      tokenConfigured: dtryx.tokenConfigured,
+      accessClientIdConfigured: dtryx.accessClientIdConfigured,
+      accessClientSecretConfigured: dtryx.accessClientSecretConfigured,
+      accessConfigured: dtryx.accessConfigured,
+      accessPairValid: dtryx.accessPairValid,
+      usedBy: ['dtryx'],
     },
     googleMapsApiKey: {
       configured: isConfigured(bindings?.GOOGLE_MAPS_API_KEY),

@@ -2,6 +2,8 @@
  * 디트릭스 현재 상영작 조회 도구
  */
 
+import type { DtryxTransportOptions } from '../transport.js';
+
 import * as z from 'zod';
 import { DTRYX_INVALID_INPUT, hasInvalidDtryxOptions, dtryxTimeoutSchema } from '../validation.js';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
@@ -16,7 +18,10 @@ interface ListNowShowingArgs {
   timeoutMs?: number;
 }
 
-async function listNowShowing(args: ListNowShowingArgs): Promise<McpToolResponse> {
+async function listNowShowing(
+  args: ListNowShowingArgs,
+  options: DtryxTransportOptions,
+): Promise<McpToolResponse> {
   if (hasInvalidDtryxOptions(args)) {
     return { isError: true, content: [{ type: 'text', text: DTRYX_INVALID_INPUT }] };
   }
@@ -49,8 +54,8 @@ async function listNowShowing(args: ListNowShowingArgs): Promise<McpToolResponse
     timeout: timeoutMs,
   };
   const [movies, playDates] = await Promise.all([
-    fetchDtryxNowShowing(request),
-    includePlayDates ? fetchDtryxPlayDates(request) : Promise.resolve([]),
+    fetchDtryxNowShowing(request, options),
+    includePlayDates ? fetchDtryxPlayDates(request, options) : Promise.resolve([]),
   ]);
 
   return {
@@ -72,7 +77,7 @@ async function listNowShowing(args: ListNowShowingArgs): Promise<McpToolResponse
   };
 }
 
-export function createListNowShowingTool(): ToolRegistration {
+export function createListNowShowingTool(options: DtryxTransportOptions = {}): ToolRegistration {
   return {
     name: 'dtryx_list_now_showing',
     metadata: {
@@ -97,7 +102,7 @@ export function createListNowShowingTool(): ToolRegistration {
           .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => listNowShowing(args as ListNowShowingArgs)) as (
+    handler: ((args) => listNowShowing(args as ListNowShowingArgs, options)) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

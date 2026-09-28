@@ -4,6 +4,8 @@
  * 국내 독립·예술영화관 다수가 공용으로 사용하는 예매 플랫폼을 조회합니다.
  */
 
+import type { DtryxTransportOptions } from './transport.js';
+
 import type { ServiceProvider } from '../../core/interfaces.js';
 import type { ServiceMetadata, ToolRegistration } from '../../core/types.js';
 import { createGetRemainingSeatsTool } from './tools/getRemainingSeats.js';
@@ -21,13 +23,19 @@ const DTRYX_METADATA: ServiceMetadata = {
 class DtryxService implements ServiceProvider {
   readonly metadata = DTRYX_METADATA;
 
+  constructor(private readonly options: DtryxTransportOptions) {}
+
   getTools(): ToolRegistration[] {
-    return [createListCinemasTool(), createListNowShowingTool(), createGetRemainingSeatsTool()];
+    return [
+      createListCinemasTool(),
+      createListNowShowingTool(this.options),
+      createGetRemainingSeatsTool(this.options),
+    ];
   }
 }
 
-export function createDtryxService(): ServiceProvider {
-  return new DtryxService();
+export function createDtryxService(options: DtryxTransportOptions = {}): ServiceProvider {
+  return new DtryxService(options);
 }
 
 export * from './types.js';

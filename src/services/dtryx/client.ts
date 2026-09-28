@@ -4,6 +4,11 @@
 
 import { formatTime, toNumber, toYyyymmdd } from '../../utils/format.js';
 import { createTimeoutController } from '../../utils/http.js';
+import {
+  hasDtryxRelayOptions,
+  requestDtryxRelay,
+  type DtryxTransportOptions,
+} from './transport.js';
 import { DTRYX_API } from './api.js';
 import type {
   DtryxMovie,
@@ -104,19 +109,33 @@ function buildScheduleId(
 }
 
 /** 상영 회차와 좌석 현황을 조회합니다. */
-export async function fetchDtryxTimetable(params: DtryxRequestParams): Promise<DtryxShowtime[]> {
+export async function fetchDtryxTimetable(
+  params: DtryxRequestParams,
+  options: DtryxTransportOptions = {},
+): Promise<DtryxShowtime[]> {
   const playDate = params.playDate || toYyyymmdd();
-  const response = await requestDtryx<DtryxTimetableResponse>(
-    DTRYX_API.ENDPOINTS.TIMETABLE_LIST,
-    DTRYX_API.WORK_GUIDS.TIMETABLE_LIST,
-    {
-      BrandCd: params.brandCode,
-      CinemaCd: params.cinemaCode,
-      PlaySDT: toDashedDate(playDate),
-      ImgSize: 'small',
-    },
-    params.timeout,
-  );
+  const response = hasDtryxRelayOptions(options)
+    ? await requestDtryxRelay<DtryxTimetableResponse>(
+        'timetable',
+        {
+          brandCode: params.brandCode,
+          cinemaCode: params.cinemaCode,
+          playDate: toCompactDate(playDate),
+        },
+        options,
+        params.timeout ?? DEFAULT_TIMEOUT_MS,
+      )
+    : await requestDtryx<DtryxTimetableResponse>(
+        DTRYX_API.ENDPOINTS.TIMETABLE_LIST,
+        DTRYX_API.WORK_GUIDS.TIMETABLE_LIST,
+        {
+          BrandCd: params.brandCode,
+          CinemaCd: params.cinemaCode,
+          PlaySDT: toDashedDate(playDate),
+          ImgSize: 'small',
+        },
+        params.timeout,
+      );
 
   return response.Recordset.filter((item) => item.CinemaCd && item.MovieCd && item.ScreenCd).map(
     (item) => {
@@ -153,17 +172,25 @@ export async function fetchDtryxTimetable(params: DtryxRequestParams): Promise<D
 /** 예매 가능한 상영 날짜를 조회합니다. */
 export async function fetchDtryxPlayDates(
   params: Omit<DtryxRequestParams, 'playDate'>,
+  options: DtryxTransportOptions = {},
 ): Promise<DtryxPlayDate[]> {
-  const response = await requestDtryx<DtryxPlayDateResponse>(
-    DTRYX_API.ENDPOINTS.PLAY_DATE_LIST,
-    DTRYX_API.WORK_GUIDS.PLAY_DATE_LIST,
-    {
-      BrandCd: params.brandCode,
-      CinemaCd: params.cinemaCode,
-      MovieCd: '',
-    },
-    params.timeout,
-  );
+  const response = hasDtryxRelayOptions(options)
+    ? await requestDtryxRelay<DtryxPlayDateResponse>(
+        'play-dates',
+        { brandCode: params.brandCode, cinemaCode: params.cinemaCode },
+        options,
+        params.timeout ?? DEFAULT_TIMEOUT_MS,
+      )
+    : await requestDtryx<DtryxPlayDateResponse>(
+        DTRYX_API.ENDPOINTS.PLAY_DATE_LIST,
+        DTRYX_API.WORK_GUIDS.PLAY_DATE_LIST,
+        {
+          BrandCd: params.brandCode,
+          CinemaCd: params.cinemaCode,
+          MovieCd: '',
+        },
+        params.timeout,
+      );
 
   return response.Recordset.filter((item) => item.PlaySDT).map((item) => ({
     playDate: toCompactDate(item.PlaySDT as string),
@@ -175,17 +202,25 @@ export async function fetchDtryxPlayDates(
 /** 현재 상영작 목록을 조회합니다. */
 export async function fetchDtryxNowShowing(
   params: Omit<DtryxRequestParams, 'playDate'>,
+  options: DtryxTransportOptions = {},
 ): Promise<DtryxMovie[]> {
-  const response = await requestDtryx<DtryxMovieResponse>(
-    DTRYX_API.ENDPOINTS.MOVIE_NOW,
-    DTRYX_API.WORK_GUIDS.MOVIE_NOW,
-    {
-      BrandCd: params.brandCode,
-      CinemaCd: params.cinemaCode,
-      ImgSize: 'small',
-    },
-    params.timeout,
-  );
+  const response = hasDtryxRelayOptions(options)
+    ? await requestDtryxRelay<DtryxMovieResponse>(
+        'movies',
+        { brandCode: params.brandCode, cinemaCode: params.cinemaCode },
+        options,
+        params.timeout ?? DEFAULT_TIMEOUT_MS,
+      )
+    : await requestDtryx<DtryxMovieResponse>(
+        DTRYX_API.ENDPOINTS.MOVIE_NOW,
+        DTRYX_API.WORK_GUIDS.MOVIE_NOW,
+        {
+          BrandCd: params.brandCode,
+          CinemaCd: params.cinemaCode,
+          ImgSize: 'small',
+        },
+        params.timeout,
+      );
 
   return response.Recordset.filter((item) => item.MovieCd && item.MovieNm).map((item) => ({
     movieCode: String(item.MovieCd),
