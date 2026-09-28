@@ -3,7 +3,6 @@
  */
 
 import { fetchJson } from '../../utils/http.js';
-import { ZYTE_COST_POLICY_MESSAGE } from '../../core/errors.js';
 import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { CU_API } from './api.js';
 import { cuStockUnavailableReason } from './upstreamError.js';
@@ -60,6 +59,8 @@ const CU_DEFAULT_HEADERS = {
 } as const;
 
 const CU_WEB_DEFAULT_HEADERS = {
+  // Workers의 기본 요청에는 User-Agent가 없어 공식 웹이 400을 반환합니다.
+  'User-Agent': 'Mozilla/5.0',
   'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
   'X-Requested-With': 'XMLHttpRequest',
   Accept: 'text/html, */*; q=0.01',
@@ -142,10 +143,6 @@ async function requestCuWebHtml(
 
   if (response.ok) {
     return response.text();
-  }
-
-  if (response.status === 400 || response.status === 403 || response.status === 429) {
-    throw new Error(ZYTE_COST_POLICY_MESSAGE);
   }
 
   throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);

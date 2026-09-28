@@ -1,5 +1,6 @@
 /** 올리브영 무료 직접 요청 및 운영자가 설정한 브라우저 릴레이 전송. */
 import { fetchJson } from '../../utils/http.js';
+import { toOliveyoungRelayError } from './errors.js';
 import { OLIVEYOUNG_API } from './api.js';
 import type { OliveyoungApiResponse } from './types.js';
 
@@ -11,6 +12,25 @@ export interface OliveyoungRequestOptions {
   relayToken?: string;
   accessClientId?: string;
   accessClientSecret?: string;
+}
+
+/** 설정 진단과 실제 요청에 같은 릴레이 URL 규칙을 적용합니다. */
+export function isValidOliveyoungRelayUrl(value: string | undefined): boolean {
+  if (!value?.trim()) return false;
+  let relay: URL;
+  try {
+    relay = new URL(value);
+  } catch {
+    return false;
+  }
+  return !(
+    relay.username ||
+    relay.password ||
+    relay.search ||
+    relay.hash ||
+    (relay.protocol !== 'https:' &&
+      !(relay.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(relay.hostname)))
+  );
 }
 
 export async function requestOliveyoung(
@@ -26,20 +46,7 @@ export async function requestOliveyoung(
   };
   let url = `${OLIVEYOUNG_API.BASE_URL}${path}`;
   if (relayUrl) {
-    let relay: URL;
-    try {
-      relay = new URL(relayUrl);
-    } catch {
-      throw new Error('올리브영 릴레이 URL은 HTTPS 또는 로컬 HTTP 주소여야 합니다.');
-    }
-    if (
-      relay.username ||
-      relay.password ||
-      relay.search ||
-      relay.hash ||
-      (relay.protocol !== 'https:' &&
-        !(relay.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(relay.hostname)))
-    ) {
+    if (!isValidOliveyoungRelayUrl(relayUrl)) {
       throw new Error('올리브영 릴레이 URL은 HTTPS 또는 로컬 HTTP 주소여야 합니다.');
     }
     if (!relayToken?.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');
@@ -53,12 +60,20 @@ export async function requestOliveyoung(
       headers['CF-Access-Client-Id'] = accessClientId;
       headers['CF-Access-Client-Secret'] = accessClientSecret;
     }
+  } else {
+    // 공식 사이트 직접 조회용 헤더는 운영자 릴레이에 전달하지 않습니다.
+    headers['User-Agent'] =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36';
+    headers.Origin = OLIVEYOUNG_API.BASE_URL;
+    headers.Referer = `${OLIVEYOUNG_API.BASE_URL}/`;
+    headers['Accept-Language'] = 'ko-KR,ko;q=0.9';
   }
   let result: OliveyoungApiResponse;
   try {
     result = await fetchJson<OliveyoungApiResponse>(url, {
       method: 'POST',
-      redirect: 'error',
+      // Workers는 error 모드를 지원하지 않으므로 따라가지 않고 아래 200 검사로 거절합니다.
+      redirect: 'manual',
       headers,
       body: JSON.stringify(body),
       timeout,
@@ -66,16 +81,17 @@ export async function requestOliveyoung(
       expectedStatus: 200,
     });
   } catch (error) {
+    if (relayUrl) throw toOliveyoungRelayError(error);
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('올리브영 API 요청 시간 초과');
     }
-    if (relayUrl) throw new Error('올리브영 브라우저 릴레이 요청 실패');
     throw new Error(
       '올리브영 직접 요청 실패. 운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN으로 브라우저 릴레이를 설정해주세요.',
       { cause: error },
     );
   }
   if (result?.status !== 'SUCCESS') {
+    if (relayUrl) throw toOliveyoungRelayError(new SyntaxError());
     throw new Error(`올리브영 API 상태 오류: ${result?.status || 'UNKNOWN'}`);
   }
   return result;

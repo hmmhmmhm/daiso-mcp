@@ -56,7 +56,7 @@ describe('createSevenElevenService', () => {
     expect(result?.structuredContent).toMatchObject({
       count: 0,
       status: 'degraded',
-      message: expect.stringContaining('비용 정책'),
+      message: expect.stringContaining('API 요청 실패: 403'),
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });

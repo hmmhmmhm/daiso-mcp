@@ -18,8 +18,8 @@ afterEach(() => {
 
 describe('createFindNearbyStoresTool', () => {
   it('키가 있어도 차단된 매장 검색에 유료 요청을 보내지 않는다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('blocked', {status:400}));
-    await expect(createFindNearbyStoresTool('worker-key').handler({keyword:'강남',limit:1})).rejects.toThrow('비용 정책');
+    mockFetch.mockResolvedValueOnce(new Response('blocked', {status:400, statusText:'Bad Request'}));
+    await expect(createFindNearbyStoresTool('worker-key').handler({keyword:'강남',limit:1})).rejects.toThrow('API 요청 실패: 400 Bad Request');
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 

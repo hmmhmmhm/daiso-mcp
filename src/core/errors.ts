@@ -15,6 +15,20 @@ export interface StandardErrorDiagnostics {
   hint: string;
 }
 
+/** 외부 응답 원문 없이 API와 MCP에 전달할 오류 진단입니다. */
+export class ServiceError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly status: 429 | 502 | 503 | 504,
+    readonly retryable: boolean,
+    readonly upstreamStatus?: number,
+  ) {
+    super(message);
+    this.name = 'ServiceError';
+  }
+}
+
 const SERVICE_PREFIXES = [
   'daiso',
   'gs25',
@@ -128,4 +142,17 @@ export function toStandardErrorDiagnostics(
 
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+}
+
+/** 전송 계층에서 확인한 재시도 가능 여부를 공통 진단에도 유지합니다. */
+export function toServiceErrorDiagnostics(error: ServiceError, operation: string): StandardErrorDiagnostics {
+  return {
+    ...toStandardErrorDiagnostics(error.code, error.message, {
+      status: error.status,
+      upstreamStatus: error.upstreamStatus,
+      operation,
+    }),
+    retryable: error.retryable,
+    hint: buildHint(error.retryable),
+  };
 }

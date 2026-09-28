@@ -61,8 +61,10 @@ describe('createGetSearchPopwordsTool', () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(
       createGetSearchPopwordsTool('worker-key').handler({ label: 'home' }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toThrow('API 요청 실패: 403');
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 });

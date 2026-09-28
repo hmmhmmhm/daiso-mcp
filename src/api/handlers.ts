@@ -11,7 +11,8 @@ import {
   fetchOliveyoungStores,
 } from '../services/oliveyoung/client.js';
 import { fetchCuStock, fetchCuStores, geocodeCuAddress } from '../services/cu/client.js';
-import { type ApiContext, errorResponse, successResponse } from './response.js';
+import { ServiceError } from '../core/errors.js';
+import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
 export {
   handleCheckInventory,
   handleFindStores,
@@ -81,6 +82,7 @@ export async function handleOliveyoungSearchProducts(c: ApiContext) {
       { total: result.totalCount, page, pageSize: size },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'product_search');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'OLIVEYOUNG_PRODUCT_SEARCH_FAILED', message, 500);
   }
@@ -124,6 +126,7 @@ export async function handleOliveyoungFindStores(c: ApiContext) {
       { total: result.totalCount, page: pageIdx, pageSize: limit }
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'store_search');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'OLIVEYOUNG_STORE_SEARCH_FAILED', message, 500);
   }
@@ -227,6 +230,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
       { total: productResult.totalCount, page, pageSize: size }
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'inventory_check');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'OLIVEYOUNG_INVENTORY_CHECK_FAILED', message, 500);
   }

@@ -86,7 +86,7 @@ describe('handleSevenElevenSearchProducts', () => {
     );
   });
 
-  it('Worker 키가 있어도 차단 시 유료 호출 없이 비용 정책 오류를 반환한다', async () => {
+  it('Worker 키가 있어도 차단 시 유료 호출 없이 원본 HTTP 오류를 반환한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     const ctx = createMockContext({ query: '삼각김밥' }, { ZYTE_API_KEY: 'worker-key' });
     await handleSevenElevenSearchProducts(ctx);
@@ -94,8 +94,7 @@ describe('handleSevenElevenSearchProducts', () => {
       expect.objectContaining({
         success: false,
         diagnostics: expect.objectContaining({
-          retryable: false,
-          hint: expect.stringContaining('비용 정책'),
+          message: expect.stringContaining('API 요청 실패: 403'),
         }),
       }),
       500,

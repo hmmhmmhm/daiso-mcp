@@ -141,13 +141,15 @@ describe('pickBestSevenElevenProduct', () => {
 });
 
 describe('searchSevenElevenProductsWithVariants', () => {
-  it('보정 검색 차단도 유료 호출 없이 비용 정책을 알린다', async () => {
+  it('보정 검색 차단도 유료 호출 없이 원본 HTTP 오류를 보존한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(
       searchSevenElevenProductsWithVariants('핫식스', { size: 1, zyteApiKey: 'worker-key' }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toThrow('API 요청 실패: 403');
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
   it('대체 질의 결과를 합쳐 가장 관련도 높은 상품을 앞에 둔다', async () => {

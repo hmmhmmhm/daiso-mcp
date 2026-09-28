@@ -14,6 +14,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('fetchJsonWithZyteFallback', () => {
@@ -54,8 +55,33 @@ describe('fetchJsonWithZyteFallback', () => {
         zyteApiKey: 'test-key',
         zyteTags: { service: 'test' },
       }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toMatchObject({ name: 'HttpError', status, bodyText: 'blocked' });
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([undefined, '', 'test-env-key'])(
+    '환경 키 %s와 무관하게 원본 오류를 보존한다',
+    async (key) => {
+      vi.stubEnv('ZYTE_API_KEY', key);
+      mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+      await expect(fetchJsonWithZyteFallback('https://example.com/api')).rejects.toMatchObject({
+        name: 'HttpError',
+        status: 403,
+        bodyText: 'blocked',
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('레거시 Zyte 옵션은 직접 요청에 전달하지 않는다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{}'));
+    await fetchJsonWithZyteFallback('https://example.com/api', {
+      zyteApiKey: 'test-key',
+      zyteTags: { service: 'test' },
+    });
+    const options = mockFetch.mock.calls[0][1];
+    expect(options).not.toHaveProperty('zyteApiKey');
+    expect(options).not.toHaveProperty('zyteTags');
   });
 
   it('원본 500 응답은 Zyte로 재시도하지 않는다', async () => {
@@ -70,7 +96,7 @@ describe('fetchJsonWithZyteFallback', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  it('HEAD 요청도 차단 응답 이후 비용 정책을 알린다', async () => {
+  it('HEAD 요청도 원본 차단 상태를 보존한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
 
     await expect(
@@ -78,7 +104,7 @@ describe('fetchJsonWithZyteFallback', () => {
         method: 'HEAD',
         zyteApiKey: 'test-key',
       }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toMatchObject({ name: 'HttpError', status: 403 });
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });

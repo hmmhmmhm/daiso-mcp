@@ -25,40 +25,48 @@ afterEach(() => {
 });
 
 describe('seveneleven client retry defaults', () => {
-  it('상품 검색 차단 시 유료 호출 없이 비용 정책을 알린다', async () => {
+  it('상품 검색 차단 시 유료 호출 없이 원본 HTTP 오류를 보존한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(
       searchSevenElevenProducts({ query: '커피' }, { zyteApiKey: 'worker-key' }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toThrow('API 요청 실패: 403');
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
-  it('매장 검색 차단 시 유료 호출 없이 비용 정책을 알린다', async () => {
+  it('매장 검색 차단 시 유료 호출 없이 원본 HTTP 오류를 보존한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(
       fetchSevenElevenStoresByKeyword({ keyword: '강남' }, { zyteApiKey: 'worker-key' }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toThrow('API 요청 실패: 403');
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
-  it('인기 검색어 차단 시 유료 호출 없이 비용 정책을 알린다', async () => {
+  it('인기 검색어 차단 시 유료 호출 없이 원본 HTTP 오류를 보존한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(
       fetchSevenElevenSearchPopwords('home', { zyteApiKey: 'worker-key' }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toThrow('API 요청 실패: 403');
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
-  it('재고 상품 메타 차단 시 유료 호출 없이 비용 정책을 알린다', async () => {
+  it('재고 상품 메타 차단 시 유료 호출 없이 원본 HTTP 오류를 보존한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(
       fetchSevenElevenStockProductMeta('8801', { zyteApiKey: 'worker-key' }),
-    ).rejects.toThrow('비용 정책');
+    ).rejects.toThrow('API 요청 실패: 403');
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
   it('카탈로그 페이지 차단 시 유료 호출 없이 빈 결과를 반환한다', async () => {
@@ -71,7 +79,9 @@ describe('seveneleven client retry defaults', () => {
       }),
     ).resolves.toEqual({ pages: [], issues: [], exhibitions: [] });
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
   it('일시적 GET 실패는 기본 재시도로 복구한다', async () => {

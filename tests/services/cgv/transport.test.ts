@@ -20,6 +20,21 @@ afterEach(() => {
 });
 
 describe('requestCgv', () => {
+  it('CGV가 허용하는 브라우저 User-Agent로 직접 요청한다', async () => {
+    mockFetch.mockImplementationOnce((_url: string, init: RequestInit) => {
+      const userAgent = new Headers(init.headers).get('User-Agent');
+      if (userAgent !== 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36') {
+        return Promise.resolve(new Response('blocked', { status: 403 }));
+      }
+      return Promise.resolve(Response.json({ statusCode: 0, data: [{ regnGrpCd: '01' }] }));
+    });
+
+    await expect(
+      requestCgv('/cnm/atkt/searchRegnList', new URLSearchParams({ coCd: 'A420' }), 1000),
+    ).resolves.toEqual({ statusCode: 0, data: [{ regnGrpCd: '01' }] });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('정상 응답을 JSON으로 파싱한다', async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ statusCode: 0, data: [] }), { status: 200 }),
@@ -51,8 +66,8 @@ describe('requestCgv', () => {
     ).rejects.toThrow('CGV API 응답 파싱 실패');
   });
 
-  it('키가 있어도 403이면 유료 호출 없이 서비스 이용 불가를 알린다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+  it.each([401, 403])('키가 있어도 %i이면 유료 호출 없이 원본 상태를 알린다', async (status) => {
+    mockFetch.mockResolvedValueOnce(new Response('blocked', { status }));
     await expect(
       requestCgv(
         '/cnm/atkt/searchRegnList',
@@ -60,7 +75,11 @@ describe('requestCgv', () => {
         1000,
         'test-key',
       ),
-    ).rejects.toThrow('CGV');
+    ).rejects.toMatchObject({
+      name: 'CgvUpstreamUnavailableError',
+      upstreamStatus: status,
+      message: expect.stringContaining(`HTTP ${status}`),
+    });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
   });
@@ -133,4 +152,9 @@ it('CGV 인증 차단은 비용 정책 안내와 함께 재시도 불가로 진�
       status: 503,
     }),
   ).toMatchObject({ retryable: false, hint: expect.stringContaining('비용 정책') });
+});
+
+it('원본 상태가 없는 CGV 오류의 기존 메시지를 유지한다', () => {
+  const error = new CgvUpstreamUnavailableError();
+  expect(error.message).toBe('CGV 원본 서비스에 연결할 수 없습니다. Zyte 유료 호출은 비용 정책에 따라 비활성화되어 있습니다.');
 });

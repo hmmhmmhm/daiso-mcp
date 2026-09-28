@@ -56,7 +56,7 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.nearbyStores).toEqual(
       expect.objectContaining({
         available: false,
-        unavailableReason: expect.stringContaining('비용 정책'),
+        unavailableReason: expect.stringContaining('API 요청 실패: 403'),
         totalCount: 0,
         stores: [],
       }),
@@ -89,8 +89,18 @@ describe('createCheckInventoryTool', () => {
   });
 
   it('키가 있어도 차단된 재고 조회에 유료 요청을 보내지 않는다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('{}')).mockResolvedValueOnce(new Response('blocked', {status:403}));
-    await expect(createCheckInventoryTool({zyteApiKey:'worker-key'}).handler({keyword:'과자',storeLimit:1})).rejects.toThrow('비용 정책');
+    mockFetch
+      .mockResolvedValueOnce(new Response('{}'))
+      .mockResolvedValueOnce(new Response('blocked', { status: 403 }));
+    const result = await createCheckInventoryTool({ zyteApiKey: 'worker-key' }).handler({
+      keyword: '과자',
+      storeLimit: 0,
+    });
+    expect(JSON.parse(result.content[0].text).inventory).toMatchObject({
+      available: false,
+      unavailableReason: expect.stringContaining('403 Request Blocked'),
+      items: [],
+    });
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -104,7 +114,9 @@ describe('createCheckInventoryTool', () => {
   it('keyword가 없으면 에러를 던진다', async () => {
     const tool = createCheckInventoryTool();
 
-    await expect(tool.handler({ keyword: '' })).rejects.toThrow('상품 검색어(keyword)를 입력해주세요.');
+    await expect(tool.handler({ keyword: '' })).rejects.toThrow(
+      '상품 검색어(keyword)를 입력해주세요.',
+    );
   });
 
   it('주변 매장과 재고 검색 결과를 함께 반환한다', async () => {
