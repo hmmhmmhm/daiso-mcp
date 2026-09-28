@@ -1,5 +1,6 @@
 /** 올리브영 무료 직접 요청 및 운영자가 설정한 브라우저 릴레이 전송. */
 import { fetchJson } from '../../utils/http.js';
+import { toOliveyoungRelayError } from './errors.js';
 import { OLIVEYOUNG_API } from './api.js';
 import type { OliveyoungApiResponse } from './types.js';
 
@@ -80,16 +81,17 @@ export async function requestOliveyoung(
       expectedStatus: 200,
     });
   } catch (error) {
+    if (relayUrl) throw toOliveyoungRelayError(error);
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('올리브영 API 요청 시간 초과');
     }
-    if (relayUrl) throw new Error('올리브영 브라우저 릴레이 요청 실패');
     throw new Error(
       '올리브영 직접 요청 실패. 운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN으로 브라우저 릴레이를 설정해주세요.',
       { cause: error },
     );
   }
   if (result?.status !== 'SUCCESS') {
+    if (relayUrl) throw toOliveyoungRelayError(new SyntaxError());
     throw new Error(`올리브영 API 상태 오류: ${result?.status || 'UNKNOWN'}`);
   }
   return result;

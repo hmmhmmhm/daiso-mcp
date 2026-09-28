@@ -1,3 +1,6 @@
+import { requestOliveyoung } from '../../src/services/oliveyoung/transport.js';
+import { afterEach, vi } from 'vitest';
+import { ServiceError } from '../../src/core/errors.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -88,4 +91,39 @@ describe('ServiceRegistry MCP SDK 오류 계약', () => {
     });
     expect(result).not.toHaveProperty('isError');
   });
+});
+
+it('표준 서비스 오류의 진단을 성공 스키마 검증 없이 MCP 텍스트로 전달한다', async () => {
+  const result = await callRegisteredTool({
+    name: 'oliveyoung_search_products',
+    metadata: { title: '오류 진단', description: '릴레이 진단', inputSchema: {}, outputSchema: { value: z.string() } },
+    handler: async () => { throw new ServiceError('OLIVEYOUNG_RELAY_HTTP_ERROR', '안전한 오류', 503, true, 503); },
+  });
+  expect(result.isError).toBe(true);
+  expect(result).not.toHaveProperty('structuredContent');
+  const content = result.content as Array<{ text: string }>;
+  expect(JSON.parse(content[0].text)).toMatchObject({
+    error: { code: 'OLIVEYOUNG_RELAY_HTTP_ERROR', message: '안전한 오류' },
+    diagnostics: { status: 503, upstreamStatus: 503, retryable: true, service: 'oliveyoung', operation: 'search_products' },
+  });
+});
+
+afterEach(() => vi.unstubAllGlobals());
+it.each([429, 502, 503])('실제 릴레이 HTTP %i를 MCP 클라이언트 진단까지 전달한다', async (status) => {
+  const fetch = vi.fn().mockResolvedValue(new Response('private-token', { status }));
+  vi.stubGlobal('fetch', fetch);
+  const result = await callRegisteredTool({
+    name: 'oliveyoung_search_products',
+    metadata: { title: '릴레이 오류', description: '릴레이 오류 진단', inputSchema: {}, outputSchema: { value: z.string() } },
+    handler: async () => {
+      await requestOliveyoung('/p', {}, { relayUrl: 'https://private-relay.example', relayToken: 'private-token' });
+      return { content: [] };
+    },
+  });
+  expect(result.isError).toBe(true);
+  expect(result).not.toHaveProperty('structuredContent');
+  const content = result.content as Array<{ text: string }>;
+  expect(JSON.parse(content[0].text)).toMatchObject({ diagnostics: { code: 'OLIVEYOUNG_RELAY_HTTP_ERROR', status, upstreamStatus: status, retryable: true } });
+  expect(JSON.stringify(result)).not.toContain('private-');
+  expect(fetch).toHaveBeenCalledTimes(1);
 });
