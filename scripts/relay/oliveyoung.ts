@@ -2,6 +2,7 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { OLIVEYOUNG_API } from '../../src/services/oliveyoung/api.js';
 import type { OliveyoungApiResponse } from '../../src/services/oliveyoung/types.js';
+import { createConsumerQuota } from './consumer.js';
 import { canonicalKey, createResponseCache } from './cache.js';
 import type { QuotaStatus } from './quota.js';
 export type BrowserRunner = (
@@ -66,6 +67,11 @@ export function createOliveyoungRelay(
   if (!token.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');
   const expected = Buffer.from(`Bearer ${token}`);
   const cache = createResponseCache();
+  const consumers = createConsumerQuota();
+  const consumerDenied = () => Response.json({ error: 'Relay quota exceeded', reason: 'consumer' }, {
+    status: 429,
+    headers: { 'x-relay-quota-reason': 'consumer', 'retry-after': String(consumers.retryAfter()) },
+  });
   const ttl: Record<string, number> = {
     'find-store': 300000,
     'product-search-v3': 300000,
@@ -103,6 +109,10 @@ export function createOliveyoungRelay(
       return error(404, 'Not found');
     // 느린 업로드도 슬롯을 점유하므로 본문 읽기 전에 상한을 검사합니다.
     if (outstanding >= 8) return error(503, 'Relay busy');
+    const consumerHeader = request.headers.get('x-relay-consumer') || '';
+    const consumer = /^[a-f0-9]{64}$/.test(consumerHeader) ? consumerHeader : 'legacy';
+    const admission = consumers.enter(consumer);
+    if (!admission) return consumerDenied();
     outstanding++;
     try {
       let body: Record<string, unknown>;
@@ -171,6 +181,8 @@ export function createOliveyoungRelay(
       emit('cache', mode, entry?.requestId);
       const queuedAt = Date.now();
       if (!entry) {
+        const reservation = admission.reserve();
+        if (!reservation) return consumerDenied();
         const signals = new Map([[request.signal, queuedAt]]);
         const task = tail
           .then(async (): Promise<Result> => {
@@ -193,6 +205,7 @@ export function createOliveyoungRelay(
                 return 'unavailable';
               }
             }
+            reservation.commit();
             const result = await run(paths[operation], body);
             if (result?.status === 'SUCCESS')
               cache.set(key, JSON.stringify(result), ttl[operation]);
@@ -201,6 +214,7 @@ export function createOliveyoungRelay(
           })
           .finally(() => {
             pending.delete(key);
+            reservation.release();
           });
         entry = { task, signals, startedAt: 0, requestId };
         pending.set(key, entry);
@@ -238,6 +252,7 @@ export function createOliveyoungRelay(
       }
     } finally {
       outstanding--;
+      admission.release();
     }
   };
 }

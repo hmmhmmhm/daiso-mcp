@@ -10,6 +10,7 @@ export function toOliveyoungRelayError(error: unknown): ServiceError {
       [429, 502, 503].includes(error.status) ? error.status as 429 | 502 | 503 : 502,
       error.status >= 500 || error.status === 408 || error.status === 429,
       error.status,
+      error.quota,
     );
   }
   if (error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name)) {

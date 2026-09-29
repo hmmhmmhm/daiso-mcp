@@ -1,3 +1,4 @@
+import { parseRelayQuota, type RelayQuota } from './relayQuota.js';
 import { diagnosticEvent } from './diagnostics.js';
 /**
  * 공용 HTTP 유틸리티
@@ -27,11 +28,12 @@ export interface FetchRetryEvent {
 }
 
 export class HttpError extends Error {
+  readonly quota?: RelayQuota;
   readonly status: number;
   readonly statusText: string;
   readonly bodyText: string;
 
-  constructor(status: number, statusText: string, bodyText: string) {
+  constructor(status: number, statusText: string, bodyText: string, headers?: Headers) {
     const normalizedBody = bodyText.trim().replace(/\s+/g, ' ').slice(0, 300);
     const detail = normalizedBody.length > 0 ? ` - ${normalizedBody}` : '';
     super(`API 요청 실패: ${status} ${statusText}${detail}`);
@@ -39,6 +41,7 @@ export class HttpError extends Error {
     this.status = status;
     this.statusText = statusText;
     this.bodyText = bodyText;
+    this.quota = parseRelayQuota(status, headers);
   }
 }
 
@@ -207,7 +210,7 @@ export async function fetchJson<T>(url: string, options: FetchOptions = {}): Pro
   const { response, body } = await readTextResponse(url, options);
 
   if (!response.ok || (options.expectedStatus !== undefined && response.status !== options.expectedStatus)) {
-    throw new HttpError(response.status, response.statusText, body);
+    throw new HttpError(response.status, response.statusText, body, response.headers);
   }
 
   if (/^\s*(?:<!doctype\s+html\b|<html\b)/i.test(body)) {
@@ -223,7 +226,7 @@ export async function fetchText(url: string, options: FetchOptions = {}): Promis
   const { response, body } = await readTextResponse(url, options);
 
   if (!response.ok) {
-    throw new HttpError(response.status, response.statusText, body);
+    throw new HttpError(response.status, response.statusText, body, response.headers);
   }
 
   return body;

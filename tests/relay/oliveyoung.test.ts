@@ -1,10 +1,12 @@
 import { expect, it, vi } from 'vitest';
 import { createOliveyoungRelay } from '../../scripts/relay/oliveyoung.js';
+let consumerSequence = 0;
+const consumerHeaders = () => ({ 'x-relay-consumer': (++consumerSequence).toString(16).padStart(64, '0') });
 const payload = { goodsNo: 'A1' };
 const request = (path = 'stock-goods-info-v3', body = JSON.stringify(payload), token = 'test') =>
   new Request(`http://localhost/v1/oliveyoung/${path}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, ...consumerHeaders() },
     body,
   });
 it('인증 실패 시 브라우저를 호출하지 않는다', async () => {
@@ -79,7 +81,7 @@ it('누락 인증, 빈 토큰, 잘못된 메서드와 요청 형태를 거절한
     (
       await relay(
         new Request('http://localhost/v1/oliveyoung/find-store', {
-          headers: { Authorization: 'Bearer test' },
+          headers: { Authorization: 'Bearer test', ...consumerHeaders() },
         }),
       )
     ).status,
@@ -89,7 +91,7 @@ it('누락 인증, 빈 토큰, 잘못된 메서드와 요청 형태를 거절한
       await relay(
         new Request('http://localhost/v1/oliveyoung/find-store', {
           method: 'POST',
-          headers: { Authorization: 'Bearer test' },
+          headers: { Authorization: 'Bearer test', ...consumerHeaders() },
         }),
       )
     ).status,
@@ -121,7 +123,7 @@ it('본문을 읽는 중인 요청도 슬롯 상한에 포함한다', async () =
     relay(
       new Request('http://localhost/v1/oliveyoung/stock-goods-info-v3', {
         method: 'POST',
-        headers: { Authorization: 'Bearer test' },
+        headers: { Authorization: 'Bearer test', ...consumerHeaders() },
         body: new ReadableStream({
           start(controller) {
             streams.push(controller);
