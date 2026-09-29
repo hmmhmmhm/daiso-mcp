@@ -1,3 +1,5 @@
+import { createRelayLogger } from './logging.js';
+import { observeRelay } from './observed.js';
 /** 실행 시에만 로컬 브라우저 릴레이를 시작합니다. */
 import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
@@ -9,6 +11,7 @@ import { launchGuardedBrowser } from './supervisor.js';
 import { createFileQuota } from './quota.js';
 import { createOliveyoungRelay } from './oliveyoung.js';
 
+let logger: ReturnType<typeof createRelayLogger> | undefined;
 async function main() {
   const token = process.env.OY_RELAY_TOKEN;
   if (!token?.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');
@@ -18,16 +21,30 @@ async function main() {
   const stateDir = process.env.OY_RELAY_STATE_DIR;
   if (!stateDir) throw new Error('OY_RELAY_STATE_DIR이 필요합니다.');
   await mkdir(stateDir, { recursive: true, mode: 0o700 });
+  logger = createRelayLogger(join(stateDir, 'logs'), { service: 'oliveyoung' });
+  const log = logger;
+  log.append({ stage: 'process', outcome: 'starting' });
   const takeQuota = await createFileQuota(join(stateDir, 'quota.json'));
-  const lifecycle = createBrowserLifecycle(() =>
-    launchGuardedBrowser(join(stateDir, 'browser-owner.json')),
+  log.append({ stage: 'quota', outcome: 'snapshot', ...takeQuota.status() });
+  const heartbeat = setInterval(
+    () => log.append({ stage: 'process', outcome: 'heartbeat', ...takeQuota.status() }),
+    60000,
+  );
+  heartbeat.unref();
+  const lifecycle = createBrowserLifecycle(
+    () => launchGuardedBrowser(join(stateDir, 'browser-owner.json')),
+    (outcome) => log.append({ stage: 'lifecycle', operation: 'browser', outcome }),
   );
   try {
     await lifecycle.start();
-    const handler = createOliveyoungRelay(token, lifecycle.run, {
-      takeQuota,
-      status: lifecycle.status,
-    });
+    const handler = observeRelay(
+      createOliveyoungRelay(token, lifecycle.run, {
+        takeQuota,
+        status: () => ({ ...lifecycle.status(), logging: log.status() }),
+        onEvent: log.append,
+      }),
+      log.append,
+    );
     const server = createServer(async (req, res) => {
       try {
         const controller = new AbortController();
@@ -41,11 +58,13 @@ async function main() {
         } as RequestInit & { duplex: 'half' });
         const response = await handler(request);
         res.writeHead(response.status, {
+          ...Object.fromEntries(response.headers),
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
         });
         res.end(await response.text());
       } catch {
+        log.append({ stage: 'server', outcome: 'error', status: 500 });
         res.writeHead(500);
         res.end('{"error":"Relay failure"}');
       }
@@ -61,10 +80,13 @@ async function main() {
     const close = () => {
       if (stopping) return;
       stopping = true;
+      clearInterval(heartbeat);
+      log.append({ stage: 'process', outcome: 'stopping' });
       server.close();
       server.closeAllConnections();
       void lifecycle
         .close()
+        .then(() => log.flush())
         .then(() => process.exit(0))
         .catch(() => process.exit(1));
     };
@@ -76,7 +98,9 @@ async function main() {
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(() => {
+  main().catch(async () => {
+    logger?.append({ stage: 'process', outcome: 'startup-failed' });
+    await logger?.flush();
     console.error('올리브영 릴레이 시작 실패: 토큰, 포트 및 GUI 브라우저 접속을 확인하세요.');
     process.exitCode = 1;
   });

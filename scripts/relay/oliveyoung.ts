@@ -1,7 +1,9 @@
 /** 고정된 올리브영 조회만 허용하는 인증 릴레이. */
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { OLIVEYOUNG_API } from '../../src/services/oliveyoung/api.js';
 import type { OliveyoungApiResponse } from '../../src/services/oliveyoung/types.js';
+import { canonicalKey, createResponseCache } from './cache.js';
+import type { QuotaStatus } from './quota.js';
 export type BrowserRunner = (
   path: string,
   body: Record<string, unknown>,
@@ -43,8 +45,17 @@ const fields: Record<string, Record<string, 'string' | 'number' | 'boolean'>> = 
 };
 const error = (status: number, message: string) => Response.json({ error: message }, { status });
 
-interface RelayOptions {
-  takeQuota?: () => Promise<boolean>;
+export interface RelayEvent {
+  stage: string;
+  operation: string;
+  outcome: string;
+  requestId?: string;
+  parentRequestId?: string;
+  durationMs?: number;
+}
+export interface RelayOptions {
+  takeQuota?: (() => Promise<boolean>) & { status?: () => QuotaStatus };
+  onEvent?: (event: RelayEvent) => void | Promise<void>;
   status?: () => Record<string, unknown>;
 }
 export function createOliveyoungRelay(
@@ -54,6 +65,23 @@ export function createOliveyoungRelay(
 ) {
   if (!token.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');
   const expected = Buffer.from(`Bearer ${token}`);
+  const cache = createResponseCache();
+  const ttl: Record<string, number> = {
+    'find-store': 300000,
+    'product-search-v3': 300000,
+    'stock-goods-info-v3': 600000,
+    'stock-stores': 60000,
+  };
+  type Result = OliveyoungApiResponse | null | 'quota' | 'unavailable';
+  const pending = new Map<
+    string,
+    {
+      task: Promise<Result>;
+      signals: Map<AbortSignal, number>;
+      startedAt: number;
+      requestId: string;
+    }
+  >();
   let outstanding = 0;
   let tail: Promise<unknown> = Promise.resolve();
   return async (request: Request): Promise<Response> => {
@@ -62,7 +90,12 @@ export function createOliveyoungRelay(
       return error(401, 'Unauthorized');
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health' && !url.search && options.status) {
-      return Response.json({ ...options.status(), outstanding });
+      return Response.json({
+        ...options.status(),
+        outstanding,
+        cache: cache.stats(),
+        quota: options.takeQuota?.status?.(),
+      });
     }
     if (!url.pathname.startsWith('/v1/oliveyoung/')) return error(404, 'Not found');
     const operation = url.pathname.slice('/v1/oliveyoung/'.length);
@@ -105,28 +138,103 @@ export function createOliveyoungRelay(
         return error(400, 'Invalid JSON');
       }
 
-      const queuedAt = Date.now();
-      const task = tail.then(async () => {
-        if (request.signal.aborted || Date.now() - queuedAt >= 15000) return null;
-        if (options.takeQuota) {
-          try {
-            if (!(await options.takeQuota())) return 'quota' as const;
-          } catch {
-            return 'unavailable' as const;
-          }
+      const suppliedId = request.headers.get('x-request-id');
+      const requestId =
+        suppliedId && /^[A-Za-z0-9_-]{1,64}$/.test(suppliedId) ? suppliedId : randomUUID();
+      const started = Date.now();
+      const emit = (stage: string, outcome: string, parentRequestId?: string) => {
+        try {
+          void Promise.resolve(
+            options.onEvent?.({
+              stage,
+              operation,
+              outcome,
+              requestId,
+              parentRequestId,
+              durationMs: Date.now() - started,
+            }),
+          ).catch(() => undefined);
+        } catch {
+          /* 관측 실패는 요청 처리에 영향을 주지 않습니다. */
         }
-        return run(paths[operation], body);
-      });
-      tail = task.catch(() => undefined);
+      };
+      const key = canonicalKey(operation, body);
+      const cached = cache.get(key);
+      if (cached !== undefined) {
+        emit('cache', 'hit');
+        return new Response(cached, {
+          headers: { 'content-type': 'application/json', 'x-relay-cache': 'hit' },
+        });
+      }
+      let entry = pending.get(key);
+      const mode = entry ? 'coalesced' : 'miss';
+      emit('cache', mode, entry?.requestId);
+      const queuedAt = Date.now();
+      if (!entry) {
+        const signals = new Map([[request.signal, queuedAt]]);
+        const task = tail
+          .then(async (): Promise<Result> => {
+            entry!.startedAt = Date.now();
+            if (
+              [...signals].every(
+                ([signal, arrived]) => signal.aborted || entry!.startedAt - arrived >= 15000,
+              )
+            )
+              return null;
+            if (options.takeQuota) {
+              try {
+                if (!(await options.takeQuota())) {
+                  emit('quota', 'denied');
+                  return 'quota';
+                }
+                emit('quota', 'consumed');
+              } catch {
+                emit('quota', 'unavailable');
+                return 'unavailable';
+              }
+            }
+            const result = await run(paths[operation], body);
+            if (result?.status === 'SUCCESS')
+              cache.set(key, JSON.stringify(result), ttl[operation]);
+            emit('upstream', result?.status === 'SUCCESS' ? 'success' : 'error');
+            return result;
+          })
+          .finally(() => {
+            pending.delete(key);
+          });
+        entry = { task, signals, startedAt: 0, requestId };
+        pending.set(key, entry);
+        tail = task.catch(() => undefined);
+      } else {
+        entry.signals.set(request.signal, queuedAt);
+      }
       try {
-        const result = await task;
-        if (result === null) return error(503, 'Request expired');
-        if (result === 'quota') return error(429, 'Relay quota exceeded');
+        const result = await entry.task;
+        if (request.signal.aborted || result === null || entry.startedAt - queuedAt >= 15000) {
+          emit('queue', 'expired');
+          return error(503, 'Request expired');
+        }
+        if (result === 'quota') {
+          const status = options.takeQuota?.status?.();
+          return Response.json(
+            { error: 'Relay quota exceeded', reason: status?.blockedBy || 'unknown' },
+            {
+              status: 429,
+              headers: {
+                'x-relay-quota-reason': status?.blockedBy || 'unknown',
+                'retry-after': String(status?.retryAfter || 60),
+              },
+            },
+          );
+        }
         if (result === 'unavailable') return error(503, 'Relay quota unavailable');
         if (result?.status !== 'SUCCESS') return error(502, 'Upstream unavailable');
-        return Response.json(result);
+        return Response.json(result, { headers: { 'x-relay-cache': mode } });
       } catch {
+        emit('upstream', 'error');
         return error(502, 'Upstream unavailable');
+      } finally {
+        entry.signals.delete(request.signal);
       }
     } finally {
       outstanding--;

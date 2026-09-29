@@ -6,10 +6,18 @@ interface Ledger {
   dayCount: number;
   minuteCount: number;
 }
+export interface QuotaStatus {
+  dailyRemaining: number;
+  minuteRemaining: number;
+  resetAt: { daily: number; minute: number };
+  blockedBy: 'daily' | 'minute' | null;
+  retryAfter: number;
+}
+export type FileQuota = (() => Promise<boolean>) & { status: () => QuotaStatus };
 export async function createFileQuota(
   path: string,
   now: () => number = Date.now,
-): Promise<() => Promise<boolean>> {
+): Promise<FileQuota> {
   let ledger: Ledger = { day: 0, minute: 0, dayCount: 0, minuteCount: 0 };
   try {
     const value = JSON.parse(await readFile(path, 'utf8')) as Ledger;
@@ -26,7 +34,7 @@ export async function createFileQuota(
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
   let tail: Promise<unknown> = Promise.resolve();
-  return () => {
+  const take = () => {
     const task = tail.then(async () => {
       const time = now();
       const day = Math.max(ledger.day, Math.floor(time / 86400000));
@@ -44,4 +52,17 @@ export async function createFileQuota(
     tail = task.catch(() => undefined);
     return task;
   };
+  return Object.assign(take, {
+    status(): QuotaStatus {
+      const time = now();
+      const day = Math.max(ledger.day, Math.floor(time / 86400000));
+      const minute = Math.max(ledger.minute, Math.floor(time / 60000));
+      const dailyRemaining = Math.max(0, 3000 - (day === ledger.day ? ledger.dayCount : 0));
+      const minuteRemaining = Math.max(0, 30 - (minute === ledger.minute ? ledger.minuteCount : 0));
+      const resetAt = { daily: (day + 1) * 86400000, minute: (minute + 1) * 60000 };
+      const blockedBy = dailyRemaining === 0 ? 'daily' : minuteRemaining === 0 ? 'minute' : null;
+      const retryAfter = blockedBy ? Math.ceil((resetAt[blockedBy] - time) / 1000) : 0;
+      return { dailyRemaining, minuteRemaining, resetAt, blockedBy, retryAfter };
+    },
+  });
 }

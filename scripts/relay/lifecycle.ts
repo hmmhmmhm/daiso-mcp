@@ -21,7 +21,17 @@ export async function bounded<T>(work: Promise<T>, ms: number): Promise<T> {
     clearTimeout(timer!);
   }
 }
-export function createBrowserLifecycle(launch: () => Promise<BrowserOwner>) {
+export function createBrowserLifecycle(
+  launch: () => Promise<BrowserOwner>,
+  onEvent?: (reason: string) => void | Promise<void>,
+) {
+  const emit = (reason: string) => {
+    try {
+      void Promise.resolve(onEvent?.(reason)).catch(() => undefined);
+    } catch {
+      /* 관측 실패는 브라우저 회수에 영향을 주지 않습니다. */
+    }
+  };
   let owner: BrowserOwner | undefined;
   let page: Page | undefined;
   let context: BrowserContext | undefined;
@@ -40,6 +50,7 @@ export function createBrowserLifecycle(launch: () => Promise<BrowserOwner>) {
   let replacementPending = false;
   const retire = (why: string) => {
     reason = why;
+    emit(why);
     if (timer) clearInterval(timer);
     timer = undefined;
     const previous = owner;
@@ -69,7 +80,12 @@ export function createBrowserLifecycle(launch: () => Promise<BrowserOwner>) {
       rotations++;
     }
     if (owner) return;
-    owner = await launch();
+    try {
+      owner = await launch();
+    } catch (error) {
+      emit('launch-failed');
+      throw error;
+    }
     born = Date.now();
     calls = 0;
     if (closed) {
@@ -97,6 +113,7 @@ export function createBrowserLifecycle(launch: () => Promise<BrowserOwner>) {
       );
       await bounded(page.waitForURL('**/store/**', { timeout: 30000 }), 32000);
       if (closed || owner !== sessionOwner) throw new Error('Browser lifecycle unavailable');
+      emit('ready');
       timer = setInterval(() => {
         if (!active && Date.now() - born >= 30 * 60 * 1000) {
           rotations++;
@@ -166,7 +183,15 @@ export function createBrowserLifecycle(launch: () => Promise<BrowserOwner>) {
       await cleanup;
     },
     status: () => ({
-      state: failed ? 'failed' : closed ? 'closed' : initializing ? 'starting' : owner ? 'ready' : 'idle',
+      state: failed
+        ? 'failed'
+        : closed
+          ? 'closed'
+          : initializing
+            ? 'starting'
+            : owner
+              ? 'ready'
+              : 'idle',
       active,
       calls,
       totalCalls,

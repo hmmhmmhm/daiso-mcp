@@ -1,5 +1,5 @@
 /** 고정 공개 API만 허용하는 디트릭스 전용 중계입니다. */
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { DTRYX_API } from '../../src/services/dtryx/api.js';
 
 type Route = 'timetable' | 'play-dates' | 'movies';
@@ -11,6 +11,14 @@ interface Params {
 interface Options {
   takeQuota: () => Promise<boolean>;
   fetcher?: typeof fetch;
+  onEvent?: (event: {
+    stage: string;
+    operation: string;
+    requestId: string;
+    outcome: string;
+    status: number;
+    durationMs: number;
+  }) => void | Promise<void>;
 }
 class RelayError extends Error {
   constructor(readonly status: number) {
@@ -195,11 +203,17 @@ export function createDtryxRelay(token: string, options: Options) {
       abort();
     }, 15000);
     let acquired = false;
+    let stage = 'body';
+    let resultStatus = 200;
+    const suppliedId = request.headers.get('x-request-id');
+    const requestId =
+      suppliedId && /^[A-Za-z0-9_-]{1,64}$/.test(suppliedId) ? suppliedId : randomUUID();
     try {
       const p = validate(
         await readJson(request.body, 16384, controller.signal, 400),
         name as Route,
       );
+      stage = 'queue';
       await acquire(controller.signal);
       acquired = true;
       if (performance.now() >= deadline) {
@@ -207,6 +221,7 @@ export function createDtryxRelay(token: string, options: Options) {
         abort();
       }
       controller.signal.throwIfAborted();
+      stage = 'quota';
       if (
         !(await abortable(
           options.takeQuota().catch(() => {
@@ -217,6 +232,7 @@ export function createDtryxRelay(token: string, options: Options) {
       )
         throw new RelayError(429);
       controller.signal.throwIfAborted();
+      stage = 'upstream';
       return reply(200, await upstream(name as Route, p, controller.signal, fetcher));
     } catch (error) {
       const status = expired
@@ -226,8 +242,23 @@ export function createDtryxRelay(token: string, options: Options) {
           : error instanceof RelayError
             ? error.status
             : 502;
+      resultStatus = status;
       return reply(status, { error: 'Relay request failed' });
     } finally {
+      try {
+        void Promise.resolve(
+          options.onEvent?.({
+            stage,
+            operation: name,
+            requestId,
+            outcome: resultStatus === 200 ? 'ok' : 'error',
+            status: resultStatus,
+            durationMs: performance.now() - deadline + 15000,
+          }),
+        ).catch(() => undefined);
+      } catch {
+        /* 관측 실패는 요청에 영향을 주지 않습니다. */
+      }
       clearTimeout(timer);
       request.signal.removeEventListener('abort', abort);
       controller.abort();

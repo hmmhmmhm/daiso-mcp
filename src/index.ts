@@ -5,6 +5,7 @@
  * 다이소, 편의점, 백화점 등 다양한 서비스를 확장할 수 있습니다.
  */
 
+import { diagnosticsMiddleware } from './middleware/diagnostics.js';
 import { dtryxTransportFromBindings } from './services/dtryx/transport.js';
 
 import { Hono, type Context } from 'hono';
@@ -315,6 +316,8 @@ const handleRootMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
 // Hono 앱 생성
 const app = new Hono<{ Bindings: AppBindings }>();
 
+app.use('*', diagnosticsMiddleware);
+
 // CORS 설정
 app.use(
   '*',
@@ -329,7 +332,7 @@ app.use(
       'Last-Event-ID',
       'mcp-protocol-version',
     ],
-    exposeHeaders: ['mcp-session-id', 'mcp-protocol-version'],
+    exposeHeaders: ['mcp-session-id', 'mcp-protocol-version', 'x-request-id'],
   }),
 );
 

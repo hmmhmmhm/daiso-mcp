@@ -202,7 +202,7 @@ describe('일일 호출 제한 통합', () => {
     ]);
     expect(fixture.idFromName).toHaveBeenLastCalledWith(RATE_LIMIT_METRICS_LEDGER_NAME);
     expect(fixture.calls[1]?.durableObjectId).toBe(LEDGER_ID);
-    expect(randomUuidSpy).toHaveBeenCalledTimes(1);
+    expect(randomUuidSpy).toHaveBeenCalledTimes(2);
 
     const ledgerRequest = fixture.calls[1]?.request;
     expect(ledgerRequest?.method).toBe('POST');

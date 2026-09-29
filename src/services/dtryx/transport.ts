@@ -1,3 +1,4 @@
+import { diagnosticHeaders } from '../../utils/diagnostics.js';
 /** 디트릭스 전용 중계 설정과 인증 전송입니다. */
 import { ServiceError } from '../../core/errors.js';
 import { createTimeoutController } from '../../utils/http.js';
@@ -66,6 +67,7 @@ export async function requestDtryxRelay<T>(
     );
   }
   const headers: Record<string, string> = {
+    ...diagnosticHeaders(),
     'Content-Type': 'application/json',
     Accept: 'application/json',
     Authorization: `Bearer ${relayToken}`,
