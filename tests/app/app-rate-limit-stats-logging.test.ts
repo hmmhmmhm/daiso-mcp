@@ -94,7 +94,7 @@ describe('GET /api/rate-limit/stats 안전 로그', () => {
     expectSafeLog(consoleSpy);
   });
 
-  it('예상된 인증·query 4xx는 오류 로그를 남기지 않는다', async () => {
+  it('예상된 인증·query 4xx는 원문 없이 공통 진단만 남긴다', async () => {
     const fixture = createStatsFixture();
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
@@ -111,6 +111,10 @@ describe('GET /api/rate-limit/stats 안전 로그', () => {
 
     expect(unauthorized.status).toBe(401);
     expect(invalid.status).toBe(400);
-    expect(consoleSpy).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledTimes(2);
+    for (const [line] of consoleSpy.mock.calls) {
+      expect(JSON.parse(line as string)).toMatchObject({ event: 'diagnostic', stage: 'request', operation: 'rate-limit.stats' });
+    }
+    expectSafeLog(consoleSpy);
   });
 });

@@ -1,3 +1,4 @@
+import { diagnosticHeaders } from '../../utils/diagnostics.js';
 /** 올리브영 무료 직접 요청 및 운영자가 설정한 브라우저 릴레이 전송. */
 import { fetchJson } from '../../utils/http.js';
 import { toOliveyoungRelayError } from './errors.js';
@@ -51,6 +52,7 @@ export async function requestOliveyoung(
     }
     if (!relayToken?.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');
     url = `${relayUrl.replace(/\/$/, '')}/v1/oliveyoung/${path.split('/').pop()}`;
+    Object.assign(headers, diagnosticHeaders());
     headers.Authorization = `Bearer ${relayToken}`;
     const { accessClientId, accessClientSecret } = options;
     if (accessClientId !== undefined || accessClientSecret !== undefined) {

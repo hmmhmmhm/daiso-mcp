@@ -1,3 +1,4 @@
+import { diagnosticEvent } from './diagnostics.js';
 /**
  * 공용 HTTP 유틸리티
  */
@@ -132,6 +133,8 @@ async function requestWithTimeout<T>(
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const { controller, timeoutId } = createTimeoutController(timeout);
     let readingResponse = false;
+    const started = Date.now();
+    let responseStatus: number | undefined;
 
     try {
       const response = await fetch(url, {
@@ -139,6 +142,8 @@ async function requestWithTimeout<T>(
         signal: controller.signal,
       });
 
+      responseStatus = response.status;
+      diagnosticEvent({ stage: 'http', outcome: response.ok ? 'ok' : 'error', status: response.status, durationMs: Date.now() - started });
       if (
         retryAllowed &&
         attempt < maxAttempts &&
@@ -162,6 +167,7 @@ async function requestWithTimeout<T>(
       readingResponse = true;
       return await readResponse(response);
     } catch (error) {
+      diagnosticEvent({ stage: 'http', outcome: 'error', status: responseStatus, durationMs: Date.now() - started });
       if (readingResponse || !retryAllowed || attempt >= maxAttempts) {
         throw error;
       }

@@ -2,6 +2,7 @@
  * 올리브영 GET API 라우트 등록
  */
 
+import { oliveyoungCacheKey } from '../../utils/oliveyoungCacheKey.js';
 import type { Hono } from 'hono';
 import { withEdgeCache } from '../../utils/cache.js';
 import {
@@ -14,11 +15,11 @@ import type { AppBindings } from '../response.js';
 export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): void {
   app.get('/api/oliveyoung/products', async (c) =>
     withEdgeCache(
-      c.req.url,
+      oliveyoungCacheKey(c.req.url),
       {
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'oliveyoung-products-v1',
+        keyPrefix: 'oliveyoung-products-v2',
       },
       () => handleOliveyoungSearchProducts(c),
     ),
@@ -26,11 +27,11 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
 
   app.get('/api/oliveyoung/stores', async (c) =>
     withEdgeCache(
-      c.req.url,
+      oliveyoungCacheKey(c.req.url),
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'oliveyoung-stores-v1',
+        keyPrefix: 'oliveyoung-stores-v2',
       },
       () => handleOliveyoungFindStores(c),
     ),
@@ -38,11 +39,11 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
 
   app.get('/api/oliveyoung/inventory', async (c) =>
     withEdgeCache(
-      c.req.url,
+      oliveyoungCacheKey(c.req.url),
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'oliveyoung-inventory-v1',
+        keyPrefix: 'oliveyoung-inventory-v2',
       },
       () => handleOliveyoungCheckInventory(c),
     ),

@@ -155,3 +155,21 @@ it('MCP 올리브영 요청은 운영 바인딩의 Access 자격증명만 사용
     expect(mockFetch).toHaveBeenCalledWith('https://relay.example/v1/oliveyoung/product-search-v3',expect.objectContaining({redirect:'manual',headers:expect.objectContaining({'CF-Access-Client-Id':'access-test-id','CF-Access-Client-Secret':'access-test-secret'})}));
   }finally{await client.close();}
 });
+it('같은 MCP 세션의 동시 도구 호출도 각각 응답과 릴레이 ID가 연결된다', async()=>{
+ const ids:string[]=[];const returned:string[]=[];
+ mockFetch.mockImplementation(async (_url,init)=>{ids.push(init.headers['x-request-id']);await Promise.resolve();return Response.json({status:'SUCCESS',data:{}})});
+ const client=new Client({name:'trace-test',version:'1'});
+ const transport=new StreamableHTTPClientTransport(new URL('https://local.test/mcp'),{fetch:async(url,init)=>{
+  const request=new Request(url,init); const body=request.method==='POST'?await request.clone().json():{};
+  const response=await app.request(request,undefined,{OY_RELAY_URL:'https://relay.example',OY_RELAY_TOKEN:'test'});
+  if(body.method==='tools/call')returned.push(response.headers.get('x-request-id')!);return response;
+ }});
+ await client.connect(transport);
+ try{await Promise.all(['a','b'].map(keyword=>client.callTool({name:'oliveyoung_search_products',arguments:{keyword}})));expect(new Set(ids).size).toBe(2);expect(ids.sort()).toEqual(returned.sort())}finally{await client.close()}
+});
+it('Actions 내부 재호출은 응답과 릴레이의 추적 ID가 같다',async()=>{
+ mockFetch.mockImplementation(async()=>Response.json({status:'SUCCESS',data:{}}));
+ const response=await app.request('/api/actions/query?action=oliveyoungSearchProducts&keyword=lip',undefined,{OY_RELAY_URL:'https://relay.example',OY_RELAY_TOKEN:'test'});
+ expect(response.status).toBe(200);
+ expect(response.headers.get('x-request-id')).toBe(mockFetch.mock.calls[0][1].headers['x-request-id']);
+});

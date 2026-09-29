@@ -314,3 +314,14 @@ it('자동 준비 중 팝업 회수 실패는 준비 완료로 보고하지 않�
   expect(f.launch).toHaveBeenCalledTimes(2);
   await life.close();
 });
+it('브라우저 시작/회수 사유를 기록하고 관측기 실패를 격리한다', async () => {
+  const f = fixture(); const events: string[] = [];
+  const life = createBrowserLifecycle(f.launch, event => { events.push(event); if(event==='shutdown') throw Error('log'); });
+  await life.start(); await life.close(); expect(events).toEqual(['ready','shutdown']);
+  const second = createBrowserLifecycle(f.launch, async()=>{throw Error('async log')});
+  await second.start(); await second.close();
+});
+it('브라우저 프로세스 실행 실패도 별도 사건으로 기록한다',async()=>{
+ const events:string[]=[];const life=createBrowserLifecycle(async()=>{throw Error('launch')},e=>{events.push(e)});
+ await expect(life.start()).rejects.toThrow('launch');expect(events).toContain('launch-failed');await life.close();
+});

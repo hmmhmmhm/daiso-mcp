@@ -4,6 +4,7 @@
  * 서비스 프로바이더를 등록하고 MCP 서버에 도구를 연결합니다.
  */
 
+import { diagnosticEvent } from '../utils/diagnostics.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ServiceProvider, ServiceFactory } from './interfaces.js';
 import type { ServiceInfo, ToolRegistration } from './types.js';
@@ -223,10 +224,12 @@ export class ServiceRegistry {
     };
 
     server.registerTool(tool.name, metadata as never, async (args) => {
+      const started = Date.now();
       let result: Awaited<ReturnType<ToolRegistration['handler']>>;
       try {
         result = await tool.handler(args);
       } catch (error) {
+        diagnosticEvent({ stage: 'tool', operation: tool.name, outcome: 'error', durationMs: Date.now() - started });
         const message = error instanceof ServiceError
           ? JSON.stringify({
             error: { code: error.code, message: error.message },
@@ -239,6 +242,7 @@ export class ServiceRegistry {
         };
       }
 
+      diagnosticEvent({ stage: 'tool', operation: tool.name, outcome: result.isError ? 'error' : 'ok', durationMs: Date.now() - started });
       const content = result.content.map((item) => ({
         type: item.type as 'text',
         text: item.text,

@@ -36,7 +36,9 @@ it('브라우저 오류를 숨기고 동시 요청을 제한한다', async () =>
   const relay = createOliveyoungRelay('test', runner);
   const first = relay(request());
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
-  const queued = Array.from({ length: 7 }, () => relay(request()));
+  const queued = Array.from({ length: 7 }, (_, i) =>
+    relay(request(undefined, JSON.stringify({ goodsNo: String(i) }))),
+  );
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect((await relay(request())).status).toBe(503);
   runner.mockResolvedValue({ status: 'SUCCESS' });
@@ -180,4 +182,224 @@ it('예산 허용 후 요청을 실행하고 잘못된 상태 경로는 거절�
       )(new Request('http://localhost/health', { headers: { Authorization: 'Bearer test' } }))
     ).status,
   ).toBe(404);
+});
+it('성공 응답을 캐시하고 캐시 조회는 예산을 사용하지 않는다', async () => {
+  const runner = vi.fn().mockResolvedValue({ status: 'SUCCESS' });
+  const takeQuota = vi.fn().mockResolvedValue(true);
+  const relay = createOliveyoungRelay('test', runner, { takeQuota });
+  expect((await relay(request())).headers.get('x-relay-cache')).toBe('miss');
+  expect((await relay(request())).headers.get('x-relay-cache')).toBe('hit');
+  expect(takeQuota).toHaveBeenCalledTimes(1);
+});
+it('동일 요청을 병합하고 첫 요청 취소가 다른 대기자를 중단하지 않는다', async () => {
+  let release!: (value: { status: string }) => void;
+  const runner = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    )
+    .mockResolvedValue({ status: 'SUCCESS' });
+  const events: unknown[] = [];
+  const relay = createOliveyoungRelay('test', runner, {
+    onEvent: (event) => {
+      events.push(event);
+    },
+  });
+  const first = relay(request(undefined, JSON.stringify({ goodsNo: 'other' })));
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
+  const controller = new AbortController();
+  const original = relay(
+    new Request(request(), {
+      signal: controller.signal,
+      headers: { authorization: 'Bearer test', 'x-request-id': 'safe-id' },
+    }),
+  );
+  await vi.waitFor(() =>
+    expect(events).toContainEqual(
+      expect.objectContaining({ requestId: 'safe-id', stage: 'cache' }),
+    ),
+  );
+  const duplicate = relay(request());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  controller.abort();
+  release({ status: 'SUCCESS' });
+  await first;
+  expect((await original).status).toBe(503);
+  expect((await duplicate).headers.get('x-relay-cache')).toBe('coalesced');
+  expect(runner).toHaveBeenCalledTimes(2);
+  expect(events).toContainEqual(
+    expect.objectContaining({ requestId: 'safe-id', stage: 'cache', outcome: 'miss' }),
+  );
+});
+it('만료된 대기는 실행하지 않고 실패한 응답을 캐시하지 않는다', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1000);
+  let release!: (value: { status: string }) => void;
+  const runner = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    )
+    .mockResolvedValue({ status: 'FAIL' });
+  const relay = createOliveyoungRelay('test', runner, {
+    onEvent: () => {
+      throw new Error('logging');
+    },
+  });
+  const first = relay(request());
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
+  const queued = relay(request(undefined, JSON.stringify({ goodsNo: 'other' })));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  clock.mockReturnValue(16000);
+  release({ status: 'SUCCESS' });
+  await first;
+  expect((await queued).status).toBe(503);
+  expect(runner).toHaveBeenCalledTimes(1);
+  clock.mockReturnValue(616000);
+  expect((await relay(request())).status).toBe(502);
+  expect((await relay(request())).status).toBe(502);
+  expect(runner).toHaveBeenCalledTimes(3);
+  clock.mockRestore();
+});
+it('할당량 사유와 재시도 시간 및 상태를 반환한다', async () => {
+  const status = {
+    dailyRemaining: 0,
+    minuteRemaining: 30,
+    resetAt: { daily: 86400000, minute: 60000 },
+    blockedBy: 'daily' as const,
+    retryAfter: 99,
+  };
+  const takeQuota = Object.assign(async () => false, { status: () => status });
+  const relay = createOliveyoungRelay('test', vi.fn(), { takeQuota, status: () => ({ pages: 0 }) });
+  const response = await relay(
+    new Request(request(), { headers: { authorization: 'Bearer test', 'x-request-id': 'bad.id' } }),
+  );
+  expect(response.headers.get('retry-after')).toBe('99');
+  expect(response.headers.get('x-relay-quota-reason')).toBe('daily');
+  const health = await relay(
+    new Request('http://localhost/health', { headers: { authorization: 'Bearer test' } }),
+  );
+  expect(await health.json()).toMatchObject({ quota: status, cache: { entries: 0 } });
+});
+it('비동기 관측 실패도 요청 처리에 영향을 주지 않는다', async () => {
+  const relay = createOliveyoungRelay('test', vi.fn().mockResolvedValue({ status: 'SUCCESS' }), {
+    onEvent: async () => {
+      throw new Error('observer');
+    },
+  });
+  expect((await relay(request())).status).toBe(200);
+});
+it('취소된 오래된 요청에 합류한 새 요청은 자기 대기 시간으로 실행한다', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1000);
+  let release!: (value: { status: string }) => void;
+  const runner = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    )
+    .mockResolvedValue({ status: 'SUCCESS' });
+  const takeQuota = vi.fn().mockResolvedValue(true);
+  const relay = createOliveyoungRelay('test', runner, { takeQuota });
+  const first = relay(request(undefined, JSON.stringify({ goodsNo: 'block' })));
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
+  const old = relay(request());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  clock.mockReturnValue(16000);
+  const fresh = relay(request());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  release({ status: 'SUCCESS' });
+  expect((await first).status).toBe(200);
+  expect((await old).status).toBe(503);
+  expect((await fresh).status).toBe(200);
+  expect(takeQuota).toHaveBeenCalledTimes(2);
+  clock.mockRestore();
+});
+it.each([
+  [
+    'product-search-v3',
+    { includeSoldOut: true, keyword: 'x', page: 1, sort: 'x', size: 1 },
+    300000,
+  ],
+  ['stock-goods-info-v3', { goodsNo: 'x' }, 600000],
+  [
+    'find-store',
+    {
+      lat: 1,
+      lon: 1,
+      pageIdx: 1,
+      searchWords: '',
+      pogKeys: '',
+      serviceKeys: '',
+      mapLat: 1,
+      mapLon: 1,
+    },
+    300000,
+  ],
+  [
+    'stock-stores',
+    { productId: 'x', lat: 1, lon: 1, pageIdx: 1, searchWords: '', mapLat: 1, mapLon: 1 },
+    60000,
+  ],
+])('%s TTL 경계까지 정규화된 입력을 재사용한다', async (operation, body, ttl) => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1000);
+  const runner = vi.fn().mockResolvedValue({ status: 'SUCCESS' });
+  const relay = createOliveyoungRelay('test', runner);
+  await relay(request(operation, JSON.stringify(body)));
+  clock.mockReturnValue(1000 + ttl - 1);
+  const reversed = Object.fromEntries(Object.entries(body).reverse());
+  expect(
+    (await relay(request(operation, JSON.stringify(reversed)))).headers.get('x-relay-cache'),
+  ).toBe('hit');
+  clock.mockReturnValue(1000 + ttl);
+  expect((await relay(request(operation, JSON.stringify(body)))).headers.get('x-relay-cache')).toBe(
+    'miss',
+  );
+  expect(runner).toHaveBeenCalledTimes(2);
+  clock.mockRestore();
+});
+it('공유 요청의 부모 ID와 실제 예산 소비를 기록한다', async () => {
+  const events: unknown[] = [];
+  let reject!: (reason: Error) => void;
+  const runner = vi.fn().mockImplementation(
+    () =>
+      new Promise((_, fail) => {
+        reject = fail;
+      }),
+  );
+  const relay = createOliveyoungRelay('test', runner, {
+    takeQuota: async () => true,
+    onEvent: (event) => {
+      events.push(event);
+    },
+  });
+  const first = relay(
+    new Request(request(), {
+      headers: { authorization: 'Bearer test', 'x-request-id': 'parent-id' },
+    }),
+  );
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
+  const child = relay(request());
+  await vi.waitFor(() =>
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        stage: 'cache',
+        outcome: 'coalesced',
+        parentRequestId: 'parent-id',
+      }),
+    ),
+  );
+  expect(
+    events.filter((event) => (event as { outcome: string }).outcome === 'consumed'),
+  ).toHaveLength(1);
+  reject(new Error('upstream'));
+  expect((await first).status).toBe(502);
+  expect((await child).status).toBe(502);
 });

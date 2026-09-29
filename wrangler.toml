@@ -1,12 +1,18 @@
 name = "daiso-mcp"
 main = "src/index.ts"
 compatibility_date = "2025-01-23"
+compatibility_flags = ["nodejs_als"]
 
 [vars]
 HEALTH_CHECK_BASE_URL = "https://daiso-mcp.hmmhmmhm.workers.dev"
 
 [observability]
-enabled = false
+enabled = true
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = false
 
 [[durable_objects.bindings]]
 name = "DAILY_RATE_LIMITER"
