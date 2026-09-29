@@ -79,6 +79,7 @@ export function errorResponse(
 
 /** 원문이 제거된 외부 서비스 오류를 실제 상태와 함께 반환합니다. */
 export function serviceErrorResponse(c: ApiContext, error: ServiceError, operation: string) {
+  if (error.retryAfter !== undefined) c.header('Retry-After', String(error.retryAfter));
   return c.json<ApiResponse<never>>({
     success: false,
     error: { code: error.code, message: error.message },

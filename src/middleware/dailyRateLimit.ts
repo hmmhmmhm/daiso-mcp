@@ -64,7 +64,7 @@ export async function hashRateLimitIdentity(ip: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function resolveRateLimitIdentity(request: Request): string | null {
+export function resolveRateLimitIdentity(request: Request): string | null {
   const ip = request.headers.get('CF-Connecting-IP')?.trim();
   if (!ip || ip !== CROSS_ZONE_WORKER_CLIENT_IP) {
     return ip || null;

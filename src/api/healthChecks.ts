@@ -1,3 +1,4 @@
+import { isKnownCgvBlock, type HealthFailureDetails } from './healthFailurePolicy.js';
 /**
  * 개별 서비스 헬스 체크 실행기
  */
@@ -134,11 +135,13 @@ function aggregateStatus(checks: HealthCheckResult[]): HealthCheckStatus {
   return 'ok';
 }
 
-function shouldDegradeFailedResponse(check: HealthCheckDefinition, message: string): boolean {
+function shouldDegradeFailedResponse(check: HealthCheckDefinition, message: string, status: number, body: HealthFailureDetails): boolean {
+  if (isKnownCgvBlock(check.path, status, body)) return true;
   return check.degradedFailurePatterns?.some((pattern) => message.includes(pattern)) ?? false;
 }
 
-function shouldDegradeCliContractPath(path: string, message: string): boolean {
+function shouldDegradeCliContractPath(path: string, message: string, status: number, body: HealthFailureDetails): boolean {
+  if (isKnownCgvBlock(path, status, body)) return true;
   if (path.startsWith('/api/gs25/')) {
     return GS25_CLOUDFRONT_403_PATTERNS.some((pattern) => message.includes(pattern));
   }
@@ -215,12 +218,13 @@ async function runCliContractCheck(
       const body = (await response.json().catch(() => ({}))) as {
         success?: boolean;
         status?: string;
-        error?: { message?: string };
+        error?: { message?: string; code?: string };
+      diagnostics?: { upstreamStatus?: number };
       };
 
       if (!response.ok || !isCliCompatibleEnvelope(path, body)) {
         const message = body.error?.message || `${path} CLI 계약 응답이 올바르지 않습니다.`;
-        if (shouldDegradeCliContractPath(path, message)) {
+        if (shouldDegradeCliContractPath(path, message, response.status, body)) {
           degradedMessages.push(`${path}: ${message}`);
           continue;
         }
@@ -280,10 +284,14 @@ async function runSingleCheck(
         signal: AbortSignal.timeout(timeoutMs),
       },
     );
-    const body = (await response.json().catch(() => ({}))) as {
+    const body = (await response.json().catch(() => {
+      if (response.ok) throw new Error('invalid JSON response');
+      return {};
+    })) as {
       success?: boolean;
       data?: unknown;
-      error?: { message?: string };
+      error?: { message?: string; code?: string };
+      diagnostics?: { upstreamStatus?: number };
       meta?: { total?: number };
     };
     const durationMs = params.now() - startedAt;
@@ -294,7 +302,7 @@ async function runSingleCheck(
         id: check.id,
         service: check.service,
         target: check.target,
-        status: shouldDegradeFailedResponse(check, message) ? 'degraded' : 'fail',
+        status: shouldDegradeFailedResponse(check, message, response.status, body) ? 'degraded' : 'fail',
         durationMs,
         httpStatus: response.status,
         message,

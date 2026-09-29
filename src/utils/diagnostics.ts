@@ -4,6 +4,7 @@ interface DiagnosticContext {
   requestId: string;
   sampled: boolean;
   events: number;
+  consumerIdentity?: string;
 }
 const context = new AsyncLocalStorage<DiagnosticContext>();
 export interface DiagnosticEvent {
@@ -13,10 +14,10 @@ export interface DiagnosticEvent {
   status?: number;
   durationMs?: number;
 }
-export function withDiagnostics<T>(work: () => T): T {
+export function withDiagnostics<T>(work: () => T, consumerIdentity?: string): T {
   if (context.getStore()) return work();
   return context.run(
-    { requestId: crypto.randomUUID(), sampled: Math.random() < 0.01, events: 0 },
+    { requestId: crypto.randomUUID(), sampled: Math.random() < 0.01, events: 0, consumerIdentity },
     work,
   );
 }
@@ -87,4 +88,16 @@ export function diagnosticOperation(url: string): string {
   if (parts[1] === 'api' && services.has(parts[2]) && operations.has(parts[3]))
     return `${parts[2]}.${parts[3]}`;
   return 'other';
+}
+
+/** 릴레이 전용 일별 익명 식별자이며 로그나 공개 응답에는 포함하지 않습니다. */
+export async function relayConsumer(token: string): Promise<string | undefined> {
+  const identity = context.getStore()?.consumerIdentity;
+  if (!identity) return undefined;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', encoder.encode(token),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key,
+    encoder.encode(`${Math.floor(Date.now() / 86400000)}:${identity}`));
+  return Array.from(new Uint8Array(signature), byte => byte.toString(16).padStart(2, '0')).join('');
 }

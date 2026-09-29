@@ -224,9 +224,9 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain(
       '/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000',
     );
-    expect(workflow).toContain('/api/health/checks?mode=quick&timeoutMs=5000&slowThresholdMs=3000');
+    expect(workflow).toContain('/api/health/checks?mode=quick&fresh=true&timeoutMs=5000&slowThresholdMs=3000');
     expect(workflow).toContain('HEALTH_CHECK_FORCE_FRESH="true"');
-    expect(workflow).toContain('HEALTH_CHECK_FORCE_FRESH="false"');
+    expect(workflow).not.toContain('HEALTH_CHECK_FORCE_FRESH="false"');
     expect(workflow).toContain('x-health-check-force-fresh: ${HEALTH_CHECK_FORCE_FRESH}');
     expect(workflow).toContain('failedChecks');
     expect(workflow).toContain('degradedChecks');

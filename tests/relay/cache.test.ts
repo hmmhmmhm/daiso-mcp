@@ -26,3 +26,16 @@ it('기본 캐시도 성공 문자열을 보관한다', () => {
   cache.set('key', '{}', 1000);
   expect(cache.get('key')).toBe('{}');
 });
+it('키를 노출하지 않고 miss와 만료·축출 누계를 집계한다', () => {
+  let now = 0;
+  const cache = createResponseCache(1, 100, () => now);
+  cache.get('cold');
+  cache.set('a', '{}', 10);
+  cache.get('a');
+  cache.set('b', '{}', 10);
+  cache.get('a');
+  now = 10;
+  cache.get('b');
+  expect(cache.stats()).toMatchObject({ hits: 1, misses: 3, expired: 1, evicted: 1 });
+  expect(JSON.stringify(cache.stats())).not.toContain('cold');
+});

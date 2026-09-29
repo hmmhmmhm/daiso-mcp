@@ -1,5 +1,6 @@
 /** REST와 MCP의 공통 요청 경계를 기록합니다. */
 import type { MiddlewareHandler } from 'hono';
+import { resolveRateLimitIdentity } from './dailyRateLimit.js';
 import {
   withDiagnostics,
   diagnosticEvent,
@@ -21,4 +22,4 @@ export const diagnosticsMiddleware: MiddlewareHandler = async (c, next) =>
         durationMs: performance.now() - start,
       });
     }
-  });
+  }, resolveRateLimitIdentity(c.req.raw) || undefined);

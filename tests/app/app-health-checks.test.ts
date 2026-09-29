@@ -732,7 +732,7 @@ it('인증된 내부 health도 원본 차단 후 Zyte를 호출하지 않는다'
   );
   expect(response.status).toBe(200);
   const data = await response.json() as { checks: Array<{ status: string; message: string }> };
-  expect(data.checks[0].status).toBe('fail');
+  expect(data.checks[0].status).toBe('degraded');
   expect(data.checks[0].message).toContain('비용 정책');
   expect(mockFetch).toHaveBeenCalledTimes(1);
   expect(mockFetch.mock.calls.every(([url]) => new URL(String(url)).hostname !== 'api.zyte.com')).toBe(true);

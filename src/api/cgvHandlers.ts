@@ -11,7 +11,7 @@ import {
 import { isCgvUpstreamUnavailableError } from '../services/cgv/errors.js';
 import { fetchCgvNearbyTheaters, resolveCgvNearestTheater } from '../services/cgv/location.js';
 import { filterAndSortTimetable } from '../services/cgv/timetable.js';
-import { type ApiContext, errorResponse, successResponse } from './response.js';
+import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
   if (!value) {
@@ -82,7 +82,7 @@ export async function handleCgvFindTheaters(c: ApiContext) {
     );
   } catch (error) {
     if (isCgvUpstreamUnavailableError(error)) {
-      return errorResponse(c, 'CGV_UPSTREAM_UNAVAILABLE', error.message, 503);
+      return serviceErrorResponse(c, error, 'theaters');
     }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'CGV_THEATER_SEARCH_FAILED', message, 500);
@@ -154,7 +154,7 @@ export async function handleCgvSearchMovies(c: ApiContext) {
     );
   } catch (error) {
     if (isCgvUpstreamUnavailableError(error)) {
-      return errorResponse(c, 'CGV_UPSTREAM_UNAVAILABLE', error.message, 503);
+      return serviceErrorResponse(c, error, 'movies');
     }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'CGV_MOVIE_SEARCH_FAILED', message, 500);
@@ -237,7 +237,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
     );
   } catch (error) {
     if (isCgvUpstreamUnavailableError(error)) {
-      return errorResponse(c, 'CGV_UPSTREAM_UNAVAILABLE', error.message, 503);
+      return serviceErrorResponse(c, error, 'timetable');
     }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'CGV_TIMETABLE_FETCH_FAILED', message, 500);

@@ -1,9 +1,12 @@
-import { diagnosticHeaders } from '../../utils/diagnostics.js';
+import { diagnosticHeaders, relayConsumer } from '../../utils/diagnostics.js';
 /** 올리브영 무료 직접 요청 및 운영자가 설정한 브라우저 릴레이 전송. */
-import { fetchJson } from '../../utils/http.js';
+import { createRelayCooldown, relayCredentialScope } from '../../utils/relayQuota.js';
+import { HttpError, fetchJson } from '../../utils/http.js';
 import { toOliveyoungRelayError } from './errors.js';
 import { OLIVEYOUNG_API } from './api.js';
 import type { OliveyoungApiResponse } from './types.js';
+
+const cooldown = createRelayCooldown();
 
 export interface OliveyoungRequestOptions {
   /** 기존 호출부와의 호환용이며 유료 요청에는 사용하지 않습니다. */
@@ -45,6 +48,8 @@ export async function requestOliveyoung(
     Accept: 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   };
+  let scope = '';
+  let consumer = 'legacy';
   let url = `${OLIVEYOUNG_API.BASE_URL}${path}`;
   if (relayUrl) {
     if (!isValidOliveyoungRelayUrl(relayUrl)) {
@@ -54,6 +59,8 @@ export async function requestOliveyoung(
     url = `${relayUrl.replace(/\/$/, '')}/v1/oliveyoung/${path.split('/').pop()}`;
     Object.assign(headers, diagnosticHeaders());
     headers.Authorization = `Bearer ${relayToken}`;
+    consumer = (await relayConsumer(relayToken)) || 'legacy';
+    if (consumer !== 'legacy') headers['x-relay-consumer'] = consumer;
     const { accessClientId, accessClientSecret } = options;
     if (accessClientId !== undefined || accessClientSecret !== undefined) {
       if (!accessClientId?.trim() || !accessClientSecret?.trim()) {
@@ -70,6 +77,13 @@ export async function requestOliveyoung(
     headers.Referer = `${OLIVEYOUNG_API.BASE_URL}/`;
     headers['Accept-Language'] = 'ko-KR,ko;q=0.9';
   }
+  if (relayUrl) {
+    scope = await relayCredentialScope([relayUrl.replace(/\/$/, ''), relayToken, options.accessClientId, options.accessClientSecret]);
+    const quota = cooldown.get(scope, consumer);
+    if (quota) throw toOliveyoungRelayError(new HttpError(429, '', '', new Headers({
+      'x-relay-quota-reason': quota.quotaReason, 'retry-after': String(quota.retryAfter),
+    })));
+  }
   let result: OliveyoungApiResponse;
   try {
     result = await fetchJson<OliveyoungApiResponse>(url, {
@@ -83,7 +97,10 @@ export async function requestOliveyoung(
       expectedStatus: 200,
     });
   } catch (error) {
-    if (relayUrl) throw toOliveyoungRelayError(error);
+    if (relayUrl) {
+      if (error instanceof HttpError && error.quota) cooldown.set(scope, consumer, error.quota);
+      throw toOliveyoungRelayError(error);
+    }
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('올리브영 API 요청 시간 초과');
     }

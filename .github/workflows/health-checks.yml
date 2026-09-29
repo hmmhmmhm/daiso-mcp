@@ -18,6 +18,7 @@ concurrency:
 jobs:
   health-checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     name: Service health checks
     steps:
       - name: Run health checks
@@ -35,20 +36,44 @@ jobs:
             HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_URL}/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000"
             HEALTH_CHECK_FORCE_FRESH="true"
           else
-            HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_URL}/api/health/checks?mode=quick&timeoutMs=5000&slowThresholdMs=3000"
-            HEALTH_CHECK_FORCE_FRESH="false"
+            HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_URL}/api/health/checks?mode=quick&fresh=true&timeoutMs=5000&slowThresholdMs=3000"
+            HEALTH_CHECK_FORCE_FRESH="true"
           fi
 
+          HEALTH_CHECK_ATTEMPT=0
           run_health_check() {
-            curl -fsS \
+            HEALTH_CHECK_ATTEMPT=$((HEALTH_CHECK_ATTEMPT + 1))
+            rm -f health-checks.json
+            if ! curl -fsS --connect-timeout 10 --max-time 240 \
               -H "Authorization: Bearer ${HEALTH_CHECK_SECRET}" \
               -H "x-health-check-force-fresh: ${HEALTH_CHECK_FORCE_FRESH}" \
               "${HEALTH_CHECK_ENDPOINT}" \
-              -o health-checks.json
+              -o health-checks.json; then
+              echo "Health check HTTP request failed on attempt ${HEALTH_CHECK_ATTEMPT}" > health-check-summary.txt
+              cp health-check-summary.txt "health-checks-attempt-${HEALTH_CHECK_ATTEMPT}.txt"
+              return 1
+            fi
+            cp health-checks.json "health-checks-attempt-${HEALTH_CHECK_ATTEMPT}.json" || return 1
 
             node <<'NODE'
           const fs = require('node:fs');
-          const payload = JSON.parse(fs.readFileSync('health-checks.json', 'utf8'));
+          let payload;
+          try { payload = JSON.parse(fs.readFileSync('health-checks.json', 'utf8')); } catch {}
+          const statuses = ['ok', 'degraded', 'fail'];
+          const valid = payload && statuses.includes(payload.status) &&
+            Array.isArray(payload.checks) && payload.checks.length > 0 &&
+            payload.checks.every(check => check && typeof check.id === 'string' && check.id.length > 0 &&
+              [...statuses, 'skipped'].includes(check.status) && typeof check.message === 'string') &&
+            new Set(payload.checks.map(check => check.id)).size === payload.checks.length &&
+            payload.status === (payload.checks.some(check => check.status === 'fail') ? 'fail' :
+              payload.checks.some(check => check.status === 'degraded') ? 'degraded' : 'ok');
+          if (!valid) {
+            const summary = 'Health check returned an invalid or inconsistent payload';
+            fs.writeFileSync('health-check-summary.txt', summary);
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
+            console.log(summary);
+            process.exitCode = 1;
+          } else {
           const failedChecks = (payload.checks || []).filter((check) => check.status === 'fail');
           const degradedChecks = (payload.checks || []).filter((check) => check.status === 'degraded');
           const lines = [...failedChecks, ...degradedChecks].map((check) => {
@@ -71,14 +96,28 @@ jobs:
           if (failedChecks.length > 0 || payload.status === 'fail') {
             process.exitCode = 1;
           }
+          }
           NODE
           }
 
           if ! run_health_check; then
             echo "Health check failed on attempt 1; retrying once"
             sleep 10
+            HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_ENDPOINT}&cacheBust=true"
             run_health_check
           fi
+
+      - name: Preserve health check attempts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: health-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            health-checks-attempt-*.json
+            health-checks-attempt-*.txt
+            health-check-summary.txt
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Notify health failure
         if: failure() && github.event_name == 'schedule' && github.event.schedule == '10 15 * * *'

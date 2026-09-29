@@ -2,6 +2,8 @@
  * MCP/API 공통 에러 진단 구조
  */
 
+import type { RelayQuota } from '../utils/relayQuota.js';
+
 export const ZYTE_COST_POLICY_MESSAGE = 'Zyte 유료 호출은 비용 정책에 따라 비활성화되어 있습니다.';
 
 export interface StandardErrorDiagnostics {
@@ -12,20 +14,27 @@ export interface StandardErrorDiagnostics {
   service?: string;
   operation?: string;
   upstreamStatus?: number;
+  quotaReason?: RelayQuota['quotaReason'];
+  retryAfter?: number;
   hint: string;
 }
 
 /** 외부 응답 원문 없이 API와 MCP에 전달할 오류 진단입니다. */
 export class ServiceError extends Error {
+  readonly quotaReason?: RelayQuota['quotaReason'];
+  readonly retryAfter?: number;
   constructor(
     readonly code: string,
     message: string,
     readonly status: 429 | 502 | 503 | 504,
     readonly retryable: boolean,
     readonly upstreamStatus?: number,
+    quota?: RelayQuota,
   ) {
     super(message);
     this.name = 'ServiceError';
+    this.quotaReason = quota?.quotaReason;
+    this.retryAfter = quota?.retryAfter;
   }
 }
 
@@ -153,6 +162,8 @@ export function toServiceErrorDiagnostics(error: ServiceError, operation: string
       operation,
     }),
     retryable: error.retryable,
+    quotaReason: error.quotaReason,
+    retryAfter: error.retryAfter,
     hint: buildHint(error.retryable),
   };
 }

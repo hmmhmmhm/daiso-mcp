@@ -63,6 +63,7 @@ it('릴레이 응답 본문을 읽는 중 실제 제한 시간이 지나도 시�
   try {
     const request = requestOliveyoung('/p', {}, { ...options, timeout: 10 });
     const assertion = expect(request).rejects.toMatchObject({ code: 'OLIVEYOUNG_RELAY_TIMEOUT', status: 504, retryable: true });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
     await vi.advanceTimersByTimeAsync(10);
     await assertion;
   } finally {
