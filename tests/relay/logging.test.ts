@@ -236,3 +236,13 @@ it('기록 이후에도 최소 2GiB의 여유 공간을 보존한다', async () 
   expect(logger.status()).toMatchObject({ lowSpace: true, written: 0, dropped: 1 });
   expect(await readdir(dir)).toEqual([]);
 });
+it('busy 및 취소 분류를 기록하면서 소비자 식별자와 본문은 버린다', async () => {
+  const dir = await directory();
+  const logger = createRelayLogger(dir, { service: 'oliveyoung', statfs: space });
+  logger.append({ stage: 'queue', outcome: 'canceled', quotaReason: 'consumer-busy', consumer: 'private-consumer', body: 'private-body' });
+  await logger.flush();
+  const [name] = await readdir(dir);
+  const line = await readFile(join(dir, name), 'utf8');
+  expect(JSON.parse(line)).toMatchObject({ stage: 'queue', outcome: 'canceled', quotaReason: 'consumer-busy' });
+  expect(line).not.toContain('private');
+});

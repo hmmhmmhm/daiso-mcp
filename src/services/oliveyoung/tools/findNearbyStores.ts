@@ -24,7 +24,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs, transport: Oliveyoun
     keyword = '',
     pageIdx = 1,
     limit = 20,
-    timeoutMs = 15000,
+    timeoutMs = transport.timeout ?? (transport.relayUrl ? 60000 : 15000),
     zyteApiKey,
   } = args;
 
@@ -36,9 +36,9 @@ async function findNearbyStores(args: FindNearbyStoresArgs, transport: Oliveyoun
       searchWords: keyword,
     },
     {
-      timeout: timeoutMs,
       apiKey: zyteApiKey,
       ...transport,
+      timeout: timeoutMs,
     }
   );
 
@@ -76,7 +76,7 @@ export function createFindNearbyStoresTool(apiKey?: string, transport: Oliveyoun
           .describe('매장 검색어 (예: 강남, 명동, 신촌). 비우면 주변 매장 전체 조회'),
         pageIdx: z.number().optional().default(1).describe('매장 결과 페이지 번호 (기본값: 1)'),
         limit: z.number().optional().default(20).describe('반환할 최대 매장 수 (기본값: 20)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z.number().optional().default(transport.timeout ?? (transport.relayUrl ? 60000 : 15000)).describe('개별 조회 제한 시간(ms, 기본값: 무료 릴레이 60000 / 직접 15000)'),
       },
     },
     handler: ((args: FindNearbyStoresArgs) =>

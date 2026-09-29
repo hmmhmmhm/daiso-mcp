@@ -127,3 +127,20 @@ it.each([429, 502, 503])('실제 릴레이 HTTP %i를 MCP 클라이언트 진단
   expect(JSON.stringify(result)).not.toContain('private-');
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+it('consumer-busy 사유와 재시도 시간을 MCP 클라이언트에 전달한다', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 429,
+    headers: { 'x-relay-quota-reason': 'consumer-busy', 'retry-after': '1' } })));
+  const result = await callRegisteredTool({
+    name: 'oliveyoung_search_products',
+    metadata: { title: '릴레이 오류', description: '릴레이 오류 진단', inputSchema: {} },
+    handler: async () => {
+      await requestOliveyoung('/p', {}, { relayUrl: 'https://mcp-busy.example', relayToken: 'private-token', timeout: 500 });
+      return { content: [] };
+    },
+  });
+  expect(result.isError).toBe(true);
+  const content = result.content as Array<{ text: string }>;
+  expect(JSON.parse(content[0].text)).toMatchObject({ diagnostics: { status: 429, upstreamStatus: 429, quotaReason: 'consumer-busy', retryAfter: 1 } });
+  expect(JSON.stringify(result)).not.toContain('private-');
+});

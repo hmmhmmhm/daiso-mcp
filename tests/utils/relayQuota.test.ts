@@ -20,3 +20,11 @@ it('휴지 표는 용량을 넘지 않고 더 짧은 휴지로 기존 시간을 
   cooldown.set('other', 'b', { quotaReason: 'minute', retryAfter: 10 });
   expect(cooldown.get('other', 'a')?.retryAfter).toBe(10);
 });
+it('busy 헤더를 검증하고 해당 소비자만 휴지한다', () => {
+  const quota = parseRelayQuota(429, new Headers({ 'x-relay-quota-reason': 'consumer-busy', 'retry-after': '1' }));
+  expect(quota).toEqual({ quotaReason: 'consumer-busy', retryAfter: 1 });
+  const cooldown = createRelayCooldown(() => 0);
+  cooldown.set('scope', 'a', quota!);
+  expect(cooldown.get('scope', 'a')).toEqual(quota);
+  expect(cooldown.get('scope', 'b')).toBeUndefined();
+});

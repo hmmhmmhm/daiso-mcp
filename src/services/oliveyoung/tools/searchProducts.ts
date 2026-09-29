@@ -24,7 +24,7 @@ async function searchProducts(args: SearchProductsArgs, transport: OliveyoungReq
     size = 20,
     sort = '01',
     includeSoldOut = false,
-    timeoutMs = 15000,
+    timeoutMs = transport.timeout ?? (transport.relayUrl ? 60000 : 15000),
     zyteApiKey,
   } = args;
 
@@ -41,9 +41,9 @@ async function searchProducts(args: SearchProductsArgs, transport: OliveyoungReq
       includeSoldOut,
     },
     {
-      timeout: timeoutMs,
       apiKey: zyteApiKey,
       ...transport,
+      timeout: timeoutMs,
     },
   );
 
@@ -84,7 +84,7 @@ export function createSearchProductsTool(apiKey?: string, transport: OliveyoungR
         size: z.number().optional().default(20).describe('페이지당 상품 수 (기본값: 20)'),
         sort: z.string().optional().default('01').describe('정렬 코드 (기본값: 01)'),
         includeSoldOut: z.boolean().optional().default(false).describe('품절 상품 포함 여부 (기본값: false)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z.number().optional().default(transport.timeout ?? (transport.relayUrl ? 60000 : 15000)).describe('개별 조회 제한 시간(ms, 기본값: 무료 릴레이 60000 / 직접 15000)'),
       },
     },
     handler: ((args: SearchProductsArgs) =>
