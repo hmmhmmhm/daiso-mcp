@@ -68,9 +68,9 @@ export function createOliveyoungRelay(
   const expected = Buffer.from(`Bearer ${token}`);
   const cache = createResponseCache();
   const consumers = createConsumerQuota();
-  const consumerDenied = () => Response.json({ error: 'Relay quota exceeded', reason: 'consumer' }, {
+  const consumerDenied = (busy = false) => Response.json({ error: 'Relay quota exceeded', reason: busy ? 'consumer-busy' : 'consumer' }, {
     status: 429,
-    headers: { 'x-relay-quota-reason': 'consumer', 'retry-after': String(consumers.retryAfter()) },
+    headers: { 'x-relay-quota-reason': busy ? 'consumer-busy' : 'consumer', 'retry-after': String(busy ? 1 : consumers.retryAfter()) },
   });
   const ttl: Record<string, number> = {
     'find-store': 300000,
@@ -112,7 +112,7 @@ export function createOliveyoungRelay(
     const consumerHeader = request.headers.get('x-relay-consumer') || '';
     const consumer = /^[a-f0-9]{64}$/.test(consumerHeader) ? consumerHeader : 'legacy';
     const admission = consumers.enter(consumer);
-    if (!admission) return consumerDenied();
+    if (!admission) return consumerDenied(true);
     outstanding++;
     try {
       let body: Record<string, unknown>;
@@ -189,7 +189,7 @@ export function createOliveyoungRelay(
             entry!.startedAt = Date.now();
             if (
               [...signals].every(
-                ([signal, arrived]) => signal.aborted || entry!.startedAt - arrived >= 15000,
+                ([signal, arrived]) => signal.aborted || entry!.startedAt - arrived >= 30000,
               )
             )
               return null;
@@ -224,8 +224,8 @@ export function createOliveyoungRelay(
       }
       try {
         const result = await entry.task;
-        if (request.signal.aborted || result === null || entry.startedAt - queuedAt >= 15000) {
-          emit('queue', 'expired');
+        if (request.signal.aborted || result === null || entry.startedAt - queuedAt >= 30000) {
+          emit('queue', request.signal.aborted ? 'canceled' : 'expired');
           return error(503, 'Request expired');
         }
         if (result === 'quota') {

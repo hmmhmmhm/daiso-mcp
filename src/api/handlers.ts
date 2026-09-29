@@ -45,8 +45,9 @@ export async function handleOliveyoungSearchProducts(c: ApiContext) {
   const size = parseInt(c.req.query('size') || '20');
   const sort = c.req.query('sort') || '01';
   const includeSoldOut = c.req.query('includeSoldOut') === 'true';
-  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
-  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
+  const defaultTimeoutMs = c.env?.OY_RELAY_URL ? 60000 : 15000;
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : defaultTimeoutMs;
 
   if (keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
@@ -98,8 +99,9 @@ export async function handleOliveyoungFindStores(c: ApiContext) {
   const lng = parseFloat(c.req.query('lng') || '126.978');
   const pageIdx = parseInt(c.req.query('pageIdx') || '1');
   const limit = parseInt(c.req.query('limit') || '20');
-  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
-  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
+  const defaultTimeoutMs = c.env?.OY_RELAY_URL ? 60000 : 15000;
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : defaultTimeoutMs;
 
   try {
     const result = await fetchOliveyoungStores(
@@ -146,8 +148,9 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
   const sort = c.req.query('sort') || '01';
   const includeSoldOut = c.req.query('includeSoldOut') === 'true';
   const storeLimit = parseInt(c.req.query('storeLimit') || '10');
-  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
-  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
+  const defaultTimeoutMs = c.env?.OY_RELAY_URL ? 60000 : 15000;
+  const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '', 10);
+  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : defaultTimeoutMs;
   const parsedStockCheckLimit = parseInt(c.req.query('stockCheckLimit') || '5', 10);
   const stockCheckLimit =
     Number.isFinite(parsedStockCheckLimit) && parsedStockCheckLimit >= 0 ? parsedStockCheckLimit : 5;

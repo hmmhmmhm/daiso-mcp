@@ -38,7 +38,7 @@ async function checkInventory(args: CheckInventoryArgs, transport: OliveyoungReq
     includeSoldOut = false,
     storeLimit = 10,
     stockCheckLimit = 5,
-    timeoutMs = 15000,
+    timeoutMs = transport.timeout ?? (transport.relayUrl ? 60000 : 15000),
     zyteApiKey,
   } = args;
 
@@ -55,9 +55,9 @@ async function checkInventory(args: CheckInventoryArgs, transport: OliveyoungReq
         searchWords: storeKeyword,
       },
       {
-        timeout: timeoutMs,
         apiKey: zyteApiKey,
-      ...transport,
+        ...transport,
+        timeout: timeoutMs,
       }
     ),
     fetchOliveyoungProducts(
@@ -69,9 +69,9 @@ async function checkInventory(args: CheckInventoryArgs, transport: OliveyoungReq
         includeSoldOut,
       },
       {
-        timeout: timeoutMs,
         apiKey: zyteApiKey,
-      ...transport,
+        ...transport,
+        timeout: timeoutMs,
       }
     ),
   ]);
@@ -84,9 +84,9 @@ async function checkInventory(args: CheckInventoryArgs, transport: OliveyoungReq
       maxProducts: Math.min(productResult.products.length, Math.max(0, stockCheckLimit)),
     },
     {
-      timeout: timeoutMs,
       apiKey: zyteApiKey,
       ...transport,
+      timeout: timeoutMs,
     }
   );
 
@@ -151,7 +151,7 @@ export function createCheckInventoryTool(apiKey?: string, transport: OliveyoungR
           .optional()
           .default(5)
           .describe('주변 매장별 재고를 보강할 상품 수 (기본값: 5, 최대: 5, 낮출수록 빠름)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z.number().optional().default(transport.timeout ?? (transport.relayUrl ? 60000 : 15000)).describe('개별 조회 제한 시간(ms, 기본값: 무료 릴레이 60000 / 직접 15000)'),
       },
     },
     handler: ((args: CheckInventoryArgs) =>

@@ -42,7 +42,8 @@ export async function requestOliveyoung(
   body: Record<string, unknown>,
   options: OliveyoungRequestOptions = {},
 ): Promise<OliveyoungApiResponse> {
-  const { timeout = 15000, relayUrl, relayToken } = options;
+  const { relayUrl, relayToken, timeout = relayUrl ? 60000 : 15000 } = options;
+  const deadline = Date.now() + timeout;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -79,39 +80,53 @@ export async function requestOliveyoung(
   }
   if (relayUrl) {
     scope = await relayCredentialScope([relayUrl.replace(/\/$/, ''), relayToken, options.accessClientId, options.accessClientSecret]);
-    const quota = cooldown.get(scope, consumer);
-    if (quota) throw toOliveyoungRelayError(new HttpError(429, '', '', new Headers({
-      'x-relay-quota-reason': quota.quotaReason, 'retry-after': String(quota.retryAfter),
-    })));
   }
-  let result: OliveyoungApiResponse;
-  try {
-    result = await fetchJson<OliveyoungApiResponse>(url, {
-      method: 'POST',
-      // Workers는 error 모드를 지원하지 않으므로 따라가지 않고 아래 200 검사로 거절합니다.
-      redirect: 'manual',
-      headers,
-      body: JSON.stringify(body),
-      timeout,
-      retries: 0,
-      expectedStatus: 200,
-    });
-  } catch (error) {
-    if (relayUrl) {
-      if (error instanceof HttpError && error.quota) cooldown.set(scope, consumer, error.quota);
-      throw toOliveyoungRelayError(error);
+  let retried = false;
+  while (true) {
+    let result: OliveyoungApiResponse;
+    const cachedQuota = relayUrl ? cooldown.get(scope, consumer) : undefined;
+    try {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new DOMException('Request deadline exceeded', 'AbortError');
+      if (cachedQuota) throw new HttpError(429, '', '', new Headers({
+        'x-relay-quota-reason': cachedQuota.quotaReason,
+        'retry-after': String(cachedQuota.retryAfter),
+      }));
+      result = await fetchJson<OliveyoungApiResponse>(url, {
+        method: 'POST',
+        // Workers는 error 모드를 지원하지 않으므로 따라가지 않고 아래 200 검사로 거절합니다.
+        redirect: 'manual',
+        headers,
+        body: JSON.stringify(body),
+        timeout: remaining,
+        retries: 0,
+        expectedStatus: 200,
+      });
+    } catch (error) {
+      if (relayUrl) {
+        if (error instanceof HttpError && error.quota) {
+          if (!cachedQuota) cooldown.set(scope, consumer, error.quota);
+          if (!retried && error.quota.quotaReason === 'consumer-busy' &&
+              deadline - Date.now() > 1000) {
+            retried = true;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+        }
+        throw toOliveyoungRelayError(error);
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('올리브영 API 요청 시간 초과');
+      }
+      throw new Error(
+        '올리브영 직접 요청 실패. 운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN으로 브라우저 릴레이를 설정해주세요.',
+        { cause: error },
+      );
     }
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('올리브영 API 요청 시간 초과');
+    if (result?.status !== 'SUCCESS') {
+      if (relayUrl) throw toOliveyoungRelayError(new SyntaxError());
+      throw new Error(`올리브영 API 상태 오류: ${result?.status || 'UNKNOWN'}`);
     }
-    throw new Error(
-      '올리브영 직접 요청 실패. 운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN으로 브라우저 릴레이를 설정해주세요.',
-      { cause: error },
-    );
+    return result;
   }
-  if (result?.status !== 'SUCCESS') {
-    if (relayUrl) throw toOliveyoungRelayError(new SyntaxError());
-    throw new Error(`올리브영 API 상태 오류: ${result?.status || 'UNKNOWN'}`);
-  }
-  return result;
 }

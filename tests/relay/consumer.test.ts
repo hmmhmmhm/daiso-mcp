@@ -9,7 +9,7 @@ it('동시 요청과 분당 신규 작업을 제한하고 만료 예산만 정�
   expect(quota.enter('a')).toBeNull();
   expect(take()).toBe(true);
   b.release();
-  for (let i = 1; i < 12; i++) expect(take()).toBe(true);
+  for (let i = 1; i < 24; i++) expect(take()).toBe(true);
   expect(take()).toBe(false);
   expect(quota.retryAfter()).toBe(60);
   const other = quota.enter('b')!;
@@ -26,7 +26,7 @@ it('대기 예약을 상한에 포함하고 분이 바뀌면 실행 시점의 �
   let now = 0;
   const quota = createConsumerQuota(() => now);
   const admission = quota.enter('a')!;
-  for (let i = 0; i < 11; i++) { const reservation = admission.reserve()!; reservation.commit(); reservation.release(); }
+  for (let i = 0; i < 23; i++) { const reservation = admission.reserve()!; reservation.commit(); reservation.release(); }
   const queued = admission.reserve()!;
   expect(admission.reserve()).toBeNull();
   now = 60000;
@@ -34,7 +34,7 @@ it('대기 예약을 상한에 포함하고 분이 바뀌면 실행 시점의 �
   queued.release();
   const canceled = admission.reserve()!;
   canceled.release();
-  for (let i = 0; i < 11; i++) { const reservation = admission.reserve()!; reservation.commit(); reservation.release(); }
+  for (let i = 0; i < 23; i++) { const reservation = admission.reserve()!; reservation.commit(); reservation.release(); }
   expect(admission.reserve()).toBeNull();
   admission.release();
 });

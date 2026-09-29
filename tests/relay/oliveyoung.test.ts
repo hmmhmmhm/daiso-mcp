@@ -230,6 +230,7 @@ it('동일 요청을 병합하고 첫 요청 취소가 다른 대기자를 중�
   release({ status: 'SUCCESS' });
   await first;
   expect((await original).status).toBe(503);
+  expect(events).toContainEqual(expect.objectContaining({ stage: 'queue', outcome: 'canceled' }));
   expect((await duplicate).headers.get('x-relay-cache')).toBe('coalesced');
   expect(runner).toHaveBeenCalledTimes(2);
   expect(events).toContainEqual(
@@ -257,12 +258,12 @@ it('만료된 대기는 실행하지 않고 실패한 응답을 캐시하지 않
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
   const queued = relay(request(undefined, JSON.stringify({ goodsNo: 'other' })));
   await new Promise((resolve) => setTimeout(resolve, 0));
-  clock.mockReturnValue(16000);
+  clock.mockReturnValue(31000);
   release({ status: 'SUCCESS' });
   await first;
   expect((await queued).status).toBe(503);
   expect(runner).toHaveBeenCalledTimes(1);
-  clock.mockReturnValue(616000);
+  clock.mockReturnValue(631000);
   expect((await relay(request())).status).toBe(502);
   expect((await relay(request())).status).toBe(502);
   expect(runner).toHaveBeenCalledTimes(3);
@@ -314,7 +315,7 @@ it('취소된 오래된 요청에 합류한 새 요청은 자기 대기 시간�
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
   const old = relay(request());
   await new Promise((resolve) => setTimeout(resolve, 0));
-  clock.mockReturnValue(16000);
+  clock.mockReturnValue(31000);
   const fresh = relay(request());
   await new Promise((resolve) => setTimeout(resolve, 0));
   release({ status: 'SUCCESS' });
@@ -404,4 +405,28 @@ it('공유 요청의 부모 ID와 실제 예산 소비를 기록한다', async (
   reject(new Error('upstream'));
   expect((await first).status).toBe(502);
   expect((await child).status).toBe(502);
+});
+
+it('브라우저 교체 중 23초 기다린 작업은 실행하고 30초 대기는 만료로 기록한다', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(0);
+  const events: unknown[] = [];
+  let release!: (value: { status: string }) => void;
+  const runner = vi.fn().mockImplementationOnce(() => new Promise(resolve => { release = resolve; }))
+    .mockResolvedValue({ status: 'SUCCESS' });
+  const relay = createOliveyoungRelay('test', runner, { onEvent: event => { events.push(event); } });
+  const first = relay(request());
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
+  const expired = relay(request(undefined, JSON.stringify({ goodsNo: 'expired' })));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  clock.mockReturnValue(7000);
+  const valid = relay(request(undefined, JSON.stringify({ goodsNo: 'valid' })));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  clock.mockReturnValue(30000);
+  release({ status: 'SUCCESS' });
+  expect((await first).status).toBe(200);
+  expect((await expired).status).toBe(503);
+  expect((await valid).status).toBe(200);
+  expect(events).toContainEqual(expect.objectContaining({ stage: 'queue', outcome: 'expired' }));
+  expect(runner).toHaveBeenCalledTimes(2);
+  clock.mockRestore();
 });
