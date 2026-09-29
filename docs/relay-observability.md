@@ -6,7 +6,7 @@ REST/MCP HTTP 응답의 `x-request-id`를 확보한다. Worker 진단 로그의 
 
 Worker는 모든 REST/MCP 요청 경계와 MCP 도구 결과, 공용 HTTP 유틸리티에서 실패를 기록한다. 성공은 요청 단위 1% 표본이며 요청당 최대 32개 이벤트를 기록한다. 개별 서비스가 자체 fetch를 쓸 경우 공용 HTTP 단계는 없을 수 있지만 REST/MCP 경계와 두 릴레이에는 기록이 남는다. 재시도·기존 결과 반환으로 최종 성공한 요청도 중간 HTTP 오류는 기록될 수 있다. Cloudflare 자체 장애로 코드가 실행되지 않은 경우에는 플랫폼 상태/Analytics를 함께 확인한다.
 
-Cloudflare Workers Observability에서 `event = diagnostic`, `requestId = <ID>`로 조회한다. 로그는 플랫폼에서 보존한다(현재 Free 3일/Paid 7일). 무제한 로컬 복사 작업은 없다. 자동 invocation 로그는 비활성화하고 커스텀 로그만 사용한다. 로그 비용/계정 한도는 Cloudflare 정책의 영향을 받는다.
+Cloudflare Workers Observability에서 `event = diagnostic`, `requestId = <ID>`로 조회한다. 로그는 플랫폼에서 보존한다(현재 Free 3일/Paid 7일). 무제한 로컬 복사 작업은 없다. 자동 invocation 로그는 비활성화하고 커스텀 로그만 사용한다. 플랫폼이 덧붙이는 요청 URL에서도 query를 제거하도록 `redact_query_string = true`를 설정한다. 로그 비용/계정 한도는 Cloudflare 정책의 영향을 받는다.
 
 - https://developers.cloudflare.com/workers/observability/logs/workers-logs/
 - https://developers.cloudflare.com/workers/runtime-apis/nodejs/asynclocalstorage/

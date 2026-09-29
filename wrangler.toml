@@ -8,6 +8,7 @@ HEALTH_CHECK_BASE_URL = "https://daiso-mcp.hmmhmmhm.workers.dev"
 
 [observability]
 enabled = true
+redact_query_string = true
 
 [observability.logs]
 enabled = true
