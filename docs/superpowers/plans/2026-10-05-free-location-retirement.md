@@ -35,5 +35,7 @@
 - 카카오 앱 무료 일간 쿼터 활성화를 콘솔에서 확인했습니다. 실제 주소 2건·역명 3건, 부산 REST/MCP 영화관 조회와 명시 좌표 우선 사용, Google/Zyte 호출 0회를 검증했습니다.
 - 로컬 OPINET 키는 없어 Kakao로 해석한 좌표를 기존 공개 오피넷 API에 전달해 HTTP 200과 주유소 9개를 확인했습니다. 새로운 키워드 경로를 운영에서 검증했다는 의미는 아닙니다.
 - 운영 Worker에는 KAKAO_REST_API_KEY 설정이 필요합니다. 운영 키·배포·워크플로는 변경하지 않았습니다.
-- 전체 테스트 207개 파일·2252개 테스트 통과, Statements/Branches/Functions/Lines 모두 100% 커버리지, 빌드 및 OpenAPI 갱신 완료.
+- 전체 테스트 207개 파일·2254개 테스트 통과, Statements/Branches/Functions/Lines 모두 100% 커버리지, 빌드 및 OpenAPI 갱신 완료.
 - 승인 설계 및 품질 리뷰 지적 사항을 해결한 후 재검토를 통과했습니다. draft PR [#207](https://github.com/hmmhmmhm/daiso-mcp/pull/207)을 생성하고 작업에 연결했습니다.
+
+- 후속 점검에서 CLI smoke의 종료 서비스 시나리오와 README 자동 안내를 정리했습니다. 도로 번호와 건물 번호가 뒤바뀐 주소를 거부하는 회귀도 추가하고 전체 검사를 다시 통과했습니다.
