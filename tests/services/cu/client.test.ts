@@ -39,6 +39,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -463,26 +464,15 @@ describe('fetchCuStock', () => {
 
 describe('geocodeCuAddress', () => {
   it('Google Geocoding 성공 시 좌표를 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              geometry: {
-                location: {
-                  lat: 37.3172188,
-                  lng: 126.8354271,
-                },
-              },
-            },
-          ],
-        }),
+        JSON.stringify({ documents: [{ place_name: '서울시 강남구', address_name: '경기도 안산시 단원구 중앙대로 885', y: 37.3172188, x: 126.8354271 }] }),
       ),
     );
 
     const result = await geocodeCuAddress('경기도 안산시 단원구 중앙대로 885', {
-      googleMapsApiKey: 'test-google-key',
+      kakaoRestApiKey: 'test-google-key',
     });
 
     expect(result).toEqual({ latitude: 37.3172188, longitude: 126.8354271 });
@@ -495,55 +485,49 @@ describe('geocodeCuAddress', () => {
 
   it('빈 주소면 null을 반환한다', async () => {
     const result = await geocodeCuAddress('   ', {
-      googleMapsApiKey: 'test-google-key',
+      kakaoRestApiKey: 'test-google-key',
     });
     expect(result).toBeNull();
   });
 
   it('status가 OK가 아니면 null을 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({
-          status: 'ZERO_RESULTS',
-          results: [],
-        }),
+        JSON.stringify({ documents: [] }),
       ),
     );
 
     const result = await geocodeCuAddress('없는주소', {
-      googleMapsApiKey: 'test-google-key',
+      kakaoRestApiKey: 'test-google-key',
     });
     expect(result).toBeNull();
   });
 
   it('좌표 결과가 없으면 null을 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [],
-        }),
+        JSON.stringify({ documents: [] }),
       ),
     );
 
     const result = await geocodeCuAddress('경기도 안산시 단원구 중앙대로 885', {
-      googleMapsApiKey: 'test-google-key',
+      kakaoRestApiKey: 'test-google-key',
     });
     expect(result).toBeNull();
   });
 
   it('좌표값이 0이면 null을 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [{ geometry: { location: { lat: 0, lng: 127.0 } } }],
-        }),
+        JSON.stringify({ documents: [{ place_name: '서울시 강남구', address_name: '경기도 안산시 단원구 중앙대로 885', y: 0, x: 127.0 }] }),
       ),
     );
 
     const result = await geocodeCuAddress('경기도 안산시 단원구 중앙대로 885', {
-      googleMapsApiKey: 'test-google-key',
+      kakaoRestApiKey: 'test-google-key',
     });
     expect(result).toBeNull();
   });

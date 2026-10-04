@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * GS25 주변 매장 탐색 도구
  */
@@ -29,6 +30,9 @@ interface FindNearbyStoresArgs {
   limit?: number;
   timeoutMs?: number;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
   zyteApiKey?: string;
   apiKey?: string;
 }
@@ -56,6 +60,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   ) {
     const geocoded = await geocodeGs25Address(keyword, {
       timeout: timeoutMs,
+      ...args,
       googleMapsApiKey,
     });
     if (geocoded) {
@@ -167,6 +172,7 @@ export function createFindNearbyStoresTool(
   googleMapsApiKey?: string,
   zyteApiKey?: string,
   apiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
 ): ToolRegistration {
   return {
     name: 'gs25_find_nearby_stores',
@@ -189,6 +195,7 @@ export function createFindNearbyStoresTool(
     handler: ((args: FindNearbyStoresArgs) =>
       findNearbyStores({
         ...args,
+        ...geocodeOptions,
         googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
         zyteApiKey: args.zyteApiKey || zyteApiKey,
         apiKey: args.apiKey || apiKey,

@@ -1,3 +1,4 @@
+import { geocodeBindings } from '../utils/geocode.js';
 /**
  * GS25 GET API 핸들러
  */
@@ -45,7 +46,7 @@ export async function handleGs25FindStores(c: ApiContext) {
     ) {
       const geocoded = await geocodeGs25Address(keyword, {
         timeout: 15000,
-        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(c.env),
       });
       if (geocoded) {
         latitude = geocoded.latitude;
@@ -223,7 +224,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
     ) {
       const directGeocoded = await geocodeGs25Address(storeKeyword, {
         timeout: 15000,
-        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(c.env),
       });
       if (directGeocoded) {
         latitude = directGeocoded.latitude;
@@ -249,7 +250,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         if (firstAddress.length > 0) {
           const geocoded = await geocodeGs25Address(firstAddress, {
             timeout: 15000,
-            googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+            ...geocodeBindings(c.env),
           });
           if (geocoded) {
             latitude = geocoded.latitude;

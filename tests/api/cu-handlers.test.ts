@@ -13,6 +13,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -441,6 +442,7 @@ describe('handleCuCheckInventory', () => {
   });
 
   it('storeKeyword 지오코딩 성공 시 좌표 기반으로 재조회한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
       .mockResolvedValueOnce(
@@ -478,22 +480,19 @@ describe('handleCuCheckInventory', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.3172, lng: 126.8354 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '경기도 안산시 단원구 중앙대로 885', y: 37.3172, x: 126.8354 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 0, storeList: [] })));
 
     const ctx = createMockContextWithEnv(
       { keyword: '치킨', storeKeyword: '안산 중앙역' },
-      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+      { KAKAO_REST_API_KEY: 'test-google-key' },
     );
     await handleCuCheckInventory(ctx);
 
     const geocodeUrl = String(mockFetch.mock.calls[3][0]);
-    expect(geocodeUrl).toContain('maps.googleapis.com/maps/api/geocode/json');
+    expect(geocodeUrl).toContain('dapi.kakao.com/v2/local/search/address.json');
     const requestInit = mockFetch.mock.calls[4][1] as RequestInit;
     const body = JSON.parse(String(requestInit.body));
     expect(body.latVal).toBe('37.3172');
@@ -501,6 +500,7 @@ describe('handleCuCheckInventory', () => {
   });
 
   it('지오코딩 성공 + 재고 시드 없음이면 기본 페이지 타입으로 재조회한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
       .mockResolvedValueOnce(
@@ -525,17 +525,14 @@ describe('handleCuCheckInventory', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.3172, lng: 126.8354 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '경기도 안산시 단원구 중앙대로 885', y: 37.3172, x: 126.8354 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 0, storeList: [] })));
 
     const ctx = createMockContextWithEnv(
       { keyword: '치킨', storeKeyword: '안산 중앙역' },
-      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+      { KAKAO_REST_API_KEY: 'test-google-key' },
     );
     await handleCuCheckInventory(ctx);
 

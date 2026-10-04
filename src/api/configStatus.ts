@@ -18,7 +18,8 @@ export interface ConfigStatus {
     accessPairValid: boolean;
   };
   dtryxRelay: ConfigStatus['oliveyoungRelay'];
-  googleMapsApiKey: ConfigStatusItem;
+  googleMapsApiKey: ConfigStatusItem & { enabled: false };
+  kakaoRestApiKey: ConfigStatusItem;
   zyteApiKey: ConfigStatusItem & { enabled: false };
   naverLocalSearch: ConfigStatusItem;
   opinetApiKey: ConfigStatusItem;
@@ -80,7 +81,12 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
     },
     googleMapsApiKey: {
       configured: isConfigured(bindings?.GOOGLE_MAPS_API_KEY),
-      usedBy: ['gs25', 'cu', 'lottemart', 'megabox', 'lottecinema', 'cgv'],
+      enabled: false,
+      usedBy: [],
+    },
+    kakaoRestApiKey: {
+      configured: isConfigured(bindings?.KAKAO_REST_API_KEY),
+      usedBy: ['gs25', 'cu', 'opinet', 'megabox', 'lottecinema', 'cgv'],
     },
     zyteApiKey: {
       configured: isConfigured(bindings?.ZYTE_API_KEY),
@@ -90,7 +96,7 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
     naverLocalSearch: {
       configured:
         isConfigured(bindings?.NAVER_CLIENT_ID) && isConfigured(bindings?.NAVER_CLIENT_SECRET),
-      usedBy: ['places'],
+      usedBy: ['places', 'gs25', 'cu', 'opinet', 'megabox', 'lottecinema', 'cgv'],
     },
     opinetApiKey: {
       configured: isConfigured(bindings?.OPINET_API_KEY),

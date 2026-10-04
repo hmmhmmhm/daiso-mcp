@@ -12,16 +12,16 @@ import {
 
 describe('actionsProxy', () => {
   it('액션 정의를 조회할 수 있다', () => {
-    expect(getActionQueryDefinition('lottemartFindStores')?.targetPath).toBe('/api/lottemart/stores');
+    expect(getActionQueryDefinition('gs25FindStores')?.targetPath).toBe('/api/gs25/stores');
     expect(ACTION_QUERY_ACTIONS).toContain('daisoGetProduct');
   });
 
   it('일반 GET 액션을 대상 URL로 변환한다', () => {
     const target = buildActionQueryTargetUrl(
-      'https://example.com/api/actions/query?action=lottemartFindStores&area=%EC%84%9C%EC%9A%B8&keyword=%EA%B0%95%EB%B3%80',
+      'https://example.com/api/actions/query?action=gs25FindStores&area=%EC%84%9C%EC%9A%B8&keyword=%EA%B0%95%EB%B3%80',
     );
 
-    expect(target.pathname).toBe('/api/lottemart/stores');
+    expect(target.pathname).toBe('/api/gs25/stores');
     expect(target.searchParams.get('action')).toBeNull();
     expect(target.searchParams.get('area')).toBe('서울');
     expect(target.searchParams.get('keyword')).toBe('강변');
@@ -29,10 +29,10 @@ describe('actionsProxy', () => {
 
   it('상대 경로 요청도 대상 URL로 변환한다', () => {
     const target = buildActionQueryTargetUrl(
-      '/api/actions/query?action=lottemartFindStores&area=%EC%84%9C%EC%9A%B8',
+      '/api/actions/query?action=gs25FindStores&area=%EC%84%9C%EC%9A%B8',
     );
 
-    expect(target.pathname).toBe('/api/lottemart/stores');
+    expect(target.pathname).toBe('/api/gs25/stores');
     expect(target.searchParams.get('area')).toBe('서울');
   });
 
@@ -67,7 +67,7 @@ describe('actionsProxy', () => {
   it('액션 설명 목록 문자열을 생성한다', () => {
     const descriptionList = createActionQueryDescriptionList();
 
-    expect(descriptionList).toContain('- `lottemartFindStores`:');
+    expect(descriptionList).toContain('- `gs25FindStores`:');
     expect(descriptionList).toContain('- `daisoGetProduct`:');
   });
 });

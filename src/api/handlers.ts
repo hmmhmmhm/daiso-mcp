@@ -1,3 +1,4 @@
+import { geocodeBindings } from '../utils/geocode.js';
 /**
  * GET API 핸들러
  *
@@ -342,7 +343,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
       if (firstAddress.length > 0) {
         const geocoded = await geocodeCuAddress(firstAddress, {
           timeout: 15000,
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
         });
         if (geocoded) {
           const hasStockSeed = !!firstStockItem?.itemCode;

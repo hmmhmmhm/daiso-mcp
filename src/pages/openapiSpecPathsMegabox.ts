@@ -7,7 +7,7 @@ export const OPENAPI_PATHS_MEGABOX = {
         get: {
           operationId: 'megaboxFindNearbyTheaters',
           summary: '메가박스 주변 지점 조회',
-          description: '좌표 또는 위치 키워드 기준으로 메가박스 지점을 거리순으로 조회합니다. lat/lng가 없으면 keyword를 구글 지오코드로 보강할 수 있습니다.',
+          description: '좌표 또는 위치 키워드 기준으로 메가박스 지점을 거리순으로 조회합니다. lat/lng가 없으면 keyword를 카카오 무료 위치 검색(장소명은 네이버 지역 검색으로 보완)로 보강할 수 있습니다.',
           parameters: [
             {
               name: 'keyword',

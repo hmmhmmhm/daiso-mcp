@@ -7,7 +7,6 @@ import {
   __testOnlyClearLotteCinemaLocationCaches,
   fetchLotteCinemaNearbyTheaters,
   resolveLotteCinemaLocation,
-  resolveLotteCinemaNearestTheater,
 } from '../../../src/services/lottecinema/location.js';
 
 const mockFetch = vi.fn();
@@ -61,6 +60,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   __testOnlyClearLotteCinemaLocationCaches();
 });
@@ -79,81 +79,17 @@ describe('resolveLotteCinemaLocation', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('구글 지오코드 결과를 캐시한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-              geometry: {
-                location: { lat: 37.3172, lng: 126.839 },
-              },
-            },
-          ],
-        }),
-      ),
-    );
-
-    const first = await resolveLotteCinemaLocation(
-      { keyword: '안산 중앙역' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-    const second = await resolveLotteCinemaLocation(
-      { keyword: '안산 중앙역' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(first.geocodeUsed).toBe(true);
-    expect(first.formattedAddress).toContain('안산시');
-    expect(second.latitude).toBe(37.3172);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('지오코드 실패 결과도 캐시한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          status: 'ZERO_RESULTS',
-          results: [],
-        }),
-      ),
-    );
-
-    const first = await resolveLotteCinemaLocation(
-      { keyword: '존재하지않는역' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-    const second = await resolveLotteCinemaLocation(
-      { keyword: '존재하지않는역' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(first.latitude).toBeNull();
-    expect(second.longitude).toBeNull();
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
   it('지오코드 주소가 없으면 formattedAddress를 null로 둔다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              geometry: {
-                location: { lat: 37.3172, lng: 126.839 },
-              },
-            },
-          ],
-        }),
+        JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '', y: 37.3172, x: 126.839 }] }),
       ),
     );
 
     const resolved = await resolveLotteCinemaLocation(
       { keyword: '안산 중앙역' },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(resolved.geocodeUsed).toBe(true);
@@ -171,107 +107,23 @@ describe('resolveLotteCinemaLocation', () => {
 
 describe('fetchLotteCinemaNearbyTheaters', () => {
   it('좌표 기준으로 가까운 극장을 거리순 정렬한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(createTicketingResponse());
 
     const result = await fetchLotteCinemaNearbyTheaters(
       { keyword: '안산 중앙역', playDate: '20260315', limit: 2 },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result.geocodeUsed).toBe(true);
     expect(result.theaters[0].theaterId).toBe('9001');
     expect(result.theaters[0].distanceKm).toBeLessThan(result.theaters[1].distanceKm as number);
-  });
-
-  it('지오코드 없이도 키워드 매칭으로 극장을 찾는다', async () => {
-    mockFetch.mockResolvedValue(createTicketingResponse());
-
-    const result = await fetchLotteCinemaNearbyTheaters({
-      keyword: '안산 중앙역',
-      playDate: '20260315',
-      limit: 2,
-    });
-
-    expect(result.count).toBe(2);
-    expect(result.theaters[0].theaterName).toBe('안산중앙');
-    expect(result.theaters[0].distanceKm).toBeNull();
-  });
-
-  it('극장명이 아니라 주소로도 키워드 매칭을 수행한다', async () => {
-    mockFetch.mockResolvedValue(createTicketingResponse());
-
-    const result = await fetchLotteCinemaNearbyTheaters({
-      keyword: '고잔동',
-      playDate: '20260315',
-      limit: 2,
-    });
-
-    expect(result.count).toBe(2);
-    expect(result.theaters[0].address).toContain('고잔동');
-  });
-
-  it('주소가 비어 있어도 극장명으로 키워드 매칭을 수행한다', async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          IsOK: true,
-          Cinemas: {
-            Cinemas: {
-              Items: [
-                {
-                  CinemaID: '1016',
-                  CinemaNameKR: '월드타워',
-                  DivisionCode: '1',
-                  DetailDivisionCode: '0001',
-                  Latitude: '37.5132941',
-                  Longitude: '127.104215',
-                  CinemaAddrSummary: '',
-                },
-              ],
-            },
-          },
-          Movies: { Movies: { Items: [] } },
-        }),
-      ),
-    );
-
-    const result = await fetchLotteCinemaNearbyTheaters({
-      keyword: '월드타워',
-      playDate: '20260315',
-      limit: 2,
-    });
-
-    expect(result.count).toBe(1);
-    expect(result.theaters[0].theaterName).toBe('월드타워');
-  });
-
-  it('불용어만 있으면 매칭 결과를 비운다', async () => {
-    mockFetch.mockResolvedValue(createTicketingResponse());
-
-    const result = await fetchLotteCinemaNearbyTheaters({
-      keyword: '영화',
-      playDate: '20260315',
-      limit: 2,
-    });
-
-    expect(result.count).toBe(0);
-    expect(result.theaters).toEqual([]);
   });
 
   it('limit이 음수여도 최소 1개는 반환한다', async () => {
@@ -347,16 +199,18 @@ describe('fetchLotteCinemaNearbyTheaters', () => {
   });
 });
 
-describe('resolveLotteCinemaNearestTheater', () => {
-  it('매칭되는 극장이 없으면 null을 반환한다', async () => {
-    mockFetch.mockResolvedValue(createTicketingResponse());
 
-    const result = await resolveLotteCinemaNearestTheater({
-      keyword: '제주공항',
-      playDate: '20260315',
-    });
 
-    expect(result.location.keyword).toBe('제주공항');
-    expect(result.theater).toBeNull();
-  });
+it.each(['안산 중앙역', '고잔동', '안산중앙', '극장', '없는곳'])('무료 위치 해석에 실패한 %s는 거리 없는 성공으로 대체하지 않는다', async (keyword) => {
+ await expect(fetchLotteCinemaNearbyTheaters({ keyword, playDate: '20261005' })).rejects.toThrow('위치를 좌표로 변환하지 못했습니다');
+ expect(mockFetch).not.toHaveBeenCalled();
+});
+it('한국 범위 밖 좌표는 조회에 사용하지 않는다', async () => {
+ await expect(resolveLotteCinemaLocation({ latitude: 0, longitude: 0 })).rejects.toThrow('유효한 위도');
+});
+it('위치 입력이나 극장 좌표가 없으면 가까운 극장을 만들지 않는다', async () => {
+ mockFetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ IsOK: true, Cinemas: { Cinemas: { Items: [] } }, Movies: { Movies: { Items: [] } } }))));
+ const { resolveLotteCinemaNearestTheater } = await import('../../../src/services/lottecinema/location.js');
+ expect((await fetchLotteCinemaNearbyTheaters({ playDate: '20261005' })).theaters).toEqual([]);
+ expect((await resolveLotteCinemaNearestTheater({ latitude: 35.115, longitude: 129.041, playDate: '20261005' })).theater).toBeNull();
 });

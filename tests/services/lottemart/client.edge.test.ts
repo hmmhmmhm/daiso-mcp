@@ -24,6 +24,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -135,21 +136,13 @@ describe('geocodeLotteMartAddress 예외 분기', () => {
 
     expect(first).toBeNull();
     expect(second).toBeNull();
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
 describe('fetchLotteMartStores 보조 분기', () => {
   it('키워드 지오코딩에 실패하면 좌표 없이 조회를 계속한다', async () => {
     mockFetch
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: 'ZERO_RESULTS',
-            results: [],
-          }),
-        ),
-      )
       .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
@@ -393,4 +386,8 @@ describe('searchLotteMartProducts 예외 처리', () => {
     expect(result.products).toHaveLength(2);
     expect(mockFetch).toHaveBeenCalledTimes(4);
   });
+});
+it('역사적 내부 매장 함수도 유효하지 않은 지역은 거부한다', async () => {
+ await expect(fetchLotteMartStores({ area: '없는지역' })).rejects.toThrow('지원하지 않는 지역');
+ expect(mockFetch).not.toHaveBeenCalled();
 });

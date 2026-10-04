@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -123,16 +124,14 @@ describe('handleGs25FindStores', () => {
   });
 
   it('좌표가 없고 keyword가 있으면 지오코딩을 시도한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     const ctx = createMockContext({ keyword: '강남' });
-    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+    (ctx as { env: Record<string, string> }).env = { KAKAO_REST_API_KEY: 'test-google-key' };
 
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.5, x: 127 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -330,8 +329,9 @@ describe('handleGs25CheckInventory', () => {
   });
 
   it('itemCode만으로도 재고 검색 결과를 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     const ctx = createMockContext({ itemCode: '8801056038861', storeKeyword: '안산 중앙역' });
-    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+    (ctx as { env: Record<string, string> }).env = { KAKAO_REST_API_KEY: 'test-google-key' };
 
     mockFetch
       .mockResolvedValueOnce(
@@ -349,10 +349,7 @@ describe('handleGs25CheckInventory', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.3187, lng: 126.8389 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.3187, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -449,16 +446,14 @@ describe('handleGs25CheckInventory', () => {
   });
 
   it('storeKeyword를 먼저 직접 지오코딩해 재고 조회 좌표로 사용한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     const ctx = createMockContext({ keyword: '오감자', storeKeyword: '강남' });
-    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+    (ctx as { env: Record<string, string> }).env = { KAKAO_REST_API_KEY: 'test-google-key' };
 
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.5, x: 127 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -494,14 +489,15 @@ describe('handleGs25CheckInventory', () => {
     };
     expect(payload.data.geocodeUsed).toBe(true);
     expect(payload.data.location).toEqual({ latitude: 37.5, longitude: 127 });
-    expect(String(mockFetch.mock.calls[0][0])).toContain('maps.googleapis.com');
+    expect(String(mockFetch.mock.calls[0][0])).toContain('dapi.kakao.com');
     expect(String(mockFetch.mock.calls[1][0])).toContain('/search/v3/totalSearch');
     expect(String(mockFetch.mock.calls[2][0])).toContain('myPositionYCoordination=37.5');
   });
 
   it('storeKeyword가 있어도 지오코딩 실패 시 location은 null이다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     const ctx = createMockContext({ keyword: '오감자', storeKeyword: '강남' });
-    (ctx as { env: Record<string, string> }).env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+    (ctx as { env: Record<string, string> }).env = { KAKAO_REST_API_KEY: 'test-google-key' };
 
     mockFetch
       // 1. storeKeyword 기준 매장 조회 (지오코딩 주소 획득용)
@@ -513,7 +509,7 @@ describe('handleGs25CheckInventory', () => {
         ),
       )
       // 2. 지오코딩 실패
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: 'ZERO_RESULTS', results: [] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ documents: [] })))
       // 3. totalSearch API (keyword → itemCode)
       .mockResolvedValueOnce(
         new Response(

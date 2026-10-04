@@ -15,6 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -95,21 +96,12 @@ describe('createListNowShowingTool', () => {
   });
 
   it('theaterId가 없어도 위치 키워드로 가장 가까운 지점을 자동 선택한다', async () => {
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -152,6 +144,6 @@ describe('createListNowShowingTool', () => {
     expect(parsed.filters.theaterId).toBe('4431');
     expect(parsed.filters.areaCode).toBe('41');
     expect(parsed.resolvedTheater.theaterName).toBe('안산중앙');
-    delete process.env.GOOGLE_MAPS_API_KEY;
+    delete process.env.KAKAO_REST_API_KEY;
   });
 });

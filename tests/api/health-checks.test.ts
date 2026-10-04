@@ -112,7 +112,7 @@ describe('runHealthChecks', () => {
       expect.any(Object),
     );
     expect(fetchImpl).toHaveBeenCalledWith(
-      expect.stringContaining('/api/lottemart/products?'),
+      expect.stringContaining('/api/gs25/products?'),
       expect.any(Object),
     );
     const oliveyoungCall = fetchImpl.mock.calls.find((call) =>

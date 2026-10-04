@@ -18,6 +18,7 @@ export interface AppBindings {
   OY_ACCESS_CLIENT_SECRET?: string;
   GS25_API_KEY?: string;
   GOOGLE_MAPS_API_KEY?: string;
+  KAKAO_REST_API_KEY?: string;
   NAVER_CLIENT_ID?: string;
   NAVER_CLIENT_SECRET?: string;
   OPINET_API_KEY?: string;
@@ -65,7 +66,7 @@ export function errorResponse(
   c: ApiContext,
   code: string,
   message: string,
-  status: 400 | 401 | 403 | 404 | 429 | 500 | 503 = 400,
+  status: 400 | 401 | 403 | 404 | 410 | 429 | 500 | 503 = 400,
 ) {
   return c.json<ApiResponse<never>>(
     {

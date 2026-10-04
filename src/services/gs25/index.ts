@@ -17,6 +17,9 @@ const GS25_METADATA: ServiceMetadata = {
 
 interface Gs25ServiceOptions {
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
   zyteApiKey?: string;
   apiKey?: string;
 }
@@ -32,12 +35,14 @@ class Gs25Service implements ServiceProvider {
         this.options.googleMapsApiKey,
         this.options.zyteApiKey,
         this.options.apiKey,
+        this.options,
       ),
       createSearchProductsTool(this.options.zyteApiKey),
       createCheckInventoryTool(
         this.options.googleMapsApiKey,
         this.options.zyteApiKey,
         this.options.apiKey,
+        this.options,
       ),
     ];
   }

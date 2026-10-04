@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * 메가박스 영화 목록 조회 도구
  */
@@ -18,7 +19,7 @@ interface ListNowShowingArgs {
   timeoutMs?: number;
 }
 
-async function listNowShowing(args: ListNowShowingArgs): Promise<McpToolResponse> {
+async function listNowShowing(args: ListNowShowingArgs, geocodeOptions: GeocodeOptions = {}): Promise<McpToolResponse> {
   const {
     playDate = toYyyymmdd(),
     theaterId: inputTheaterId,
@@ -44,7 +45,7 @@ async function listNowShowing(args: ListNowShowingArgs): Promise<McpToolResponse
         timeout: timeoutMs,
       },
       {
-        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+        ...geocodeOptions,
         timeout: timeoutMs,
       },
     );
@@ -89,7 +90,7 @@ async function listNowShowing(args: ListNowShowingArgs): Promise<McpToolResponse
   };
 }
 
-export function createListNowShowingTool(): ToolRegistration {
+export function createListNowShowingTool(geocodeOptions: GeocodeOptions = {}): ToolRegistration {
   return {
     name: 'megabox_list_now_showing',
     metadata: {
@@ -102,10 +103,10 @@ export function createListNowShowingTool(): ToolRegistration {
         keyword: z.string().optional().describe('위치 키워드 (예: 안산 중앙역, 강남역)'),
         latitude: z.number().optional().describe('위도'),
         longitude: z.number().optional().describe('경도'),
-        areaCode: z.string().optional().default('11').describe('지역 코드 (기본값: 11, 서울)'),
+        areaCode: z.string().optional().describe('지역 코드 (미입력 시 위치로 결정)'),
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: listNowShowing as (args: unknown) => Promise<McpToolResponse>,
+    handler: ((args: unknown) => listNowShowing(args as ListNowShowingArgs, geocodeOptions)),
   };
 }

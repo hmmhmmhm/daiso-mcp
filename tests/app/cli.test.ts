@@ -877,52 +877,22 @@ describe('CLI', () => {
     expect(errors[0]).toContain('pluCd와 --bizNoArr가 필요합니다');
   });
 
-  it('lottemart-stores 명령은 롯데마트 매장 API를 호출한다', async () => {
-    const { deps } = createDeps();
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ success: true }),
-    } as unknown as Response);
-    deps.fetchImpl = fetchImpl;
-
-    const exitCode = await runCli(
-      ['lottemart-stores', '잠실', '--area', '서울', '--limit', '5'],
-      deps,
-    );
-
-    expect(exitCode).toBe(0);
-    expect(fetchImpl).toHaveBeenCalledWith(
-      'https://mcp.aka.page/api/lottemart/stores?area=%EC%84%9C%EC%9A%B8&limit=5&keyword=%EC%9E%A0%EC%8B%A4',
-    );
-  });
-
-  it('lottemart-products 명령은 롯데마트 상품 API를 호출한다', async () => {
-    const { deps } = createDeps();
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ success: true }),
-    } as unknown as Response);
-    deps.fetchImpl = fetchImpl;
-
-    const exitCode = await runCli(
-      ['lottemart-products', '콜라', '--storeName', '강변점', '--area', '서울'],
-      deps,
-    );
-
-    expect(exitCode).toBe(0);
-    expect(fetchImpl).toHaveBeenCalledWith(
-      'https://mcp.aka.page/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeName=%EA%B0%95%EB%B3%80%EC%A0%90&area=%EC%84%9C%EC%9A%B8',
-    );
-  });
-
-  it('lottemart-products 명령은 store 정보가 없으면 실패한다', async () => {
-    const { errors, deps } = createDeps();
-
-    const exitCode = await runCli(['lottemart-products', '콜라'], deps);
-
-    expect(exitCode).toBe(1);
-    expect(errors[0]).toContain('--storeCode 또는 --storeName이 필요합니다');
-    expect(errors[0]).toContain('매장을 모르면 먼저 daiso lottemart-stores 잠실 --area 서울');
+  it.each([
+    ['lottemart-stores'],
+    ['lottemart-stores', '잠실', '--area', '서울', '--limit', '5'],
+    ['lottemart-stores', '--help'],
+    ['lottemart-stores', '--foo', 'bar'],
+    ['lottemart-products'],
+    ['lottemart-products', '콜라', '--storeName', '강변점', '--area', '서울'],
+    ['lottemart-products', '콜라'],
+    ['lottemart-products', '--help'],
+    ['lottemart-products', '--foo', 'bar'],
+  ])('롯데마트 명령 %j는 입력과 관계없이 외부 요청 없이 지원 종료를 알린다', async (...args) => {
+    const { errors, output, deps } = createDeps();
+    expect(await runCli(args, deps)).toBe(1);
+    expect(errors.join('\n')).toContain('롯데마트 서비스 지원이 종료되었습니다.');
+    expect(output).toEqual([]);
+    expect(deps.fetchImpl).not.toHaveBeenCalled();
   });
 
   it('gs25-stores 명령은 GS25 매장 API를 호출한다', async () => {
@@ -1234,8 +1204,6 @@ describe('CLI', () => {
     ['emart24-stores', ['emart24-stores', '강남']],
     ['emart24-products', ['emart24-products', '두바이']],
     ['emart24-inventory', ['emart24-inventory', '8800244010504', '--bizNoArr', '28339']],
-    ['lottemart-stores', ['lottemart-stores', '잠실']],
-    ['lottemart-products', ['lottemart-products', '콜라', '--storeName', '강변점']],
     ['gs25-stores', ['gs25-stores', '강남']],
     ['gs25-products', ['gs25-products', '오감자']],
     ['gs25-inventory', ['gs25-inventory', '오감자']],

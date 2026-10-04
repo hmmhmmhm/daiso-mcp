@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -41,25 +42,16 @@ describe('resolveMegaboxLocation', () => {
   });
 
   it('키워드를 구글 지오코드로 보강해 좌표와 지역 코드를 찾는다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              formatted_address: '대한민국 경기도 안산시 단원구 고잔동',
-              geometry: {
-                location: { lat: 37.3171, lng: 126.8389 },
-              },
-            },
-          ],
-        }),
+        JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동', y: 37.3171, x: 126.8389 }] }),
       ),
     );
 
     const result = await resolveMegaboxLocation(
       { keyword: '안산 중앙역' },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result).toEqual({
@@ -71,122 +63,17 @@ describe('resolveMegaboxLocation', () => {
     });
   });
 
-  it('지오코드 address_components의 short_name으로도 지역 코드를 찾는다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              address_components: [{ long_name: '', short_name: '경기도' }],
-              geometry: {
-                location: { lat: 37.3171, lng: 126.8389 },
-              },
-            },
-          ],
-        }),
-      ),
-    );
-
-    const result = await resolveMegaboxLocation(
-      { keyword: '안산 중앙역' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(result.areaCode).toBe('41');
-    expect(result.latitude).toBe(37.3171);
-    expect(result.longitude).toBe(126.8389);
-    expect(result.geocodeUsed).toBe(true);
-  });
-
-  it('좌표만 있어도 역지오코드로 지역 코드를 보강한다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              address_components: [{ long_name: '경기도' }],
-              geometry: {
-                location: { lat: 37.3171, lng: 126.8389 },
-              },
-            },
-          ],
-        }),
-      ),
-    );
-
-    const result = await resolveMegaboxLocation(
-      { latitude: 37.3171, longitude: 126.8389 },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(result.areaCode).toBe('41');
-    expect(result.geocodeUsed).toBe(true);
-  });
-
-  it('지오코드 실패 시 기본 서울 좌표와 지역 코드를 사용한다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          status: 'ZERO_RESULTS',
-          results: [],
-        }),
-      ),
-    );
-
-    const result = await resolveMegaboxLocation(
-      { keyword: '없는 위치' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(result.areaCode).toBe('11');
-    expect(result.latitude).toBe(37.5665);
-    expect(result.longitude).toBe(126.978);
-    expect(result.geocodeUsed).toBe(false);
-  });
-
-  it('지오코드가 OK여도 결과가 비면 기본 서울 좌표와 지역 코드를 사용한다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [],
-        }),
-      ),
-    );
-
-    const result = await resolveMegaboxLocation(
-      { keyword: '결과없음' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(result.areaCode).toBe('11');
-    expect(result.latitude).toBe(37.5665);
-    expect(result.longitude).toBe(126.978);
-    expect(result.geocodeUsed).toBe(false);
-  });
-
   it('지역 코드를 찾지 못해도 좌표는 사용하고 지역 코드는 기본값으로 둔다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              formatted_address: '대한민국 어딘가',
-              geometry: {
-                location: { lat: 35.1234, lng: 128.1234 },
-              },
-            },
-          ],
-        }),
+        JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 어딘가', y: 35.1234, x: 128.1234 }] }),
       ),
     );
 
     const result = await resolveMegaboxLocation(
       { keyword: '어딘가' },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result.latitude).toBe(35.1234);
@@ -194,76 +81,15 @@ describe('resolveMegaboxLocation', () => {
     expect(result.areaCode).toBe('11');
     expect(result.geocodeUsed).toBe(true);
   });
-
-  it('같은 키워드 지오코드 결과를 캐시에서 재사용한다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              formatted_address: '대한민국 경기도 안산시 단원구',
-              geometry: {
-                location: { lat: 37.3171, lng: 126.8389 },
-              },
-            },
-          ],
-        }),
-      ),
-    );
-
-    const first = await resolveMegaboxLocation(
-      { keyword: '안산 중앙역' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-    const second = await resolveMegaboxLocation(
-      { keyword: '안산 중앙역' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(first.areaCode).toBe('41');
-    expect(second.areaCode).toBe('41');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('좌표 없는 지오코드 결과는 null로 처리한다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [{}],
-        }),
-      ),
-    );
-
-    const result = await resolveMegaboxLocation(
-      { keyword: '좌표없는결과' },
-      { googleMapsApiKey: 'test-google-key' },
-    );
-
-    expect(result.areaCode).toBe('11');
-    expect(result.latitude).toBe(37.5665);
-    expect(result.longitude).toBe(126.978);
-    expect(result.geocodeUsed).toBe(false);
-  });
 });
 
 describe('fetchMegaboxNearbyTheaters', () => {
   it('지오코드된 위치 기준으로 근처 극장을 거리순 정렬한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -285,7 +111,7 @@ describe('fetchMegaboxNearbyTheaters', () => {
 
     const result = await fetchMegaboxNearbyTheaters(
       { keyword: '안산 중앙역', playDate: '20260315', limit: 2 },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result.areaCode).toBe('41');
@@ -295,20 +121,11 @@ describe('fetchMegaboxNearbyTheaters', () => {
   });
 
   it('nearest theater를 자동으로 선택한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -324,7 +141,7 @@ describe('fetchMegaboxNearbyTheaters', () => {
 
     const result = await resolveMegaboxNearestTheater(
       { keyword: '안산 중앙역', playDate: '20260315' },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result.location.areaCode).toBe('41');
@@ -352,7 +169,7 @@ describe('fetchMegaboxNearbyTheaters', () => {
         playDate: '20260315',
         limit: 0,
       },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result.count).toBe(1);
@@ -374,10 +191,24 @@ describe('fetchMegaboxNearbyTheaters', () => {
         areaCode: '41',
         playDate: '20260315',
       },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result.location.areaCode).toBe('41');
     expect(result.theater).toBeNull();
   });
+});
+describe('무료 위치 해석 계약', () => {
+ it('키워드 검색 실패는 서울 성공으로 대체하지 않는다', async () => {
+  await expect(resolveMegaboxLocation({ keyword: '부산역' })).rejects.toThrow('위치를 좌표로 변환하지 못했습니다');
+ });
+ it('좌표를 명시하면 사용자 지오코딩을 생략하고 전체 지역을 검색한다', async () => {
+  const result = await resolveMegaboxLocation({ latitude: 35.115, longitude: 129.041 });
+  expect(result).toMatchObject({ latitude: 35.115, longitude: 129.041, areaCode: '', geocodeUsed: false });
+  expect(mockFetch).not.toHaveBeenCalled();
+ });
+ it('부산역 주소에서 부산 지역을 결정한다', async () => {
+  mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ documents: [{ place_name: '부산역', address_name: '부산 동구', x: '129.041', y: '35.115' }] })));
+  expect(await resolveMegaboxLocation({ keyword: '부산역' }, { kakaoRestApiKey: 'free' })).toMatchObject({ areaCode: '26', latitude: 35.115 });
+ });
 });

@@ -23,6 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -119,7 +120,8 @@ describe('geocodeLotteMartAddress', () => {
       googleMapsApiKey: 'test-key',
     });
 
-    expect(result).toEqual({ latitude: 37.5, longitude: 127.0 });
+    expect(result).toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 
@@ -187,19 +189,11 @@ describe('fetchLotteMartStores', () => {
     expect(result.location).toEqual({ latitude: 37.5354, longitude: 127.0958 });
     expect(result.stores).toHaveLength(1);
     expect(result.stores[0].storeCode).toBe('2301');
-    expect(result.stores[0].distanceM).toBe(0);
+    expect(result.stores[0].distanceM).toBeNull();
   });
 
   it('키워드 지오코딩을 사용한 뒤 키워드로 매장을 필터링한다', async () => {
     mockFetch
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.5, lng: 127.0 } } }],
-          }),
-        ),
-      )
       .mockResolvedValueOnce(createSessionResponse())
       .mockResolvedValueOnce(
         new Response(`
@@ -238,7 +232,7 @@ describe('fetchLotteMartStores', () => {
       },
     );
 
-    expect(result.geocodeUsed).toBe(true);
+    expect(result.geocodeUsed).toBe(false);
     expect(result.stores[0].storeName).toBe('강변점');
   });
 
@@ -339,11 +333,11 @@ describe('fetchLotteMartStores', () => {
       },
     );
 
-    expect(result.geocodeUsed).toBe(true);
+    expect(result.geocodeUsed).toBe(false);
     expect(result.stores.map((store) => store.storeCode)).toEqual(['2415']);
-    expect(mockFetch).toHaveBeenCalledTimes(4);
-    expect(String(mockFetch.mock.calls[1]?.[1]?.body || '')).toContain('m_area=%EC%84%9C%EC%9A%B8');
-    expect(String(mockFetch.mock.calls[2]?.[1]?.body || '')).toContain('m_area=%EA%B2%BD%EA%B8%B0');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(String(mockFetch.mock.calls[0]?.[1]?.body || '')).toContain('m_area=%EC%84%9C%EC%9A%B8');
+    expect(String(mockFetch.mock.calls[1]?.[1]?.body || '')).toContain('m_area=%EA%B2%BD%EA%B8%B0');
   });
 });
 

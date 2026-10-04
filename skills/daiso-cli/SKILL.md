@@ -57,7 +57,6 @@ npx daiso seveneleven-products 삼각김밥 --size 10 --json
 npx daiso seveneleven-stores "안산 중앙역" --limit 10 --json
 npx daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10 --json
 npx daiso emart24-products 커피 --pageSize 10 --json
-npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울 --json
 npx daiso cgv-movies --playDate <YYYYMMDD> --theaterCode <theaterCode> --json
 npx daiso cgv-timetable --playDate <YYYYMMDD> --theaterCode <theaterCode> --json
 ```

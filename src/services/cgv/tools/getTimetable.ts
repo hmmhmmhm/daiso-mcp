@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * CGV 시간표 조회 도구
  */
@@ -23,6 +24,7 @@ async function getTimetable(
   args: GetTimetableArgs,
   apiKey?: string,
   googleMapsApiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
 ): Promise<McpToolResponse> {
   const {
     playDate = toYyyymmdd(),
@@ -49,7 +51,8 @@ async function getTimetable(
       {
         timeout: timeoutMs,
         zyteApiKey: apiKey,
-        googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
+        ...geocodeOptions,
+        googleMapsApiKey,
       },
     );
     resolvedTheater = resolved.theater;
@@ -90,7 +93,7 @@ async function getTimetable(
   };
 }
 
-export function createGetTimetableTool(apiKey?: string, googleMapsApiKey?: string): ToolRegistration {
+export function createGetTimetableTool(apiKey?: string, googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): ToolRegistration {
   return {
     name: 'cgv_get_timetable',
     metadata: {
@@ -107,7 +110,7 @@ export function createGetTimetableTool(apiKey?: string, googleMapsApiKey?: strin
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => getTimetable(args as GetTimetableArgs, apiKey, googleMapsApiKey)) as (
+    handler: ((args) => getTimetable(args as GetTimetableArgs, apiKey, googleMapsApiKey, geocodeOptions)) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

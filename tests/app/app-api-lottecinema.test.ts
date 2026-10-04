@@ -15,6 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   __testOnlyClearLotteCinemaLocationCaches();
 });
 
@@ -53,20 +54,11 @@ describe('GET /api/lottecinema/theaters', () => {
   });
 
   it('위치 키워드로도 주변 지점을 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -94,7 +86,7 @@ describe('GET /api/lottecinema/theaters', () => {
       );
 
     const res = await app.request('/api/lottecinema/theaters?keyword=안산%20중앙역', undefined, {
-      GOOGLE_MAPS_API_KEY: 'test-google-key',
+      KAKAO_REST_API_KEY: 'test-google-key',
     });
     expect(res.status).toBe(200);
 
@@ -170,20 +162,11 @@ describe('GET /api/lottecinema/movies', () => {
   });
 
   it('위치 키워드로 최근접 극장을 찾아 영화/회차를 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -267,7 +250,7 @@ describe('GET /api/lottecinema/movies', () => {
       );
 
     const res = await app.request('/api/lottecinema/movies?playDate=20260310&keyword=안산%20중앙역&movieId=23816', undefined, {
-      GOOGLE_MAPS_API_KEY: 'test-google-key',
+      KAKAO_REST_API_KEY: 'test-google-key',
     });
     expect(res.status).toBe(200);
 

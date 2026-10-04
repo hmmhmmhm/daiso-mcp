@@ -17,6 +17,9 @@ const OPINET_METADATA: ServiceMetadata = {
 interface OpinetServiceOptions {
   apiKey?: string;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
 }
 
 class OpinetService implements ServiceProvider {
@@ -28,7 +31,7 @@ class OpinetService implements ServiceProvider {
     return [
       createOpinetAveragePricesTool(this.options.apiKey),
       createOpinetLowestStationsTool(this.options.apiKey),
-      createOpinetStationsAroundTool(this.options.apiKey, this.options.googleMapsApiKey),
+      createOpinetStationsAroundTool(this.options.apiKey, this.options.googleMapsApiKey, this.options),
       createOpinetStationDetailTool(this.options.apiKey),
     ];
   }

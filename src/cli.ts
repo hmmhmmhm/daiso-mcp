@@ -28,8 +28,6 @@ import {
   handleEmart24Stores,
   handleEmart24Products,
   handleEmart24Inventory,
-  handleLotteMartStores,
-  handleLotteMartProducts,
   handleCompareProducts,
   handlePlaces,
   handleGs25Stores,
@@ -165,6 +163,11 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     return 0;
   }
 
+  if (command === 'lottemart-stores' || command === 'lottemart-products') {
+    resolvedDeps.writeErr('롯데마트 서비스 지원이 종료되었습니다.');
+    return 1;
+  }
+
   if (command === 'get') return await handleGet(options, resolvedDeps);
   if (command === 'products') return await handleProducts(options, resolvedDeps);
   if (command === 'product') return await handleProduct(options, resolvedDeps);
@@ -189,8 +192,6 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
   if (command === 'emart24-stores') return await handleEmart24Stores(options, resolvedDeps);
   if (command === 'emart24-products') return await handleEmart24Products(options, resolvedDeps);
   if (command === 'emart24-inventory') return await handleEmart24Inventory(options, resolvedDeps);
-  if (command === 'lottemart-stores') return await handleLotteMartStores(options, resolvedDeps);
-  if (command === 'lottemart-products') return await handleLotteMartProducts(options, resolvedDeps);
   if (command === 'gs25-stores') return await handleGs25Stores(options, resolvedDeps);
   if (command === 'gs25-products') return await handleGs25Products(options, resolvedDeps);
   if (command === 'gs25-inventory') return await handleGs25Inventory(options, resolvedDeps);

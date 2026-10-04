@@ -57,14 +57,14 @@ describe('GET /api/health/checks', () => {
       jsonResponse({
         success: true,
         data: {
-          products: [{ productName: '코카콜라 (215ML*6입)' }],
+          products: [{ itemName: '코카콜라 (215ML*6입)' }],
         },
         meta: { total: 1 },
       }),
     );
 
     const res = await app.request(
-      '/api/health/checks?check=lottemart.products&includeSamples=true&timeoutMs=1234&fresh=true&transport=network',
+      '/api/health/checks?check=gs25.products&includeSamples=true&timeoutMs=1234&fresh=true&transport=network',
       {
         headers: { Authorization: 'Bearer test-secret' },
       },
@@ -79,14 +79,14 @@ describe('GET /api/health/checks', () => {
     expect(data.checks).toHaveLength(1);
     expect(data.checks[0]).toEqual(
       expect.objectContaining({
-        id: 'lottemart.products',
-        service: 'lottemart',
+        id: 'gs25.products',
+        service: 'gs25',
         target: 'products',
         status: 'ok',
         sample: { first: '코카콜라 (215ML*6입)' },
       }),
     );
-    expect(String(mockFetch.mock.calls[0][0])).toContain('/api/lottemart/products');
+    expect(String(mockFetch.mock.calls[0][0])).toContain('/api/gs25/products');
     expect(String(mockFetch.mock.calls[0][0])).toContain('timeoutMs=1234');
   });
 
@@ -102,7 +102,7 @@ describe('GET /api/health/checks', () => {
     );
 
     const res = await app.request(
-      'https://mcp.aka.page/api/health/checks?check=lottemart.products&fresh=true',
+      'https://mcp.aka.page/api/health/checks?check=gs25.products&fresh=true',
       {
         headers: { Authorization: 'Bearer test-secret' },
       },
@@ -115,7 +115,7 @@ describe('GET /api/health/checks', () => {
 
     expect(res.status).toBe(200);
     expect(String(mockFetch.mock.calls[0][0])).toMatch(
-      /^https:\/\/daiso-mcp\.example\.workers\.dev\/api\/lottemart\/products/,
+      /^https:\/\/daiso-mcp\.example\.workers\.dev\/api\/gs25\/products/,
     );
   });
 

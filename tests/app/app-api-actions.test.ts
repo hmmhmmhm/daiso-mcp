@@ -16,6 +16,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   __testOnlyClearLotteCinemaLocationCaches();
 });
 
@@ -66,6 +67,7 @@ describe('GET /api/actions/query', () => {
   });
 
   it('GS25 2단계 재고 조회를 action facade로 위임한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
@@ -105,10 +107,7 @@ describe('GET /api/actions/query', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.3187, lng: 126.8389 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '', y: 37.3187, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -137,7 +136,7 @@ describe('GET /api/actions/query', () => {
     const inventoryRes = await app.request(
       '/api/actions/query?action=gs25CheckInventory&itemCode=8801056038861&storeKeyword=%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD&storeLimit=10',
       undefined,
-      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+      { KAKAO_REST_API_KEY: 'test-google-key' },
     );
     expect(inventoryRes.status).toBe(200);
 
@@ -287,6 +286,7 @@ describe('GET /api/actions/query', () => {
   });
 
   it('CGV keyword 조회를 action facade로 위임한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
@@ -305,32 +305,12 @@ describe('GET /api/actions/query', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -347,7 +327,7 @@ describe('GET /api/actions/query', () => {
       '/api/actions/query?action=cgvSearchMovies&playDate=20260315&keyword=안산%20중앙역',
       undefined,
       {
-        GOOGLE_MAPS_API_KEY: 'test-google-key',
+        KAKAO_REST_API_KEY: 'test-google-key',
       },
     );
     expect(res.status).toBe(200);
@@ -358,20 +338,11 @@ describe('GET /api/actions/query', () => {
   });
 
   it('롯데시네마 keyword 조회를 action facade로 위임한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -458,7 +429,7 @@ describe('GET /api/actions/query', () => {
       '/api/actions/query?action=lottecinemaListMovies&playDate=20260315&keyword=안산%20중앙역&movieId=23816',
       undefined,
       {
-        GOOGLE_MAPS_API_KEY: 'test-google-key',
+        KAKAO_REST_API_KEY: 'test-google-key',
       },
     );
     expect(res.status).toBe(200);
