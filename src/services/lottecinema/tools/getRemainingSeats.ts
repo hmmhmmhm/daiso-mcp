@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * 롯데시네마 잔여 좌석 조회 도구
  */
@@ -21,6 +22,7 @@ interface GetRemainingSeatsArgs {
 async function getRemainingSeats(
   args: GetRemainingSeatsArgs,
   googleMapsApiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
 ): Promise<McpToolResponse> {
   const {
     playDate = toYyyymmdd(),
@@ -46,7 +48,8 @@ async function getRemainingSeats(
       },
       {
         timeout: timeoutMs,
-        googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
+        ...geocodeOptions,
+        googleMapsApiKey,
       },
     );
     resolvedTheater = resolved.theater;
@@ -102,7 +105,7 @@ async function getRemainingSeats(
   };
 }
 
-export function createGetRemainingSeatsTool(googleMapsApiKey?: string): ToolRegistration {
+export function createGetRemainingSeatsTool(googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): ToolRegistration {
   return {
     name: 'lottecinema_get_remaining_seats',
     metadata: {
@@ -119,7 +122,7 @@ export function createGetRemainingSeatsTool(googleMapsApiKey?: string): ToolRegi
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => getRemainingSeats(args as GetRemainingSeatsArgs, googleMapsApiKey)) as (
+    handler: ((args) => getRemainingSeats(args as GetRemainingSeatsArgs, googleMapsApiKey, geocodeOptions)) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

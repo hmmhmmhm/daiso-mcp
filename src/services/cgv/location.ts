@@ -2,13 +2,21 @@
  * CGV 위치 해석 및 근처 극장 조회 보조 모듈
  */
 
-import { fetchJson } from '../../utils/http.js';
+import {
+  geocodeLocation,
+  readGeocodeEnvironment,
+  searchKakaoPlaces,
+  validKoreanCoordinates,
+} from '../../utils/geocode.js';
 import { fetchCgvTheaters } from './client.js';
 import type { CgvTheater } from './types.js';
 
 interface RequestOptions {
   timeout?: number;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
   zyteApiKey?: string;
 }
 
@@ -18,19 +26,6 @@ interface ResolveCgvLocationParams {
   longitude?: number;
   regionCode?: string;
   playDate?: string;
-}
-
-interface GoogleGeocodeResponse {
-  status?: string;
-  results?: Array<{
-    formatted_address?: string;
-    geometry?: {
-      location?: {
-        lat?: number;
-        lng?: number;
-      };
-    };
-  }>;
 }
 
 export interface CgvResolvedLocation {
@@ -56,37 +51,9 @@ export interface CgvNearbyTheaterResult extends CgvResolvedLocation {
 }
 
 const DEFAULT_TIMEOUT_MS = 15000;
-const USER_GEOCODE_CACHE_TTL_MS = 60 * 60 * 1000;
-const THEATER_GEOCODE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const MAX_CANDIDATE_THEATERS = 12;
-const LOCATION_STOPWORDS = new Set([
-  'cgv',
-  '극장',
-  '영화',
-  '주변',
-  '근처',
-  '오늘',
-  '상영',
-  '시간표',
-  '좌석',
-  '잔여',
-  '찾아',
-  '주세요',
-  '주세요요',
-  '역',
-]);
 const BRAND_PATTERN = /\b(?:cgv|씨지브이)\b/giu;
 const TRAILING_INTENT_PATTERN =
   /\s+(?:극장|영화관|영화|상영작|시간표|좌석|잔여좌석|남은좌석|목록|찾고|찾아|찾아서|알려|보여|추천|조회|확인|해주세요|해줘).*/u;
-
-const userGeocodeCache = new Map<
-  string,
-  { expiresAt: number; value: { latitude: number; longitude: number; formattedAddress: string | null } | null }
->();
-const theaterGeocodeCache = new Map<
-  string,
-  { expiresAt: number; value: { latitude: number; longitude: number; formattedAddress: string | null } | null }
->();
 
 function calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -129,85 +96,17 @@ function sanitizeLocationKeyword(keyword: string): string {
   return sanitized || trimmed;
 }
 
-function extractLocationTokens(...values: Array<string | null | undefined>): string[] {
-  const tokens = new Set<string>();
-
-  for (const value of values) {
-    const matches = (value || '').match(/[0-9A-Za-z가-힣]+/g) || [];
-    for (const match of matches) {
-      const normalized = normalizeText(match);
-      if (normalized.length < 2 || LOCATION_STOPWORDS.has(normalized)) {
-        continue;
-      }
-      tokens.add(normalized);
-    }
-  }
-
-  return [...tokens];
-}
-
-function scoreTheaterName(theaterName: string, tokens: string[]): number {
-  const normalized = normalizeText(theaterName);
-  return tokens.reduce((score, token) => (normalized.includes(token) ? score + 1 : score), 0);
-}
-
-async function geocodeAddress(
-  query: string,
-  options: RequestOptions,
-  cacheKey: string,
-  ttlMs: number,
-  cache: Map<
-    string,
-    { expiresAt: number; value: { latitude: number; longitude: number; formattedAddress: string | null } | null }
-  >,
-): Promise<{ latitude: number; longitude: number; formattedAddress: string | null } | null> {
-  const apiKey = (options.googleMapsApiKey || '').trim();
-  const trimmedQuery = query.trim();
-  if (apiKey.length === 0 || trimmedQuery.length === 0) {
-    return null;
-  }
-
-  const cached = cache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.value;
-  }
-
-  const endpoint = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  endpoint.searchParams.set('address', trimmedQuery);
-  endpoint.searchParams.set('key', apiKey);
-
-  const body = await fetchJson<GoogleGeocodeResponse>(endpoint.toString(), {
-    method: 'GET',
-    timeout: options.timeout || DEFAULT_TIMEOUT_MS,
-    headers: { Accept: 'application/json' },
-  });
-
-  const firstResult = body.status === 'OK' ? body.results?.[0] : null;
-  const latitude = firstResult?.geometry?.location?.lat;
-  const longitude = firstResult?.geometry?.location?.lng;
-  const value =
-    typeof latitude === 'number' && typeof longitude === 'number'
-      ? {
-          latitude,
-          longitude,
-          formattedAddress: firstResult?.formatted_address || null,
-        }
-      : null;
-
-  cache.set(cacheKey, {
-    expiresAt: Date.now() + ttlMs,
-    value,
-  });
-
-  return value;
-}
-
 export async function resolveCgvLocation(
   params: ResolveCgvLocationParams,
   options: RequestOptions = {},
 ): Promise<CgvResolvedLocation> {
   const keyword = sanitizeLocationKeyword((params.keyword || '').trim());
   const hasCoordinates = isValidCoordinate(params.latitude) && isValidCoordinate(params.longitude);
+  if (
+    hasCoordinates &&
+    !validKoreanCoordinates(params.latitude as number, params.longitude as number)
+  )
+    throw new Error('유효한 위도/경도를 입력해주세요.');
 
   if (hasCoordinates) {
     return {
@@ -229,13 +128,7 @@ export async function resolveCgvLocation(
     };
   }
 
-  const geocoded = await geocodeAddress(
-    keyword,
-    options,
-    `user:${keyword}`,
-    USER_GEOCODE_CACHE_TTL_MS,
-    userGeocodeCache,
-  );
+  const geocoded = await geocodeLocation(keyword, options);
 
   return {
     keyword,
@@ -244,42 +137,6 @@ export async function resolveCgvLocation(
     geocodeUsed: Boolean(geocoded),
     formattedAddress: geocoded?.formattedAddress ?? null,
   };
-}
-
-async function geocodeCgvTheater(
-  theater: CgvTheater,
-  options: RequestOptions,
-): Promise<{ latitude: number; longitude: number; address: string | null } | null> {
-  const cleanName = theater.theaterName.replace(/^CGV\s*/i, '').trim();
-  const geocoded = await geocodeAddress(
-    `대한민국 CGV ${cleanName}`,
-    options,
-    `theater:${theater.theaterCode}:${cleanName}`,
-    THEATER_GEOCODE_CACHE_TTL_MS,
-    theaterGeocodeCache,
-  );
-
-  return geocoded
-    ? {
-        latitude: geocoded.latitude,
-        longitude: geocoded.longitude,
-        address: geocoded.formattedAddress,
-      }
-    : null;
-}
-
-function pickCandidateTheaters(theaters: CgvTheater[], tokens: string[]): CgvTheater[] {
-  if (tokens.length === 0) {
-    return theaters.slice(0, MAX_CANDIDATE_THEATERS);
-  }
-
-  const scored = theaters
-    .map((theater) => ({ theater, score: scoreTheaterName(theater.theaterName, tokens) }))
-    .filter((item) => item.score > 0)
-    .sort((left, right) => right.score - left.score || left.theater.theaterName.localeCompare(right.theater.theaterName))
-    .map((item) => item.theater);
-
-  return scored.slice(0, MAX_CANDIDATE_THEATERS);
 }
 
 export async function fetchCgvNearbyTheaters(
@@ -295,42 +152,48 @@ export async function fetchCgvNearbyTheaters(
     zyteApiKey: options.zyteApiKey,
   });
   const location = await resolveCgvLocation(params, options);
-  const tokens = extractLocationTokens(location.keyword, location.formattedAddress);
-  const hasGoogleKey = (options.googleMapsApiKey || '').trim().length > 0;
-
-  if (tokens.length === 0 && !hasGoogleKey) {
-    return {
-      ...location,
-      playDate: params.playDate,
-      regionCode: params.regionCode || null,
-      count: 0,
-      theaters: [],
-    };
+  if (location.keyword && location.latitude === null)
+    throw new Error(`위치를 좌표로 변환하지 못했습니다: ${location.keyword}`);
+  const geocodeOptions = { ...readGeocodeEnvironment(), ...options };
+  let resolvedCandidates: CgvResolvedTheater[];
+  if (location.latitude !== null && location.longitude !== null) {
+    // 주변 장소를 공식 CGV 목록에 연결하여 전국 앞부분만 검색하는 오류를 막습니다.
+    const places = await searchKakaoPlaces('CGV', geocodeOptions, {
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
+    resolvedCandidates = places.flatMap((place) => {
+      const cleanName = normalizeText((place.place_name || '').replace(/^CGV\s*/iu, ''));
+      const theater = theaters.find(
+        (item) => normalizeText(item.theaterName.replace(/^CGV\s*/iu, '')) === cleanName,
+      );
+      const latitude = Number(place.y);
+      const longitude = Number(place.x);
+      if (!theater || !validKoreanCoordinates(latitude, longitude)) return [];
+      return [
+        {
+          ...theater,
+          latitude,
+          longitude,
+          address: place.road_address_name || place.address_name || null,
+          distanceKm: Number(
+            calculateDistanceKm(
+              location.latitude as number,
+              location.longitude as number,
+              latitude,
+              longitude,
+            ).toFixed(2),
+          ),
+        },
+      ];
+    });
+  } else {
+    resolvedCandidates = [];
   }
 
-  const candidates = pickCandidateTheaters(theaters, tokens);
-
-  const resolvedCandidates = await Promise.all(
-    candidates.map(async (theater) => {
-      const geocoded = await geocodeCgvTheater(theater, options);
-      const distanceKm =
-        geocoded && location.latitude !== null && location.longitude !== null
-          ? Number(calculateDistanceKm(location.latitude, location.longitude, geocoded.latitude, geocoded.longitude).toFixed(2))
-          : null;
-
-      return {
-        ...theater,
-        latitude: geocoded?.latitude ?? null,
-        longitude: geocoded?.longitude ?? null,
-        distanceKm,
-        address: geocoded?.address ?? null,
-      };
-    }),
-  );
-
   const sorted = resolvedCandidates.sort((left, right) => {
-    const leftDistance = left.distanceKm ?? Number.POSITIVE_INFINITY;
-    const rightDistance = right.distanceKm ?? Number.POSITIVE_INFINITY;
+    const leftDistance = left.distanceKm as number;
+    const rightDistance = right.distanceKm as number;
     return leftDistance - rightDistance || left.theaterName.localeCompare(right.theaterName);
   });
 
@@ -369,6 +232,5 @@ export async function resolveCgvNearestTheater(
 }
 
 export function __testOnlyClearCgvLocationCaches(): void {
-  userGeocodeCache.clear();
-  theaterGeocodeCache.clear();
+  // 캐시를 유지하지 않으므로 초기화할 상태가 없습니다.
 }

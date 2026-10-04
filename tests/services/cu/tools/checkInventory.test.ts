@@ -13,6 +13,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -227,7 +228,7 @@ describe('createCheckInventoryTool', () => {
   });
 
   it('주소가 있어도 Google 키가 없으면 키워드 매장 결과를 그대로 사용한다', async () => {
-    delete process.env.GOOGLE_MAPS_API_KEY;
+    delete process.env.KAKAO_REST_API_KEY;
 
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
@@ -287,8 +288,9 @@ describe('createCheckInventoryTool', () => {
   });
 
   it('storeKeyword 기반 지오코딩이 성공하면 좌표 기반 재조회한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
@@ -337,10 +339,7 @@ describe('createCheckInventoryTool', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.3172, lng: 126.8354 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '경기도 안산시 단원구 중앙대로 885', y: 37.3172, x: 126.8354 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 0, storeList: [] })));
@@ -349,19 +348,20 @@ describe('createCheckInventoryTool', () => {
     await tool.handler({ keyword: '치킨', storeKeyword: '안산 중앙역' });
 
     const geocodeUrl = String(mockFetch.mock.calls[3][0]);
-    expect(geocodeUrl).toContain('maps.googleapis.com/maps/api/geocode/json');
+    expect(geocodeUrl).toContain('dapi.kakao.com/v2/local/search/address.json');
     const requestInit = mockFetch.mock.calls[4][1] as RequestInit;
     const body = JSON.parse(String(requestInit.body));
     expect(body.latVal).toBe('37.3172');
     expect(body.longVal).toBe('126.8354');
     expect(body.itemCd).toBe('2202000140047');
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 
   it('지오코딩 성공 + 재고 시드 없음이면 기본 페이지 타입으로 재조회한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ areaList: [] })))
@@ -387,10 +387,7 @@ describe('createCheckInventoryTool', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.3172, lng: 126.8354 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '경기도 안산시 단원구 중앙대로 885', y: 37.3172, x: 126.8354 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ totalCnt: 0, storeList: [] })));
@@ -404,6 +401,6 @@ describe('createCheckInventoryTool', () => {
     expect(body.recommendId).toBe('');
     expect(body.pageType).toBe('search_improve');
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 });

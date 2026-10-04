@@ -59,16 +59,6 @@ export const ACTION_QUERY_DEFINITIONS: ActionQueryDefinition[] = [
     summary: '이마트24 재고 조회',
     targetPath: '/api/emart24/inventory',
   },
-  {
-    action: 'lottemartFindStores',
-    summary: '롯데마트 매장 검색',
-    targetPath: '/api/lottemart/stores',
-  },
-  {
-    action: 'lottemartSearchProducts',
-    summary: '롯데마트 상품 검색',
-    targetPath: '/api/lottemart/products',
-  },
   { action: 'gs25FindStores', summary: 'GS25 매장 검색', targetPath: '/api/gs25/stores' },
   { action: 'gs25SearchProducts', summary: 'GS25 상품 검색', targetPath: '/api/gs25/products' },
   { action: 'gs25CheckInventory', summary: 'GS25 재고 조회', targetPath: '/api/gs25/inventory' },

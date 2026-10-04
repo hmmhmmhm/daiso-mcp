@@ -17,6 +17,9 @@ const CU_METADATA: ServiceMetadata = {
 export interface CuServiceOptions {
   zyteApiKey?: string;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
 }
 
 class CuService implements ServiceProvider {
@@ -29,6 +32,7 @@ class CuService implements ServiceProvider {
       createFindNearbyStoresTool(this.options.zyteApiKey),
       createCheckInventoryTool({
         zyteApiKey: this.options.zyteApiKey,
+        ...this.options,
         googleMapsApiKey: this.options.googleMapsApiKey,
       }),
     ];

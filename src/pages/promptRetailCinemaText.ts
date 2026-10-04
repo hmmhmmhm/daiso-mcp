@@ -49,32 +49,6 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 ---
 
-### 6-2. 롯데마트 매장/상품 조회
-
-**설명**: 롯데마트 계열 매장 검색과 특정 매장 기준 상품 가격/재고 조회를 제공합니다.
-
-**URL**:
-- ${baseUrl}/api/lottemart/stores?keyword={키워드}
-- ${baseUrl}/api/lottemart/products?keyword={검색어}&storeName={매장명}
-
-**선택 파라미터**:
-- area: 지역 (예: 서울, 경기, 제주)
-- brandVariant: lottemart, toysrus, max, bottlebunker, mealguru, grandgrocery
-- lat: 위도 (선택)
-- lng: 경도 (선택)
-- limit: 최대 결과 수 (기본값: 20)
-- storeCode 또는 storeName: 상품 검색 대상 매장
-- pageLimit: 추가 조회할 최대 페이지 수 (기본값: 3)
-- source: 상품 검색 경로 (auto, legacy, zetta). 빠른 검색이나 헬스체크에는 zetta 권장
-
-**예시**:
-- ${baseUrl}/api/lottemart/stores?keyword=잠실&area=서울&limit=10
-- ${baseUrl}/api/lottemart/stores?area=경기&brandVariant=lottemart&limit=10
-- ${baseUrl}/api/lottemart/products?keyword=콜라&storeName=강변점&area=서울
-- ${baseUrl}/api/lottemart/products?keyword=우유&storeCode=2301&pageLimit=2&source=zetta
-
----
-
 ### 6-3. GS25 매장/상품/재고 조회
 
 **설명**: GS25 매장 탐색, 상품 키워드 검색, 재고 조회를 제공합니다.

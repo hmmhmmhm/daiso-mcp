@@ -97,13 +97,12 @@ describe('GET /', () => {
     expect(emart24Service.name).toBe('이마트24');
   });
 
-  it('롯데마트 서비스가 등록되어 있다', async () => {
+  it('종료된 롯데마트 서비스는 등록하지 않는다', async () => {
     const res = await app.request('/');
     const data = await res.json();
 
     const lotteMartService = data.services.find((s: { id: string }) => s.id === 'lottemart');
-    expect(lotteMartService).toBeDefined();
-    expect(lotteMartService.name).toBe('롯데마트');
+    expect(lotteMartService).toBeUndefined();
   });
 
   it('메가박스 서비스가 등록되어 있다', async () => {
@@ -204,12 +203,12 @@ describe('GET /', () => {
     expect(data.tools).toContain('emart24_check_inventory');
   });
 
-  it('롯데마트 도구들이 포함되어 있다', async () => {
+  it('종료된 롯데마트 도구들은 포함하지 않는다', async () => {
     const res = await app.request('/');
     const data = await res.json();
 
-    expect(data.tools).toContain('lottemart_find_nearby_stores');
-    expect(data.tools).toContain('lottemart_search_products');
+    expect(data.tools).not.toContain('lottemart_find_nearby_stores');
+    expect(data.tools).not.toContain('lottemart_search_products');
   });
 
   it('메가박스 도구들이 포함되어 있다', async () => {
@@ -284,6 +283,7 @@ describe('기본 페이지', () => {
   it('GET /health는 헬스 체크 응답을 반환한다', async () => {
     const res = await app.request('/health', undefined, {
       GOOGLE_MAPS_API_KEY: 'test-google',
+      KAKAO_REST_API_KEY: 'test-kakao',
       ZYTE_API_KEY: '',
       HEALTH_CHECK_SECRET: 'test-secret',
     });
@@ -315,13 +315,14 @@ describe('기본 페이지', () => {
         accessPairValid: true,
         usedBy: ['dtryx'],
       },
-      googleMapsApiKey: { configured: true, usedBy: expect.arrayContaining(['gs25', 'cgv']) },
+      googleMapsApiKey: { configured: true, enabled: false, usedBy: [] },
+      kakaoRestApiKey: { configured: true, usedBy: ['gs25', 'cu', 'opinet', 'megabox', 'lottecinema', 'cgv'] },
       zyteApiKey: {
         configured: false,
         enabled: false,
         usedBy: [],
       },
-      naverLocalSearch: { configured: false, usedBy: ['places'] },
+      naverLocalSearch: { configured: false, usedBy: ['places', 'gs25', 'cu', 'opinet', 'megabox', 'lottecinema', 'cgv'] },
       opinetApiKey: { configured: false, usedBy: ['opinet'] },
       supabaseFeedback: { configured: false, usedBy: ['feedback'] },
       healthCheckSecret: { configured: true, usedBy: ['health-checks'] },
@@ -338,7 +339,7 @@ describe('기본 페이지', () => {
     const data = await res.json();
     expect(data.config.naverLocalSearch).toEqual({
       configured: true,
-      usedBy: ['places'],
+      usedBy: ['places', 'gs25', 'cu', 'opinet', 'megabox', 'lottecinema', 'cgv'],
     });
   });
 

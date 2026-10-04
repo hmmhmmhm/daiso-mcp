@@ -13,7 +13,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete process.env.GOOGLE_MAPS_API_KEY;
+  vi.unstubAllEnvs();
+  delete process.env.KAKAO_REST_API_KEY;
   vi.restoreAllMocks();
 });
 
@@ -83,6 +84,7 @@ describe('createFindTheatersTool', () => {
   });
 
   it('keyword가 있으면 가까운 극장 후보를 우선 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
@@ -101,32 +103,12 @@ describe('createFindTheatersTool', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       );
 
@@ -139,7 +121,8 @@ describe('createFindTheatersTool', () => {
   });
 
   it('환경 변수 구글 키도 사용한다', async () => {
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
     mockFetch
       .mockResolvedValueOnce(
         new Response(
@@ -158,32 +141,12 @@ describe('createFindTheatersTool', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       );
 

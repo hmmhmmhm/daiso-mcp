@@ -56,14 +56,12 @@ describe('GET /api/opinet', () => {
   });
 
   it('반경 내 주유소 API는 위경도와 location을 지원한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })))
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ formatted_address: '서울 강남역', geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '서울 강남역', y: 37.4979, x: 127.0276 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })));
@@ -73,7 +71,7 @@ describe('GET /api/opinet', () => {
     });
     const byLocation = await app.request('/api/opinet/stations/around?location=%EA%B0%95%EB%82%A8%EC%97%AD', undefined, {
       OPINET_API_KEY: 'key',
-      GOOGLE_MAPS_API_KEY: 'google-key',
+      KAKAO_REST_API_KEY: 'google-key',
     });
 
     expect((await byCoordinates.json()).data.location.inputType).toBe('coordinates');

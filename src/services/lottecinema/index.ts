@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../utils/geocode.js';
 /**
  * 롯데시네마 서비스 프로바이더
  */
@@ -16,20 +17,20 @@ const LOTTECINEMA_METADATA: ServiceMetadata = {
 };
 
 class LotteCinemaService implements ServiceProvider {
-  constructor(private readonly options: { googleMapsApiKey?: string } = {}) {}
+  constructor(private readonly options: GeocodeOptions = {}) {}
 
   readonly metadata = LOTTECINEMA_METADATA;
 
   getTools(): ToolRegistration[] {
     return [
-      createFindNearbyTheatersTool(this.options.googleMapsApiKey),
-      createListNowShowingTool(this.options.googleMapsApiKey),
-      createGetRemainingSeatsTool(this.options.googleMapsApiKey),
+      createFindNearbyTheatersTool(this.options.googleMapsApiKey, this.options),
+      createListNowShowingTool(this.options.googleMapsApiKey, this.options),
+      createGetRemainingSeatsTool(this.options.googleMapsApiKey, this.options),
     ];
   }
 }
 
-export function createLotteCinemaService(options: { googleMapsApiKey?: string } = {}): ServiceProvider {
+export function createLotteCinemaService(options: GeocodeOptions = {}): ServiceProvider {
   return new LotteCinemaService(options);
 }
 

@@ -1,3 +1,5 @@
+import { handleLotteMartFindStores } from './api/lottemartHandlers.js';
+import { geocodeBindings } from './utils/geocode.js';
 /**
  * 다중 서비스 MCP 서버
  *
@@ -20,7 +22,6 @@ import { createDtryxService } from './services/dtryx/index.js';
 import { createMegaboxService } from './services/megabox/index.js';
 import { createCgvService } from './services/cgv/index.js';
 import { createLotteCinemaService } from './services/lottecinema/index.js';
-import { createLotteMartService } from './services/lottemart/index.js';
 import { createCuService } from './services/cu/index.js';
 import { createEmart24Service } from './services/emart24/index.js';
 import { createGs25Service } from './services/gs25/index.js';
@@ -70,7 +71,7 @@ const createRegistry = (bindings?: AppBindings) => {
     createDaisoService,
     () =>
       createGs25Service({
-        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(bindings),
         zyteApiKey: bindings?.ZYTE_API_KEY,
         apiKey: bindings?.GS25_API_KEY,
       }),
@@ -89,29 +90,24 @@ const createRegistry = (bindings?: AppBindings) => {
     () =>
       createOpinetService({
         apiKey: bindings?.OPINET_API_KEY,
-        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(bindings),
       }),
     () =>
       createCuService({
         zyteApiKey: bindings?.ZYTE_API_KEY,
-        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(bindings),
       }),
     createEmart24Service,
-    () =>
-      createLotteMartService({
-        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
-        zyteApiKey: bindings?.ZYTE_API_KEY,
-      }),
-    createMegaboxService,
+    () => createMegaboxService(geocodeBindings(bindings)),
     () => createDtryxService(dtryxTransportFromBindings(bindings)),
     () =>
       createLotteCinemaService({
-        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(bindings),
       }),
     () =>
       createCgvService({
         zyteApiKey: bindings?.ZYTE_API_KEY,
-        googleMapsApiKey: bindings?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(bindings),
       }),
     () =>
       createOliveyoungService({
@@ -389,6 +385,7 @@ app.get('/privacy', (c) => {
 // GET API 엔드포인트 (MCP 미지원 에이전트용)
 
 app.get('/api/actions/query', async (c) => {
+  if (['lottemartFindStores', 'lottemartSearchProducts'].includes(c.req.query('action') || '')) return handleLotteMartFindStores(c);
   try {
     const targetUrl = buildActionQueryTargetUrl(c.req.url);
     const headers = new Headers(c.req.raw.headers);

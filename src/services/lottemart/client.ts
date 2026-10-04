@@ -167,26 +167,14 @@ export async function fetchLotteMartStores(
   geocodeUsed: boolean;
 }> {
   const { area, keyword = '', brandVariant = '', latitude, longitude, limit = 20 } = params;
-  const { timeout = DEFAULT_LOTTEMART_TIMEOUT_MS, googleMapsApiKey } = options;
+  const { timeout = DEFAULT_LOTTEMART_TIMEOUT_MS } = options;
   if (area && !normalizeArea(area)) {
     throw new Error(`지원하지 않는 지역입니다: ${area}`);
   }
 
-  let resolvedLatitude = latitude;
-  let resolvedLongitude = longitude;
-  let geocodeUsed = false;
-
-  if (
-    (typeof resolvedLatitude !== 'number' || typeof resolvedLongitude !== 'number') &&
-    keyword.trim().length > 0
-  ) {
-    const geocoded = await geocodeLotteMartAddress(keyword, { timeout, googleMapsApiKey });
-    if (geocoded) {
-      resolvedLatitude = geocoded.latitude;
-      resolvedLongitude = geocoded.longitude;
-      geocodeUsed = true;
-    }
-  }
+  const resolvedLatitude = latitude;
+  const resolvedLongitude = longitude;
+  const geocodeUsed = false;
 
   const sessionCookie = await getLotteMartSessionCookie({ timeout });
 
@@ -219,33 +207,9 @@ export async function fetchLotteMartStores(
     resolvedLongitude,
   );
 
-  const enriched = await Promise.all(
-    filtered.map(async (store) => {
-      if (
-        typeof resolvedLatitude !== 'number' ||
-        typeof resolvedLongitude !== 'number' ||
-        store.latitude !== 0 ||
-        store.longitude !== 0
-      ) {
-        return store;
-      }
-
-      const geocoded = await geocodeLotteMartAddress(store.address, { timeout, googleMapsApiKey });
-      if (!geocoded) {
-        return store;
-      }
-
-      return {
-        ...store,
-        latitude: geocoded.latitude,
-        longitude: geocoded.longitude,
-        distanceM: calculateDistanceM(resolvedLatitude, resolvedLongitude, geocoded.latitude, geocoded.longitude),
-      };
-    }),
-  );
 
   return {
-    stores: sortStores(enriched).slice(0, limit),
+    stores: sortStores(filtered).slice(0, limit),
     location:
       typeof resolvedLatitude === 'number' && typeof resolvedLongitude === 'number'
         ? { latitude: resolvedLatitude, longitude: resolvedLongitude }

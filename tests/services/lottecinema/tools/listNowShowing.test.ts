@@ -7,7 +7,7 @@ import { __testOnlyClearLotteCinemaLocationCaches } from '../../../../src/servic
 import { createListNowShowingTool } from '../../../../src/services/lottecinema/tools/listNowShowing.js';
 
 const mockFetch = vi.fn();
-const originalGoogleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+const originalGoogleMapsApiKey = process.env.KAKAO_REST_API_KEY;
 
 beforeEach(() => {
   mockFetch.mockReset();
@@ -16,9 +16,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   __testOnlyClearLotteCinemaLocationCaches();
-  process.env.GOOGLE_MAPS_API_KEY = originalGoogleMapsApiKey;
+  process.env.KAKAO_REST_API_KEY = originalGoogleMapsApiKey;
 });
 
 describe('createListNowShowingTool', () => {
@@ -66,20 +67,11 @@ describe('createListNowShowingTool', () => {
   });
 
   it('위치 키워드로 최근접 극장을 찾아 영화/회차를 조회한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -215,13 +207,14 @@ describe('createListNowShowingTool', () => {
       ),
     );
 
-    process.env.GOOGLE_MAPS_API_KEY = '';
+    process.env.KAKAO_REST_API_KEY = '';
     const tool = createListNowShowingTool();
-    const result = await tool.handler({ playDate: '20260310', keyword: '제주공항' });
-    const parsed = JSON.parse(result.content[0].text);
-
-    expect(parsed.filters.theaterId).toBeNull();
-    expect(parsed.resolvedTheater).toBeNull();
-    expect(parsed.counts.showtimes).toBe(0);
+    await expect(tool.handler({ playDate: '20260310', keyword: '제주공항' })).rejects.toThrow('위치를 좌표로 변환하지 못했습니다');
+    expect(mockFetch).not.toHaveBeenCalled();
   });
+});
+it('좌표가 유효해도 주변 극장이 없으면 목록을 비운다', async () => {
+ mockFetch.mockResolvedValue(new Response(JSON.stringify({ IsOK: true, Cinemas: { Cinemas: { Items: [] } }, Movies: { Movies: { Items: [] } } })));
+ const result = await createListNowShowingTool().handler({ latitude: 35.115, longitude: 129.041, playDate: '20261005' });
+ expect(JSON.parse(result.content[0].text).resolvedTheater).toBeNull();
 });

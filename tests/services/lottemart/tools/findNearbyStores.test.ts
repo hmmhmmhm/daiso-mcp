@@ -17,6 +17,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -68,7 +69,7 @@ describe('createFindNearbyStoresTool', () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.location).toEqual({ latitude: 37.5354, longitude: 127.0958 });
-    expect(parsed.stores[0].distanceM).toBe(0);
+    expect(parsed.stores[0].distanceM).toBeNull();
   });
 
   it('지역이 없으면 전체 지역 기준 응답을 구성하고 전달된 API 키를 우선 사용한다', async () => {

@@ -33,20 +33,11 @@ describe('GET /api/megabox/theaters', () => {
   });
 
   it('keyword로 지오코드한 위치를 기준으로 메가박스 지점을 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -57,7 +48,7 @@ describe('GET /api/megabox/theaters', () => {
       );
 
     const res = await app.request('/api/megabox/theaters?keyword=안산%20중앙역', undefined, {
-      GOOGLE_MAPS_API_KEY: 'test-google-key',
+      KAKAO_REST_API_KEY: 'test-google-key',
     });
     expect(res.status).toBe(200);
 
@@ -102,20 +93,11 @@ describe('GET /api/megabox/movies', () => {
   });
 
   it('keyword만 있어도 가까운 극장을 자동 선택한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -147,7 +129,7 @@ describe('GET /api/megabox/movies', () => {
       );
 
     const res = await app.request('/api/megabox/movies?playDate=20260315&keyword=안산%20중앙역', undefined, {
-      GOOGLE_MAPS_API_KEY: 'test-google-key',
+      KAKAO_REST_API_KEY: 'test-google-key',
     });
     expect(res.status).toBe(200);
 
@@ -189,20 +171,11 @@ describe('GET /api/megabox/seats', () => {
   });
 
   it('keyword만 있어도 가까운 극장 좌석을 조회한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -232,7 +205,7 @@ describe('GET /api/megabox/seats', () => {
       );
 
     const res = await app.request('/api/megabox/seats?playDate=20260315&keyword=안산%20중앙역', undefined, {
-      GOOGLE_MAPS_API_KEY: 'test-google-key',
+      KAKAO_REST_API_KEY: 'test-google-key',
     });
     expect(res.status).toBe(200);
 

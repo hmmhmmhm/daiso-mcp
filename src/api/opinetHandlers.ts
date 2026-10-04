@@ -1,3 +1,4 @@
+import { geocodeBindings } from '../utils/geocode.js';
 import { getErrorMessage } from '../core/errors.js';
 import {
   fetchOpinetAveragePrices,
@@ -83,7 +84,7 @@ export async function handleOpinetStationsAround(c: ApiContext) {
       },
       {
         apiKey: c.env?.OPINET_API_KEY,
-        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(c.env),
         timeoutMs: parseInteger(c.req.query('timeoutMs')),
       },
     );

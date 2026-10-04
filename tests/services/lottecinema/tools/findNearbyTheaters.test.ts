@@ -15,6 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   __testOnlyClearLotteCinemaLocationCaches();
 });
@@ -64,20 +65,11 @@ describe('createFindNearbyTheatersTool', () => {
   });
 
   it('위치 키워드로도 주변 지점을 찾는다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(

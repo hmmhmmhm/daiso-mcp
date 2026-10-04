@@ -1,3 +1,4 @@
+import { geocodeBindings } from '../utils/geocode.js';
 /**
  * 메가박스 GET API 핸들러
  */
@@ -40,7 +41,7 @@ export async function handleMegaboxFindNearbyTheaters(c: ApiContext) {
         timeout: timeoutMs,
       },
       {
-        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(c.env),
         timeout: timeoutMs,
       },
     );
@@ -85,7 +86,7 @@ export async function handleMegaboxListNowShowing(c: ApiContext) {
           timeout: timeoutMs,
         },
         {
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
           timeout: timeoutMs,
         },
       );
@@ -158,7 +159,7 @@ export async function handleMegaboxGetRemainingSeats(c: ApiContext) {
           timeout: timeoutMs,
         },
         {
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
           timeout: timeoutMs,
         },
       );

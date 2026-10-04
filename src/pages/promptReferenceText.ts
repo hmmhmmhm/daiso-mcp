@@ -55,8 +55,6 @@ export function buildPromptReferenceText(baseUrl: string): string {
 | GS25_STORE_SEARCH_FAILED | GS25 매장 조회 실패 |
 | GS25_PRODUCT_SEARCH_FAILED | GS25 상품 조회 실패 |
 | GS25_INVENTORY_CHECK_FAILED | GS25 재고 조회 실패 |
-| LOTTEMART_STORE_SEARCH_FAILED | 롯데마트 매장 조회 실패 |
-| LOTTEMART_PRODUCT_SEARCH_FAILED | 롯데마트 상품 조회 실패 |
 | SEVENELEVEN_INVENTORY_CHECK_FAILED | 세븐일레븐 재고 조회 실패 |
 | PLACES_SEARCH_FAILED | 주변 장소 검색 실패 |
 | DEVELOPER_REQUEST_SUBMIT_FAILED | 개발자 요청 저장 실패 |
@@ -108,7 +106,6 @@ export function buildPromptReferenceText(baseUrl: string): string {
    - 너무 넓은 축약어로만 매칭된 경우에는 확정 상품처럼 단정하지 말고, 추정 매칭임을 짧게 밝힌 뒤 재고를 안내합니다.
    - 위치/브랜드/상품명은 한 인자에 섞지 말고 가능한 한 분리해서 도구에 전달합니다.
 8. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
-9. **롯데마트 상품 조회**: /api/lottemart/products는 keyword와 함께 storeCode 또는 storeName이 필요합니다.
 10. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 11. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
 12. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
@@ -129,8 +126,6 @@ MCP 연결 정보: ${baseUrl}/mcp
 - daiso_check_inventory: 재고 확인
 - daiso_get_price_info: 가격 정보 조회
 - daiso_get_display_location: 진열 위치 조회
-- lottemart_find_nearby_stores: 롯데마트 주변 매장 탐색
-- lottemart_search_products: 롯데마트 상품 검색
 - gs25_find_nearby_stores: GS25 주변 매장 탐색
 - gs25_search_products: GS25 상품 검색
 - gs25_check_inventory: GS25 재고 조회

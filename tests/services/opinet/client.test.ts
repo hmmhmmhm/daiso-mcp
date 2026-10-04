@@ -113,15 +113,13 @@ describe('opinet client', () => {
   });
 
   it('위경도와 location 기반 반경 검색을 지원한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     const fetchImpl = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })))
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ formatted_address: '서울 강남역', geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남역', y: 37.4979, x: 127.0276 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })));
@@ -132,7 +130,7 @@ describe('opinet client', () => {
     );
     const locationResult = await fetchOpinetStationsAround(
       { location: '강남역' },
-      { apiKey: 'key', googleMapsApiKey: 'google-key', fetchImpl },
+      { apiKey: 'key', kakaoRestApiKey: 'google-key', fetchImpl },
     );
 
     expect(coordinateResult.location).toMatchObject({

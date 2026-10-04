@@ -114,6 +114,7 @@ describe('GET /api/gs25/inventory', () => {
   });
 
   it('itemCode만으로도 GS25 재고 검색 결과를 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
@@ -130,10 +131,7 @@ describe('GET /api/gs25/inventory', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.3187, lng: 126.8389 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '', y: 37.3187, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -154,7 +152,7 @@ describe('GET /api/gs25/inventory', () => {
     const res = await app.request(
       '/api/gs25/inventory?itemCode=8801056038861&storeKeyword=%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD',
       undefined,
-      { GOOGLE_MAPS_API_KEY: 'test-google-key' },
+      { KAKAO_REST_API_KEY: 'test-google-key' },
     );
     expect(res.status).toBe(200);
 

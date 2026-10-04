@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * 롯데시네마 영화 목록 조회 도구
  */
@@ -17,7 +18,7 @@ interface ListNowShowingArgs {
   timeoutMs?: number;
 }
 
-async function listNowShowing(args: ListNowShowingArgs, googleMapsApiKey?: string): Promise<McpToolResponse> {
+async function listNowShowing(args: ListNowShowingArgs, googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): Promise<McpToolResponse> {
   const { playDate = toYyyymmdd(), theaterId, movieId, keyword, latitude, longitude, timeoutMs = 15000 } = args;
   let resolvedTheater = null;
   let targetTheaterId = theaterId;
@@ -33,7 +34,8 @@ async function listNowShowing(args: ListNowShowingArgs, googleMapsApiKey?: strin
       },
       {
         timeout: timeoutMs,
-        googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
+        ...geocodeOptions,
+        googleMapsApiKey,
       },
     );
     resolvedTheater = resolved.theater;
@@ -83,7 +85,7 @@ async function listNowShowing(args: ListNowShowingArgs, googleMapsApiKey?: strin
   };
 }
 
-export function createListNowShowingTool(googleMapsApiKey?: string): ToolRegistration {
+export function createListNowShowingTool(googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): ToolRegistration {
   return {
     name: 'lottecinema_list_now_showing',
     metadata: {
@@ -99,7 +101,7 @@ export function createListNowShowingTool(googleMapsApiKey?: string): ToolRegistr
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => listNowShowing(args as ListNowShowingArgs, googleMapsApiKey)) as (
+    handler: ((args) => listNowShowing(args as ListNowShowingArgs, googleMapsApiKey, geocodeOptions)) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

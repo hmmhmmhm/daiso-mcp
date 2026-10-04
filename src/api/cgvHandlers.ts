@@ -1,3 +1,4 @@
+import { geocodeBindings } from '../utils/geocode.js';
 /**
  * CGV GET API 핸들러
  */
@@ -50,7 +51,7 @@ export async function handleCgvFindTheaters(c: ApiContext) {
         {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
         },
       );
 
@@ -119,7 +120,7 @@ export async function handleCgvSearchMovies(c: ApiContext) {
         {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
         },
       );
       resolvedTheater = resolved.theater;
@@ -193,7 +194,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
         {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
         },
       );
       resolvedTheater = resolved.theater;

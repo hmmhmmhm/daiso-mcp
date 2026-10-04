@@ -16,6 +16,7 @@ beforeEach(() => {
 
 describe('GET /api/cgv/movies keyword normalization', () => {
   it('복합 요청 문장에서도 안산 극장을 선택한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
@@ -37,32 +38,12 @@ describe('GET /api/cgv/movies keyword normalization', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -79,7 +60,7 @@ describe('GET /api/cgv/movies keyword normalization', () => {
       'CGV 안산 중앙역 근처 극장 찾고 오늘 하는 영화 목록 찾고 남은 좌석수 찾아주세요',
     );
     const res = await app.request(`/api/cgv/movies?playDate=20260315&keyword=${keyword}`, undefined, {
-      GOOGLE_MAPS_API_KEY: 'test-google-key',
+      KAKAO_REST_API_KEY: 'test-google-key',
     });
 
     expect(res.status).toBe(200);

@@ -40,8 +40,6 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  npx daiso cgv-theaters 강남 --limit 5');
   writeOut('  npx daiso cgv-timetable --playDate 20260307 --theaterCode 0056');
   writeOut('  npx daiso lottecinema-theaters --keyword "안산 중앙역" --limit 5');
-  writeOut('  npx daiso lottemart-stores 잠실 --area 서울 --limit 10');
-  writeOut('  npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울');
   writeOut('  npx daiso emart24-products 두바이 --pageSize 20');
   writeOut('  npx daiso gs25-products 오감자');
   writeOut('  npx daiso gs25-inventory 오감자 --storeKeyword 강남');
@@ -55,7 +53,6 @@ export function printHelp(writeOut: (message: string) => void): void {
   writeOut('  제품명을 먼저 검색해 productId를 확인: npx daiso products 수납박스');
   writeOut('  productId로 재고 확인: npx daiso inventory <productId> --keyword 강남역');
   writeOut('  매장을 먼저 검색해 storeName 또는 storeCode를 확인: npx daiso stores 강남역');
-  writeOut('  롯데마트 매장 확인: npx daiso lottemart-stores 잠실 --area 서울');
   writeOut('');
   writeOut('상세 도움말:');
   writeOut('  npx daiso help <command>');

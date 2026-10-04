@@ -19,6 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   __testOnlyClearLotteCinemaLocationCaches();
 });
@@ -96,20 +97,11 @@ describe('handleLotteCinemaFindNearbyTheaters', () => {
   });
 
   it('위치 키워드로 주변 지점을 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -137,7 +129,7 @@ describe('handleLotteCinemaFindNearbyTheaters', () => {
       );
 
     const ctx = createMockContext({ keyword: '안산 중앙역' });
-    ctx.env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+    ctx.env = { KAKAO_REST_API_KEY: 'test-google-key' };
     await handleLotteCinemaFindNearbyTheaters(ctx);
 
     expect(ctx.json).toHaveBeenCalledWith(
@@ -194,20 +186,11 @@ describe('handleLotteCinemaListNowShowing', () => {
   });
 
   it('위치 키워드로 최근접 극장을 찾아 영화/회차 목록을 반환한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -291,7 +274,7 @@ describe('handleLotteCinemaListNowShowing', () => {
       );
 
     const ctx = createMockContext({ playDate: '20260310', keyword: '안산 중앙역', movieId: '23816' });
-    ctx.env = { GOOGLE_MAPS_API_KEY: 'test-google-key' };
+    ctx.env = { KAKAO_REST_API_KEY: 'test-google-key' };
     await handleLotteCinemaListNowShowing(ctx);
 
     expect(ctx.json).toHaveBeenCalledWith(
@@ -474,15 +457,6 @@ describe('handleLotteCinemaGetRemainingSeats', () => {
     const ctx = createMockContext({ playDate: '20260310', keyword: '제주공항', movieId: '23816' });
     await handleLotteCinemaGetRemainingSeats(ctx);
 
-    expect(ctx.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: true,
-        data: expect.objectContaining({
-          filters: expect.objectContaining({ theaterId: null, keyword: '제주공항' }),
-          resolvedTheater: null,
-          seats: [],
-        }),
-      }),
-    );
+    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: expect.objectContaining({ message: expect.stringContaining('위치를 좌표로 변환하지 못했습니다') }) }), 500);
   });
 });

@@ -194,7 +194,7 @@ export const ACTION_QUERY_PARAMETERS = [
     name: 'area',
     in: 'query',
     required: false,
-    description: '롯데마트 지역',
+    description: '지역',
     schema: { type: 'string' },
   },
   {
@@ -222,7 +222,7 @@ export const ACTION_QUERY_PARAMETERS = [
     name: 'brandVariant',
     in: 'query',
     required: false,
-    description: '롯데마트 브랜드 변형',
+    description: '브랜드 변형',
     schema: { type: 'string' },
   },
   {
@@ -257,7 +257,7 @@ export const ACTION_QUERY_PARAMETERS = [
     name: 'pageLimit',
     in: 'query',
     required: false,
-    description: '롯데마트 추가 페이지 수',
+    description: '추가 페이지 수',
     schema: { type: 'integer' },
   },
   {
@@ -308,7 +308,7 @@ export const ACTION_QUERY_PARAMETERS = [
     in: 'query',
     required: false,
     description:
-      '매장명. 롯데마트 상품 조회에서 storeCode가 없을 때 사용하며, 모르면 먼저 lottemartFindNearbyStores 또는 /api/lottemart/stores로 확인하세요.',
+      '매장명',
     schema: { type: 'string' },
   },
   {

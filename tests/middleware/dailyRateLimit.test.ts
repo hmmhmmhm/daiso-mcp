@@ -72,7 +72,6 @@ describe('isDailyRateLimitedRequest', () => {
     '/api/cgv/timetable',
     '/api/cu/stores',
     '/api/gs25/products',
-    '/api/lottemart/products',
   ])('%s GET을 보호한다', (path) => {
     expect(isDailyRateLimitedRequest(new Request(`https://example.com${path}`))).toBe(true);
   });
@@ -87,6 +86,9 @@ describe('isDailyRateLimitedRequest', () => {
     '/api/cgvish/timetable',
     '/api/cuish/stores',
     '/api/gs250/products',
+    '/api/lottemart/stores',
+    '/api/lottemart/products',
+    '/api/lottemart/debug',
     '/api/lottemartish/products',
     '/api/cgv',
   ])('%s 경로를 제외한다', (path) => {

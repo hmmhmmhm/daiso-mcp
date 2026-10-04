@@ -9,7 +9,7 @@
 
 # Daiso MCP 및 Skill
 
-다이소(제품/매장/재고), 상품 가격 비교, 주변 음식점/카페, 주유소/유가, 개발자 요청 제출, 롯데마트(매장/상품), GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표), 디트릭스(독립·예술영화관/상영작/잔여 좌석) 조회 기능을 MCP, CLI, Codex Skill로 AI에 연결합니다.
+다이소(제품/매장/재고), 상품 가격 비교, 주변 음식점/카페, 주유소/유가, 개발자 요청 제출, GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표), 디트릭스(독립·예술영화관/상영작/잔여 좌석) 조회 기능을 MCP, CLI, Codex Skill로 AI에 연결합니다.
 
 디트릭스의 지원 범위와 CLI 예시는 [독립·예술영화관 조회 가이드](docs/dtryx.md)를 참고하세요.
 
@@ -57,7 +57,7 @@
     </tr>
     <tr>
       <td>리테일</td>
-      <td>다이소, 올리브영, 롯데마트</td>
+      <td>다이소, 올리브영</td>
       <td>상품, 매장, 재고</td>
     </tr>
     <tr>
@@ -95,7 +95,7 @@
 </div>
 
 > [!IMPORTANT]
-> 최근 공개 서버 사용량이 크게 증가하여 2026년 7월 18일부터 올리브영·CGV·CU·GS25·롯데마트의 검색을 포함한 공개 GET API에 IP당 하루 합산 3,000회(KST 기준)의 호출 제한을 적용합니다. 한도를 초과하는 사용이 필요하다면 Daiso MCP는 오픈 소스이므로 이 저장소를 직접 배포해 이용해 주세요.
+> 최근 공개 서버 사용량이 크게 증가하여 2026년 7월 18일부터 올리브영·CGV·CU·GS25의 검색을 포함한 공개 GET API에 IP당 하루 합산 3,000회(KST 기준)의 호출 제한을 적용합니다. 한도를 초과하는 사용이 필요하다면 Daiso MCP는 오픈 소스이므로 이 저장소를 직접 배포해 이용해 주세요.
 
 <div align="center">
 
@@ -136,8 +136,6 @@ ChatGPT, Claude, Home Assistant, Grok 같은 AI 앱에서 바로 연결해 사�
 콜라 어디가 싼지 비교해줘
 올리브영 mcp로 명동 근처 매장 찾아줘
 이마트24 mcp로 강남 근처 매장과 두바이 재고 알려줘
-롯데마트 mcp로 잠실 근처 매장 찾아줘
-롯데마트 mcp로 강변점에서 콜라 재고 알려줘
 GS25 mcp로 강남 근처 매장과 오감자 재고 알려줘
 세븐일레븐 mcp로 삼각김밥 검색해줘
 세븐일레븐 mcp로 안산 중앙역 근처 매장 찾아줘
@@ -183,8 +181,6 @@ CGV mcp로 강남 상영 영화와 시간표 알려줘
 올리브영 mcp를 사용해서 명동 근처 매장 찾아줘
 올리브영 mcp를 사용해서 선크림 재고 확인해줘
 이마트24 mcp를 사용해서 강남 매장 찾고 두바이 재고 확인해줘
-롯데마트 mcp를 사용해서 잠실 근처 매장 찾아줘
-롯데마트 mcp를 사용해서 강변점에서 콜라 검색해줘
 GS25 mcp를 사용해서 강남 매장 찾고 오감자 재고 확인해줘
 세븐일레븐 mcp를 사용해서 안산 중앙역 근처 매장 찾고 핫식스 재고 확인해줘
 메가박스 mcp를 사용해서 강남역 근처 지점 찾아줘
@@ -318,8 +314,6 @@ npx daiso cu-inventory 과자 --storeKeyword 강남
 npx daiso cgv-theaters 강남 --limit 10
 npx daiso cgv-movies --playDate 20260307 --theaterCode 0056
 npx daiso cgv-timetable --playDate 20260307 --theaterCode 0056
-npx daiso lottemart-stores 잠실 --area 서울 --limit 10
-npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울
 npx daiso emart24-stores 강남 --service24h true
 npx daiso emart24-products 두바이 --pageSize 20
 npx daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015
@@ -404,7 +398,7 @@ GET /api/opinet/stations/around?x=314681.8&y=544837&radiusMeters=3000&fuelCode=B
 GET /api/opinet/station?id=A0010207
 ```
 
-오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 `lat/lng`, `location`, KATEC `x/y`를 모두 지원하며, `location` 검색에는 `GOOGLE_MAPS_API_KEY`가 필요합니다.
+오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 `lat/lng`, `location`, KATEC `x/y`를 모두 지원하며, `location` 검색에는 `KAKAO_REST_API_KEY`를 설정합니다. 역명·상호명은 네이버 지역 검색으로 보완합니다. 자세한 설정은 [무료 위치 검색 가이드](./docs/free-location-search.md)를 확인하세요.
 
 운영 제약 및 캐싱 정책:
 
@@ -415,7 +409,7 @@ GET /api/opinet/station?id=A0010207
 - `GET /api/opinet/lowest`: 30분 캐시, 10분 stale-while-revalidate
 - `GET /api/opinet/stations/around`: 20분 캐시, 5분 stale-while-revalidate
 - `GET /api/opinet/station`: 60분 캐시, 10분 stale-while-revalidate
-- `location` 키워드의 Google Geocoding 결과는 Worker 인스턴스 메모리에서 24시간 캐시합니다.
+- 주소·장소명 변환은 카카오 주소/키워드 검색을 사용합니다. 직접 좌표를 입력하면 위치 변환 API를 호출하지 않습니다.
 - 호출 한도에 자주 도달하면 운영자가 담당 기관인 한국석유공사/오피넷에 문의해 추가 할당량 또는 별도 이용 조건을 협의할 예정입니다.
 
 ### 개발자 요청 제출
@@ -437,6 +431,10 @@ GET /api/feedback/requests?type=bug&title=제목&description=설명
 
 로컬 실행이나 배포 환경에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 설정하세요. 테이블 스키마는 [supabase-agent-requests.sql](./docs/supabase-agent-requests.sql)에 있습니다.
 
+### 무료 위치 검색
+
+주소·역명·상호명을 좌표로 바꾸는 기능은 카카오맵 무료 API를 사용합니다. Google Geocoding과 Zyte는 호출하지 않습니다. 카카오 무료 쿼터 대상 확인, 환경 변수와 실패 시 동작은 [무료 위치 검색 가이드](./docs/free-location-search.md)에 있습니다.
+
 ### 운영 헬스 체크
 
 공개 상태 페이지: **[Daiso MCP Status](https://aka-page.betteruptime.com/)**
@@ -453,7 +451,7 @@ curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
 주요 쿼리:
 
 - `service=gs25`: 특정 서비스만 확인
-- `check=lottemart.products`: 특정 체크만 확인
+- `check=daiso.products`: 특정 체크만 확인
 - `mode=quick|deep|full`: 체크 모드 선택
 - `fresh=true`: 60초 캐시 우회
 - `includeSamples=true`: 첫 결과 이름 샘플 포함
@@ -484,7 +482,7 @@ curl -H "x-health-check-key: $HEALTH_CHECK_SECRET" \
   "https://mcp.aka.page/api/rate-limit/stats?service=cgv"
 ```
 
-쿼리 필터는 `from`, `to`, `service`입니다. `from`과 `to`는 함께 지정하거나 둘 다 생략해야 하며 날짜 형식은 `YYYY-MM-DD`입니다. `service`에는 `oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`만 사용할 수 있습니다. 날짜를 생략하면 현재 KST 일자를 포함한 최근 7일을 조회합니다. 조회 가능한 보관 범위는 현재 KST 일자와 그 이전 29일이며, 한 번에 KST 달력 날짜 기준 최대 30일을 요청할 수 있습니다.
+쿼리 필터는 `from`, `to`, `service`입니다. `from`과 `to`는 함께 지정하거나 둘 다 생략해야 하며 날짜 형식은 `YYYY-MM-DD`입니다. `service`에는 `oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`만 사용할 수 있습니다. `lottemart` 필터는 지원 중단 전 호출 제한 통계를 조회하기 위해 유지합니다. 날짜를 생략하면 현재 KST 일자를 포함한 최근 7일을 조회합니다. 조회 가능한 보관 범위는 현재 KST 일자와 그 이전 29일이며, 한 번에 KST 달력 날짜 기준 최대 30일을 요청할 수 있습니다.
 
 성공 응답은 전체 합계와 일별·서비스별 차단 요청 수와 고유 차단 주체 수를 제공합니다.
 
@@ -640,7 +638,9 @@ daiso 인터랙티브 모드
 - [이마트24 앱 스크래핑 준비 가이드](./docs/emart24-app-scraping-preparation-guide.md)
 - [이마트24 앱 스크래핑 리플레이 가이드](./docs/emart24-app-scraping-replay-guide.md)
 
-### 롯데마트
+### 롯데마트 과거 분석
+
+롯데마트 지원은 중단했습니다. 기존 REST 경로는 `410 SERVICE_RETIRED`, 기존 CLI 명령은 지원 중단 오류를 반환합니다.
 
 - [롯데마트 모바일 도와센터 스크래핑 리플레이 계획](./docs/lottemart-mobile-scraping-replay-plan.md)
 

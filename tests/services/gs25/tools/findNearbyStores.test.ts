@@ -15,6 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -103,16 +104,14 @@ describe('createFindNearbyStoresTool', () => {
   });
 
   it('좌표가 없고 keyword가 있으면 지오코딩을 시도한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.5, x: 127 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -130,20 +129,18 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.geocodeUsed).toBe(true);
     expect(parsed.location).toEqual({ latitude: 37.5, longitude: 127 });
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 
   it('지오코딩이 성공하면 좌표 기반 매장 조회를 사용하고 키워드 필터가 비어도 가까운 매장을 반환한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.4979, x: 127.0276 }] }),
         ),
       )
       .mockResolvedValueOnce(
@@ -181,20 +178,18 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.count).toBe(2);
     expect(parsed.stores[0].storeCode).toBe('near');
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 
   it('좌표 기반 매장 조회가 비면 상품 재고 조회를 이용해 가까운 GS25 매장으로 대체한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.4979, x: 127.0276 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
@@ -222,20 +217,18 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.count).toBe(1);
     expect(parsed.stores[0].storeCode).toBe('near');
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 
   it('좌표 기반 매장 조회가 비고 fallback 재고 조회가 실패해도 빈 매장 결과를 반환한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.4979, x: 127.0276 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
@@ -250,20 +243,18 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.fallbackUsed).toBe(true);
     expect(parsed.count).toBe(0);
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 
   it('fallback 상품 재고 조회도 비면 빈 매장 결과를 반환한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-          }),
+          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.4979, x: 127.0276 }] }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ stores: [] })))
@@ -277,6 +268,6 @@ describe('createFindNearbyStoresTool', () => {
     expect(parsed.fallbackUsed).toBe(true);
     expect(parsed.count).toBe(0);
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 });

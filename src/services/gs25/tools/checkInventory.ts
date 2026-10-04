@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * GS25 재고 확인 도구
  */
@@ -29,6 +30,9 @@ interface CheckInventoryArgs {
   storeLimit?: number;
   timeoutMs?: number;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
   zyteApiKey?: string;
   apiKey?: string;
 }
@@ -81,7 +85,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     if (firstAddress.length > 0) {
       const geocoded = await geocodeGs25Address(firstAddress, {
         timeout: timeoutMs,
-        googleMapsApiKey,
+        ...args,
+      googleMapsApiKey,
       });
       if (geocoded) {
         resolvedLatitude = geocoded.latitude;
@@ -240,6 +245,7 @@ export function createCheckInventoryTool(
   googleMapsApiKey?: string,
   zyteApiKey?: string,
   apiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
 ): ToolRegistration {
   return {
     name: 'gs25_check_inventory',
@@ -278,6 +284,7 @@ export function createCheckInventoryTool(
     handler: ((args: CheckInventoryArgs) =>
       checkInventory({
         ...args,
+        ...geocodeOptions,
         googleMapsApiKey: args.googleMapsApiKey || googleMapsApiKey,
         zyteApiKey: args.zyteApiKey || zyteApiKey,
         apiKey: args.apiKey || apiKey,

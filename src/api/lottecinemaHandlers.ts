@@ -1,3 +1,4 @@
+import { geocodeBindings } from '../utils/geocode.js';
 /**
  * 롯데시네마 GET API 핸들러
  */
@@ -42,7 +43,7 @@ export async function handleLotteCinemaFindNearbyTheaters(c: ApiContext) {
       },
       {
         timeout: timeoutMs,
-        googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+        ...geocodeBindings(c.env),
       },
     );
 
@@ -76,7 +77,7 @@ export async function handleLotteCinemaListNowShowing(c: ApiContext) {
         },
         {
           timeout: timeoutMs,
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
         },
       );
       resolvedTheater = resolved.theater;
@@ -142,7 +143,7 @@ export async function handleLotteCinemaGetRemainingSeats(c: ApiContext) {
         },
         {
           timeout: timeoutMs,
-          googleMapsApiKey: c.env?.GOOGLE_MAPS_API_KEY,
+          ...geocodeBindings(c.env),
         },
       );
       resolvedTheater = resolved.theater;

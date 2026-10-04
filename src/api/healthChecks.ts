@@ -176,7 +176,6 @@ const CLI_CONTRACT_PATHS = [
   '/api/gs25/stores?keyword=%EA%B0%95%EB%82%A8&limit=1',
   '/api/seveneleven/products?query=%EC%BB%A4%ED%94%BC&size=1',
   '/api/emart24/products?keyword=%EC%BB%A4%ED%94%BC&pageSize=1',
-  '/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeCode=2301&area=%EC%84%9C%EC%9A%B8&pageLimit=1',
   '/api/oliveyoung/products?keyword=%EC%84%A0%ED%81%AC%EB%A6%BC&size=1',
   '/api/megabox/theaters?keyword=%EA%B0%95%EB%82%A8&limit=1',
   '/api/lottecinema/theaters?keyword=%EC%9E%A0%EC%8B%A4&limit=1',

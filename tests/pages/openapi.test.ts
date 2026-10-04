@@ -73,7 +73,7 @@ describe('OpenAPI 페이지', () => {
       spec.paths['/api/actions/query'].get.parameters.find(
         (parameter) => parameter.name === 'storeName',
       )?.description,
-    ).toContain('모르면 먼저 lottemartFindNearbyStores');
+    ).not.toContain('lottemart');
     expect(
       spec.paths['/api/actions/query'].get.parameters.some(
         (parameter) => parameter.name === 'location',
@@ -150,15 +150,8 @@ describe('OpenAPI 페이지', () => {
     expect(spec.paths['/api/emart24/stores']).toBeDefined();
     expect(spec.paths['/api/emart24/products']).toBeDefined();
     expect(spec.paths['/api/emart24/inventory']).toBeDefined();
-    expect(spec.paths['/api/lottemart/stores']).toBeDefined();
-    expect(spec.paths['/api/lottemart/products']).toBeDefined();
-    expect(
-      (
-        spec.paths['/api/lottemart/products'] as {
-          get: { parameters: Array<{ name: string }> };
-        }
-      ).get.parameters.map((parameter) => parameter.name),
-    ).toEqual(expect.arrayContaining(['source', 'timeoutMs']));
+    expect(spec.paths['/api/lottemart/stores']).toBeUndefined();
+    expect(spec.paths['/api/lottemart/products']).toBeUndefined();
     expect(spec.paths['/api/gs25/stores']).toBeDefined();
     expect(spec.paths['/api/gs25/products']).toBeDefined();
     expect(spec.paths['/api/gs25/inventory']).toBeDefined();

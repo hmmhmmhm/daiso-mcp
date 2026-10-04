@@ -14,7 +14,7 @@ export function registerCuRoutes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'cu-stores-v1',
+        keyPrefix: 'cu-stores-v2',
       },
       () => handleCuFindStores(c),
     ),
@@ -26,7 +26,7 @@ export function registerCuRoutes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'cu-inventory-v1',
+        keyPrefix: 'cu-inventory-v2',
       },
       () => handleCuCheckInventory(c),
     ),

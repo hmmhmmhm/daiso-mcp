@@ -172,7 +172,6 @@ describe('일일 호출 제한 통합', () => {
     ['cgv', '/api/cgv/timetable'],
     ['cu', '/api/cu/stores'],
     ['gs25', '/api/gs25/products'],
-    ['lottemart', '/api/lottemart/products'],
   ] as const)('%s 한도 초과 429마다 정확히 한 건을 원장에 먼저 기록한다', async (service, path) => {
     const denied = createResult({ allowed: false, count: 3000, remaining: 0 });
     const fixture = createRateLimitEnv([denied]);
@@ -215,6 +214,19 @@ describe('일일 호출 제한 통합', () => {
       service,
       identityId: QUOTA_ID,
     });
+  });
+
+  it.each(['stores', 'products', 'debug'])('종료된 롯데마트 %s는 소진된 쿼터를 조회하거나 기록하지 않고 410을 반환한다', async (endpoint) => {
+    const fixture = createRateLimitEnv([createResult({ allowed: false, count: 3000, remaining: 0 })]);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const response = await app.request(`/api/lottemart/${endpoint}`, {
+      headers: { 'CF-Connecting-IP': '203.0.113.10' },
+    }, fixture.env);
+    expect(response.status).toBe(410);
+    expect((await response.json()).error.code).toBe('SERVICE_RETIRED');
+    expect(response.headers.get('X-RateLimit-Remaining')).toBeNull();
+    expect(fixture.calls).toEqual([]);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('교차 존 요청의 원장에는 원본·정규화 주체·단순 해시 대신 DO ID만 기록한다', async () => {

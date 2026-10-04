@@ -33,6 +33,9 @@ const BRAND_NAMES: Record<string, string> = {
 interface OpinetClientOptions {
   apiKey?: string;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }
@@ -252,7 +255,7 @@ export async function fetchOpinetStationsAround(
   options: OpinetClientOptions = {},
 ): Promise<OpinetAroundStationsResult> {
   const resolvedLocation = await resolveOpinetLocation(params, {
-    googleMapsApiKey: options.googleMapsApiKey,
+    ...options,
     timeoutMs: options.timeoutMs,
     fetchImpl: options.fetchImpl,
   });

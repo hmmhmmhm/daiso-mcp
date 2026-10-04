@@ -18,11 +18,17 @@ interface CheckInventoryArgs {
   timeoutMs?: number;
   zyteApiKey?: string;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
 }
 
 interface CuInventoryToolOptions {
   zyteApiKey?: string;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
 }
 
 async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
@@ -82,7 +88,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       if (firstAddress.length > 0) {
         const geocoded = await geocodeCuAddress(firstAddress, {
           timeout: timeoutMs,
-          googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
+          ...args,
+          googleMapsApiKey,
         });
         if (geocoded) {
           const hasStockSeed = !!firstStockItem?.itemCode;
@@ -194,6 +201,7 @@ export function createCheckInventoryTool(options: CuInventoryToolOptions = {}): 
     handler: ((args: CheckInventoryArgs) =>
       checkInventory({
         ...args,
+        ...options,
         zyteApiKey: options.zyteApiKey ?? args.zyteApiKey,
         googleMapsApiKey: options.googleMapsApiKey ?? args.googleMapsApiKey,
       })) as (args: unknown) => Promise<McpToolResponse>,

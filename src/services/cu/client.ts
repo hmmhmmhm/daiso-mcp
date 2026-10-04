@@ -1,3 +1,4 @@
+import { geocodeLocation } from '../../utils/geocode.js';
 /**
  * CU API 클라이언트
  */
@@ -12,6 +13,9 @@ interface RequestOptions {
   timeout?: number;
   apiKey?: string;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
 }
 
 interface FetchCuStoresParams {
@@ -33,22 +37,9 @@ interface FetchCuStockParams {
   searchSort: string;
 }
 
-interface Coordinate {
-  latitude: number;
-  longitude: number;
-}
 
-interface GoogleGeocodeResponse {
-  status?: string;
-  results?: Array<{
-    geometry?: {
-      location?: {
-        lat?: number;
-        lng?: number;
-      };
-    };
-  }>;
-}
+
+
 
 const CU_DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
@@ -148,48 +139,9 @@ async function requestCuWebHtml(
   throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
 }
 
-export async function geocodeCuAddress(address: string, options: RequestOptions = {}): Promise<Coordinate | null> {
-  const keyword = address.trim();
-  if (keyword.length === 0) {
-    return null;
-  }
-
-  const { timeout = 15000, googleMapsApiKey } = options;
-  const apiKey = (googleMapsApiKey || '').trim();
-  if (apiKey.length === 0) {
-    return null;
-  }
-
-  const endpoint = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  endpoint.searchParams.set('address', keyword);
-  endpoint.searchParams.set('key', apiKey);
-  const body = await fetchJson<GoogleGeocodeResponse>(endpoint.toString(), {
-    method: 'GET',
-    timeout,
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (body.status !== 'OK') {
-    return null;
-  }
-
-  const firstLocation = body.results?.[0]?.geometry?.location;
-  if (!firstLocation) {
-    return null;
-  }
-
-  const latitude = toNumber(firstLocation.lat);
-  const longitude = toNumber(firstLocation.lng);
-  if (latitude === 0 || longitude === 0) {
-    return null;
-  }
-
-  return {
-    latitude,
-    longitude,
-  };
+export async function geocodeCuAddress(address: string, options: RequestOptions = {}) {
+  const location = await geocodeLocation(address, options);
+  return location ? { latitude: location.latitude, longitude: location.longitude } : null;
 }
 
 function decodeHtmlEntities(value: string): string {

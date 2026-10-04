@@ -14,7 +14,7 @@ export function registerCgvRoutes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'cgv-theaters-v1',
+        keyPrefix: 'cgv-theaters-v2',
       },
       () => handleCgvFindTheaters(c),
     ),
@@ -26,7 +26,7 @@ export function registerCgvRoutes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'cgv-movies-v1',
+        keyPrefix: 'cgv-movies-v2',
       },
       () => handleCgvSearchMovies(c),
     ),
@@ -38,7 +38,7 @@ export function registerCgvRoutes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 30,
-        keyPrefix: 'cgv-timetable-v1',
+        keyPrefix: 'cgv-timetable-v2',
       },
       () => handleCgvGetTimetable(c),
     ),

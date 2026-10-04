@@ -21,7 +21,6 @@ const PROTECTED_SERVICES: ReadonlyArray<{ prefix: string; service: RateLimitServ
   { prefix: '/api/cgv/', service: 'cgv' },
   { prefix: '/api/cu/', service: 'cu' },
   { prefix: '/api/gs25/', service: 'gs25' },
-  { prefix: '/api/lottemart/', service: 'lottemart' },
 ] as const;
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

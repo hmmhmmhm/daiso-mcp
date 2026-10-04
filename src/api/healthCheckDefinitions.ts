@@ -125,15 +125,6 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     allowEmpty: true,
   },
   {
-    id: 'lottemart.products',
-    service: 'lottemart',
-    target: 'products',
-    mode: 'quick',
-    path: '/api/lottemart/products?keyword=%EC%BD%9C%EB%9D%BC&storeCode=2301&area=%EC%84%9C%EC%9A%B8&pageLimit=1&source=zetta',
-    collectionKey: 'products',
-    requiredFields: ['productCode', 'name', 'productName'],
-  },
-  {
     id: 'oliveyoung.products',
     service: 'oliveyoung',
     target: 'products',

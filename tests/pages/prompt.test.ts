@@ -35,8 +35,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('/api/oliveyoung/products');
     expect(text).toContain('products[].imageUrl');
     expect(text).toContain('/api/oliveyoung/inventory');
-    expect(text).toContain('/api/lottemart/stores');
-    expect(text).toContain('/api/lottemart/products');
+    expect(text).not.toContain('/api/lottemart/stores');
+    expect(text).not.toContain('/api/lottemart/products');
     expect(text).toContain('/api/gs25/stores');
     expect(text).toContain('/api/gs25/products');
     expect(text).toContain('/api/gs25/inventory');
@@ -102,8 +102,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('GS25_STORE_SEARCH_FAILED');
     expect(text).toContain('GS25_PRODUCT_SEARCH_FAILED');
     expect(text).toContain('GS25_INVENTORY_CHECK_FAILED');
-    expect(text).toContain('LOTTEMART_STORE_SEARCH_FAILED');
-    expect(text).toContain('LOTTEMART_PRODUCT_SEARCH_FAILED');
+    expect(text).not.toContain('LOTTEMART_STORE_SEARCH_FAILED');
+    expect(text).not.toContain('LOTTEMART_PRODUCT_SEARCH_FAILED');
     expect(text).toContain('SEVENELEVEN_INVENTORY_CHECK_FAILED');
   });
 
@@ -116,8 +116,8 @@ describe('generatePromptText', () => {
     expect(text).toContain('daiso_check_inventory');
     expect(text).toContain('daiso_get_price_info');
     expect(text).toContain('daiso_get_display_location');
-    expect(text).toContain('lottemart_find_nearby_stores');
-    expect(text).toContain('lottemart_search_products');
+    expect(text).not.toContain('lottemart_find_nearby_stores');
+    expect(text).not.toContain('lottemart_search_products');
     expect(text).toContain('gs25_find_nearby_stores');
     expect(text).toContain('gs25_search_products');
     expect(text).toContain('gs25_check_inventory');

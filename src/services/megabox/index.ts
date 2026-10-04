@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../utils/geocode.js';
 /**
  * 메가박스 서비스 프로바이더
  */
@@ -16,19 +17,20 @@ const MEGABOX_METADATA: ServiceMetadata = {
 };
 
 class MegaboxService implements ServiceProvider {
+  constructor(private readonly options: GeocodeOptions = {}) {}
   readonly metadata = MEGABOX_METADATA;
 
   getTools(): ToolRegistration[] {
     return [
-      createFindNearbyTheatersTool(),
-      createListNowShowingTool(),
-      createGetRemainingSeatsTool(),
+      createFindNearbyTheatersTool(this.options),
+      createListNowShowingTool(this.options),
+      createGetRemainingSeatsTool(this.options),
     ];
   }
 }
 
-export function createMegaboxService(): ServiceProvider {
-  return new MegaboxService();
+export function createMegaboxService(options: GeocodeOptions = {}): ServiceProvider {
+  return new MegaboxService(options);
 }
 
 export * from './types.js';

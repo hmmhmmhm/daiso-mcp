@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../utils/geocode.js';
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../core/types.js';
 import {
@@ -55,7 +56,7 @@ export function createOpinetLowestStationsTool(apiKey?: string): ToolRegistratio
   };
 }
 
-export function createOpinetStationsAroundTool(apiKey?: string, googleMapsApiKey?: string): ToolRegistration {
+export function createOpinetStationsAroundTool(apiKey?: string, googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): ToolRegistration {
   return {
     name: 'opinet_search_stations_around',
     metadata: {
@@ -90,7 +91,7 @@ export function createOpinetStationsAroundTool(apiKey?: string, googleMapsApiKey
       timeoutMs?: number;
     }) =>
       buildTextResponse(
-        await fetchOpinetStationsAround(args, { apiKey, googleMapsApiKey, timeoutMs: args.timeoutMs }),
+        await fetchOpinetStationsAround(args, { ...geocodeOptions, apiKey, googleMapsApiKey, timeoutMs: args.timeoutMs }),
       )) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

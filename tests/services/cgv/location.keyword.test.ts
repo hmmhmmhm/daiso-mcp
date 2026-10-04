@@ -18,24 +18,16 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
 describe('CGV 위치 키워드 정규화', () => {
   it('복합 요청 문장에서도 위치 구간만 추출해 지오코드한다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [
-            {
-              formatted_address: '대한민국 경기도 안산시 단원구 고잔동',
-              geometry: {
-                location: { lat: 37.3171, lng: 126.8389 },
-              },
-            },
-          ],
-        }),
+        JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동', y: 37.3171, x: 126.8389 }] }),
       ),
     );
 
@@ -43,12 +35,12 @@ describe('CGV 위치 키워드 정규화', () => {
       {
         keyword: 'CGV 안산 중앙역 근처 극장 찾고 오늘 하는 영화 목록 찾고 남은 좌석수 찾아주세요',
       },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     const requestUrl = new URL(mockFetch.mock.calls[0]?.[0] as string);
 
-    expect(requestUrl.searchParams.get('address')).toBe('안산 중앙역');
+    expect(requestUrl.searchParams.get('query')).toBe('안산 중앙역');
     expect(result.keyword).toBe('안산 중앙역');
     expect(result.latitude).toBe(37.3171);
     expect(result.longitude).toBe(126.8389);
@@ -68,6 +60,7 @@ describe('CGV 위치 키워드 정규화', () => {
   });
 
   it('정규화된 위치로 가까운 극장을 고른다', async () => {
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch
       .mockResolvedValueOnce(
         new Response(
@@ -89,32 +82,12 @@ describe('CGV 위치 키워드 정규화', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동',
-                geometry: {
-                  location: { lat: 37.3171, lng: 126.8389 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동', y: 37.3171, x: 126.8389 }] }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            status: 'OK',
-            results: [
-              {
-                formatted_address: '대한민국 경기도 안산시 단원구 고잔동 535',
-                geometry: {
-                  location: { lat: 37.3172, lng: 126.839 },
-                },
-              },
-            ],
-          }),
+          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
         ),
       );
 
@@ -123,7 +96,7 @@ describe('CGV 위치 키워드 정규화', () => {
         playDate: '20260315',
         keyword: 'CGV 안산 중앙역 근처 극장 찾고 오늘 하는 영화 목록 찾고 남은 좌석수 찾아주세요',
       },
-      { googleMapsApiKey: 'test-google-key' },
+      { kakaoRestApiKey: 'test-google-key' },
     );
 
     expect(result.keyword).toBe('안산 중앙역');

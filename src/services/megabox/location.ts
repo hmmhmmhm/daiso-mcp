@@ -2,12 +2,15 @@
  * 메가박스 위치 해석 및 근처 지점 조회 보조 모듈
  */
 
-import { fetchJson } from '../../utils/http.js';
+import { geocodeLocation, validKoreanCoordinates } from '../../utils/geocode.js';
 import { fetchMegaboxBookingList, fetchMegaboxTheaterInfo } from './client.js';
 
 interface RequestOptions {
   timeout?: number;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
 }
 
 interface ResolveMegaboxLocationParams {
@@ -15,23 +18,6 @@ interface ResolveMegaboxLocationParams {
   latitude?: number;
   longitude?: number;
   areaCode?: string;
-}
-
-interface GoogleGeocodeResponse {
-  status?: string;
-  results?: Array<{
-    formatted_address?: string;
-    address_components?: Array<{
-      long_name?: string;
-      short_name?: string;
-    }>;
-    geometry?: {
-      location?: {
-        lat?: number;
-        lng?: number;
-      };
-    };
-  }>;
 }
 
 export interface MegaboxNearbyTheater {
@@ -61,12 +47,6 @@ const DEFAULT_LATITUDE = 37.5665;
 const DEFAULT_LONGITUDE = 126.978;
 const DEFAULT_AREA_CODE = '11';
 const DEFAULT_TIMEOUT_MS = 15000;
-const GEOCODE_CACHE_TTL_MS = 60 * 60 * 1000;
-
-const megaboxGeocodeCache = new Map<
-  string,
-  { expiresAt: number; value: { latitude: number; longitude: number; areaCode: string | null } | null }
->();
 
 const MEGABOX_AREA_CODE_BY_REGION: Array<[string, string]> = [
   ['서울특별시', '11'],
@@ -133,82 +113,6 @@ function resolveAreaCodeFromText(text: string): string | null {
   return null;
 }
 
-function resolveAreaCodeFromGeocodeResult(result: NonNullable<GoogleGeocodeResponse['results']>[number]): string | null {
-  for (const component of result.address_components || []) {
-    const candidates = [component.long_name || '', component.short_name || ''];
-    for (const candidate of candidates) {
-      const areaCode = resolveAreaCodeFromText(candidate);
-      if (areaCode) {
-        return areaCode;
-      }
-    }
-  }
-
-  return resolveAreaCodeFromText(result.formatted_address || '');
-}
-
-async function geocodeMegaboxLocation(
-  params: ResolveMegaboxLocationParams,
-  options: RequestOptions = {},
-): Promise<{ latitude: number; longitude: number; areaCode: string | null } | null> {
-  const apiKey = (options.googleMapsApiKey || '').trim();
-  if (apiKey.length === 0) {
-    return null;
-  }
-
-  const hasCoordinates = isValidCoordinate(params.latitude) && isValidCoordinate(params.longitude);
-  const keyword = (params.keyword || '').trim();
-  if (!hasCoordinates && keyword.length === 0) {
-    return null;
-  }
-
-  const cacheKey = hasCoordinates ? `coords:${params.latitude},${params.longitude}` : `keyword:${keyword}`;
-  const cached = megaboxGeocodeCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.value;
-  }
-
-  const endpoint = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  if (hasCoordinates) {
-    endpoint.searchParams.set('latlng', `${params.latitude},${params.longitude}`);
-  } else {
-    endpoint.searchParams.set('address', keyword);
-  }
-  endpoint.searchParams.set('key', apiKey);
-
-  const body = await fetchJson<GoogleGeocodeResponse>(endpoint.toString(), {
-    method: 'GET',
-    timeout: options.timeout || DEFAULT_TIMEOUT_MS,
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (body.status !== 'OK') {
-    megaboxGeocodeCache.set(cacheKey, {
-      expiresAt: Date.now() + GEOCODE_CACHE_TTL_MS,
-      value: null,
-    });
-    return null;
-  }
-
-  const firstResult = body.results?.[0];
-  const latitude = firstResult?.geometry?.location?.lat;
-  const longitude = firstResult?.geometry?.location?.lng;
-  const areaCode = firstResult ? resolveAreaCodeFromGeocodeResult(firstResult) : null;
-  const value =
-    typeof latitude === 'number' && typeof longitude === 'number'
-      ? { latitude, longitude, areaCode }
-      : null;
-
-  megaboxGeocodeCache.set(cacheKey, {
-    expiresAt: Date.now() + GEOCODE_CACHE_TTL_MS,
-    value,
-  });
-
-  return value;
-}
-
 export async function resolveMegaboxLocation(
   params: ResolveMegaboxLocationParams,
   options: RequestOptions = {},
@@ -216,31 +120,32 @@ export async function resolveMegaboxLocation(
   const explicitAreaCode = (params.areaCode || '').trim();
   const keyword = (params.keyword || '').trim();
   const hasCoordinates = isValidCoordinate(params.latitude) && isValidCoordinate(params.longitude);
+  if (
+    hasCoordinates &&
+    !validKoreanCoordinates(params.latitude as number, params.longitude as number)
+  )
+    throw new Error('유효한 위도/경도를 입력해주세요.');
 
-  let latitude: number = hasCoordinates ? (params.latitude as number) : DEFAULT_LATITUDE;
-  let longitude: number = hasCoordinates ? (params.longitude as number) : DEFAULT_LONGITUDE;
-  let areaCode = explicitAreaCode || '';
-  let geocodeUsed = false;
-
-  if (!explicitAreaCode || !hasCoordinates) {
-    const geocoded = await geocodeMegaboxLocation(params, options);
-    if (geocoded) {
-      if (!hasCoordinates) {
-        latitude = geocoded.latitude;
-        longitude = geocoded.longitude;
-      }
-      if (!explicitAreaCode && geocoded.areaCode) {
-        areaCode = geocoded.areaCode;
-      }
-      geocodeUsed = true;
-    }
-  }
+  const geocoded = !hasCoordinates && keyword ? await geocodeLocation(keyword, options) : null;
+  if (keyword && !hasCoordinates && !geocoded)
+    throw new Error(`위치를 좌표로 변환하지 못했습니다: ${keyword}`);
+  const latitude = hasCoordinates
+    ? (params.latitude as number)
+    : (geocoded?.latitude ?? DEFAULT_LATITUDE);
+  const longitude = hasCoordinates
+    ? (params.longitude as number)
+    : (geocoded?.longitude ?? DEFAULT_LONGITUDE);
+  const areaCode =
+    explicitAreaCode ||
+    resolveAreaCodeFromText(geocoded?.formattedAddress || keyword) ||
+    (hasCoordinates ? '' : DEFAULT_AREA_CODE);
+  const geocodeUsed = Boolean(geocoded);
 
   return {
     keyword: keyword.length > 0 ? keyword : null,
     latitude,
     longitude,
-    areaCode: areaCode || DEFAULT_AREA_CODE,
+    areaCode,
     geocodeUsed,
   };
 }
@@ -281,7 +186,12 @@ export async function fetchMegaboxNearbyTheaters(
         latitude: info.latitude,
         longitude: info.longitude,
         distanceKm: Number(
-          calculateDistanceKm(resolved.latitude, resolved.longitude, info.latitude, info.longitude).toFixed(2),
+          calculateDistanceKm(
+            resolved.latitude,
+            resolved.longitude,
+            info.latitude,
+            info.longitude,
+          ).toFixed(2),
         ),
       };
     })
@@ -324,5 +234,5 @@ export async function resolveMegaboxNearestTheater(
 }
 
 export function __testOnlyClearMegaboxLocationCaches(): void {
-  megaboxGeocodeCache.clear();
+  // 캐시를 유지하지 않으므로 초기화할 상태가 없습니다.
 }

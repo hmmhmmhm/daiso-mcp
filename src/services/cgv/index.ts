@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../utils/geocode.js';
 /**
  * CGV 서비스 프로바이더
  */
@@ -16,20 +17,20 @@ const CGV_METADATA: ServiceMetadata = {
 };
 
 class CgvService implements ServiceProvider {
-  constructor(private readonly options: { zyteApiKey?: string; googleMapsApiKey?: string } = {}) {}
+  constructor(private readonly options: GeocodeOptions & { zyteApiKey?: string } = {}) {}
 
   readonly metadata = CGV_METADATA;
 
   getTools(): ToolRegistration[] {
     return [
-      createFindTheatersTool(this.options.zyteApiKey, this.options.googleMapsApiKey),
-      createSearchMoviesTool(this.options.zyteApiKey, this.options.googleMapsApiKey),
-      createGetTimetableTool(this.options.zyteApiKey, this.options.googleMapsApiKey),
+      createFindTheatersTool(this.options.zyteApiKey, this.options.googleMapsApiKey, this.options),
+      createSearchMoviesTool(this.options.zyteApiKey, this.options.googleMapsApiKey, this.options),
+      createGetTimetableTool(this.options.zyteApiKey, this.options.googleMapsApiKey, this.options),
     ];
   }
 }
 
-export function createCgvService(options: { zyteApiKey?: string; googleMapsApiKey?: string } = {}): ServiceProvider {
+export function createCgvService(options: GeocodeOptions & { zyteApiKey?: string } = {}): ServiceProvider {
   return new CgvService(options);
 }
 

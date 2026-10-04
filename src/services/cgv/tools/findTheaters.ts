@@ -1,3 +1,4 @@
+import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * CGV 극장 검색 도구
  */
@@ -21,6 +22,7 @@ async function findTheaters(
   args: FindTheatersArgs,
   apiKey?: string,
   googleMapsApiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
 ): Promise<McpToolResponse> {
   const {
     playDate = toYyyymmdd(),
@@ -46,7 +48,8 @@ async function findTheaters(
       {
         timeout: timeoutMs,
         zyteApiKey: apiKey,
-        googleMapsApiKey: googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY,
+        ...geocodeOptions,
+        googleMapsApiKey,
       },
     );
 
@@ -81,7 +84,7 @@ async function findTheaters(
   };
 }
 
-export function createFindTheatersTool(apiKey?: string, googleMapsApiKey?: string): ToolRegistration {
+export function createFindTheatersTool(apiKey?: string, googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): ToolRegistration {
   return {
     name: 'cgv_find_theaters',
     metadata: {
@@ -97,7 +100,7 @@ export function createFindTheatersTool(apiKey?: string, googleMapsApiKey?: strin
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => findTheaters(args as FindTheatersArgs, apiKey, googleMapsApiKey)) as (
+    handler: ((args) => findTheaters(args as FindTheatersArgs, apiKey, googleMapsApiKey, geocodeOptions)) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

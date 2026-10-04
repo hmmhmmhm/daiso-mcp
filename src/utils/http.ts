@@ -5,6 +5,7 @@ import { diagnosticEvent } from './diagnostics.js';
  */
 
 export interface FetchOptions extends RequestInit {
+  fetchImpl?: typeof fetch;
   timeout?: number;
   /** fetchJson에서 허용할 정확한 HTTP 상태입니다. 생략하면 모든 2xx를 허용합니다. */
   expectedStatus?: number;
@@ -120,6 +121,7 @@ async function requestWithTimeout<T>(
 ): Promise<T> {
   const {
     timeout = 10000,
+    fetchImpl = fetch,
     retries = 0,
     retryDelayMs = 250,
     retryStatusCodes = DEFAULT_RETRY_STATUS_CODES,
@@ -140,7 +142,7 @@ async function requestWithTimeout<T>(
     let responseStatus: number | undefined;
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchImpl(url, {
         ...restOptions,
         signal: controller.signal,
       });

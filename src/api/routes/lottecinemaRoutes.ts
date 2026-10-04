@@ -18,7 +18,7 @@ export function registerLotteCinemaRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'lottecinema-theaters-v1',
+        keyPrefix: 'lottecinema-theaters-v2',
       },
       () => handleLotteCinemaFindNearbyTheaters(c),
     ),
@@ -30,7 +30,7 @@ export function registerLotteCinemaRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'lottecinema-movies-v1',
+        keyPrefix: 'lottecinema-movies-v2',
       },
       () => handleLotteCinemaListNowShowing(c),
     ),
@@ -42,7 +42,7 @@ export function registerLotteCinemaRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 30,
-        keyPrefix: 'lottecinema-seats-v1',
+        keyPrefix: 'lottecinema-seats-v2',
       },
       () => handleLotteCinemaGetRemainingSeats(c),
     ),

@@ -1,3 +1,4 @@
+import { geocodeLocation } from '../../utils/geocode.js';
 /**
  * GS25 API 클라이언트
  */
@@ -26,6 +27,9 @@ export {
 interface RequestOptions {
   timeout?: number;
   googleMapsApiKey?: string;
+  kakaoRestApiKey?: string;
+  naverClientId?: string;
+  naverClientSecret?: string;
   zyteApiKey?: string;
   apiKey?: string;
 }
@@ -51,17 +55,7 @@ interface Gs25WebLocationStore {
   posY?: string | number;
 }
 
-interface GoogleGeocodeResponse {
-  status?: string;
-  results?: Array<{
-    geometry?: {
-      location?: {
-        lat?: number;
-        lng?: number;
-      };
-    };
-  }>;
-}
+
 
 interface CacheEntry {
   expiresAt: number;
@@ -126,46 +120,8 @@ function buildCacheKey(
 }
 
 export async function geocodeGs25Address(address: string, options: RequestOptions = {}) {
-  const keyword = address.trim();
-  if (keyword.length === 0) {
-    return null;
-  }
-
-  const { timeout = 15000, googleMapsApiKey } = options;
-  const apiKey = (googleMapsApiKey || '').trim();
-  if (apiKey.length === 0) {
-    return null;
-  }
-
-  const endpoint = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  endpoint.searchParams.set('address', keyword);
-  endpoint.searchParams.set('key', apiKey);
-
-  const body = await fetchJson<GoogleGeocodeResponse>(endpoint.toString(), {
-    ...GS25_DEFAULT_FETCH_OPTIONS,
-    method: 'GET',
-    timeout,
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (body.status !== 'OK') {
-    return null;
-  }
-
-  const location = body.results?.[0]?.geometry?.location;
-  if (!location) {
-    return null;
-  }
-
-  const latitude = toNumber(location.lat);
-  const longitude = toNumber(location.lng);
-  if (latitude === 0 || longitude === 0) {
-    return null;
-  }
-
-  return { latitude, longitude };
+  const location = await geocodeLocation(address, options);
+  return location ? { latitude: location.latitude, longitude: location.longitude } : null;
 }
 
 export async function fetchGs25WebStores(

@@ -57,10 +57,8 @@ Use `--json` for structured output. In shell commands, quoted Korean strings are
 - Emart24 products: `npx daiso emart24-products 커피 --pageSize 20 --json`
 - Emart24 inventory: `npx daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015 --json`
 
-## Marts And Olive Young
+## Olive Young
 
-- Lotte Mart stores: `npx daiso lottemart-stores 잠실 --area 서울 --limit 10 --json`
-- Lotte Mart products: `npx daiso lottemart-products 콜라 --storeName 강변점 --area 서울 --json`
 - Olive Young products: `npx daiso get /api/oliveyoung/products --keyword 선크림 --size 10 --json`
 - Olive Young stores: `npx daiso get /api/oliveyoung/stores --keyword 명동 --limit 10 --json`
 - Olive Young inventory: `npx daiso get /api/oliveyoung/inventory --keyword 선크림 --storeKeyword 명동 --json`

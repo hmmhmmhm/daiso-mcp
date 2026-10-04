@@ -15,6 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -105,8 +106,9 @@ describe('createCheckInventoryTool', () => {
   });
 
   it('storeKeyword 기반 지오코딩이 성공하면 좌표를 반영한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     // 1. 기본 매장 목록 조회 (지오코딩용)
     mockFetch.mockResolvedValueOnce(
@@ -116,10 +118,7 @@ describe('createCheckInventoryTool', () => {
     // 2. Google Geocoding API 응답
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [{ geometry: { location: { lat: 37.5, lng: 127 } } }],
-        }),
+        JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구 강남대로 1', y: 37.5, x: 127 }] }),
       ),
     );
 
@@ -148,7 +147,7 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.geocodeUsed).toBe(true);
     expect(parsed.location).toEqual({ latitude: 37.5, longitude: 127 });
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 
   it('상품 검색 결과가 없으면 keyword fallback을 사용한다', async () => {
@@ -182,8 +181,9 @@ describe('createCheckInventoryTool', () => {
   });
 
   it('위치 기반 재고 조회 결과가 있으면 storeKeyword 문자열 필터가 비어도 가까운 재고 매장을 유지한다', async () => {
-    const prevGoogleKey = process.env.GOOGLE_MAPS_API_KEY;
-    process.env.GOOGLE_MAPS_API_KEY = 'test-google-key';
+    vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
+    const prevGoogleKey = process.env.KAKAO_REST_API_KEY;
+    process.env.KAKAO_REST_API_KEY = 'test-google-key';
 
     mockFetch.mockResolvedValueOnce(
       createStoreStockResponse([
@@ -193,10 +193,7 @@ describe('createCheckInventoryTool', () => {
 
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({
-          status: 'OK',
-          results: [{ geometry: { location: { lat: 37.4979, lng: 127.0276 } } }],
-        }),
+        JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구 강남대로 1', y: 37.4979, x: 127.0276 }] }),
       ),
     );
 
@@ -226,6 +223,6 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.inventory.stores[0].storeCode).toBe('near');
     expect(parsed.inventory.inStockStoreCount).toBe(1);
 
-    process.env.GOOGLE_MAPS_API_KEY = prevGoogleKey;
+    process.env.KAKAO_REST_API_KEY = prevGoogleKey;
   });
 });
