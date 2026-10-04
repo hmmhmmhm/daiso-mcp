@@ -22,6 +22,8 @@ describe('buildReadmeSection', () => {
     });
 
     expect(section).toContain('> [!IMPORTANT]');
+    expect(section).not.toContain('롯데마트');
+    expect(section).toContain('올리브영·CGV·CU·GS25');
     expect(section).toContain('2026년 7월 18일부터');
     expect(section).toContain('IP당 하루 합산 3,000회(KST 기준)');
     expect(section.indexOf('workers-invocations.png')).toBeLessThan(

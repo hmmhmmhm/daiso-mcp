@@ -25,7 +25,9 @@ interface KakaoDocument {
 function validKakaoDocument(value: unknown): value is KakaoDocument {
   if (!value || typeof value !== 'object') return false;
   const document = value as Record<string, unknown>;
-  return ['place_name', 'address_name', 'road_address_name'].every((field) => document[field] === undefined || typeof document[field] === 'string');
+  return ['place_name', 'address_name', 'road_address_name'].every(
+    (field) => document[field] === undefined || typeof document[field] === 'string',
+  );
 }
 export function readGeocodeEnvironment(): GeocodeOptions {
   const env = typeof process === 'undefined' ? {} : process.env;
@@ -88,6 +90,13 @@ function matches(query: string, value: string): boolean {
     )
   );
 }
+function matchesAddress(query: string, address: string): boolean {
+  // 주소 검색은 숫자 존재뿐 아니라 도로 번호와 건물 번호의 순서도 검증합니다.
+  return (
+    matches(query, address) &&
+    query.match(/\d+(?:-\d+)?/gu)!.join(',') === address.match(/\d+(?:-\d+)?/gu)!.join(',')
+  );
+}
 export async function searchKakaoPlaces(
   query: string,
   options: GeocodeOptions,
@@ -109,9 +118,7 @@ export async function searchKakaoPlaces(
     headers: { Authorization: `KakaoAK ${key}` },
     timeout: options.timeout ?? options.timeoutMs ?? 10000,
   });
-  return Array.isArray(body.documents)
-    ? body.documents.filter(validKakaoDocument)
-    : [];
+  return Array.isArray(body.documents) ? body.documents.filter(validKakaoDocument) : [];
 }
 export async function geocodeLocation(
   query: string,
@@ -138,9 +145,7 @@ export async function geocodeLocation(
           headers: { Authorization: `KakaoAK ${options.kakaoRestApiKey.trim()}` },
           timeout: options.timeout ?? options.timeoutMs ?? 10000,
         });
-        documents = Array.isArray(body.documents)
-          ? body.documents.filter(validKakaoDocument)
-          : [];
+        documents = Array.isArray(body.documents) ? body.documents.filter(validKakaoDocument) : [];
       } else documents = await searchKakaoPlaces(keyword, options);
     } catch {
       // 장소명은 네이버 지역 검색으로 보완하고 주소는 잘못된 장소로 대체하지 않습니다.
@@ -153,8 +158,8 @@ export async function geocodeLocation(
     if (
       !validKoreanCoordinates(latitude, longitude) ||
       !(isAddress
-        ? matches(keyword, document.address_name || '') ||
-          matches(keyword, document.road_address_name || '')
+        ? matchesAddress(keyword, document.address_name || '') ||
+          matchesAddress(keyword, document.road_address_name || '')
         : matches(
             keyword,
             `${document.place_name} ${document.address_name || ''} ${document.road_address_name || ''}`,

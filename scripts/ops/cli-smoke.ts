@@ -25,7 +25,6 @@ type SmokeService =
   | 'gs25'
   | 'seveneleven'
   | 'emart24'
-  | 'lottemart'
   | 'oliveyoung'
   | 'megabox'
   | 'lottecinema'
@@ -82,7 +81,10 @@ function validateApiEnvelope(
   return typeof check === 'function' ? check(payload.data) : null;
 }
 
-function expectDataField(key: string, expected: string): (data: Record<string, unknown>) => string | null {
+function expectDataField(
+  key: string,
+  expected: string,
+): (data: Record<string, unknown>) => string | null {
   return (data) => {
     if (data[key] !== expected) {
       return `data.${key}가 ${expected}가 아닙니다`;
@@ -93,7 +95,8 @@ function expectDataField(key: string, expected: string): (data: Record<string, u
 }
 
 function validateStderrContains(expected: string): Validator {
-  return (_stdout, stderr) => (stderr.includes(expected) ? null : `stderr에 "${expected}"가 없습니다`);
+  return (_stdout, stderr) =>
+    stderr.includes(expected) ? null : `stderr에 "${expected}"가 없습니다`;
 }
 
 export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
@@ -157,12 +160,6 @@ export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '커피')),
   },
   {
-    service: 'lottemart',
-    scenario: '롯데마트 매장 포함 상품 검색',
-    args: ['lottemart-products', '콜라', '--storeCode', '2301', '--area', '서울', '--pageLimit', '1', '--json'],
-    validate: (stdout) => validateApiEnvelope(stdout, expectDataField('keyword', '콜라')),
-  },
-  {
     service: 'oliveyoung',
     scenario: '올리브영 get 상품 검색',
     args: ['get', '/api/oliveyoung/products', '--keyword', '선크림', '--size', '1', '--json'],
@@ -193,13 +190,18 @@ export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
     validate: (stdout) => validateApiEnvelope(stdout, expectDataField('provider', 'opinet')),
   },
   {
-    service: 'dtryx', scenario: '디트릭스 상영작 조회',
+    service: 'dtryx',
+    scenario: '디트릭스 상영작 조회',
     args: ['get', '/api/dtryx/movies', '--cinemaCode', '000067', '--json'],
-    validate: (stdout) => validateApiEnvelope(stdout, (data) => {
-      const first = Array.isArray(data.movies) ? data.movies[0] : undefined;
-      return isRecord(first) && typeof first.movieCode === 'string' && typeof first.movieName === 'string'
-        ? null : '디트릭스 상영작의 movieCode 또는 movieName이 없습니다';
-    }),
+    validate: (stdout) =>
+      validateApiEnvelope(stdout, (data) => {
+        const first = Array.isArray(data.movies) ? data.movies[0] : undefined;
+        return isRecord(first) &&
+          typeof first.movieCode === 'string' &&
+          typeof first.movieName === 'string'
+          ? null
+          : '디트릭스 상영작의 movieCode 또는 movieName이 없습니다';
+      }),
   },
 ];
 

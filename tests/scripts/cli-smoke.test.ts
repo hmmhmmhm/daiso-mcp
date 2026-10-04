@@ -25,7 +25,6 @@ describe('runCliSmoke', () => {
         'gs25',
         'seveneleven',
         'emart24',
-        'lottemart',
         'oliveyoung',
         'megabox',
         'lottecinema',
@@ -35,11 +34,22 @@ describe('runCliSmoke', () => {
     );
   });
 
+  it('지원 종료 서비스는 활성 smoke 목록에 포함하지 않는다', () => {
+    expect(CLI_SMOKE_COMMANDS.map((command) => command.service)).not.toContain('lottemart');
+    expect(CLI_SMOKE_COMMANDS.some((command) => command.args[0].startsWith('lottemart-'))).toBe(
+      false,
+    );
+  });
+
   it('필수 CLI 명령이 모두 성공하면 0을 반환한다', async () => {
     const runCommand = vi.fn((_command: string, args: string[]) => {
       const command = args[1];
       if (command === 'health') {
-        return Promise.resolve({ exitCode: 0, stdout: JSON.stringify({ status: 'ok' }), stderr: '' });
+        return Promise.resolve({
+          exitCode: 0,
+          stdout: JSON.stringify({ status: 'ok' }),
+          stderr: '',
+        });
       }
 
       const stdoutByCommand: Record<string, unknown> = {
@@ -49,7 +59,6 @@ describe('runCliSmoke', () => {
         'gs25-stores': { success: true, data: { keyword: '강남' } },
         'seveneleven-products': { success: true, data: { query: '커피' } },
         'emart24-products': { success: true, data: { keyword: '커피' } },
-        'lottemart-products': { success: true, data: { keyword: '콜라' } },
         'megabox-theaters': { success: true, data: { keyword: '강남' } },
         'lottecinema-theaters': { success: true, data: { keyword: '잠실' } },
       };
@@ -58,14 +67,16 @@ describe('runCliSmoke', () => {
         path === '/api/dtryx/movies'
           ? { success: true, data: { movies: [{ movieCode: '1', movieName: '영화' }] } }
           : path === '/api/oliveyoung/products'
-          ? { success: true, data: { keyword: '선크림' } }
-          : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
-            ? { success: true, data: { keyword: '강남' } }
-            : path === '/api/opinet/average'
-              ? { success: true, data: { provider: 'opinet' } }
-            : undefined;
+            ? { success: true, data: { keyword: '선크림' } }
+            : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
+              ? { success: true, data: { keyword: '강남' } }
+              : path === '/api/opinet/average'
+                ? { success: true, data: { provider: 'opinet' } }
+                : undefined;
       const payload = stdoutByCommand[command] || getPayload || { success: true, data: {} };
-      const stderr = args.includes('--store') ? '알 수 없는 옵션: --store\n매장명은 --keyword로 전달하세요' : '';
+      const stderr = args.includes('--store')
+        ? '알 수 없는 옵션: --store\n매장명은 --keyword로 전달하세요'
+        : '';
       return Promise.resolve({
         exitCode: args.includes('--store') ? 1 : 0,
         stdout: args.includes('--store') ? '' : JSON.stringify(payload),
@@ -85,8 +96,22 @@ describe('runCliSmoke', () => {
 
     expect(exitCode).toBe(0);
     expect(runCommand).toHaveBeenCalledWith('node', ['dist/bin.js', 'health']);
-    expect(runCommand).toHaveBeenCalledWith('node', ['dist/bin.js', 'products', '수납박스', '--pageSize', '1', '--json']);
-    expect(runCommand).toHaveBeenCalledWith('node', ['dist/bin.js', 'stores', '안산 중앙역', '--limit', '1', '--json']);
+    expect(runCommand).toHaveBeenCalledWith('node', [
+      'dist/bin.js',
+      'products',
+      '수납박스',
+      '--pageSize',
+      '1',
+      '--json',
+    ]);
+    expect(runCommand).toHaveBeenCalledWith('node', [
+      'dist/bin.js',
+      'stores',
+      '안산 중앙역',
+      '--limit',
+      '1',
+      '--json',
+    ]);
     expect(runCommand).toHaveBeenCalledWith('node', [
       'dist/bin.js',
       'inventory',
@@ -94,18 +119,7 @@ describe('runCliSmoke', () => {
       '--store',
       '강남역점',
     ]);
-    expect(runCommand).toHaveBeenCalledWith('node', [
-      'dist/bin.js',
-      'lottemart-products',
-      '콜라',
-      '--storeCode',
-      '2301',
-      '--area',
-      '서울',
-      '--pageLimit',
-      '1',
-      '--json',
-    ]);
+    expect(runCommand.mock.calls.some(([, args]) => args[1].startsWith('lottemart-'))).toBe(false);
     expect(writeErr).not.toHaveBeenCalled();
   });
 
@@ -135,7 +149,10 @@ describe('runCliSmoke', () => {
 
     expect(exitCode).toBe(0);
     expect(runCommand).toHaveBeenCalledTimes(2);
-    expect(runCommand.mock.calls.map(([, args]) => args[1])).toEqual(['gs25-products', 'gs25-stores']);
+    expect(runCommand.mock.calls.map(([, args]) => args[1])).toEqual([
+      'gs25-products',
+      'gs25-stores',
+    ]);
   });
 
   it('known upstream 403이면 degraded로 기록하고 통과한다', async () => {
@@ -222,7 +239,6 @@ describe('runCliSmoke', () => {
         'gs25-stores': { success: true, data: { keyword: '강남' } },
         'seveneleven-products': { success: true, data: { query: '커피' } },
         'emart24-products': { success: true, data: { keyword: '커피' } },
-        'lottemart-products': { success: true, data: { keyword: '콜라' } },
         'megabox-theaters': { success: true, data: { keyword: '강남' } },
         'lottecinema-theaters': { success: true, data: { keyword: null } },
       };
@@ -231,12 +247,12 @@ describe('runCliSmoke', () => {
         path === '/api/dtryx/movies'
           ? { success: true, data: { movies: [{ movieCode: '1', movieName: '영화' }] } }
           : path === '/api/oliveyoung/products'
-          ? { success: true, data: { keyword: '선크림' } }
-          : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
-            ? { success: true, data: { keyword: '강남' } }
-            : path === '/api/opinet/average'
-              ? { success: true, data: { provider: 'opinet' } }
-            : undefined;
+            ? { success: true, data: { keyword: '선크림' } }
+            : path === '/api/megabox/theaters' || path === '/api/cgv/theaters'
+              ? { success: true, data: { keyword: '강남' } }
+              : path === '/api/opinet/average'
+                ? { success: true, data: { provider: 'opinet' } }
+                : undefined;
       const payload = payloadByCommand[command] || getPayload || { success: true, data: {} };
 
       return Promise.resolve({
