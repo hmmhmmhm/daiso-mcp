@@ -587,3 +587,17 @@ it('CU 주소에 두 도로 번호가 함께 있으면 임의로 첫 위치만 �
   expect(await geocodeCuAddress(address, { kakaoRestApiKey: 'test-key' })).toBeNull();
   expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe(address);
 });
+it.each([
+  '서울특별시 강남구 테헤란로63길 9 (서울특별시 서초구 강남대로 111)',
+  '서울특별시 강남구 테헤란로63길 9 (경기도 성남시 분당구 정자동 12-3)',
+])('CU 괄호 안의 다른 도로·지번 주소를 상세 정보로 제거하지 않는다 (%s)', async (address) => {
+  mockFetch.mockResolvedValue(Response.json({ documents: [{ x: '127.03', y: '37.5', address_name: '서울 강남구 테헤란로63길 9' }] }));
+  expect(await geocodeCuAddress(address, { kakaoRestApiKey: 'test-key' })).toBeNull();
+  expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe(address);
+});
+it('CU 주소의 인식할 수 없는 숫자 상세는 원문에 남긴다', async () => {
+  const address = '서울특별시 강남구 테헤란로63길 9 105';
+  mockFetch.mockResolvedValue(Response.json({ documents: [{ x: '127.03', y: '37.5', address_name: '서울 강남구 테헤란로63길 9' }] }));
+  expect(await geocodeCuAddress(address, { kakaoRestApiKey: 'test-key' })).toBeNull();
+  expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe(address);
+});
