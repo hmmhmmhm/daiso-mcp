@@ -79,11 +79,18 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
   const secret = Buffer.from(`Bearer ${token}`);
   const fetcher = options.fetcher ?? fetch;
   const cache = options.cacheTtl ? createResponseCache() : undefined;
+  interface SharedWork {
+    controller: AbortController;
+    result: Promise<string>;
+    waiters: number;
+    done: boolean;
+    stage: string;
+  }
+  const pending = new Map<string, SharedWork>();
   let outstanding = 0;
   let active = 0;
   const queue: Array<() => void> = [];
   function acquire(signal: AbortSignal): Promise<void> {
-    if (signal.aborted) return Promise.reject(new RelayError(499));
     if (active < 4) {
       active++;
       return Promise.resolve();
@@ -101,6 +108,69 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
       signal.addEventListener('abort', abort, { once: true });
       queue.push(start);
     });
+  }
+  function startWork(key: string, name: string, params: unknown, deadline: number): SharedWork {
+    const controller = new AbortController();
+    const work: SharedWork = {
+      controller,
+      result: Promise.resolve(''),
+      waiters: 0,
+      done: false,
+      stage: 'queue',
+    };
+    let expired = false;
+    const timer = setTimeout(
+      () => {
+        expired = true;
+        controller.abort();
+      },
+      Math.max(0, deadline - performance.now()),
+    );
+    work.result = (async () => {
+      let acquired = false;
+      try {
+        await acquire(controller.signal);
+        acquired = true;
+        if (performance.now() >= deadline) {
+          expired = true;
+          controller.abort();
+        }
+        controller.signal.throwIfAborted();
+        work.stage = 'quota';
+        const allowed = await abortable(
+          options.takeQuota().catch(() => {
+            throw new RelayError(503);
+          }),
+          controller.signal,
+        );
+        if (!allowed) throw new RelayError(429);
+        controller.signal.throwIfAborted();
+        work.stage = 'upstream';
+        const data = await abortable(
+          options.upstream(name, params, controller.signal, fetcher),
+          controller.signal,
+        );
+        controller.signal.throwIfAborted();
+        const body = JSON.stringify(data);
+        if (body === undefined) throw new RelayError(502);
+        if (cache) cache.set(key, body, options.cacheTtl!(name));
+        return body;
+      } catch (error) {
+        if (expired) throw new RelayError(504);
+        throw error;
+      } finally {
+        work.done = true;
+        clearTimeout(timer);
+        controller.abort();
+        if (pending.get(key) === work) pending.delete(key);
+        if (acquired) {
+          active--;
+          queue.shift()?.();
+        }
+      }
+    })();
+    if (cache) pending.set(key, work);
+    return work;
   }
   return async (request: Request): Promise<Response> => {
     const authorization = Buffer.from(request.headers.get('authorization') ?? '');
@@ -129,7 +199,8 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
       expired = true;
       abort();
     }, 15000);
-    let acquired = false;
+    let work: SharedWork | undefined;
+    let workKey = '';
     let stage = 'body';
     let resultStatus = 200;
     const suppliedId = request.headers.get('x-request-id');
@@ -146,29 +217,17 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
           headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
         });
       }
-      stage = 'queue';
-      await acquire(controller.signal);
-      acquired = true;
-      if (performance.now() >= deadline) {
-        expired = true;
-        abort();
-      }
       controller.signal.throwIfAborted();
-      stage = 'quota';
-      if (
-        !(await abortable(
-          options.takeQuota().catch(() => {
-            throw new RelayError(503);
-          }),
-          controller.signal,
-        ))
-      )
-        throw new RelayError(429);
-      controller.signal.throwIfAborted();
-      stage = 'upstream';
-      const data = await options.upstream(name, p, controller.signal, fetcher);
-      if (cache) cache.set(key, JSON.stringify(data), options.cacheTtl!(name));
-      return reply(200, data);
+      workKey = key;
+      work = cache ? pending.get(key) : undefined;
+      const shared = work !== undefined;
+      work ??= startWork(key, name, p, deadline);
+      work.waiters++;
+      stage = shared ? 'coalesced' : 'upstream';
+      const body = await abortable(work.result, controller.signal);
+      return new Response(body, {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      });
     } catch (error) {
       const status = expired
         ? 504
@@ -183,7 +242,7 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
       try {
         void Promise.resolve(
           options.onEvent?.({
-            stage,
+            stage: work && stage !== 'coalesced' ? work.stage : stage,
             operation: name,
             requestId,
             outcome: resultStatus === 200 ? 'ok' : 'error',
@@ -198,9 +257,12 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
       request.signal.removeEventListener('abort', abort);
       controller.abort();
       outstanding--;
-      if (acquired) {
-        active--;
-        queue.shift()?.();
+      if (work) {
+        work.waiters--;
+        if (work.waiters === 0 && !work.done) {
+          if (pending.get(workKey) === work) pending.delete(workKey);
+          work.controller.abort();
+        }
       }
     }
   };
