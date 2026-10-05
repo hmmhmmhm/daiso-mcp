@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createFileQuota, assertSeparateQuotaDirectories } from './quota.js';
 import { createConvenienceRelay } from './convenience.js';
+import { createGs25SessionTransport } from './gs25-session.js';
 import { createDtryxRelay } from './dtryx.js';
 
 let logger: ReturnType<typeof createRelayLogger> | undefined;
@@ -39,7 +40,11 @@ async function main() {
     await assertSeparateQuotaDirectories(stateDir, convenienceDir);
     convenienceLog = createRelayLogger(join(convenienceDir, 'logs'), { service: 'convenience' });
     const quota = await createFileQuota(join(convenienceDir, 'quota.json'));
-    const convenienceHandler = createConvenienceRelay(convenienceToken, { takeQuota: quota, onEvent: convenienceLog.append, gs25ApiKey: process.env.GS25_API_KEY });
+    const sessionFile = process.env.GS25_AUTH_SESSION_FILE?.trim();
+    const convenienceHandler = createConvenienceRelay(convenienceToken, {
+      takeQuota: quota, onEvent: convenienceLog.append, gs25ApiKey: process.env.GS25_API_KEY,
+      gs25Session: sessionFile ? createGs25SessionTransport(sessionFile) : undefined,
+    });
     convenience = observeRelay(async (request) => {
       const response = await convenienceHandler(request);
       if (response.ok && new URL(request.url).pathname === '/v1/convenience/health') return Response.json({ ...(await response.json()), quota: quota.status(), logging: convenienceLog!.status() });
