@@ -1,3 +1,4 @@
+import { selectGs25InventoryProduct } from '../productSelection.js';
 import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
@@ -139,7 +140,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       timeout: timeoutMs,
       zyteApiKey,
     });
-    firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
+    firstProduct = selectGs25InventoryProduct(searchProducts, keyword);
 
     if (firstProduct) {
       resolvedItemCode = firstProduct.itemCode;
