@@ -8,7 +8,7 @@ const env = {
   CONVENIENCE_RELAY_TOKEN: 'token',
   KAKAO_REST_API_KEY: 'test-key',
 };
-const html = `<table><tr><td><span class="name">강남예시점</span></td><td><address><a href="#" onclick="searchLatLng('서울 강남구 테헤란로 1', 'sample');">서울 강남구 테헤란로 1</a></address></td></tr></table>`;
+const html = `<table><tr><td><span class="name">강남예시점</span></td><td><address><a href="#" onclick="searchLatLng('서울특별시 강남구 테헤란로63길 9 1층 105호', 'sample');">서울특별시 강남구 테헤란로63길 9 1층 105호</a></address></td></tr></table>`;
 afterEach(() => vi.unstubAllGlobals());
 function prepare(geocode = true) {
   const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
@@ -16,7 +16,7 @@ function prepare(geocode = true) {
     if (url.startsWith('https://dapi.kakao.com/'))
       return Response.json({
         documents: geocode
-          ? [{ x: '127.03', y: '37.5', address_name: '서울 강남구 테헤란로 1' }]
+          ? [{ x: '127.03', y: '37.5', address_name: '서울 강남구 테헤란로63길 9' }]
           : [],
       });
     if (url.endsWith('/cu-prime')) return Response.json({});
@@ -61,7 +61,7 @@ it('중계 설정이 있어도 좌표 없는 CU 매장 키워드는 공식 웹�
   expect(result.stores).toEqual([
     expect.objectContaining({
       storeName: '강남예시점',
-      address: '서울 강남구 테헤란로 1',
+      address: '서울특별시 강남구 테헤란로63길 9 1층 105호',
       stock: -1,
     }),
   ]);

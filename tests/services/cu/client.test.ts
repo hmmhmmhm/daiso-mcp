@@ -561,3 +561,29 @@ it.each([400, 403, 429])('키가 없는 재고 원본 %i 차단은 조회 불가
   expect(result.unavailableReason).toContain(`${status} Request Blocked`);
   expect(mockFetch).toHaveBeenCalledTimes(2);
 });
+
+it.each([
+  ['서울특별시 강남구 테헤란로63길 9 1층 105호', '서울특별시 강남구 테헤란로63길 9', '서울 강남구 테헤란로63길 9'],
+  ['서울특별시 강남구 도산대로 529 KRA프라자 (청담동) KRA프라자', '서울특별시 강남구 도산대로 529', '서울 강남구 도산대로 529'],
+  ['서울특별시 강남구 논현로 201 (도곡동)', '서울특별시 강남구 논현로 201', '서울 강남구 논현로 201'],
+  ['경기도 성남시 분당구 정자동 12-3 2층 201호', '경기도 성남시 분당구 정자동 12-3', '경기 성남시 분당구 정자동 12-3'],
+])('CU 상세 주소의 건물 위치만 요청하되 도로·건물 번호를 보존한다 (%s)', async (address, query, canonical) => {
+  mockFetch.mockResolvedValue(Response.json({ documents: [{ x: '127.03', y: '37.5', address_name: canonical }] }));
+  expect(await geocodeCuAddress(address, { kakaoRestApiKey: 'test-key' })).toEqual({ latitude: 37.5, longitude: 127.03 });
+  expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe(query);
+});
+it.each(['서울 강남구 테헤란로64길 9', '서울 강남구 테헤란로63길 10', '서울 서초구 테헤란로63길 9'])('CU 상세 주소도 다른 도로·건물·지역을 거절한다 (%s)', async (canonical) => {
+  mockFetch.mockResolvedValue(Response.json({ documents: [{ x: '127.03', y: '37.5', address_name: canonical }] }));
+  expect(await geocodeCuAddress('서울특별시 강남구 테헤란로63길 9 1층 105호', { kakaoRestApiKey: 'test-key' })).toBeNull();
+});
+it('CU 위치를 확인할 수 없는 주소는 원문을 그대로 조회한다', async () => {
+  mockFetch.mockResolvedValue(Response.json({ documents: [] }));
+  expect(await geocodeCuAddress('알수없는 건물 105호', { kakaoRestApiKey: 'test-key' })).toBeNull();
+  expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe('알수없는 건물 105호');
+});
+it('CU 주소에 두 도로 번호가 함께 있으면 임의로 첫 위치만 선택하지 않는다', async () => {
+  mockFetch.mockResolvedValue(Response.json({ documents: [] }));
+  const address = '서울특별시 강남구 테헤란로63길 9 강남대로 111';
+  expect(await geocodeCuAddress(address, { kakaoRestApiKey: 'test-key' })).toBeNull();
+  expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe(address);
+});
