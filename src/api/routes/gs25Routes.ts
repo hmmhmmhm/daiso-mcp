@@ -18,7 +18,7 @@ export function registerGs25Routes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'gs25-stores-v2',
+        keyPrefix: 'gs25-stores-v3',
       },
       () => handleGs25FindStores(c),
     ),
@@ -30,7 +30,7 @@ export function registerGs25Routes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'gs25-products-v2',
+        keyPrefix: 'gs25-products-v3',
       },
       () => handleGs25SearchProducts(c),
     ),
@@ -42,7 +42,7 @@ export function registerGs25Routes(app: Hono<{ Bindings: AppBindings }>): void {
       {
         ttlSeconds: 60 * 2,
         staleWhileRevalidateSeconds: 30,
-        keyPrefix: 'gs25-inventory-v2',
+        keyPrefix: 'gs25-inventory-v3',
       },
       () => handleGs25CheckInventory(c),
     ),

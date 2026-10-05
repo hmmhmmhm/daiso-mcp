@@ -19,7 +19,7 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
       {
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'oliveyoung-products-v2',
+        keyPrefix: 'oliveyoung-products-v3',
       },
       () => handleOliveyoungSearchProducts(c),
     ),
@@ -31,7 +31,7 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'oliveyoung-stores-v2',
+        keyPrefix: 'oliveyoung-stores-v3',
       },
       () => handleOliveyoungFindStores(c),
     ),
@@ -43,7 +43,7 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'oliveyoung-inventory-v2',
+        keyPrefix: 'oliveyoung-inventory-v3',
       },
       () => handleOliveyoungCheckInventory(c),
     ),

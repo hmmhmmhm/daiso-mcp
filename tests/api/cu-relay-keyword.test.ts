@@ -141,7 +141,7 @@ it.each([
     expect(text).toContain('강남예시점');
     expect(text).not.toContain('시청예시점');
     const newKey = new URL(url);
-    newKey.searchParams.append('__cache_prefix', `${prefix}-v3`);
+    newKey.searchParams.append('__cache_prefix', `${prefix}-v4`);
     expect(match.mock.calls[0][0].url).toBe(newKey.href);
     expect(put.mock.calls[0][0].url).toBe(newKey.href);
     expect(response.headers.get('Cache-Control')).toContain(`max-age=${ttl}`);

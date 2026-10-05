@@ -18,7 +18,7 @@ export function registerEmart24Routes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 30,
         staleWhileRevalidateSeconds: 60 * 3,
-        keyPrefix: 'emart24-stores-v1',
+        keyPrefix: 'emart24-stores-v2',
       },
       () => handleEmart24FindStores(c),
     ),
@@ -30,7 +30,7 @@ export function registerEmart24Routes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'emart24-products-v1',
+        keyPrefix: 'emart24-products-v2',
       },
       () => handleEmart24SearchProducts(c),
     ),
@@ -42,7 +42,7 @@ export function registerEmart24Routes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'emart24-inventory-v1',
+        keyPrefix: 'emart24-inventory-v2',
       },
       () => handleEmart24CheckInventory(c),
     ),

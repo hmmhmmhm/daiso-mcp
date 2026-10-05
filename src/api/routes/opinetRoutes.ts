@@ -15,7 +15,7 @@ export function registerOpinetRoutes(app: Hono<{ Bindings: AppBindings }>): void
       {
         ttlSeconds: 60 * 60,
         staleWhileRevalidateSeconds: 60 * 30,
-        keyPrefix: 'opinet-average-v2',
+        keyPrefix: 'opinet-average-v3',
       },
       () => handleOpinetAveragePrices(c),
     ),
@@ -27,7 +27,7 @@ export function registerOpinetRoutes(app: Hono<{ Bindings: AppBindings }>): void
       {
         ttlSeconds: 60 * 30,
         staleWhileRevalidateSeconds: 60 * 10,
-        keyPrefix: 'opinet-lowest-v2',
+        keyPrefix: 'opinet-lowest-v3',
       },
       () => handleOpinetLowestStations(c),
     ),
@@ -39,7 +39,7 @@ export function registerOpinetRoutes(app: Hono<{ Bindings: AppBindings }>): void
       {
         ttlSeconds: 60 * 20,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'opinet-around-v2',
+        keyPrefix: 'opinet-around-v3',
       },
       () => handleOpinetStationsAround(c),
     ),
@@ -51,7 +51,7 @@ export function registerOpinetRoutes(app: Hono<{ Bindings: AppBindings }>): void
       {
         ttlSeconds: 60 * 60,
         staleWhileRevalidateSeconds: 60 * 10,
-        keyPrefix: 'opinet-station-v2',
+        keyPrefix: 'opinet-station-v3',
       },
       () => handleOpinetStationDetail(c),
     ),
