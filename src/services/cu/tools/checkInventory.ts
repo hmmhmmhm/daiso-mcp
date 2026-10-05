@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * CU 재고 확인 도구
  */
@@ -6,7 +7,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { fetchCuStock, fetchCuStores, geocodeCuAddress } from '../client.js';
 
-interface CheckInventoryArgs {
+interface CheckInventoryArgs extends ConvenienceTransportOptions {
   keyword: string;
   latitude?: number;
   longitude?: number;
@@ -23,7 +24,7 @@ interface CheckInventoryArgs {
   naverClientSecret?: string;
 }
 
-interface CuInventoryToolOptions {
+interface CuInventoryToolOptions extends ConvenienceTransportOptions {
   zyteApiKey?: string;
   googleMapsApiKey?: string;
   kakaoRestApiKey?: string;
@@ -58,6 +59,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       searchSort,
     },
     {
+      ...args,
       timeout: timeoutMs,
       apiKey: zyteApiKey,
     },
@@ -79,6 +81,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
           searchWord: storeKeyword,
         },
         {
+          ...args,
           timeout: timeoutMs,
           apiKey: zyteApiKey,
         },
@@ -87,8 +90,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         keywordStoreResult.stores.find((store) => store.address.trim().length > 0)?.address || '';
       if (firstAddress.length > 0) {
         const geocoded = await geocodeCuAddress(firstAddress, {
-          timeout: timeoutMs,
           ...args,
+          timeout: timeoutMs,
           googleMapsApiKey,
         });
         if (geocoded) {
@@ -106,6 +109,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
               pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
             },
             {
+              ...args,
               timeout: timeoutMs,
               apiKey: zyteApiKey,
             },
@@ -130,6 +134,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
           pageType: hasStockSeed ? 'search_improve stock_sch_improve' : 'search_improve',
         },
         {
+          ...args,
           timeout: timeoutMs,
           apiKey: zyteApiKey,
         },

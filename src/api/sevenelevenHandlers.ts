@@ -1,3 +1,4 @@
+import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 GET API 핸들러
  */
@@ -50,7 +51,8 @@ export async function handleSevenElevenSearchProducts(c: ApiContext) {
         size,
         sort,
       },
-      { zyteApiKey: c.env?.ZYTE_API_KEY },
+      { ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY },
     );
 
     return successResponse(
@@ -93,7 +95,8 @@ export async function handleSevenElevenSearchStores(c: ApiContext) {
         keyword,
         limit: safeLimit,
       },
-      { zyteApiKey: c.env?.ZYTE_API_KEY },
+      { ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY },
     );
 
     return successResponse(
@@ -141,6 +144,7 @@ export async function handleSevenElevenCheckInventory(c: ApiContext) {
       },
       {
         timeout: safeTimeoutMs,
+        ...convenienceTransportFromBindings(c.env),
         zyteApiKey: c.env?.ZYTE_API_KEY,
       },
     );
@@ -149,7 +153,7 @@ export async function handleSevenElevenCheckInventory(c: ApiContext) {
       ? '실시간 재고 데이터가 포함되어 있습니다.'
       : result.stockError
         ? `실시간 재고 API 호출에 실패했습니다: ${result.stockError.message}`
-        : '실시간 재고 API가 현재 제한되어 있어 매장 목록만 제공됩니다.';
+        : '선택한 매장의 재고 수량을 확인하지 못했습니다.';
 
     return successResponse(
       c,
@@ -187,7 +191,8 @@ export async function handleSevenElevenGetSearchPopwords(c: ApiContext) {
 
   try {
     const keywords = await fetchSevenElevenSearchPopwords(label, {
-      zyteApiKey: c.env?.ZYTE_API_KEY,
+      ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
     });
 
     return successResponse(c, {
@@ -219,7 +224,8 @@ export async function handleSevenElevenGetCatalogSnapshot(c: ApiContext) {
     const result = await fetchSevenElevenCatalogSnapshot({
       includeIssues,
       includeExhibition,
-      zyteApiKey: c.env?.ZYTE_API_KEY,
+      ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
     });
 
     return successResponse(c, {

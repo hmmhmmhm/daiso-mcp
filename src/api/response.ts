@@ -16,6 +16,10 @@ export interface AppBindings {
   OY_RELAY_TOKEN?: string;
   OY_ACCESS_CLIENT_ID?: string;
   OY_ACCESS_CLIENT_SECRET?: string;
+  CONVENIENCE_RELAY_URL?: string;
+  CONVENIENCE_RELAY_TOKEN?: string;
+  CONVENIENCE_ACCESS_CLIENT_ID?: string;
+  CONVENIENCE_ACCESS_CLIENT_SECRET?: string;
   GS25_API_KEY?: string;
   GOOGLE_MAPS_API_KEY?: string;
   KAKAO_REST_API_KEY?: string;

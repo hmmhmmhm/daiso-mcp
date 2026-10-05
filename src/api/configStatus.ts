@@ -18,6 +18,7 @@ export interface ConfigStatus {
     accessPairValid: boolean;
   };
   dtryxRelay: ConfigStatus['oliveyoungRelay'];
+  convenienceRelay: ConfigStatus['oliveyoungRelay'];
   googleMapsApiKey: ConfigStatusItem & { enabled: false };
   kakaoRestApiKey: ConfigStatusItem;
   zyteApiKey: ConfigStatusItem & { enabled: false };
@@ -56,7 +57,19 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
       (dtryxId && dtryxSecret),
   };
 
+  const convenienceId = isConfigured(bindings?.CONVENIENCE_ACCESS_CLIENT_ID);
+  const convenienceSecret = isConfigured(bindings?.CONVENIENCE_ACCESS_CLIENT_SECRET);
+  const convenienceUrl = isValidDtryxRelayUrl(bindings?.CONVENIENCE_RELAY_URL);
+  const convenienceToken = isConfigured(bindings?.CONVENIENCE_RELAY_TOKEN);
+  const conveniencePair = (bindings?.CONVENIENCE_ACCESS_CLIENT_ID === undefined && bindings?.CONVENIENCE_ACCESS_CLIENT_SECRET === undefined) || (convenienceId && convenienceSecret);
   return {
+    convenienceRelay: {
+      configured: convenienceUrl && convenienceToken && conveniencePair,
+      urlConfigured: isConfigured(bindings?.CONVENIENCE_RELAY_URL), urlValid: convenienceUrl,
+      tokenConfigured: convenienceToken, accessClientIdConfigured: convenienceId, accessClientSecretConfigured: convenienceSecret,
+      accessConfigured: convenienceId && convenienceSecret, accessPairValid: conveniencePair,
+      usedBy: ['cu', 'seveneleven', 'gs25'],
+    },
     oliveyoungRelay: {
       configured: urlValid && tokenConfigured && accessPairValid,
       urlConfigured: isConfigured(bindings?.OY_RELAY_URL),

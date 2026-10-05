@@ -1,3 +1,4 @@
+import { hasConvenienceRelay, requestConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
  * GS25 상품 검색 API
  */
@@ -7,7 +8,7 @@ import { fetchJson } from '../../utils/http.js';
 import { GS25_API } from './api.js';
 import { toNumber } from './storeUtils.js';
 
-interface RequestOptions {
+interface RequestOptions extends ConvenienceTransportOptions {
   timeout?: number;
   zyteApiKey?: string;
 }
@@ -48,7 +49,7 @@ export interface Gs25SearchProduct {
   stockCheckEnabled: boolean;
 }
 
-const GS25_TOTAL_SEARCH_HEADERS = {
+export const GS25_TOTAL_SEARCH_HEADERS = {
   Accept: 'application/json, text/plain, */*',
   'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
   'User-Agent':
@@ -71,6 +72,7 @@ async function fetchGs25TotalSearchResponse(
   const endpoint = new URL(GS25_API.TOTAL_SEARCH_PATH, GS25_API.APIGW_BASE_URL);
   const bodyText = JSON.stringify({ query });
 
+  if (hasConvenienceRelay(options)) return requestConvenienceRelay('gs25-products', { query }, options, timeout);
   return fetchJson<Gs25TotalSearchResponse>(endpoint.toString(), {
     ...GS25_DEFAULT_FETCH_OPTIONS,
     method: 'POST',

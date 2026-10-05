@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 상품 검색 도구
  */
@@ -21,7 +22,7 @@ function buildTextResponse(payload: Record<string, unknown>): McpToolResponse {
   };
 }
 
-async function searchProducts(args: SearchProductsArgs, zyteApiKey?: string): Promise<McpToolResponse> {
+async function searchProducts(args: SearchProductsArgs, zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): Promise<McpToolResponse> {
   const { query, page = 1, size = 20, sort = 'recommend', timeoutMs = 15000 } = args;
 
   if (!query || query.trim().length === 0) {
@@ -34,6 +35,7 @@ async function searchProducts(args: SearchProductsArgs, zyteApiKey?: string): Pr
       size,
       sort,
       timeout: timeoutMs,
+      ...transport,
       zyteApiKey,
     });
 
@@ -79,7 +81,7 @@ const searchProductsOutputSchema = {
   message: z.string().optional().describe('degraded 상태의 원인 메시지'),
 };
 
-export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration {
+export function createSearchProductsTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'seveneleven_search_products',
     metadata: {
@@ -98,6 +100,6 @@ export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration 
       },
       outputSchema: searchProductsOutputSchema,
     },
-    handler: (args: unknown) => searchProducts(args as SearchProductsArgs, zyteApiKey),
+    handler: (args: unknown) => searchProducts(args as SearchProductsArgs, zyteApiKey, transport),
   };
 }

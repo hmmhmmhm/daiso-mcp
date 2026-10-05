@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
  * CU 서비스 프로바이더
  */
@@ -14,7 +15,7 @@ const CU_METADATA: ServiceMetadata = {
   description: 'CU 매장 탐색 및 상품 재고 조회 서비스',
 };
 
-export interface CuServiceOptions {
+export interface CuServiceOptions extends ConvenienceTransportOptions {
   zyteApiKey?: string;
   googleMapsApiKey?: string;
   kakaoRestApiKey?: string;
@@ -29,7 +30,7 @@ class CuService implements ServiceProvider {
 
   getTools(): ToolRegistration[] {
     return [
-      createFindNearbyStoresTool(this.options.zyteApiKey),
+      createFindNearbyStoresTool(this.options.zyteApiKey, this.options),
       createCheckInventoryTool({
         zyteApiKey: this.options.zyteApiKey,
         ...this.options,

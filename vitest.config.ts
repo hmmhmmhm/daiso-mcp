@@ -30,7 +30,7 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'html', 'json'],
 
       // 커버리지 대상 파일
-      include: ['src/**/*.ts', 'scripts/relay/cache.ts', 'scripts/relay/logging.ts', 'scripts/relay/observed.ts', 'scripts/relay/oliveyoung.ts', 'scripts/relay/dtryx.ts', 'scripts/relay/browser.ts', 'scripts/relay/lifecycle.ts', 'scripts/relay/ownership.ts', 'scripts/relay/guard-controller.ts', 'scripts/relay/guard-runtime.ts', 'scripts/relay/supervisor.ts', 'scripts/relay/quota.ts', 'scripts/relay/consumer.ts', 'scripts/relay/browser-environment.ts'],
+      include: ['src/**/*.ts', 'scripts/relay/cache.ts', 'scripts/relay/logging.ts', 'scripts/relay/observed.ts', 'scripts/relay/oliveyoung.ts', 'scripts/relay/dtryx.ts', 'scripts/relay/http-relay.ts', 'scripts/relay/convenience.ts', 'scripts/relay/browser.ts', 'scripts/relay/lifecycle.ts', 'scripts/relay/ownership.ts', 'scripts/relay/guard-controller.ts', 'scripts/relay/guard-runtime.ts', 'scripts/relay/supervisor.ts', 'scripts/relay/quota.ts', 'scripts/relay/consumer.ts', 'scripts/relay/browser-environment.ts'],
 
       // 커버리지 제외 파일
       exclude: [

@@ -1,3 +1,4 @@
+import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
  * GET API 핸들러
@@ -263,6 +264,7 @@ export async function handleCuFindStores(c: ApiContext) {
       },
       {
         timeout: 15000,
+        ...convenienceTransportFromBindings(c.env),
         apiKey: c.env.ZYTE_API_KEY,
       },
     );
@@ -316,6 +318,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
       },
       {
         timeout: 15000,
+        ...convenienceTransportFromBindings(c.env),
         apiKey: c.env?.ZYTE_API_KEY,
       },
     );
@@ -336,7 +339,8 @@ export async function handleCuCheckInventory(c: ApiContext) {
         },
         {
           timeout: 15000,
-          apiKey: c.env?.ZYTE_API_KEY,
+          ...convenienceTransportFromBindings(c.env),
+        apiKey: c.env?.ZYTE_API_KEY,
         },
       );
       const firstAddress = keywordStoreResult.stores.find((store) => store.address.trim().length > 0)?.address || '';
@@ -361,7 +365,8 @@ export async function handleCuCheckInventory(c: ApiContext) {
             },
             {
               timeout: 15000,
-              apiKey: c.env?.ZYTE_API_KEY,
+              ...convenienceTransportFromBindings(c.env),
+        apiKey: c.env?.ZYTE_API_KEY,
             },
           );
         }
@@ -385,7 +390,8 @@ export async function handleCuCheckInventory(c: ApiContext) {
         },
         {
           timeout: 15000,
-          apiKey: c.env?.ZYTE_API_KEY,
+          ...convenienceTransportFromBindings(c.env),
+        apiKey: c.env?.ZYTE_API_KEY,
         },
       );
     }

@@ -293,6 +293,7 @@ describe('기본 페이지', () => {
     const data = await res.json();
     expect(data.status).toBe('ok');
     expect(data.config).toEqual({
+      convenienceRelay: { configured: false, urlConfigured: false, urlValid: false, tokenConfigured: false, accessClientIdConfigured: false, accessClientSecretConfigured: false, accessConfigured: false, accessPairValid: true, usedBy: ['cu', 'seveneleven', 'gs25'] },
       oliveyoungRelay: {
         configured: false,
         urlConfigured: false,

@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 인기 검색어 조회 도구
  */
@@ -14,11 +15,13 @@ interface GetSearchPopwordsArgs {
 async function getSearchPopwords(
   args: GetSearchPopwordsArgs,
   zyteApiKey?: string,
+  transport: ConvenienceTransportOptions = {},
 ): Promise<McpToolResponse> {
   const { label = 'home', timeoutMs = 15000 } = args;
 
   const keywords = await fetchSevenElevenSearchPopwords(label, {
     timeout: timeoutMs,
+    ...transport,
     zyteApiKey,
   });
 
@@ -45,7 +48,7 @@ async function getSearchPopwords(
   };
 }
 
-export function createGetSearchPopwordsTool(zyteApiKey?: string): ToolRegistration {
+export function createGetSearchPopwordsTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'seveneleven_get_search_popwords',
     metadata: {
@@ -56,6 +59,6 @@ export function createGetSearchPopwordsTool(zyteApiKey?: string): ToolRegistrati
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: (args: unknown) => getSearchPopwords(args as GetSearchPopwordsArgs, zyteApiKey),
+    handler: (args: unknown) => getSearchPopwords(args as GetSearchPopwordsArgs, zyteApiKey, transport),
   };
 }
