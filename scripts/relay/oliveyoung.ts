@@ -9,6 +9,9 @@ export type BrowserRunner = (
   path: string,
   body: Record<string, unknown>,
 ) => Promise<OliveyoungApiResponse>;
+// 준비된 세션의 작업 watchdog 18초와 여유 2초를 Worker 기본 예산 60초에서 뺀 대기 목표입니다.
+// 수명 관리의 추가 준비·회수 시간까지 포함한 전체 응답 시간을 보장하지는 않습니다.
+const MAX_QUEUE_WAIT_MS = 40000;
 const paths: Record<string, string> = {
   'find-store': OLIVEYOUNG_API.STORE_FINDER_PATH,
   'product-search-v3': OLIVEYOUNG_API.PRODUCT_SEARCH_PATH,
@@ -189,7 +192,7 @@ export function createOliveyoungRelay(
             entry!.startedAt = Date.now();
             if (
               [...signals].every(
-                ([signal, arrived]) => signal.aborted || entry!.startedAt - arrived >= 30000,
+                ([signal, arrived]) => signal.aborted || entry!.startedAt - arrived >= MAX_QUEUE_WAIT_MS,
               )
             )
               return null;
@@ -224,7 +227,7 @@ export function createOliveyoungRelay(
       }
       try {
         const result = await entry.task;
-        if (request.signal.aborted || result === null || entry.startedAt - queuedAt >= 30000) {
+        if (request.signal.aborted || result === null || entry.startedAt - queuedAt >= MAX_QUEUE_WAIT_MS) {
           emit('queue', request.signal.aborted ? 'canceled' : 'expired');
           return error(503, 'Request expired');
         }
