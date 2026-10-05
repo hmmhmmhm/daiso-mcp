@@ -13,7 +13,7 @@ export function registerPlacesRoutes(app: Hono<{ Bindings: AppBindings }>): void
       {
         ttlSeconds: 60 * 60,
         staleWhileRevalidateSeconds: 60 * 10,
-        keyPrefix: 'places-search-v1',
+        keyPrefix: 'places-search-v2',
       },
       () => handlePlacesSearch(c),
     ),

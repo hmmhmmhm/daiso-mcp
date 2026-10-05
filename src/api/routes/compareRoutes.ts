@@ -10,7 +10,7 @@ export function registerCompareRoutes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'compare-products-v1',
+        keyPrefix: 'compare-products-v2',
       },
       () => handleCompareProducts(c),
     ),

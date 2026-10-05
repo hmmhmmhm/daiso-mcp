@@ -18,7 +18,7 @@ export function registerDtryxRoutes(app: Hono<{ Bindings: AppBindings }>): void 
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'dtryx-cinemas-v1',
+        keyPrefix: 'dtryx-cinemas-v2',
       },
       () => handleDtryxListCinemas(c),
     ),
@@ -30,7 +30,7 @@ export function registerDtryxRoutes(app: Hono<{ Bindings: AppBindings }>): void 
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'dtryx-movies-v1',
+        keyPrefix: 'dtryx-movies-v2',
       },
       () => handleDtryxListNowShowing(c),
     ),
@@ -42,7 +42,7 @@ export function registerDtryxRoutes(app: Hono<{ Bindings: AppBindings }>): void 
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 30,
-        keyPrefix: 'dtryx-seats-v1',
+        keyPrefix: 'dtryx-seats-v2',
       },
       () => handleDtryxGetRemainingSeats(c),
     ),

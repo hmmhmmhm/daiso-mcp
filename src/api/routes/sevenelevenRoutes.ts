@@ -20,7 +20,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'seveneleven-products-v1',
+        keyPrefix: 'seveneleven-products-v2',
       },
       () => handleSevenElevenSearchProducts(c),
     ),
@@ -32,7 +32,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'seveneleven-stores-v1',
+        keyPrefix: 'seveneleven-stores-v2',
       },
       () => handleSevenElevenSearchStores(c),
     ),
@@ -44,7 +44,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'seveneleven-inventory-v1',
+        keyPrefix: 'seveneleven-inventory-v2',
       },
       () => handleSevenElevenCheckInventory(c),
     ),
@@ -56,7 +56,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'seveneleven-popwords-v1',
+        keyPrefix: 'seveneleven-popwords-v2',
       },
       () => handleSevenElevenGetSearchPopwords(c),
     ),
@@ -68,7 +68,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'seveneleven-catalog-v1',
+        keyPrefix: 'seveneleven-catalog-v2',
       },
       () => handleSevenElevenGetCatalogSnapshot(c),
     ),
