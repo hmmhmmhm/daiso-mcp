@@ -614,6 +614,7 @@ daiso 인터랙티브 모드
 
 ### 공통 가이드
 
+- [GS25 정상 로그인·직접 인증 복구 운영 절차](./docs/gs25-auth-recovery-runbook.md)
 - [서비스 레퍼런스](./docs/service-reference.md)
 - [스크래핑 플레이북](./docs/scraping-playbook.md)
 - [mitmproxy 가이드](./docs/mitmproxy-guide.md)
