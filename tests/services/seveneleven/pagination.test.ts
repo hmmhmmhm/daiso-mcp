@@ -214,3 +214,19 @@ it('초기 레거시 목록도 전체 500개 제한을 적용한다', async () =
   );
   await expect(searchSevenElevenProducts({ query: '커피' })).rejects.toThrow('최대 500개 제한');
 });
+
+it('교환권 컬렉션의 같은 상품 코드가 먼저 확인한 매장 상품 번호를 덮어쓰지 않는다', async () => {
+  mockFetch.mockResolvedValueOnce(Response.json({
+    data: { SearchQueryResult: { Collection: [
+      { CollectionId: 'pickup', Documentset: { totalCount: 1, Document: [
+        { field: { itemCd: '8809415436006', prdNo: '3047966', itemOnm: '커피', itemGbnNm: '당일픽업', onlinePrice: '2000' } },
+      ] } },
+      { CollectionId: 'coupon', Documentset: { totalCount: 1, Document: [
+        { field: { itemCd: '8809415436006', prdNo: '21441', itemOnm: '커피', itemGbnNm: '교환권', onlinePrice: '2000' } },
+      ] } },
+    ] } },
+  }));
+  const result = await searchSevenElevenProducts({ query: '커피' });
+  expect(result.totalCount).toBe(1);
+  expect(result.products[0]).toMatchObject({ productNo: '3047966', itemType: '당일픽업', salePrice: 2000 });
+});

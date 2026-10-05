@@ -206,11 +206,13 @@ export async function fetchSevenElevenProductSearchResults(
   const rows = normalizeProducts(
     pagination.documents.length ? pagination.documents : Array.isArray(data.content) ? data.content : [],
   );
-  const products = [
-    ...new Map(
-      rows.map((product) => [product.itemCode || product.productNo || product.itemName, product]),
-    ).values(),
-  ];
+  const uniqueProducts = new Map<string, SevenElevenProduct>();
+  for (const product of rows) {
+    const key = product.itemCode || product.productNo || product.itemName;
+    // 뒤쪽 교환권 행이 먼저 확인한 매장 상품 정보를 덮어쓰지 않습니다.
+    if (!uniqueProducts.has(key)) uniqueProducts.set(key, product);
+  }
+  const products = [...uniqueProducts.values()];
   return {
     query: data.SearchQueryResult?.query || query,
     totalCount: products.length,
