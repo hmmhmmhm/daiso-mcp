@@ -5,6 +5,7 @@
  */
 
 import * as z from 'zod';
+import { positiveIntegerSchema, validatePagination } from '../validation.js';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { Product, ProductSearchResponse } from '../types.js';
 import { DAISOMALL_API, getImageUrl } from '../api.js';
@@ -23,8 +24,9 @@ interface SearchProductsArgs {
 export async function fetchProducts(
   query: string,
   page: number = 1,
-  pageSize: number = 30
+  pageSize: number = 30,
 ): Promise<{ products: Product[]; totalCount: number }> {
+  validatePagination(page, pageSize);
   const url = new URL(DAISOMALL_API.SEARCH_PRODUCTS);
   url.searchParams.set('searchTerm', query);
   url.searchParams.set('cntPerPage', pageSize.toString());
@@ -91,8 +93,11 @@ export function createSearchProductsTool(): ToolRegistration {
       description: '다이소 제품을 검색합니다. 키워드로 제품을 검색할 수 있습니다.',
       inputSchema: {
         query: z.string().describe('검색할 제품명 또는 키워드'),
-        page: z.number().optional().default(1).describe('페이지 번호 (기본값: 1)'),
-        pageSize: z.number().optional().default(30).describe('페이지당 결과 수 (기본값: 30)'),
+        page: positiveIntegerSchema.optional().default(1).describe('페이지 번호 (기본값: 1)'),
+        pageSize: positiveIntegerSchema
+          .optional()
+          .default(30)
+          .describe('페이지당 결과 수 (기본값: 30)'),
       },
     },
     handler: searchProducts as (args: unknown) => Promise<McpToolResponse>,

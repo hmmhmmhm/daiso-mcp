@@ -5,6 +5,7 @@
  */
 
 import * as z from 'zod';
+import { positiveIntegerSchema, validatePositiveInteger } from '../validation.js';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type { Store, StoreOptions } from '../types.js';
 import { DAISO_WEB_API, formatTime } from '../api.js';
@@ -101,12 +102,10 @@ export async function fetchStores(
   keyword?: string,
   sido?: string,
   gugun?: string,
-  dong?: string
+  dong?: string,
 ): Promise<Store[]> {
   const searchKeywords =
-    keyword && !sido && !gugun && !dong
-      ? buildDaisoStoreKeywordVariants(keyword)
-      : [keyword || ''];
+    keyword && !sido && !gugun && !dong ? buildDaisoStoreKeywordVariants(keyword) : [keyword || ''];
 
   for (const searchKeyword of searchKeywords) {
     const url = new URL(DAISO_WEB_API.SHOP_SEARCH);
@@ -160,6 +159,7 @@ async function findStores(args: FindStoresArgs): Promise<McpToolResponse> {
     throw new Error('검색어(keyword) 또는 지역(sido)을 입력해주세요.');
   }
 
+  validatePositiveInteger(limit, 'limit');
   const stores = await fetchStores(keyword, sido, gugun, dong);
   const limitedStores = stores.slice(0, limit);
 
@@ -190,7 +190,10 @@ export function createFindStoresTool(): ToolRegistration {
         sido: z.string().optional().describe('시/도 (예: 서울, 경기, 부산)'),
         gugun: z.string().optional().describe('구/군 (예: 강남구, 마포구)'),
         dong: z.string().optional().describe('동 (예: 역삼동, 합정동)'),
-        limit: z.number().optional().default(50).describe('반환할 최대 매장 수 (기본값: 50)'),
+        limit: positiveIntegerSchema
+          .optional()
+          .default(50)
+          .describe('반환할 최대 매장 수 (기본값: 50)'),
       },
     },
     handler: findStores as (args: unknown) => Promise<McpToolResponse>,

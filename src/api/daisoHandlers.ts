@@ -2,6 +2,13 @@
  * 다이소 GET API 핸들러
  */
 
+import {
+  DaisoValidationError,
+  parseNumericQuery,
+  validatePagination,
+  validatePositiveInteger,
+  resolveCoordinates,
+} from '../services/daiso/validation.js';
 import { getImageUrl } from '../services/daiso/api.js';
 import { toProductSummary } from '../services/daiso/product.js';
 import { fetchOnlineStock, fetchStoreInventory } from '../services/daiso/tools/checkInventory.js';
@@ -13,18 +20,21 @@ import { type ApiContext, errorResponse, successResponse } from './response.js';
 
 export async function handleSearchProducts(c: ApiContext) {
   const query = c.req.query('q');
-  const page = parseInt(c.req.query('page') || '1');
-  const pageSize = parseInt(c.req.query('pageSize') || '30');
+  const page = parseNumericQuery(c.req.query('page'), 1) as number;
+  const pageSize = parseNumericQuery(c.req.query('pageSize'), 30) as number;
 
   if (!query || query.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(q)를 입력해주세요.');
   }
 
   try {
+    validatePagination(page, pageSize);
     const { products, totalCount } = await fetchProducts(query, page, pageSize);
 
     return successResponse(c, { products }, { total: totalCount, page, pageSize });
   } catch (error) {
+    if (error instanceof DaisoValidationError)
+      return errorResponse(c, 'INVALID_PARAMS', error.message);
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEARCH_FAILED', message, 500);
   }
@@ -67,18 +77,21 @@ export async function handleFindStores(c: ApiContext) {
   const sido = c.req.query('sido');
   const gugun = c.req.query('gugun');
   const dong = c.req.query('dong');
-  const limit = parseInt(c.req.query('limit') || '50');
+  const limit = parseNumericQuery(c.req.query('limit'), 50) as number;
 
   if (!keyword && !sido) {
     return errorResponse(c, 'MISSING_PARAMS', '검색어(keyword) 또는 지역(sido)을 입력해주세요.');
   }
 
   try {
+    validatePositiveInteger(limit, 'limit');
     const stores = await fetchStores(keyword, sido, gugun, dong);
     const limitedStores = stores.slice(0, limit);
 
     return successResponse(c, { stores: limitedStores }, { total: stores.length });
   } catch (error) {
+    if (error instanceof DaisoValidationError)
+      return errorResponse(c, 'INVALID_PARAMS', error.message);
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEARCH_FAILED', message, 500);
   }
@@ -86,17 +99,19 @@ export async function handleFindStores(c: ApiContext) {
 
 export async function handleCheckInventory(c: ApiContext) {
   const productId = c.req.query('productId');
-  const lat = parseFloat(c.req.query('lat') || '37.5665');
-  const lng = parseFloat(c.req.query('lng') || '126.978');
+  const inputLat = parseNumericQuery(c.req.query('lat'));
+  const inputLng = parseNumericQuery(c.req.query('lng'));
   const keyword = c.req.query('keyword') || '';
-  const page = parseInt(c.req.query('page') || '1');
-  const pageSize = parseInt(c.req.query('pageSize') || '30');
+  const page = parseNumericQuery(c.req.query('page'), 1) as number;
+  const pageSize = parseNumericQuery(c.req.query('pageSize'), 30) as number;
 
   if (!productId) {
     return errorResponse(c, 'MISSING_PRODUCT_ID', '제품 ID(productId)를 입력해주세요.');
   }
 
   try {
+    validatePagination(page, pageSize);
+    const { latitude: lat, longitude: lng } = resolveCoordinates(inputLat, inputLng);
     const [onlineStock, storeResult, productDoc] = await Promise.all([
       fetchOnlineStock(productId),
       fetchStoreInventory(productId, lat, lng, page, pageSize, keyword),
@@ -121,6 +136,8 @@ export async function handleCheckInventory(c: ApiContext) {
 
     return successResponse(c, result, { total: storeResult.totalCount, page, pageSize });
   } catch (error) {
+    if (error instanceof DaisoValidationError)
+      return errorResponse(c, 'INVALID_PARAMS', error.message);
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'INVENTORY_CHECK_FAILED', message, 500);
   }
