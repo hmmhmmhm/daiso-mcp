@@ -49,9 +49,9 @@ export const OPENAPI_LOTTECINEMA_COMPONENT_SCHEMAS = {
       playDate: { type: 'string', example: '20260310' },
       startTime: { type: 'string', example: '10:40' },
       endTime: { type: 'string', example: '12:47' },
-      totalSeats: { type: 'integer', example: 32 },
-      bookedSeats: { type: 'integer', example: 4 },
-      remainingSeats: { type: 'integer', example: 28 },
+      totalSeats: { type: 'integer', nullable: true, example: 32 },
+      bookedSeats: { type: 'integer', nullable: true, example: 4 },
+      remainingSeats: { type: 'integer', nullable: true, example: 28 },
     },
   },
   LotteCinemaTheaterSearchResponse: {

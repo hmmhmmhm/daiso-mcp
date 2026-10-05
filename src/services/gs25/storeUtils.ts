@@ -2,6 +2,7 @@
  * GS25 매장 정규화와 정렬 유틸리티
  */
 
+import { parseInventoryQuantity } from '../inventoryQuantity.js';
 import type {
   Gs25ProductCandidate,
   Gs25Store,
@@ -65,10 +66,10 @@ export function normalizeStore(raw: NonNullable<Gs25StoreStockResponse['stores']
     longitude: toNumber(raw.storeXCoordination),
     latitude: toNumber(raw.storeYCoordination),
     serviceCode: raw.serviceCode || '',
-    realStockQuantity: toInteger(raw.realStockQuantity),
-    pickupStockQuantity: toInteger(raw.pickupStkQty),
-    deliveryStockQuantity: toInteger(raw.dlvyStkQty),
-    isSoldOut: toBooleanYn(raw.isSoldOutYn),
+    realStockQuantity: parseInventoryQuantity(raw.realStockQuantity),
+    pickupStockQuantity: parseInventoryQuantity(raw.pickupStkQty),
+    deliveryStockQuantity: parseInventoryQuantity(raw.dlvyStkQty),
+    isSoldOut: parseInventoryQuantity(raw.realStockQuantity) === 0 && toBooleanYn(raw.isSoldOutYn),
     searchItemName: String(raw.searchItemName || '').trim(),
     searchItemSellPrice:
       raw.searchItemSellPrice === null || raw.searchItemSellPrice === undefined
@@ -174,7 +175,7 @@ export function sortGs25Stores(stores: Gs25Store[]): Gs25Store[] {
     }
 
     if (b.realStockQuantity !== a.realStockQuantity) {
-      return b.realStockQuantity - a.realStockQuantity;
+      return (b.realStockQuantity ?? -1) - (a.realStockQuantity ?? -1);
     }
 
     return a.storeName.localeCompare(b.storeName, 'ko');
@@ -192,7 +193,7 @@ export function extractGs25ProductCandidates(stores: Gs25Store[]): Gs25ProductCa
 
     const key = `${name}::${store.searchItemSellPrice ?? 'null'}`;
     const prev = map.get(key);
-    const inStock = store.realStockQuantity > 0 ? 1 : 0;
+    const inStock = (store.realStockQuantity ?? 0) > 0 ? 1 : 0;
 
     if (!prev) {
       map.set(key, {
@@ -200,14 +201,19 @@ export function extractGs25ProductCandidates(stores: Gs25Store[]): Gs25ProductCa
         sellPrice: store.searchItemSellPrice,
         matchedStoreCount: 1,
         inStockStoreCount: inStock,
-        totalStockQuantity: Math.max(store.realStockQuantity, 0),
+        totalStockQuantity: store.realStockQuantity,
+        unknownStockStoreCount: store.realStockQuantity === null ? 1 : 0,
       });
       continue;
     }
 
     prev.matchedStoreCount += 1;
     prev.inStockStoreCount += inStock;
-    prev.totalStockQuantity += Math.max(store.realStockQuantity, 0);
+    if (store.realStockQuantity === null) {
+      prev.unknownStockStoreCount += 1;
+    } else {
+      prev.totalStockQuantity = (prev.totalStockQuantity ?? 0) + store.realStockQuantity;
+    }
   }
 
   return [...map.values()].sort((a, b) => {
@@ -216,7 +222,7 @@ export function extractGs25ProductCandidates(stores: Gs25Store[]): Gs25ProductCa
     }
 
     if (b.totalStockQuantity !== a.totalStockQuantity) {
-      return b.totalStockQuantity - a.totalStockQuantity;
+      return (b.totalStockQuantity ?? -1) - (a.totalStockQuantity ?? -1);
     }
 
     return a.name.localeCompare(b.name, 'ko');

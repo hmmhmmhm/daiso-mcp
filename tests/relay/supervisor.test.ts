@@ -30,7 +30,7 @@ it('준비된 소유 브라우저에 연결하고 그룹 RSS 및 정상 종료�
   expect(await owner.rss()).toBe(30);
   expect(owner.pid).toBe(123);
   await owner.close();
-  expect(child.send).toHaveBeenCalledWith('close');
+  expect(child.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'close' }));
   await owner.close();
   expect(child.send).toHaveBeenCalledTimes(1);
 });
@@ -48,7 +48,7 @@ it('브라우저 연결 실패도 소유 감시 프로세스를 종료한다', a
   const pending = launchGuardedBrowser('/tmp/test-owner');
   child.emit('message', { type: 'ready', endpoint: 'ws://localhost', root });
   await expect(pending).rejects.toThrow('connect failed');
-  expect(child.send).toHaveBeenCalledWith('close');
+  expect(child.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'close' }));
 });
 it('감시 프로세스 종료가 멈추면 확인 실패로 종료한다', async () => {
   vi.useFakeTimers();
@@ -63,4 +63,13 @@ it('감시 프로세스 종료가 멈추면 확인 실패로 종료한다', asyn
   await vi.advanceTimersByTimeAsync(9000);
   await rejected;
   expect(child.send).not.toHaveBeenCalled();
+});
+it('수명 계층의 종료 기한을 IPC에 그대로 전달한다', async () => {
+  const child = fixture();
+  const pending = launchGuardedBrowser('/tmp/test-owner');
+  child.emit('message', { type: 'ready', endpoint: 'ws://localhost', root });
+  const owner = await pending;
+  const deadline = Date.now() + 6000;
+  await owner.close(deadline);
+  expect(child.send).toHaveBeenCalledWith({ type: 'close', deadline });
 });

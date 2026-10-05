@@ -90,7 +90,8 @@ async function checkInventory(args: CheckInventoryArgs, transport: OliveyoungReq
     }
   );
 
-  const inStockProducts = enrichedInventory.products.filter((product) => product.inStock);
+  const checkedProducts = enrichedInventory.products.filter((product) => product.stockSource === 'nearby_store');
+  const inStockProducts = checkedProducts.filter((product) => product.stockStatus === 'in_stock');
 
   const result = {
     keyword,
@@ -116,7 +117,8 @@ async function checkInventory(args: CheckInventoryArgs, transport: OliveyoungReq
       stockCheckedCount: enrichedInventory.checkedCount,
       stockUncheckedCount: Math.max(0, productResult.products.length - enrichedInventory.checkedCount),
       inStockCount: inStockProducts.length,
-      outOfStockCount: enrichedInventory.products.length - inStockProducts.length,
+      outOfStockCount: checkedProducts.filter((product) => product.stockStatus === 'out_of_stock').length,
+      notSoldCount: checkedProducts.filter((product) => product.stockStatus === 'not_sold').length,
       products: enrichedInventory.products,
     },
   };

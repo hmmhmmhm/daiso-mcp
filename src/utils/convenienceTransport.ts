@@ -3,6 +3,7 @@ import { ServiceError } from '../core/errors.js';
 import { diagnosticHeaders } from './diagnostics.js';
 import { isValidDtryxRelayUrl } from '../services/dtryx/transport.js';
 import { createTimeoutController } from './http.js';
+import { parseRelayQuota } from './relayQuota.js';
 export interface ConvenienceTransportOptions {
   convenienceRelayUrl?: string;
   convenienceRelayToken?: string;
@@ -83,6 +84,7 @@ export async function requestConvenienceRelay<T>(
         status === 429 || status === 503 || status === 504 ? status : 502,
         status === 429 || status >= 500,
         status,
+        parseRelayQuota(status, response.headers),
       );
     }
     const data: unknown = await response.json();

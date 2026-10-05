@@ -142,6 +142,7 @@ export async function searchSevenElevenProductsWithVariants(
   const seenKeys = new Set<string>();
   const collectionIds = new Set<string>();
   const mergedProducts: SevenElevenProduct[] = [];
+  let totalCount = 0;
 
   for (const candidate of appliedQueries) {
     const result = await searchSevenElevenProducts(
@@ -158,6 +159,7 @@ export async function searchSevenElevenProductsWithVariants(
       },
     );
 
+    totalCount = Math.max(totalCount, result.totalCount);
     for (const collectionId of result.collectionIds) {
       collectionIds.add(collectionId);
     }
@@ -184,12 +186,11 @@ export async function searchSevenElevenProductsWithVariants(
     return 0;
   });
 
-  const start = Math.max(page - 1, 0) * size;
-  const pagedProducts = rankedProducts.slice(start, start + size);
+  const pagedProducts = rankedProducts.slice(0, size);
 
   return {
     query,
-    totalCount: rankedProducts.length,
+    totalCount: Math.max(totalCount, rankedProducts.length),
     products: pagedProducts,
     collectionIds: [...collectionIds],
     appliedQueries,

@@ -1,3 +1,5 @@
+import { parseInventoryQuantity } from '../inventoryQuantity.js';
+import { ServiceError } from '../../core/errors.js';
 import { hasConvenienceRelay, requestConvenienceRelay } from '../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 재고 조회 클라이언트
@@ -73,8 +75,8 @@ function normalizeStockStore(raw: StockApiStoreRaw): SevenElevenStockStore {
     address: '',
     latitude: 0,
     longitude: 0,
-    stockQuantity: toNullableNumber(raw.stock) ?? -1,
-    isSoldOut: toNullableNumber(raw.stock) === 0,
+    stockQuantity: parseInventoryQuantity(raw.stock) ?? -1,
+    isSoldOut: parseInventoryQuantity(raw.stock) === 0,
     distanceM: null,
   };
 }
@@ -237,7 +239,7 @@ function filterStoresByKeyword<T extends { storeName: string; address: string }>
     return tokens.every((token) => combined.includes(token));
   });
 
-  return tokenMatched.length > 0 ? tokenMatched : stores;
+  return tokenMatched;
 }
 
 async function tryStockApi(
@@ -286,6 +288,7 @@ async function tryStockApi(
       error: null,
     };
   } catch (error) {
+    if (error instanceof ServiceError) throw error;
     return {
       stores: null,
       error: normalizeStockError(error),
@@ -314,7 +317,7 @@ export async function checkSevenElevenInventory(
   // 3) 재고 API 시도 (실패 시 graceful fallback)
   let stockStores: SevenElevenStockStore[] | null = null;
   let stockError: SevenElevenStockError | null = null;
-  if (firstProduct && firstProduct.itemCode.length > 0) {
+  if (matchedStores.length > 0 && firstProduct && firstProduct.itemCode.length > 0) {
     try {
       const stockProduct = await fetchSevenElevenStockProductMeta(firstProduct.itemCode, options);
       if (stockProduct) {
@@ -323,6 +326,7 @@ export async function checkSevenElevenInventory(
         stockError = stockAttempt.error;
       }
     } catch (error) {
+    if (error instanceof ServiceError) throw error;
       stockError = normalizeStockError(error);
     }
   }

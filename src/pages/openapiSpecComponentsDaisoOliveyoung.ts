@@ -80,7 +80,7 @@ export const OPENAPI_DAISO_OLIVEYOUNG_COMPONENT_SCHEMAS = {
             storeName: { type: 'string', description: '매장명', example: '다이소 강남역점' },
             address: { type: 'string', description: '주소' },
             distance: { type: 'string', description: '거리', example: '0.5km' },
-            quantity: { type: 'integer', description: '재고 수량', example: 12 },
+            quantity: { type: 'integer', nullable: true, description: '재고 수량', example: 12 },
             options: {
               type: 'object',
               properties: {
@@ -149,12 +149,13 @@ export const OPENAPI_DAISO_OLIVEYOUNG_COMPONENT_SCHEMAS = {
                     longitude: { type: 'number', format: 'float' },
                   },
                 },
-                onlineStock: { type: 'integer', description: '온라인 재고 수량', example: 150 },
+                onlineStock: { type: 'integer', nullable: true, description: '온라인 재고 수량', example: 150 },
                 storeInventory: {
                   type: 'object',
                   properties: {
                     totalStores: { type: 'integer', description: '전체 매장 수' },
                     inStockCount: { type: 'integer', description: '재고 있는 매장 수' },
+                    unknownStockCount: { type: 'integer', description: '수량을 확인하지 못한 매장 수' },
                     stores: {
                       type: 'array',
                       items: { $ref: '#/components/schemas/StoreInventory' },
@@ -202,7 +203,7 @@ export const OPENAPI_DAISO_OLIVEYOUNG_COMPONENT_SCHEMAS = {
             o2oStockFlag: { type: 'boolean', description: '올리브영 원본 재고 가능 플래그', example: true },
             o2oRemainQuantity: { type: 'integer', description: '올리브영 원본 잔여 수량 필드. 0이어도 재고가 있을 수 있음', example: 0 },
             inStock: { type: 'boolean', description: '현재 조회한 주변 매장 기준 재고 여부. storeInventory가 있으면 그 결과를 우선 반영', example: true },
-            stockStatus: { type: 'string', enum: ['in_stock', 'out_of_stock'], example: 'in_stock' },
+            stockStatus: { type: 'string', enum: ['in_stock', 'out_of_stock', 'not_sold', 'unknown'], example: 'in_stock' },
             stockSource: { type: 'string', enum: ['global_search', 'nearby_store'], example: 'nearby_store' },
             storeInventory: { $ref: '#/components/schemas/OliveyoungProductStoreInventory' },
           },
@@ -322,6 +323,7 @@ export const OPENAPI_DAISO_OLIVEYOUNG_COMPONENT_SCHEMAS = {
                     stockUncheckedCount: { type: 'integer' },
                     inStockCount: { type: 'integer' },
                     outOfStockCount: { type: 'integer' },
+                    notSoldCount: { type: 'integer' },
                     products: {
                       type: 'array',
                       items: { $ref: '#/components/schemas/OliveyoungProduct' },

@@ -285,7 +285,7 @@ describe('handleEmart24CheckInventory', () => {
     };
     expect(payload.data.stores).toHaveLength(2);
     expect(payload.data.stores[1].bizNo).toBe('99999');
-    expect(payload.data.stores[1].bizQty).toBe(0);
+    expect(payload.data.stores[1].bizQty).toBeNull();
     expect(payload.data.stores[1].storeName).toBe('');
   });
 

@@ -28,10 +28,13 @@ it('원래 그룹의 정체를 확인할 수 없으면 강제 종료하지 않�
   await expect(closeOwnedGroup(root, async () => {}, snapshot, kill)).rejects.toThrow('identity');
   expect(kill).not.toHaveBeenCalled();
 });
-it.skipIf(process.platform === 'win32')('실제 POSIX 스냅샷에서 현재 프로세스를 찾는다', async () => {
-  const { processSnapshot } = await import('../../scripts/relay/ownership.js');
-  expect((await processSnapshot()).some((row) => row.pid === process.pid)).toBe(true);
-});
+it.skipIf(process.platform === 'win32')(
+  '실제 POSIX 스냅샷에서 현재 프로세스를 찾는다',
+  async () => {
+    const { processSnapshot } = await import('../../scripts/relay/ownership.js');
+    expect((await processSnapshot()).some((row) => row.pid === process.pid)).toBe(true);
+  },
+);
 it('잘못된 형식과 이미 사라진 그룹을 처리한다', async () => {
   expect(() => parseProcesses('bad')).toThrow('Invalid');
   const close = vi.fn().mockResolvedValue(undefined);
@@ -163,4 +166,80 @@ it('강제 종료 후에도 Playwright 프로필 정리 완료를 기다린다',
   finish();
   await pending;
   vi.useRealTimers();
+});
+it('프로세스 소멸이 확인되면 Playwright 종료 거절은 복구를 막지 않는다', async () => {
+  const kill = vi.fn();
+  await expect(
+    closeOwnedGroup(
+      root,
+      async () => {
+        throw Error('Target closed');
+      },
+      async () => [],
+      kill,
+    ),
+  ).resolves.toBeUndefined();
+  expect(kill).not.toHaveBeenCalled();
+});
+it('느린 close와 강제 종료 확인 및 프로필 정리도 한 예산 안에 끝낸다', async () => {
+  vi.useFakeTimers();
+  const started = Date.now();
+  const snapshot = vi
+    .fn()
+    .mockImplementation(async () => (Date.now() - started < 5900 ? [root] : []));
+  const closing = new Promise<void>((resolve) => setTimeout(resolve, 6900));
+  const pending = closeOwnedGroup(root, () => closing, snapshot, vi.fn());
+  await vi.advanceTimersByTimeAsync(7000);
+  await expect(pending).resolves.toBeUndefined();
+  expect(Date.now() - started).toBe(7000);
+  vi.useRealTimers();
+});
+
+it('공유 종료 기한을 넘긴 프로필 정리는 실패로 남긴다', async () => {
+  vi.useFakeTimers();
+  const started = Date.now();
+  const snapshot = vi
+    .fn()
+    .mockImplementation(async () => (Date.now() - started < 5900 ? [root] : []));
+  const closing = new Promise<void>((resolve) => setTimeout(resolve, 6900));
+  const pending = closeOwnedGroup(root, () => closing, snapshot, vi.fn(), started + 6500);
+  const rejected = expect(pending).rejects.toThrow('watchdog');
+  await vi.advanceTimersByTimeAsync(7000);
+  await rejected;
+  vi.useRealTimers();
+});
+it('정상 종료 또는 강제 종료 후 소멸이 확인되어도 close 거절을 허용한다', async () => {
+  for (const snapshots of [
+    [[root], []],
+    [[root], [root], []],
+  ]) {
+    const snapshot = vi.fn();
+    for (const rows of snapshots) snapshot.mockResolvedValueOnce(rows);
+    const kill = vi.fn();
+    await expect(
+      closeOwnedGroup(
+        root,
+        async () => {
+          throw Error('Target closed');
+        },
+        snapshot,
+        kill,
+      ),
+    ).resolves.toBeUndefined();
+    expect(kill).toHaveBeenCalledTimes(snapshots.length === 3 ? 1 : 0);
+  }
+});
+it('스냅샷 실패를 소멸로 간주하거나 임의 프로세스를 종료하지 않는다', async () => {
+  const kill = vi.fn();
+  await expect(
+    closeOwnedGroup(
+      root,
+      async () => {},
+      async () => {
+        throw Error('snapshot denied');
+      },
+      kill,
+    ),
+  ).rejects.toThrow('snapshot denied');
+  expect(kill).not.toHaveBeenCalled();
 });

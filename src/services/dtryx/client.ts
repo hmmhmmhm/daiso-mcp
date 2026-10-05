@@ -2,7 +2,7 @@
  * 디트릭스 API 클라이언트
  */
 
-import { formatTime, toNumber, toYyyymmdd } from '../../utils/format.js';
+import { formatTime, toNumber, toSeatCount, toYyyymmdd } from '../../utils/format.js';
 import { createTimeoutController } from '../../utils/http.js';
 import {
   hasDtryxRelayOptions,
@@ -139,8 +139,8 @@ export async function fetchDtryxTimetable(
 
   return response.Recordset.filter((item) => item.CinemaCd && item.MovieCd && item.ScreenCd).map(
     (item) => {
-      const totalSeats = toNumber(item.TotalSeatCnt);
-      const remainingSeats = toNumber(item.RemainSeatCnt);
+      const totalSeats = toSeatCount(item.TotalSeatCnt);
+      const remainingSeats = toSeatCount(item.RemainSeatCnt);
       const compactDate = toCompactDate(item.PlaySDT || playDate);
       const cinemaCode = String(item.CinemaCd);
       const screenCode = String(item.ScreenCd);
@@ -162,7 +162,10 @@ export async function fetchDtryxTimetable(
         rating: item.RatingNm || '',
         totalSeats,
         remainingSeats,
-        bookedSeats: Math.max(totalSeats - remainingSeats, 0),
+        bookedSeats:
+          totalSeats === null || remainingSeats === null
+            ? null
+            : Math.max(totalSeats - remainingSeats, 0),
         planStatus: item.PlanStatus || '',
       };
     },

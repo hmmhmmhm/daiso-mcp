@@ -99,7 +99,7 @@ describe('GET /api/opinet', () => {
   });
 
   it('주유소 상세 API는 결과가 없어도 빈 상세 결과를 반환한다', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ RESULT: {} })));
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ RESULT: { OIL: [] } })));
 
     const res = await app.request('/api/opinet/station?stationId=A0&timeoutMs=1000', undefined, {
       OPINET_API_KEY: 'key',

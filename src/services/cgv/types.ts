@@ -27,8 +27,8 @@ export interface CgvTimetable {
   playDate: string;
   startTime: string;
   endTime: string;
-  totalSeats: number;
-  remainingSeats: number;
+  totalSeats: number | null;
+  remainingSeats: number | null;
 }
 
 interface CgvTheaterItem {

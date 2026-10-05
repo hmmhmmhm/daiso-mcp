@@ -292,7 +292,7 @@ describe('cliInteractiveTestables', () => {
       createPrompt(['박스', '1']),
       store,
     );
-    expect(out.join('\n')).toContain('재고 수량: 0');
+    expect(out.join('\n')).toContain('재고 수량: 확인 불가');
   });
 
   it('runOliveyoungItemSearch의 예외 분기를 처리한다', async () => {

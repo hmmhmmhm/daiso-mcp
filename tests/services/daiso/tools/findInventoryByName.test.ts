@@ -96,6 +96,71 @@ describe('createFindInventoryByNameTool', () => {
     expect(parsed.nextSteps.storeCodeSource).toContain('storeInventory.stores[].storeCode');
   });
 
+  it('온라인 수량 누락은 확인 불가로 안내한다', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([
+        { PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '1000' },
+      ], 1))))
+      .mockResolvedValueOnce(new Response(createMockStoreHtml()))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { pdNo: '1049516' } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [
+          {
+            strCd: '11199',
+            strNm: '강남역점',
+            strAddr: '서울 강남구',
+            strTno: '02',
+            opngTime: '0900',
+            clsngTime: '2200',
+            strLttd: 37.5,
+            strLitd: 127,
+            km: '0.2km',
+            parkYn: 'N',
+            usimYn: 'N',
+            pkupYn: 'Y',
+            taxfYn: 'N',
+            elvtYn: 'Y',
+            entrRampYn: 'N',
+            nocashYn: 'N',
+          },
+        ],
+      })))
+      .mockResolvedValueOnce(new Response('sample-token', { headers: { 'X-DM-UID': 'dm-uid-123' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        success: true,
+        data: [{ pdNo: '1049516', strCd: '11199', stck: '2' }],
+      })));
+
+    const tool = createFindInventoryByNameTool();
+    const result = await tool.handler({ query: '수납박스', storeQuery: '강남역', pageSize: 5 });
+
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.query).toBe('수납박스');
+    expect(parsed.summary).toMatchObject({
+      headline: expect.stringContaining('수납박스'),
+      selectedProduct: '수납박스',
+      storeQuery: '강남역',
+      displayLocationHint: expect.stringContaining('daiso_get_display_location'),
+    });
+    expect(parsed.location).toMatchObject({
+      latitude: 37.4979,
+      longitude: 127.0276,
+      source: 'storeQuery',
+      storeName: '다이소 강남역점',
+    });
+    expect(parsed.selectedProduct.id).toBe('1049516');
+    expect(parsed.productCandidates).toHaveLength(1);
+    expect(parsed.onlineStock).toBeNull();
+    expect(parsed.summary.inventorySummary).toContain('확인 불가');
+    expect(parsed.storeInventory.stores[0]).toMatchObject({
+      storeCode: '11199',
+      storeName: '강남역점',
+      quantity: 2,
+    });
+    expect(parsed.nextSteps.displayLocationTool).toBe('daiso_get_display_location');
+    expect(parsed.nextSteps.storeCodeSource).toContain('storeInventory.stores[].storeCode');
+  });
+
   it('정확히 일치하는 비품절 상품 후보를 우선 선택한다', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([

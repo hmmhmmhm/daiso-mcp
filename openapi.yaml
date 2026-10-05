@@ -589,6 +589,7 @@ components:
           example: 0.5km
         quantity:
           type: integer
+          nullable: true
           description: 재고 수량
           example: 12
         options:
@@ -675,6 +676,7 @@ components:
                   format: float
             onlineStock:
               type: integer
+              nullable: true
               description: 온라인 재고 수량
               example: 150
             storeInventory:
@@ -686,6 +688,9 @@ components:
                 inStockCount:
                   type: integer
                   description: 재고 있는 매장 수
+                unknownStockCount:
+                  type: integer
+                  description: 수량을 확인하지 못한 매장 수
                 stores:
                   type: array
                   items:
@@ -765,6 +770,8 @@ components:
           enum:
             - in_stock
             - out_of_stock
+            - not_sold
+            - unknown
           example: in_stock
         stockSource:
           type: string
@@ -940,6 +947,8 @@ components:
                   type: integer
                 outOfStockCount:
                   type: integer
+                notSoldCount:
+                  type: integer
                 products:
                   type: array
                   items:
@@ -1006,9 +1015,11 @@ components:
           example: "11:20"
         totalSeats:
           type: integer
+          nullable: true
           example: 120
         remainingSeats:
           type: integer
+          nullable: true
           example: 42
     MegaboxTheaterSearchResponse:
       type: object
@@ -1156,6 +1167,7 @@ components:
           example: 97
         stock:
           type: integer
+          nullable: true
           example: 10
         deliveryYn:
           type: boolean
@@ -1446,6 +1458,7 @@ components:
                     example: 28339
                   bizQty:
                     type: integer
+                    nullable: true
                     example: 3
                   storeName:
                     type: string
@@ -1483,6 +1496,7 @@ components:
           example: 127.0276
         realStockQuantity:
           type: integer
+          nullable: true
           example: 3
         distanceM:
           type: number
@@ -1511,8 +1525,12 @@ components:
         inStockStoreCount:
           type: integer
           example: 42
+        unknownStockStoreCount:
+          type: integer
+          example: 0
         totalStockQuantity:
           type: integer
+          nullable: true
           example: 110
     Gs25StoreSearchResponse:
       type: object
@@ -1589,8 +1607,12 @@ components:
                 inStockStoreCount:
                   type: integer
                   example: 35
+                unknownStockStoreCount:
+                  type: integer
+                  example: 0
                 totalStockQuantity:
                   type: integer
+                  nullable: true
                   example: 90
                 stores:
                   type: array
@@ -1823,12 +1845,15 @@ components:
           example: "12:47"
         totalSeats:
           type: integer
+          nullable: true
           example: 32
         bookedSeats:
           type: integer
+          nullable: true
           example: 4
         remainingSeats:
           type: integer
+          nullable: true
           example: 28
     LotteCinemaTheaterSearchResponse:
       type: object
@@ -2035,9 +2060,11 @@ components:
           example: "11:20"
         totalSeats:
           type: integer
+          nullable: true
           example: 150
         remainingSeats:
           type: integer
+          nullable: true
           example: 42
     CgvTheaterSearchResponse:
       type: object

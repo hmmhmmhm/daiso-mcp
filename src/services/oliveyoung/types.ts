@@ -22,7 +22,7 @@ export interface OliveyoungProduct {
   o2oStockFlag: boolean;
   o2oRemainQuantity: number;
   inStock: boolean;
-  stockStatus: 'in_stock' | 'out_of_stock';
+  stockStatus: 'in_stock' | 'out_of_stock' | 'not_sold' | 'unknown';
   stockSource?: 'global_search' | 'nearby_store';
   storeInventory?: OliveyoungProductStoreInventory;
 }

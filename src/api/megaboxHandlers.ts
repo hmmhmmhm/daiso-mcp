@@ -1,19 +1,18 @@
+import { hasInvalidCinemaQuery, CINEMA_INVALID_INPUT } from '../services/cgv/validation.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
  * 메가박스 GET API 핸들러
  */
 
 import { fetchMegaboxBookingList, toYyyymmdd } from '../services/megabox/client.js';
-import { fetchMegaboxNearbyTheaters, resolveMegaboxNearestTheater } from '../services/megabox/location.js';
+import {
+  fetchMegaboxNearbyTheaters,
+  resolveMegaboxNearestTheater,
+} from '../services/megabox/location.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return value === undefined ? undefined : Number(value);
 }
 
 /**
@@ -21,6 +20,8 @@ function parseOptionalNumber(value: string | undefined): number | undefined {
  * GET /api/megabox/theaters?lat={위도}&lng={경도}&playDate={YYYYMMDD}&areaCode={지역코드}
  */
 export async function handleMegaboxFindNearbyTheaters(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const keyword = c.req.query('keyword') || undefined;
   const lat = parseOptionalNumber(c.req.query('lat'));
   const lng = parseOptionalNumber(c.req.query('lng'));
@@ -46,11 +47,7 @@ export async function handleMegaboxFindNearbyTheaters(c: ApiContext) {
       },
     );
 
-    return successResponse(
-      c,
-      result,
-      { total: result.count, pageSize: limit }
-    );
+    return successResponse(c, result, { total: result.count, pageSize: limit });
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'MEGABOX_THEATER_SEARCH_FAILED', message, 500);
@@ -62,6 +59,8 @@ export async function handleMegaboxFindNearbyTheaters(c: ApiContext) {
  * GET /api/megabox/movies?playDate={YYYYMMDD}&theaterId={지점ID}&movieId={영화ID}
  */
 export async function handleMegaboxListNowShowing(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const playDate = c.req.query('playDate') || toYyyymmdd();
   const keyword = c.req.query('keyword') || undefined;
   const lat = parseOptionalNumber(c.req.query('lat'));
@@ -90,7 +89,8 @@ export async function handleMegaboxListNowShowing(c: ApiContext) {
           timeout: timeoutMs,
         },
       );
-      theaterId = resolved.theater?.theaterId;
+      if (!resolved.theater) throw new Error('요청 위치의 메가박스 극장을 찾을 수 없습니다.');
+      theaterId = resolved.theater.theaterId;
       resolvedTheater = resolved.theater;
       resolvedLocation = resolved.location;
     }
@@ -121,7 +121,7 @@ export async function handleMegaboxListNowShowing(c: ApiContext) {
         movies: result.movies,
         showtimes: result.showtimes,
       },
-      { total: result.showtimes.length }
+      { total: result.showtimes.length },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
@@ -134,6 +134,8 @@ export async function handleMegaboxListNowShowing(c: ApiContext) {
  * GET /api/megabox/seats?playDate={YYYYMMDD}&theaterId={지점ID}&movieId={영화ID}
  */
 export async function handleMegaboxGetRemainingSeats(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const playDate = c.req.query('playDate') || toYyyymmdd();
   const keyword = c.req.query('keyword') || undefined;
   const lat = parseOptionalNumber(c.req.query('lat'));
@@ -163,7 +165,8 @@ export async function handleMegaboxGetRemainingSeats(c: ApiContext) {
           timeout: timeoutMs,
         },
       );
-      theaterId = resolved.theater?.theaterId;
+      if (!resolved.theater) throw new Error('요청 위치의 메가박스 극장을 찾을 수 없습니다.');
+      theaterId = resolved.theater.theaterId;
       resolvedTheater = resolved.theater;
       resolvedLocation = resolved.location;
     }
@@ -203,7 +206,7 @@ export async function handleMegaboxGetRemainingSeats(c: ApiContext) {
         resolvedTheater,
         seats,
       },
-      { total: seats.length, pageSize: limit }
+      { total: seats.length, pageSize: limit },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';

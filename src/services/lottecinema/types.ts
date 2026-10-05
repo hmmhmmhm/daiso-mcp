@@ -31,9 +31,9 @@ export interface LotteCinemaShowtime {
   playDate: string;
   startTime: string;
   endTime: string;
-  totalSeats: number;
-  bookedSeats: number;
-  remainingSeats: number;
+  totalSeats: number | null;
+  bookedSeats: number | null;
+  remainingSeats: number | null;
 }
 
 interface LotteCinemaTicketingTheaterItem {

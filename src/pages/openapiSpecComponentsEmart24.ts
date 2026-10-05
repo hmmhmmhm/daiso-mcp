@@ -127,7 +127,7 @@ export const OPENAPI_EMART24_COMPONENT_SCHEMAS = {
               type: 'object',
               properties: {
                 bizNo: { type: 'string', example: '28339' },
-                bizQty: { type: 'integer', example: 3 },
+                bizQty: { type: 'integer', nullable: true, example: 3 },
                 storeName: { type: 'string', example: '강남스퀘어점' },
                 address: { type: 'string' },
                 phone: { type: 'string' },

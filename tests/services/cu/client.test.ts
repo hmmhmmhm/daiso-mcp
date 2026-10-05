@@ -12,6 +12,14 @@ import {
 
 const mockFetch = vi.fn();
 
+it('상품 가격의 숫자가 아닌 문자열은 유효 가격으로 해석하지 않는다', async () => {
+  mockFetch.mockResolvedValueOnce(Response.json({})).mockResolvedValueOnce(Response.json({
+    data: { stockResult: { result: { total_count: 1, rows: [{ fields: { item_cd: 'P', item_nm: '콜라', hyun_maega: 'invalid-price' } }] } } },
+  }));
+  const result = await fetchCuStock({ keyword: '콜라', limit: 1, offset: 0, searchSort: 'recom' });
+  expect(result.items[0].price).toBe(0);
+});
+
 it('CU 조회 실패 응답을 빈 재고로 처리하지 않는다', async () => {
   mockFetch.mockResolvedValueOnce(new Response('{}')).mockResolvedValueOnce(new Response(
     JSON.stringify({ resp_cd: '3000', resp_msg: '재고조회 조회 실패' }),
@@ -314,7 +322,7 @@ describe('fetchCuStores', () => {
     expect(result.stores[0].storeCode).toBe('');
     expect(result.stores[0].latitude).toBe(0);
     expect(result.stores[0].longitude).toBe(0);
-    expect(result.stores[0].stock).toBe(0);
+    expect(result.stores[0].stock).toBeNull();
   });
 });
 

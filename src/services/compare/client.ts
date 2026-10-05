@@ -3,6 +3,7 @@ import { fetchGs25SearchProducts } from '../gs25/client.js';
 import { searchSevenElevenProducts } from '../seveneleven/client.js';
 import { searchEmart24Products } from '../emart24/client.js';
 import type { ComparableProduct, CompareProductsResult, CompareServiceId } from './types.js';
+import type { ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 
 const DEFAULT_COMPARE_SERVICES: CompareServiceId[] = ['daiso', 'gs25', 'seveneleven', 'emart24'];
 
@@ -62,10 +63,11 @@ async function searchService(
   service: CompareServiceId,
   keyword: string,
   limit: number,
+  options: ConvenienceTransportOptions,
 ): Promise<ComparableProduct[]> {
   if (service === 'daiso') {
     const result = await fetchDaisoProducts(keyword, 1, limit);
-    return result.products.map((product) => ({
+    return result.products.slice(0, limit).map((product) => ({
       service,
       serviceName: SERVICE_NAMES[service],
       code: product.id,
@@ -77,7 +79,7 @@ async function searchService(
   }
 
   if (service === 'gs25') {
-    const products = await fetchGs25SearchProducts(keyword, { timeout: 15000 });
+    const products = await fetchGs25SearchProducts(keyword, { ...options, timeout: 15000 });
     return products.slice(0, limit).map((product) => ({
       service,
       serviceName: SERVICE_NAMES[service],
@@ -91,8 +93,8 @@ async function searchService(
   }
 
   if (service === 'seveneleven') {
-    const result = await searchSevenElevenProducts({ query: keyword, page: 1, size: limit });
-    return result.products.map((product) => ({
+    const result = await searchSevenElevenProducts({ query: keyword, page: 1, size: limit }, options);
+    return result.products.slice(0, limit).map((product) => ({
       service,
       serviceName: SERVICE_NAMES[service],
       code: product.itemCode || product.productNo,
@@ -111,7 +113,7 @@ async function searchService(
     sortType: 'PRICE_ASC',
     saleProductYn: 'N',
   });
-  return result.products.map((product) => ({
+  return result.products.slice(0, limit).map((product) => ({
     service,
     serviceName: SERVICE_NAMES[service],
     code: product.pluCd,
@@ -128,6 +130,7 @@ export function parseCompareServices(value: string | undefined): CompareServiceI
 
 export async function compareProducts(
   params: CompareProductsParams,
+  options: ConvenienceTransportOptions = {},
 ): Promise<CompareProductsResult> {
   const keyword = params.keyword.trim();
   const limit = Math.max(1, Math.min(Math.trunc(params.limit || 5), 20));
@@ -137,7 +140,7 @@ export async function compareProducts(
   const settled = await Promise.allSettled(
     services.map(async (service) => ({
       service,
-      products: await searchService(service, keyword, limit),
+      products: await searchService(service, keyword, limit, options),
     })),
   );
 

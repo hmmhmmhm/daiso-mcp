@@ -212,10 +212,10 @@ describe('searchNaverLocalPlaces', () => {
     );
   });
 
-  it('items가 없는 성공 응답은 빈 장소 목록으로 처리한다', async () => {
+  it('빈 items 배열은 정상 빈 결과로 처리한다', async () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
-      .mockResolvedValue(new Response(JSON.stringify({ total: 0 })));
+      .mockResolvedValue(new Response(JSON.stringify({ total: 0, items: [] })));
 
     const result = await searchNaverLocalPlaces({
       naverClientId: 'client-id',

@@ -40,7 +40,7 @@ function buildCliHint(command: string, url: URL, bodyText: string): string[] {
     ];
   }
 
-  if (url.pathname === '/api/lottemart/products') {
+  if (url.pathname === '/api/lottemart/products' && code !== 'SERVICE_RETIRED') {
     return [
       '힌트: 롯데마트 상품 조회는 매장 정보가 필요합니다.',
       '다음 명령 예시: daiso lottemart-products <상품명> --storeName <매장명>',

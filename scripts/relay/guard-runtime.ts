@@ -29,6 +29,7 @@ export async function runGuard(
   const crashDir = await realpath(crashPath);
   await marker.writeFile(JSON.stringify({ guardPid: pid, state: 'launching', crashDir }));
   await marker.sync();
+  let cleanupDeadline = 0;
   const guard = createGuardController(
     async () => {
       const server = await launch(crashDir);
@@ -42,7 +43,14 @@ export async function runGuard(
         return {
           root,
           endpoint: server.wsEndpoint(),
-          close: () => closeOwnedGroup(root, () => server.close(), snapshot),
+          close: () =>
+            closeOwnedGroup(
+              root,
+              () => server.close(),
+              snapshot,
+              process.kill,
+              cleanupDeadline - 500,
+            ),
         };
       } catch (error) {
         await server.kill();
@@ -59,7 +67,8 @@ export async function runGuard(
   const stop = () => {
     if (stopping) return;
     stopping = true;
-    void bounded(guard.stop(), 8000)
+    cleanupDeadline ||= Date.now() + 8000;
+    void bounded(guard.stop(), Math.max(0, cleanupDeadline - Date.now()))
       .then(() => {
         if (channel.connected) channel.send({ type: 'closed' });
         disposeListeners();
@@ -75,6 +84,18 @@ export async function runGuard(
   channel.once('SIGINT', stop);
   const onMessage = (message: unknown) => {
     if (message === 'close') stop();
+    else if (
+      message &&
+      typeof message === 'object' &&
+      'type' in message &&
+      message.type === 'close' &&
+      'deadline' in message &&
+      typeof message.deadline === 'number' &&
+      Number.isFinite(message.deadline)
+    ) {
+      if (!stopping) cleanupDeadline = message.deadline;
+      stop();
+    }
   };
   channel.on('message', onMessage);
   const disposeListeners = () => {

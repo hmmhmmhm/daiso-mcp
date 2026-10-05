@@ -128,12 +128,30 @@ describe('handleCgvFindTheaters', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: '안산 중앙역',
+                address_name: '대한민국 경기도 안산시 단원구',
+                y: 37.3171,
+                x: 126.8389,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: 'CGV 안산',
+                address_name: '대한민국 경기도 안산시 단원구 고잔동 535',
+                y: 37.3172,
+                x: 126.839,
+              },
+            ],
+          }),
         ),
       );
 
@@ -170,11 +188,7 @@ describe('handleCgvFindTheaters', () => {
     const ctx = createMockContext({ playDate: '20260304', lat: 'abc', lng: 'def' });
     await handleCgvFindTheaters(ctx);
 
-    const payload = (ctx.json as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
-      data: { filters: { latitude: number | null; longitude: number | null } };
-    };
-    expect(payload.data.filters.latitude).toBeNull();
-    expect(payload.data.filters.longitude).toBeNull();
+    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }), 400);
   });
 
   it('유효한 lat/lng 값은 숫자로 파싱한다', async () => {
@@ -197,7 +211,16 @@ describe('handleCgvFindTheaters', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: '안산 중앙역',
+                address_name: '대한민국 경기도 안산시 단원구 고잔동 535',
+                y: 37.3172,
+                x: 126.839,
+              },
+            ],
+          }),
         ),
       );
 
@@ -342,12 +365,30 @@ describe('handleCgvSearchMovies', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: '안산 중앙역',
+                address_name: '대한민국 경기도 안산시 단원구',
+                y: 37.3171,
+                x: 126.8389,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: 'CGV 안산',
+                address_name: '대한민국 경기도 안산시 단원구 고잔동 535',
+                y: 37.3172,
+                x: 126.839,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
@@ -393,7 +434,15 @@ describe('handleCgvSearchMovies', () => {
     const ctx = createMockContext({ playDate: '20260315', keyword: '안산 중앙역' });
     await handleCgvSearchMovies(ctx);
 
-    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: expect.objectContaining({ message: expect.stringContaining('위치를 좌표로 변환하지 못했습니다') }) }), 500);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: expect.objectContaining({
+          message: expect.stringContaining('위치를 좌표로 변환하지 못했습니다'),
+        }),
+      }),
+      500,
+    );
   });
 
   it('CGV 영화 조회 중 비 Error 예외는 기본 메시지로 처리한다', async () => {
@@ -618,8 +667,8 @@ describe('handleCgvGetTimetable', () => {
     const payload = (ctx.json as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
       data: { filterRelaxed: boolean; timetable: Array<{ movieCode: string }> };
     };
-    expect(payload.data.filterRelaxed).toBe(true);
-    expect(payload.data.timetable[0].movieCode).toBe('M2');
+    expect(payload.data.filterRelaxed).toBe(false);
+    expect(payload.data.timetable).toEqual([]);
   });
 
   it('theaterCode/movieCode가 없으면 null 필터를 반환한다', async () => {
@@ -692,12 +741,30 @@ describe('handleCgvGetTimetable', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: '안산 중앙역',
+                address_name: '대한민국 경기도 안산시 단원구',
+                y: 37.3171,
+                x: 126.8389,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: 'CGV 안산', address_name: '대한민국 경기도 안산시 단원구 고잔동 535', y: 37.3172, x: 126.839 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: 'CGV 안산',
+                address_name: '대한민국 경기도 안산시 단원구 고잔동 535',
+                y: 37.3172,
+                x: 126.839,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
@@ -756,7 +823,15 @@ describe('handleCgvGetTimetable', () => {
     const ctx = createMockContext({ playDate: '20260315', keyword: '안산 중앙역' });
     await handleCgvGetTimetable(ctx);
 
-    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: expect.objectContaining({ message: expect.stringContaining('위치를 좌표로 변환하지 못했습니다') }) }), 500);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: expect.objectContaining({
+          message: expect.stringContaining('위치를 좌표로 변환하지 못했습니다'),
+        }),
+      }),
+      500,
+    );
   });
 
   it('CGV 시간표 조회 중 비 Error 예외는 기본 메시지로 처리한다', async () => {
@@ -795,9 +870,17 @@ describe('handleCgvGetTimetable', () => {
     );
   });
 });
-it.each([handleCgvSearchMovies, handleCgvGetTimetable])('위치가 유효해도 공식 극장이 없으면 목록을 비운다', async (handler) => {
- mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 0, data: [] })));
- const ctx = createMockContext({ lat: '35.115', lng: '129.041', playDate: '20261005' });
- await handler(ctx);
- expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: expect.objectContaining({ resolvedTheater: null }) }));
-});
+it.each([handleCgvSearchMovies, handleCgvGetTimetable])(
+  '위치가 유효해도 공식 극장이 없으면 목록을 비운다',
+  async (handler) => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ statusCode: 0, data: [] })));
+    const ctx = createMockContext({ lat: '35.115', lng: '129.041', playDate: '20261005' });
+    await handler(ctx);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({ resolvedTheater: null }),
+      }),
+    );
+  },
+);

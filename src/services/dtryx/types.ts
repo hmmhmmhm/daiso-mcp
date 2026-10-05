@@ -35,9 +35,9 @@ export interface DtryxShowtime {
   endTime: string;
   runningMinutes: number;
   rating: string;
-  totalSeats: number;
-  remainingSeats: number;
-  bookedSeats: number;
+  totalSeats: number | null;
+  remainingSeats: number | null;
+  bookedSeats: number | null;
   planStatus: string;
 }
 

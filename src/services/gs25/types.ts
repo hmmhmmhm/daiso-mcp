@@ -17,9 +17,9 @@ export interface Gs25Store {
   latitude: number;
   longitude: number;
   serviceCode: string;
-  realStockQuantity: number;
-  pickupStockQuantity: number;
-  deliveryStockQuantity: number;
+  realStockQuantity: number | null;
+  pickupStockQuantity: number | null;
+  deliveryStockQuantity: number | null;
   isSoldOut: boolean;
   searchItemName: string;
   searchItemSellPrice: number | null;
@@ -61,5 +61,6 @@ export interface Gs25ProductCandidate {
   sellPrice: number | null;
   matchedStoreCount: number;
   inStockStoreCount: number;
-  totalStockQuantity: number;
+  totalStockQuantity: number | null;
+  unknownStockStoreCount: number;
 }

@@ -229,7 +229,12 @@ it('자동 교체 중 종료는 준비 중인 브라우저를 회수하고 타�
   const life = createBrowserLifecycle(f.launch);
   await life.start();
   let finish!: () => void;
-  f.page.goto.mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
+  f.page.goto.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
   await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
   expect(f.launch).toHaveBeenCalledTimes(2);
   expect(life.status().state).toBe('starting');
@@ -259,7 +264,12 @@ it('조회 중 RSS 초과는 조회 종료 후 한 번만 새 세션을 준비�
   const life = createBrowserLifecycle(f.launch);
   await life.start();
   let finish!: (v: unknown) => void;
-  f.page.evaluate.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  f.page.evaluate.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
   await vi.advanceTimersByTimeAsync(29000);
   const pending = life.run('/p', {});
   f.owner.rss.mockResolvedValue(2 ** 30 + 1);
@@ -303,7 +313,12 @@ it('자동 준비 중 팝업 회수 실패는 준비 완료로 보고하지 않�
   const life = createBrowserLifecycle(f.launch);
   await life.start();
   let finish!: () => void;
-  f.page.waitForURL.mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
+  f.page.waitForURL.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
   await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
   f.context.emit('page', { close: vi.fn().mockRejectedValue(new Error('popup')) });
   await vi.advanceTimersByTimeAsync(0);
@@ -315,13 +330,62 @@ it('자동 준비 중 팝업 회수 실패는 준비 완료로 보고하지 않�
   await life.close();
 });
 it('브라우저 시작/회수 사유를 기록하고 관측기 실패를 격리한다', async () => {
-  const f = fixture(); const events: string[] = [];
-  const life = createBrowserLifecycle(f.launch, event => { events.push(event); if(event==='shutdown') throw Error('log'); });
-  await life.start(); await life.close(); expect(events).toEqual(['ready','shutdown']);
-  const second = createBrowserLifecycle(f.launch, async()=>{throw Error('async log')});
-  await second.start(); await second.close();
+  const f = fixture();
+  const events: string[] = [];
+  const life = createBrowserLifecycle(f.launch, (event) => {
+    events.push(event);
+    if (event === 'shutdown') throw Error('log');
+  });
+  await life.start();
+  await life.close();
+  expect(events).toEqual(['ready', 'shutdown']);
+  const second = createBrowserLifecycle(f.launch, async () => {
+    throw Error('async log');
+  });
+  await second.start();
+  await second.close();
 });
-it('브라우저 프로세스 실행 실패도 별도 사건으로 기록한다',async()=>{
- const events:string[]=[];const life=createBrowserLifecycle(async()=>{throw Error('launch')},e=>{events.push(e)});
- await expect(life.start()).rejects.toThrow('launch');expect(events).toContain('launch-failed');await life.close();
+it('브라우저 프로세스 실행 실패도 별도 사건으로 기록한다', async () => {
+  const events: string[] = [];
+  const life = createBrowserLifecycle(
+    async () => {
+      throw Error('launch');
+    },
+    (e) => {
+      events.push(e);
+    },
+  );
+  await expect(life.start()).rejects.toThrow('launch');
+  expect(events).toContain('launch-failed');
+  await life.close();
+});
+it('수명 계층이 종료 시작 때 하나의 기한을 생성한다', async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const life = createBrowserLifecycle(f.launch);
+  await life.start();
+  const now = Date.now();
+  await life.close();
+  expect(f.owner.close).toHaveBeenCalledWith(now + 10000);
+});
+it('소멸 확인 뒤 close 거절은 다음 요청의 새 브라우저 실행을 허용한다', async () => {
+  const { closeOwnedGroup } = await import('../../scripts/relay/ownership.js');
+  const f = fixture();
+  f.owner.close.mockImplementation(() =>
+    closeOwnedGroup(
+      { pid: 123, ppid: 1, pgid: 123, rss: 1, birth: 'start' },
+      async () => {
+        throw Error('Target closed');
+      },
+      async () => [],
+      vi.fn(),
+    ),
+  );
+  const life = createBrowserLifecycle(f.launch);
+  await life.start();
+  f.page.emit('crash');
+  await life.run('/p', {});
+  expect(f.launch).toHaveBeenCalledTimes(2);
+  expect(life.status()).toMatchObject({ state: 'ready', pages: 1 });
+  await life.close();
 });

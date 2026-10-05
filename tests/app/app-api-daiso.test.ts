@@ -110,10 +110,10 @@ describe('GET /api/daiso/stores', () => {
 
 describe('GET /api/daiso/inventory', () => {
   it('재고 정보를 반환한다', async () => {
-    // 온라인 재고 응답
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: false })));
-    // 매장 재고 응답
-    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: false })));
+    // 확인된 실제 온라인 재고 0개
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: { stck: 0 } })));
+    // 정상 빈 매장 검색
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] })));
     // 상품 메타데이터 응답
     mockFetch.mockResolvedValueOnce(
       new Response(
@@ -153,7 +153,7 @@ describe('GET /api/daiso/inventory', () => {
   it('역명 키워드가 비면 붙여쓴 변형으로 재시도한다', async () => {
     mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
       if (url.includes('selOnlStck')) {
-        return new Response(JSON.stringify({ success: false }));
+        return new Response(JSON.stringify({ success: true, data: { stck: 0 } }));
       }
 
       if (url.includes('FindStoreGoods')) {

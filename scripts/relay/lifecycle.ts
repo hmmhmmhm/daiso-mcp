@@ -5,7 +5,7 @@ import type { BrowserRunner } from './oliveyoung.js';
 export interface BrowserOwner {
   browser: Pick<Browser, 'newContext'>;
   pid: number;
-  close(): Promise<void>;
+  close(deadline?: number): Promise<void>;
   rss(): Promise<number>;
 }
 export async function bounded<T>(work: Promise<T>, ms: number): Promise<T> {
@@ -61,10 +61,13 @@ export function createBrowserLifecycle(
     context?.removeAllListeners('page');
     page = undefined;
     context = undefined;
-    cleanup = bounded(previous.close(), 10000).catch((error) => {
-      failed = error;
-      throw error;
-    });
+    const deadline = Date.now() + 10000;
+    cleanup = bounded(previous.close(deadline), Math.max(0, deadline - Date.now())).catch(
+      (error) => {
+        failed = error;
+        throw error;
+      },
+    );
     // 이벤트 핸들러에서 발생한 실패도 보존하고 다음 요청/종료에 전달합니다.
     void cleanup.catch(() => undefined);
     return cleanup;

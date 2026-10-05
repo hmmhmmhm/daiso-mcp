@@ -41,10 +41,12 @@ describe('handleMegaboxFindNearbyTheaters', () => {
   it('메가박스 주변 지점을 반환한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ areaBrchList: [{ brchNo: '1372', brchNm: '강남' }] }))
+        new Response(JSON.stringify({ areaBrchList: [{ brchNo: '1372', brchNm: '강남' }] })),
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>서울 강남구 강남대로</dd><a href="?lng=127.0&lat=37.5">지도</a>')
+        new Response(
+          '<dt>도로명주소</dt><dd>서울 강남구 강남대로</dd><a href="?lng=127.0&lat=37.5">지도</a>',
+        ),
       );
 
     const ctx = createMockContext({ lat: '37.5', lng: '127.0', areaCode: '11' });
@@ -54,7 +56,7 @@ describe('handleMegaboxFindNearbyTheaters', () => {
       expect.objectContaining({
         success: true,
         data: expect.objectContaining({ theaters: expect.any(Array) }),
-      })
+      }),
     );
   });
 
@@ -69,7 +71,7 @@ describe('handleMegaboxFindNearbyTheaters', () => {
         success: false,
         error: { code: 'MEGABOX_THEATER_SEARCH_FAILED', message: 'megabox fail' },
       }),
-      500
+      500,
     );
   });
 
@@ -82,9 +84,12 @@ describe('handleMegaboxFindNearbyTheaters', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: { code: 'MEGABOX_THEATER_SEARCH_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
+        error: {
+          code: 'MEGABOX_THEATER_SEARCH_FAILED',
+          message: '알 수 없는 오류가 발생했습니다.',
+        },
       }),
-      500
+      500,
     );
   });
 
@@ -98,13 +103,13 @@ describe('handleMegaboxFindNearbyTheaters', () => {
               { brchNo: '2', brchNm: 'B' },
               { brchNo: '3', brchNm: 'C' },
             ],
-          })
-        )
+          }),
+        ),
       )
       .mockRejectedValueOnce(new Error('failed'))
       .mockResolvedValueOnce(new Response('<dt>주소</dt><dd>좌표없음</dd>'))
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.1&lat=37.6">지도</a>')
+        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.1&lat=37.6">지도</a>'),
       );
 
     const ctx = createMockContext({ lat: '37.5', lng: '127.0', areaCode: '11' });
@@ -116,7 +121,7 @@ describe('handleMegaboxFindNearbyTheaters', () => {
         data: expect.objectContaining({
           theaters: [expect.objectContaining({ theaterId: '3' })],
         }),
-      })
+      }),
     );
   });
 
@@ -129,14 +134,14 @@ describe('handleMegaboxFindNearbyTheaters', () => {
               { brchNo: '1', brchNm: 'A' },
               { brchNo: '2', brchNm: 'B' },
             ],
-          })
-        )
+          }),
+        ),
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.5&lat=37.5">지도</a>')
+        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.5&lat=37.5">지도</a>'),
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.0&lat=37.5">지도</a>')
+        new Response('<dt>도로명주소</dt><dd>서울</dd><a href="?lng=127.0&lat=37.5">지도</a>'),
       );
 
     const ctx = createMockContext({ lat: '37.5', lng: '127.0', areaCode: '11' });
@@ -151,7 +156,7 @@ describe('handleMegaboxFindNearbyTheaters', () => {
             expect.objectContaining({ theaterId: '1' }),
           ],
         }),
-      })
+      }),
     );
   });
 
@@ -160,7 +165,16 @@ describe('handleMegaboxFindNearbyTheaters', () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: '안산 중앙역',
+                address_name: '대한민국 경기도 안산시 단원구',
+                y: 37.3171,
+                x: 126.8389,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
@@ -171,7 +185,9 @@ describe('handleMegaboxFindNearbyTheaters', () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>경기 안산시</dd><a href="?lng=126.8389&lat=37.3171">지도</a>'),
+        new Response(
+          '<dt>도로명주소</dt><dd>경기 안산시</dd><a href="?lng=126.8389&lat=37.3171">지도</a>',
+        ),
       );
 
     const ctx = createMockContext({ keyword: '안산 중앙역', limit: '1' });
@@ -189,27 +205,24 @@ describe('handleMegaboxFindNearbyTheaters', () => {
   });
 
   it('잘못된 좌표 문자열은 무시하고 처리한다', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          areaBrchList: [{ brchNo: '1372', brchNm: '강남' }],
-        }),
-      ),
-    ).mockResolvedValueOnce(
-      new Response('<dt>도로명주소</dt><dd>서울 강남구</dd><a href="?lng=127.0&lat=37.5">지도</a>'),
-    );
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            areaBrchList: [{ brchNo: '1372', brchNm: '강남' }],
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          '<dt>도로명주소</dt><dd>서울 강남구</dd><a href="?lng=127.0&lat=37.5">지도</a>',
+        ),
+      );
 
     const ctx = createMockContext({ lat: 'not-a-number', lng: '127.0', areaCode: '11' });
     await handleMegaboxFindNearbyTheaters(ctx);
 
-    expect(ctx.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: true,
-        data: expect.objectContaining({
-          latitude: 37.5665,
-        }),
-      }),
-    );
+    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }), 400);
   });
 });
 
@@ -233,8 +246,8 @@ describe('handleMegaboxListNowShowing', () => {
               totSeatCnt: 100,
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
     const ctx = createMockContext({ playDate: '20260304', theaterId: '1372' });
@@ -247,7 +260,7 @@ describe('handleMegaboxListNowShowing', () => {
           movies: expect.any(Array),
           showtimes: expect.any(Array),
         }),
-      })
+      }),
     );
   });
 
@@ -262,7 +275,7 @@ describe('handleMegaboxListNowShowing', () => {
         success: false,
         error: { code: 'MEGABOX_MOVIE_LIST_FAILED', message: 'movie list fail' },
       }),
-      500
+      500,
     );
   });
 
@@ -277,7 +290,7 @@ describe('handleMegaboxListNowShowing', () => {
         success: false,
         error: { code: 'MEGABOX_MOVIE_LIST_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
       }),
-      500
+      500,
     );
   });
 
@@ -286,7 +299,16 @@ describe('handleMegaboxListNowShowing', () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: '안산 중앙역',
+                address_name: '대한민국 경기도 안산시 단원구',
+                y: 37.3171,
+                x: 126.8389,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
@@ -297,7 +319,9 @@ describe('handleMegaboxListNowShowing', () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>경기 안산시</dd><a href="?lng=126.8389&lat=37.3171">지도</a>'),
+        new Response(
+          '<dt>도로명주소</dt><dd>경기 안산시</dd><a href="?lng=126.8389&lat=37.3171">지도</a>',
+        ),
       )
       .mockResolvedValueOnce(
         new Response(
@@ -354,8 +378,8 @@ describe('handleMegaboxGetRemainingSeats', () => {
               totSeatCnt: 100,
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
     const ctx = createMockContext({ playDate: '20260304', theaterId: '1372' });
@@ -365,7 +389,7 @@ describe('handleMegaboxGetRemainingSeats', () => {
       expect.objectContaining({
         success: true,
         data: expect.objectContaining({ seats: expect.any(Array) }),
-      })
+      }),
     );
   });
 
@@ -397,8 +421,8 @@ describe('handleMegaboxGetRemainingSeats', () => {
               totSeatCnt: 100,
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
     const ctx = createMockContext({ playDate: '20260304', movieId: 'M1' });
@@ -413,7 +437,7 @@ describe('handleMegaboxGetRemainingSeats', () => {
             expect.objectContaining({ theaterName: '코엑스' }),
           ],
         }),
-      })
+      }),
     );
   });
 
@@ -445,8 +469,8 @@ describe('handleMegaboxGetRemainingSeats', () => {
               totSeatCnt: 100,
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
     const ctx = createMockContext({ playDate: '20260304', movieId: 'M1' });
@@ -461,7 +485,7 @@ describe('handleMegaboxGetRemainingSeats', () => {
             expect.objectContaining({ scheduleId: 'S2' }),
           ],
         }),
-      })
+      }),
     );
   });
 
@@ -476,7 +500,7 @@ describe('handleMegaboxGetRemainingSeats', () => {
         success: false,
         error: { code: 'MEGABOX_SEAT_LIST_FAILED', message: 'seat fail' },
       }),
-      500
+      500,
     );
   });
 
@@ -491,7 +515,7 @@ describe('handleMegaboxGetRemainingSeats', () => {
         success: false,
         error: { code: 'MEGABOX_SEAT_LIST_FAILED', message: '알 수 없는 오류가 발생했습니다.' },
       }),
-      500
+      500,
     );
   });
 
@@ -500,7 +524,16 @@ describe('handleMegaboxGetRemainingSeats', () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '대한민국 경기도 안산시 단원구', y: 37.3171, x: 126.8389 }] }),
+          JSON.stringify({
+            documents: [
+              {
+                place_name: '안산 중앙역',
+                address_name: '대한민국 경기도 안산시 단원구',
+                y: 37.3171,
+                x: 126.8389,
+              },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(
@@ -511,7 +544,9 @@ describe('handleMegaboxGetRemainingSeats', () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response('<dt>도로명주소</dt><dd>경기 안산시</dd><a href="?lng=126.8389&lat=37.3171">지도</a>'),
+        new Response(
+          '<dt>도로명주소</dt><dd>경기 안산시</dd><a href="?lng=126.8389&lat=37.3171">지도</a>',
+        ),
       )
       .mockResolvedValueOnce(
         new Response(

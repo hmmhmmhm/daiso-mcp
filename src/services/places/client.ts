@@ -178,15 +178,22 @@ export async function searchNaverLocalPlaces(
   try {
     parsed = JSON.parse(bodyText) as NaverLocalResponse;
   } catch {
-    parsed = {};
+    if (!response.ok)
+      throw new Error(
+        `places API 호출 실패: HTTP ${response.status} ${bodyText || `HTTP ${response.status}`}`,
+      );
+    throw new Error('places API 응답이 올바른 JSON이 아닙니다.');
   }
 
   if (!response.ok) {
-    const message = parsed.errorMessage || bodyText || `HTTP ${response.status}`;
+    const message = parsed?.errorMessage || bodyText;
     throw new Error(`네이버 지역 검색 실패: ${message}`);
   }
 
-  const places = (parsed.items ?? []).map(normalizePlace);
+  if (!parsed || parsed.errorMessage || !Array.isArray(parsed.items))
+    throw new Error('네이버 지역 검색 응답이 올바르지 않습니다.');
+
+  const places = parsed.items.map(normalizePlace);
   return {
     provider: 'naverLocal',
     searchMode: 'keyword',

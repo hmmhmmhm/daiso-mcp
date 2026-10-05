@@ -84,7 +84,7 @@ function buildInventorySummary(args: {
   query: string;
   storeQuery: string;
   selectedProductName: string;
-  onlineStock: number;
+  onlineStock: number | null;
   inStockCount: number;
   totalStores: number;
 }): Record<string, string> {
@@ -93,7 +93,7 @@ function buildInventorySummary(args: {
     headline: `"${args.query}" 조회 결과, "${args.selectedProductName}" 상품을 기준으로 재고를 확인했습니다.`,
     selectedProduct: args.selectedProductName,
     storeQuery: args.storeQuery || '미지정',
-    inventorySummary: `${storeScope} 매장 ${args.totalStores}곳 중 ${args.inStockCount}곳에서 재고가 확인되었습니다. 온라인 재고는 ${args.onlineStock}개입니다.`,
+    inventorySummary: `${storeScope} 매장 ${args.totalStores}곳 중 ${args.inStockCount}곳에서 재고가 확인되었습니다. 온라인 재고는 ${args.onlineStock === null ? '확인 불가' : `${args.onlineStock}개`}입니다.`,
     displayLocationHint: '진열 위치가 필요하면 storeInventory.stores[].storeCode로 daiso_get_display_location을 호출하세요.',
   };
 }
@@ -195,7 +195,7 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
     ),
   ]);
   const stores = storeResult.stores;
-  const inStockCount = stores.filter((store) => store.quantity > 0).length;
+  const inStockCount = stores.filter((store) => (store.quantity ?? 0) > 0).length;
 
   const result = {
     query,
@@ -216,6 +216,7 @@ async function findInventoryByName(args: FindInventoryByNameArgs): Promise<McpTo
       totalStores: storeResult.totalCount,
       inStockCount,
       outOfStockCount: stores.filter((store) => store.quantity === 0).length,
+      unknownStockCount: stores.filter((store) => store.quantity === null).length,
       page,
       pageSize,
       stores,
@@ -255,12 +256,13 @@ const inventoryByNameOutputSchema = {
     .describe('사용자에게 바로 보여줄 요약'),
   productCandidates: z.array(z.unknown()).describe('검색된 상품 후보 목록'),
   selectedProduct: z.unknown().nullable().describe('재고 조회 기준으로 선택한 상품'),
-  onlineStock: z.number().describe('온라인 재고 수량'),
+  onlineStock: z.number().nullable().describe('온라인 재고 수량'),
   storeInventory: z
     .object({
       totalStores: z.number(),
       inStockCount: z.number(),
       outOfStockCount: z.number(),
+      unknownStockCount: z.number().optional(),
       page: z.number(),
       pageSize: z.number(),
       stores: z.array(z.unknown()),

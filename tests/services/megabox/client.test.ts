@@ -41,11 +41,15 @@ describe('fetchMegaboxBookingList', () => {
               totSeatCnt: '100',
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
-    const result = await fetchMegaboxBookingList({ playDate: '20260304', theaterId: '1372', movieId: 'M1' });
+    const result = await fetchMegaboxBookingList({
+      playDate: '20260304',
+      theaterId: '1372',
+      movieId: 'M1',
+    });
 
     expect(result.theaters[0]).toEqual({ theaterId: '1372', theaterName: '강남' });
     expect(result.movies[0].movieStatus).toBe('상영중');
@@ -68,16 +72,16 @@ describe('fetchMegaboxBookingList', () => {
               restSeatCnt: 'abc',
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
     const result = await fetchMegaboxBookingList({ playDate: '20260304' });
 
     expect(result.showtimes[0].startTime).toBe('9');
     expect(result.showtimes[0].endTime).toBe('10');
-    expect(result.showtimes[0].totalSeats).toBe(0);
-    expect(result.showtimes[0].remainingSeats).toBe(0);
+    expect(result.showtimes[0].totalSeats).toBeNull();
+    expect(result.showtimes[0].remainingSeats).toBeNull();
   });
 
   it('시간 포맷 분기(콜론 포함/기타)를 처리한다', async () => {
@@ -93,8 +97,8 @@ describe('fetchMegaboxBookingList', () => {
               playEndTime: '123',
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
     const result = await fetchMegaboxBookingList({ playDate: '20260304' });
@@ -113,8 +117,8 @@ describe('fetchMegaboxBookingList', () => {
               brchNo: '1372',
             },
           ],
-        })
-      )
+        }),
+      ),
     );
 
     const result = await fetchMegaboxBookingList({ playDate: '20260304' });
@@ -126,7 +130,7 @@ describe('fetchMegaboxBookingList', () => {
     mockFetch.mockResolvedValue(new Response('fail', { status: 500 }));
 
     await expect(fetchMegaboxBookingList({ playDate: '20260304' })).rejects.toThrow(
-      '메가박스 상영 목록 조회 실패: 500'
+      '메가박스 상영 목록 조회 실패: 500',
     );
   });
 
@@ -134,7 +138,7 @@ describe('fetchMegaboxBookingList', () => {
     mockFetch.mockRejectedValue(new DOMException('aborted', 'AbortError'));
 
     await expect(fetchMegaboxBookingList({ playDate: '20260304' })).rejects.toThrow(
-      '메가박스 상영 목록 조회 시간 초과'
+      '메가박스 상영 목록 조회 시간 초과',
     );
   });
 
@@ -148,7 +152,7 @@ describe('fetchMegaboxBookingList', () => {
     mockFetch.mockRejectedValue(new DOMException('aborted', 'AbortError'));
 
     await expect(fetchMegaboxBookingList({ playDate: '20260304' })).rejects.toThrow(
-      '메가박스 상영 목록 조회 시간 초과'
+      '메가박스 상영 목록 조회 시간 초과',
     );
   });
 });
@@ -156,7 +160,9 @@ describe('fetchMegaboxBookingList', () => {
 describe('fetchMegaboxTheaterInfo', () => {
   it('도로명주소와 좌표를 파싱한다', async () => {
     mockFetch.mockResolvedValue(
-      new Response('<dt>도로명주소</dt><dd>서울 강남구 강남대로</dd><a href="?lng=127.01&lat=37.50">지도</a>')
+      new Response(
+        '<dt>도로명주소</dt><dd>서울 강남구 강남대로</dd><a href="?lng=127.01&lat=37.50">지도</a>',
+      ),
     );
 
     const result = await fetchMegaboxTheaterInfo('1372');
@@ -167,7 +173,11 @@ describe('fetchMegaboxTheaterInfo', () => {
   });
 
   it('일반 주소와 mapLat/mapLng 파싱을 지원한다', async () => {
-    mockFetch.mockResolvedValue(new Response("<dt>주소</dt><dd>서울시 중구</dd><script>mapLat:'37.56';mapLng:'126.97';</script>"));
+    mockFetch.mockResolvedValue(
+      new Response(
+        "<dt>주소</dt><dd>서울시 중구</dd><script>mapLat:'37.56';mapLng:'126.97';</script>",
+      ),
+    );
 
     const result = await fetchMegaboxTheaterInfo('1000');
 
@@ -189,13 +199,17 @@ describe('fetchMegaboxTheaterInfo', () => {
   it('HTTP 에러를 처리한다', async () => {
     mockFetch.mockResolvedValue(new Response('fail', { status: 404 }));
 
-    await expect(fetchMegaboxTheaterInfo('1372')).rejects.toThrow('메가박스 지점 정보 조회 실패: 404');
+    await expect(fetchMegaboxTheaterInfo('1372')).rejects.toThrow(
+      '메가박스 지점 정보 조회 실패: 404',
+    );
   });
 
   it('AbortError를 시간 초과 에러로 변환한다', async () => {
     mockFetch.mockRejectedValue(new DOMException('aborted', 'AbortError'));
 
-    await expect(fetchMegaboxTheaterInfo('1372')).rejects.toThrow('메가박스 지점 정보 조회 시간 초과');
+    await expect(fetchMegaboxTheaterInfo('1372')).rejects.toThrow(
+      '메가박스 지점 정보 조회 시간 초과',
+    );
   });
 });
 

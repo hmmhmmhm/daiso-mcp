@@ -12,7 +12,7 @@ export const OPENAPI_GS25_COMPONENT_SCHEMAS = {
       phone: { type: 'string', example: '02-1234-5678' },
       latitude: { type: 'number', format: 'float', example: 37.4982 },
       longitude: { type: 'number', format: 'float', example: 127.0276 },
-      realStockQuantity: { type: 'integer', example: 3 },
+      realStockQuantity: { type: 'integer', nullable: true, example: 3 },
       distanceM: { type: 'number', nullable: true, example: 120 },
       propertyNames: {
         type: 'array',
@@ -28,7 +28,8 @@ export const OPENAPI_GS25_COMPONENT_SCHEMAS = {
       sellPrice: { type: 'integer', nullable: true, example: 1700 },
       matchedStoreCount: { type: 'integer', example: 120 },
       inStockStoreCount: { type: 'integer', example: 42 },
-      totalStockQuantity: { type: 'integer', example: 110 },
+      unknownStockStoreCount: { type: 'integer', example: 0 },
+      totalStockQuantity: { type: 'integer', nullable: true, example: 110 },
     },
   },
   Gs25StoreSearchResponse: {
@@ -96,7 +97,8 @@ export const OPENAPI_GS25_COMPONENT_SCHEMAS = {
               totalStoreCount: { type: 'integer', example: 17684 },
               matchedStoreCount: { type: 'integer', example: 100 },
               inStockStoreCount: { type: 'integer', example: 35 },
-              totalStockQuantity: { type: 'integer', example: 90 },
+              unknownStockStoreCount: { type: 'integer', example: 0 },
+              totalStockQuantity: { type: 'integer', nullable: true, example: 90 },
               stores: {
                 type: 'array',
                 items: { $ref: '#/components/schemas/Gs25Store' },

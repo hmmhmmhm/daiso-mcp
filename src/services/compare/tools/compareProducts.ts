@@ -1,6 +1,7 @@
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { compareProducts, parseCompareServices } from '../client.js';
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 
 interface CompareProductsArgs {
   keyword: string;
@@ -8,7 +9,7 @@ interface CompareProductsArgs {
   services?: string;
 }
 
-async function compareProductsHandler(args: CompareProductsArgs): Promise<McpToolResponse> {
+async function compareProductsHandler(args: CompareProductsArgs, options: ConvenienceTransportOptions): Promise<McpToolResponse> {
   const keyword = args.keyword?.trim();
   if (!keyword) {
     throw new Error('검색어(keyword)를 입력해주세요.');
@@ -18,7 +19,7 @@ async function compareProductsHandler(args: CompareProductsArgs): Promise<McpToo
     keyword,
     limit: args.limit,
     services: parseCompareServices(args.services),
-  });
+  }, options);
 
   return {
     content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
@@ -26,7 +27,7 @@ async function compareProductsHandler(args: CompareProductsArgs): Promise<McpToo
   };
 }
 
-export function createCompareProductsTool(): ToolRegistration {
+export function createCompareProductsTool(options: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'compare_products',
     metadata: {
@@ -52,6 +53,6 @@ export function createCompareProductsTool(): ToolRegistration {
         note: z.string().optional(),
       },
     },
-    handler: compareProductsHandler as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args: unknown) => compareProductsHandler(args as CompareProductsArgs, options),
   };
 }

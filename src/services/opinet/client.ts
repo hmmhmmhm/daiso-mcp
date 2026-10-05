@@ -60,7 +60,10 @@ function requireApiKey(apiKey: string | undefined): string {
   return resolved;
 }
 
-export function normalizeFuelCode(value: string | undefined, fallback: OpinetFuelCode = 'B027'): OpinetFuelCode {
+export function normalizeFuelCode(
+  value: string | undefined,
+  fallback: OpinetFuelCode = 'B027',
+): OpinetFuelCode {
   const normalized = (value || fallback).trim().toUpperCase();
   if (!FUEL_CODES.has(normalized)) {
     throw new Error('fuelCode는 B027, D047, B034, C004, K015 중 하나여야 합니다.');
@@ -117,7 +120,11 @@ function unwrapOil(payload: OpinetEnvelope): Record<string, unknown>[] {
   return asArray(payload.RESULT?.OIL ?? payload.OIL);
 }
 
-async function fetchOpinetJson(path: string, params: Record<string, string>, options: OpinetClientOptions) {
+async function fetchOpinetJson(
+  path: string,
+  params: Record<string, string>,
+  options: OpinetClientOptions,
+) {
   const url = new URL(`${OPINET_API_BASE_URL}/${path}`);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
@@ -134,12 +141,20 @@ async function fetchOpinetJson(path: string, params: Record<string, string>, opt
   try {
     parsed = JSON.parse(bodyText) as OpinetEnvelope;
   } catch {
-    parsed = {};
+    if (!response.ok)
+      throw new Error(
+        `opinet API 호출 실패: HTTP ${response.status} ${bodyText || `HTTP ${response.status}`}`,
+      );
+    throw new Error('opinet API 응답이 올바른 JSON이 아닙니다.');
   }
 
   if (!response.ok) {
     throw new Error(`오피넷 API 호출 실패: HTTP ${response.status} ${bodyText}`);
   }
+
+  const oil = parsed?.RESULT?.OIL ?? parsed?.OIL;
+  if (!parsed || oil === undefined || oil === null || typeof oil !== 'object')
+    throw new Error('오피넷 API 응답이 올바르지 않습니다.');
 
   return parsed;
 }

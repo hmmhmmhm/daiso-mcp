@@ -29,7 +29,7 @@ export interface Emart24Product {
 
 export interface Emart24StoreInventory {
   bizNo: string;
-  bizQty: number;
+  bizQty: number | null;
   storeName: string;
   address: string;
   phone: string;

@@ -10,7 +10,7 @@ import type {
   MegaboxTheater,
   MegaboxTheaterInfo,
 } from './types.js';
-import { formatTime, toNumber, toYyyymmdd } from '../../utils/format.js';
+import { formatTime, toSeatCount, toYyyymmdd } from '../../utils/format.js';
 import { createTimeoutController } from '../../utils/http.js';
 
 interface FetchBookingListParams {
@@ -88,8 +88,8 @@ export async function fetchMegaboxBookingList(
         playDate: item.playDe || params.playDate,
         startTime: formatTime(item.playStartTime),
         endTime: formatTime(item.playEndTime),
-        totalSeats: toNumber(item.totSeatCnt),
-        remainingSeats: toNumber(item.restSeatCnt),
+        totalSeats: toSeatCount(item.totSeatCnt),
+        remainingSeats: toSeatCount(item.restSeatCnt),
       }));
 
     return {

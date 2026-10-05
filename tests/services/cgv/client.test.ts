@@ -53,7 +53,9 @@ describe('fetchCgvTheaters', () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));
     await expect(fetchCgvTheaters({ zyteApiKey: 'test-key' })).rejects.toThrow('CGV');
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
   it('HTTP 에러를 처리한다', async () => {
@@ -343,8 +345,8 @@ describe('fetchCgvTimetable', () => {
     expect(result).toHaveLength(1);
     expect(result[0].startTime).toBe('');
     expect(result[0].endTime).toBe('');
-    expect(result[0].totalSeats).toBe(0);
-    expect(result[0].remainingSeats).toBe(0);
+    expect(result[0].totalSeats).toBeNull();
+    expect(result[0].remainingSeats).toBeNull();
   });
 
   it('응답 필드 일부가 비어 있어도 기본값으로 정규화한다', async () => {
@@ -408,8 +410,8 @@ describe('fetchCgvTimetable', () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0].totalSeats).toBe(0);
-    expect(result[0].remainingSeats).toBe(0);
+    expect(result[0].totalSeats).toBeNull();
+    expect(result[0].remainingSeats).toBeNull();
   });
 
   it('movieCode 조회에서 필수 필드가 없는 항목은 제외한다', async () => {
@@ -527,7 +529,7 @@ describe('fetchCgvTimetable', () => {
     expect(result).toHaveLength(1);
     expect(result[0].scheduleId).toBe('202603040056');
     expect(result[0].movieName).toBe('');
-    expect(result[0].remainingSeats).toBe(0);
+    expect(result[0].remainingSeats).toBeNull();
   });
 
   it('theaterCode가 있고 사이트 시간표가 비면 같은 극장에서 fallback 탐색한다', async () => {

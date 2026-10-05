@@ -2,6 +2,7 @@
  * 이마트24 재고 조회 공통 로직
  */
 
+import { parseInventoryQuantity } from '../inventoryQuantity.js';
 import {
   calculateDistanceM,
   fetchEmart24StoreDetail,
@@ -32,6 +33,7 @@ export interface Emart24InventoryLookupResult {
   keyword: string;
   pluCd: string;
   productCandidates: Emart24Product[];
+  selectionReason: 'explicit_code' | 'exact_match' | 'first_candidate';
   location: { latitude: number; longitude: number } | null;
   storeFilters: {
     storeKeyword: string;
@@ -59,12 +61,13 @@ async function resolvePluCd(
   productPage: number,
   productPageSize: number,
   timeoutMs: number,
-): Promise<{ pluCd: string; products: Emart24Product[] }> {
+): Promise<{ pluCd: string; products: Emart24Product[]; selectionReason: Emart24InventoryLookupResult['selectionReason'] }> {
   const normalizedPluCd = (pluCd || '').trim();
   if (normalizedPluCd.length > 0) {
     return {
       pluCd: normalizedPluCd,
       products: [],
+      selectionReason: 'explicit_code',
     };
   }
 
@@ -83,7 +86,8 @@ async function resolvePluCd(
     },
   );
 
-  const firstProduct = productResult.products.find((item) => item.pluCd.trim().length > 0);
+  const firstProduct = productResult.products.find((item) => item.pluCd.trim().length > 0 && item.goodsName.replace(/\s+/g, '').toLowerCase() === keyword.replace(/\s+/g, '').toLowerCase())
+    ?? productResult.products.find((item) => item.pluCd.trim().length > 0);
   if (!firstProduct) {
     throw new Error('상품 검색 결과에서 PLU 코드를 찾을 수 없습니다.');
   }
@@ -91,6 +95,7 @@ async function resolvePluCd(
   return {
     pluCd: firstProduct.pluCd,
     products: productResult.products,
+    selectionReason: firstProduct.goodsName.replace(/\s+/g, '').toLowerCase() === keyword.replace(/\s+/g, '').toLowerCase() ? 'exact_match' : 'first_candidate',
   };
 }
 
@@ -187,7 +192,7 @@ export async function lookupEmart24Inventory(
   const qtyByBizNo = new Map(
     (stockResult.storeGoodsQty || []).map((item) => [
       String(item.BIZNO || '').trim(),
-      Number.parseInt(String(item.BIZQTY || 0), 10) || 0,
+      parseInventoryQuantity(item.BIZQTY),
     ]),
   );
 
@@ -210,7 +215,7 @@ export async function lookupEmart24Inventory(
 
     return {
       bizNo,
-      bizQty: qtyByBizNo.get(bizNo) ?? 0,
+      bizQty: qtyByBizNo.get(bizNo) ?? null,
       storeName: detailInfo?.storeNm || nearby?.storeName || '',
       address: detailInfo?.storeAddr || nearby?.address || '',
       phone: detailInfo?.tel || nearby?.phone || '',
@@ -222,6 +227,7 @@ export async function lookupEmart24Inventory(
     keyword,
     pluCd: resolved.pluCd,
     productCandidates: resolved.products,
+    selectionReason: resolved.selectionReason,
     location:
       typeof latitude === 'number' && typeof longitude === 'number'
         ? { latitude, longitude }

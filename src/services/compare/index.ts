@@ -1,6 +1,7 @@
 import type { ServiceProvider } from '../../core/interfaces.js';
 import type { ServiceMetadata, ToolRegistration } from '../../core/types.js';
 import { createCompareProductsTool } from './tools/compareProducts.js';
+import type { ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 
 const COMPARE_METADATA: ServiceMetadata = {
   id: 'compare',
@@ -11,14 +12,15 @@ const COMPARE_METADATA: ServiceMetadata = {
 
 class CompareService implements ServiceProvider {
   readonly metadata = COMPARE_METADATA;
+  constructor(private readonly options: ConvenienceTransportOptions) {}
 
   getTools(): ToolRegistration[] {
-    return [createCompareProductsTool()];
+    return [createCompareProductsTool(this.options)];
   }
 }
 
-export function createCompareService(): ServiceProvider {
-  return new CompareService();
+export function createCompareService(options: ConvenienceTransportOptions = {}): ServiceProvider {
+  return new CompareService(options);
 }
 
 export * from './types.js';

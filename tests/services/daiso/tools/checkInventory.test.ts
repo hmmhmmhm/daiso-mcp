@@ -31,24 +31,22 @@ describe('fetchOnlineStock', () => {
     expect(stock).toBe(50);
   });
 
-  it('실패 시 0을 반환한다', async () => {
+  it('명시적 조회 실패는 오류를 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(JSON.stringify({ success: false }))
     );
 
-    const stock = await fetchOnlineStock('12345');
-
-    expect(stock).toBe(0);
+    await expect(fetchOnlineStock('12345')).rejects.toThrow();
   });
 
-  it('성공 응답에 재고 데이터가 없으면 0을 반환한다', async () => {
+  it('성공 응답에 재고 데이터가 없으면 null을 반환한다', async () => {
     mockFetch.mockResolvedValue(
       new Response(JSON.stringify({ success: true }))
     );
 
     const stock = await fetchOnlineStock('12345');
 
-    expect(stock).toBe(0);
+    expect(stock).toBeNull();
   });
 });
 
@@ -117,7 +115,7 @@ describe('fetchStoreInventory', () => {
     });
   });
 
-  it('재고 응답에 없거나 숫자가 아닌 매장은 0으로 처리한다', async () => {
+  it('재고 응답에 없거나 숫자가 아닌 매장은 null로 처리한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(JSON.stringify({
@@ -166,11 +164,11 @@ describe('fetchStoreInventory', () => {
 
     const result = await fetchStoreInventory('12345', 37.5, 127.0);
 
-    expect(result.stores[0].quantity).toBe(0);
-    expect(result.stores[1].quantity).toBe(0);
+    expect(result.stores[0].quantity).toBeNull();
+    expect(result.stores[1].quantity).toBeNull();
   });
 
-  it('재고 응답 data가 없으면 모든 매장을 0으로 처리한다', async () => {
+  it('재고 응답 data가 없으면 모든 매장을 null로 처리한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(JSON.stringify({
@@ -204,7 +202,7 @@ describe('fetchStoreInventory', () => {
 
     const result = await fetchStoreInventory('12345', 37.5, 127.0);
 
-    expect(result.stores[0].quantity).toBe(0);
+    expect(result.stores[0].quantity).toBeNull();
   });
 
   it('매장 검색 결과가 비면 붙여쓴 키워드로 재시도한다', async () => {
@@ -310,6 +308,7 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.product).toBeUndefined();
     expect(parsed.onlineStock).toBe(7);
     expect(parsed.storeInventory.totalStores).toBe(0);
+    expect(parsed.storeInventory.unknownStockCount).toBe(0);
   });
 
   it('상품 요약 조회 결과가 비어도 재고 결과를 반환한다', async () => {
@@ -336,6 +335,7 @@ describe('createCheckInventoryTool', () => {
     expect(parsed.product).toBeUndefined();
     expect(parsed.onlineStock).toBe(7);
     expect(parsed.storeInventory.totalStores).toBe(0);
+    expect(parsed.storeInventory.unknownStockCount).toBe(0);
   });
 
   it('온라인 재고와 매장 재고를 함께 반환한다', async () => {
