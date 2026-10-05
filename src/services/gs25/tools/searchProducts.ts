@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * GS25 상품 키워드 검색 도구
  */
@@ -6,7 +7,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { fetchGs25SearchProducts } from '../client.js';
 
-interface SearchProductsArgs {
+interface SearchProductsArgs extends ConvenienceTransportOptions {
   keyword: string;
   limit?: number;
   timeoutMs?: number;
@@ -41,7 +42,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     throw new Error('상품 검색어(keyword)를 입력해주세요.');
   }
 
-  const products = await fetchGs25SearchProducts(keyword, { timeout: timeoutMs, zyteApiKey });
+  const products = await fetchGs25SearchProducts(keyword, { ...args, timeout: timeoutMs, zyteApiKey });
   const limitedProducts = products.slice(0, limit);
   const payload = {
     keyword,
@@ -70,7 +71,7 @@ const searchProductsOutputSchema = {
   note: z.string().describe('후속 재고 조회 안내'),
 };
 
-export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration {
+export function createSearchProductsTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'gs25_search_products',
     metadata: {
@@ -85,7 +86,7 @@ export function createSearchProductsTool(zyteApiKey?: string): ToolRegistration 
       outputSchema: searchProductsOutputSchema,
     },
     handler: ((args: SearchProductsArgs) =>
-      searchProducts({ ...args, zyteApiKey: zyteApiKey ?? args.zyteApiKey })) as (
+      searchProducts({ ...args, ...transport, zyteApiKey: zyteApiKey ?? args.zyteApiKey })) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

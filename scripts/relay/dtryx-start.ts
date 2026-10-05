@@ -6,7 +6,8 @@ import { Readable } from 'node:stream';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createFileQuota } from './quota.js';
+import { createFileQuota, assertSeparateQuotaDirectories } from './quota.js';
+import { createConvenienceRelay } from './convenience.js';
 import { createDtryxRelay } from './dtryx.js';
 
 let logger: ReturnType<typeof createRelayLogger> | undefined;
@@ -28,8 +29,25 @@ async function main() {
     60000,
   );
   heartbeat.unref();
+  let convenience: ((request: Request) => Promise<Response>) | undefined;
+  let convenienceLog: ReturnType<typeof createRelayLogger> | undefined;
+  if (process.env.CONVENIENCE_RELAY_TOKEN !== undefined || process.env.CONVENIENCE_RELAY_STATE_DIR !== undefined) {
+    const convenienceToken = process.env.CONVENIENCE_RELAY_TOKEN;
+    const convenienceDir = process.env.CONVENIENCE_RELAY_STATE_DIR;
+    if (!convenienceToken?.trim() || !convenienceDir) throw Error('Invalid convenience configuration');
+    await mkdir(convenienceDir, { recursive: true, mode: 0o700 });
+    await assertSeparateQuotaDirectories(stateDir, convenienceDir);
+    convenienceLog = createRelayLogger(join(convenienceDir, 'logs'), { service: 'convenience' });
+    const quota = await createFileQuota(join(convenienceDir, 'quota.json'));
+    const convenienceHandler = createConvenienceRelay(convenienceToken, { takeQuota: quota, onEvent: convenienceLog.append, gs25ApiKey: process.env.GS25_API_KEY });
+    convenience = observeRelay(async (request) => {
+      const response = await convenienceHandler(request);
+      if (response.ok && new URL(request.url).pathname === '/v1/convenience/health') return Response.json({ ...(await response.json()), quota: quota.status(), logging: convenienceLog!.status() });
+      return response;
+    }, convenienceLog.append);
+  }
   const relay = createDtryxRelay(token, { takeQuota, onEvent: log.append });
-  const handler = observeRelay(async (request) => {
+  const dtryxHandler = observeRelay(async (request) => {
     const response = await relay(request);
     if (response.ok && new URL(request.url).pathname === '/v1/dtryx/health') {
       return Response.json({
@@ -40,6 +58,9 @@ async function main() {
     }
     return response;
   }, log.append);
+  const handler = (request: Request) => new URL(request.url).pathname.startsWith('/v1/convenience/')
+    ? convenience ? convenience(request) : Promise.resolve(Response.json({ error: 'Not found' }, { status: 404 }))
+    : dtryxHandler(request);
   const server = createServer(async (req, res) => {
     const controller = new AbortController();
     res.once('close', () => controller.abort());
@@ -78,6 +99,7 @@ async function main() {
     clearInterval(heartbeat);
     log.append({ stage: 'process', outcome: 'stopping' });
     void log.flush();
+    void convenienceLog?.flush();
     server.close();
     server.closeAllConnections();
   };

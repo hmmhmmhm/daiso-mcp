@@ -1,3 +1,4 @@
+import { convenienceTransportFromBindings } from './utils/convenienceTransport.js';
 import { handleLotteMartFindStores } from './api/lottemartHandlers.js';
 import { geocodeBindings } from './utils/geocode.js';
 /**
@@ -70,12 +71,12 @@ const createRegistry = (bindings?: AppBindings) => {
   registry.registerAll([
     createDaisoService,
     () =>
-      createGs25Service({
+      createGs25Service({ ...convenienceTransportFromBindings(bindings),
         ...geocodeBindings(bindings),
         zyteApiKey: bindings?.ZYTE_API_KEY,
         apiKey: bindings?.GS25_API_KEY,
       }),
-    () => createSevenElevenService({ zyteApiKey: bindings?.ZYTE_API_KEY }),
+    () => createSevenElevenService({ ...convenienceTransportFromBindings(bindings), zyteApiKey: bindings?.ZYTE_API_KEY }),
     createCompareService,
     () =>
       createFeedbackService({
@@ -93,7 +94,7 @@ const createRegistry = (bindings?: AppBindings) => {
         ...geocodeBindings(bindings),
       }),
     () =>
-      createCuService({
+      createCuService({ ...convenienceTransportFromBindings(bindings),
         zyteApiKey: bindings?.ZYTE_API_KEY,
         ...geocodeBindings(bindings),
       }),

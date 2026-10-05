@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 카탈로그 스냅샷 도구
  */
@@ -16,6 +17,7 @@ interface GetCatalogSnapshotArgs {
 async function getCatalogSnapshot(
   args: GetCatalogSnapshotArgs,
   zyteApiKey?: string,
+  transport: ConvenienceTransportOptions = {},
 ): Promise<McpToolResponse> {
   const { includeIssues = true, includeExhibition = true, limit = 20, timeoutMs = 15000 } = args;
 
@@ -23,6 +25,7 @@ async function getCatalogSnapshot(
     includeIssues,
     includeExhibition,
     timeout: timeoutMs,
+    ...transport,
     zyteApiKey,
   });
 
@@ -58,7 +61,7 @@ async function getCatalogSnapshot(
   };
 }
 
-export function createGetCatalogSnapshotTool(zyteApiKey?: string): ToolRegistration {
+export function createGetCatalogSnapshotTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'seveneleven_get_catalog_snapshot',
     metadata: {
@@ -71,6 +74,6 @@ export function createGetCatalogSnapshotTool(zyteApiKey?: string): ToolRegistrat
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: (args: unknown) => getCatalogSnapshot(args as GetCatalogSnapshotArgs, zyteApiKey),
+    handler: (args: unknown) => getCatalogSnapshot(args as GetCatalogSnapshotArgs, zyteApiKey, transport),
   };
 }

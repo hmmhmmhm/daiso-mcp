@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 서비스 프로바이더
  */
@@ -17,7 +18,7 @@ const SEVENELEVEN_METADATA: ServiceMetadata = {
   description: '세븐일레븐 공개 상품/검색/카탈로그 조회 서비스',
 };
 
-export interface SevenElevenServiceOptions {
+export interface SevenElevenServiceOptions extends ConvenienceTransportOptions {
   zyteApiKey?: string;
 }
 
@@ -28,11 +29,11 @@ class SevenElevenService implements ServiceProvider {
 
   getTools(): ToolRegistration[] {
     return [
-      createSearchProductsTool(this.options.zyteApiKey),
-      createSearchStoresTool(this.options.zyteApiKey),
-      createCheckInventoryTool(this.options.zyteApiKey),
-      createGetSearchPopwordsTool(this.options.zyteApiKey),
-      createGetCatalogSnapshotTool(this.options.zyteApiKey),
+      createSearchProductsTool(this.options.zyteApiKey, this.options),
+      createSearchStoresTool(this.options.zyteApiKey, this.options),
+      createCheckInventoryTool(this.options.zyteApiKey, this.options),
+      createGetSearchPopwordsTool(this.options.zyteApiKey, this.options),
+      createGetCatalogSnapshotTool(this.options.zyteApiKey, this.options),
     ];
   }
 }

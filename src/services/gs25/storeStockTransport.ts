@@ -1,12 +1,14 @@
+import { hasConvenienceRelay, requestConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
  * GS25 재고 원본 요청과 Zyte 대체 경로
  */
 
+import { ServiceError } from '../../core/errors.js';
 import { fetchJson, HttpError } from '../../utils/http.js';
 import { Gs25UpstreamUnavailableError } from './errors.js';
 import type { Gs25StoreStockResponse } from './types.js';
 
-interface StoreStockTransportOptions {
+interface StoreStockTransportOptions extends ConvenienceTransportOptions {
   timeout?: number;
   zyteApiKey?: string;
   apiKey?: string;
@@ -26,6 +28,13 @@ export async function fetchGs25StoreStockResponse(
   options: StoreStockTransportOptions,
   headers: Record<string, string>,
 ): Promise<Gs25StoreStockResponse> {
+  if (hasConvenienceRelay(options)) {
+    const params = Object.fromEntries(new URL(url).searchParams);
+    return requestConvenienceRelay<Gs25StoreStockResponse>('gs25-stock', { ...params, ...(options.apiKey?.trim() ? { apiKey: options.apiKey.trim() } : {}) }, options, options.timeout).catch((error: unknown) => {
+      if (error instanceof ServiceError && isAuthenticationStatus(error.upstreamStatus)) throw new Gs25UpstreamUnavailableError();
+      throw error;
+    });
+  }
   const requestHeaders = withApiKey(headers, options.apiKey);
 
   try {

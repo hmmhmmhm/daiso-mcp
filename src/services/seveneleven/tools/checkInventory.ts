@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 재고 확인 도구
  *
@@ -34,7 +35,7 @@ function isEncryptedStockFailure(
   return codeMatched || messageMatched;
 }
 
-async function checkInventory(args: CheckInventoryArgs, zyteApiKey?: string): Promise<McpToolResponse> {
+async function checkInventory(args: CheckInventoryArgs, zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): Promise<McpToolResponse> {
   const {
     keyword,
     storeKeyword = '',
@@ -54,6 +55,7 @@ async function checkInventory(args: CheckInventoryArgs, zyteApiKey?: string): Pr
     },
     {
       timeout: timeoutMs,
+      ...transport,
       zyteApiKey,
     },
   );
@@ -66,7 +68,7 @@ async function checkInventory(args: CheckInventoryArgs, zyteApiKey?: string): Pr
       ? '실시간 재고 API가 암호화 검증에서 거절되었습니다. 현재 구현의 평문 요청만으로는 재고 수량을 조회할 수 없습니다.'
       : result.stockError
         ? `실시간 재고 API 호출에 실패했습니다: ${result.stockError.message}`
-        : '실시간 재고 API가 현재 제한되어 있어 매장 목록만 제공됩니다. stockQuantity가 -1인 경우 재고 수량 미확인 상태입니다.';
+        : '선택한 매장의 재고 수량을 확인하지 못했습니다. stockQuantity가 -1인 경우 재고 수량 미확인 상태입니다.';
 
   return {
     content: [
@@ -95,7 +97,7 @@ async function checkInventory(args: CheckInventoryArgs, zyteApiKey?: string): Pr
   };
 }
 
-export function createCheckInventoryTool(zyteApiKey?: string): ToolRegistration {
+export function createCheckInventoryTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'seveneleven_check_inventory',
     metadata: {
@@ -113,7 +115,7 @@ export function createCheckInventoryTool(zyteApiKey?: string): ToolRegistration 
         timeoutMs: z.number().optional().default(20000).describe('요청 제한 시간(ms, 기본값: 20000)'),
       },
     },
-    handler: (args: unknown) => checkInventory(args as CheckInventoryArgs, zyteApiKey),
+    handler: (args: unknown) => checkInventory(args as CheckInventoryArgs, zyteApiKey, transport),
   };
 }
 /* c8 ignore stop */

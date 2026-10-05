@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * GS25 재고 확인 도구
@@ -20,7 +21,7 @@ function getProcessEnvValue(name: string): string | undefined {
   return typeof process !== 'undefined' ? process.env[name] : undefined;
 }
 
-interface CheckInventoryArgs {
+interface CheckInventoryArgs extends ConvenienceTransportOptions {
   keyword: string;
   itemCode?: string;
   latitude?: number;
@@ -72,6 +73,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         serviceCode,
       },
       {
+        ...args,
         timeout: timeoutMs,
         zyteApiKey,
         apiKey,
@@ -84,8 +86,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
 
     if (firstAddress.length > 0) {
       const geocoded = await geocodeGs25Address(firstAddress, {
-        timeout: timeoutMs,
         ...args,
+        timeout: timeoutMs,
       googleMapsApiKey,
       });
       if (geocoded) {
@@ -124,6 +126,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         useCache: false,
       },
       {
+        ...args,
         timeout: timeoutMs,
         zyteApiKey,
         apiKey,
@@ -132,6 +135,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   } else {
     // itemCode가 없으면 totalSearch API로 키워드 → itemCode 변환
     const searchProducts = await fetchGs25SearchProducts(keyword, {
+      ...args,
       timeout: timeoutMs,
       zyteApiKey,
     });
@@ -151,6 +155,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
           useCache: false,
         },
         {
+          ...args,
           timeout: timeoutMs,
           zyteApiKey,
           apiKey,
@@ -168,6 +173,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
           useCache: false,
         },
         {
+          ...args,
           timeout: timeoutMs,
           zyteApiKey,
           apiKey,
@@ -245,7 +251,7 @@ export function createCheckInventoryTool(
   googleMapsApiKey?: string,
   zyteApiKey?: string,
   apiKey?: string,
-  geocodeOptions: GeocodeOptions = {},
+  geocodeOptions: GeocodeOptions & ConvenienceTransportOptions = {},
 ): ToolRegistration {
   return {
     name: 'gs25_check_inventory',

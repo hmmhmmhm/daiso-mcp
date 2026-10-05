@@ -1,0 +1,118 @@
+/** 편의점 공통 릴레이 설정과 인증 전송입니다. */
+import { ServiceError } from '../core/errors.js';
+import { diagnosticHeaders } from './diagnostics.js';
+import { isValidDtryxRelayUrl } from '../services/dtryx/transport.js';
+import { createTimeoutController } from './http.js';
+export interface ConvenienceTransportOptions {
+  convenienceRelayUrl?: string;
+  convenienceRelayToken?: string;
+  convenienceAccessClientId?: string;
+  convenienceAccessClientSecret?: string;
+}
+export function convenienceTransportFromBindings(bindings?: {
+  CONVENIENCE_RELAY_URL?: string;
+  CONVENIENCE_RELAY_TOKEN?: string;
+  CONVENIENCE_ACCESS_CLIENT_ID?: string;
+  CONVENIENCE_ACCESS_CLIENT_SECRET?: string;
+}): ConvenienceTransportOptions {
+  return {
+    convenienceRelayUrl: bindings?.CONVENIENCE_RELAY_URL,
+    convenienceRelayToken: bindings?.CONVENIENCE_RELAY_TOKEN,
+    convenienceAccessClientId: bindings?.CONVENIENCE_ACCESS_CLIENT_ID,
+    convenienceAccessClientSecret: bindings?.CONVENIENCE_ACCESS_CLIENT_SECRET,
+  };
+}
+export function hasConvenienceRelay(options: ConvenienceTransportOptions): boolean {
+  return [
+    options.convenienceRelayUrl,
+    options.convenienceRelayToken,
+    options.convenienceAccessClientId,
+    options.convenienceAccessClientSecret,
+  ].some((v) => v !== undefined);
+}
+export async function requestConvenienceRelay<T>(
+  operation: string,
+  body: unknown,
+  options: ConvenienceTransportOptions,
+  timeout = 15000,
+): Promise<T> {
+  const {
+    convenienceRelayUrl: url,
+    convenienceRelayToken: token,
+    convenienceAccessClientId: id,
+    convenienceAccessClientSecret: secret,
+  } = options;
+  const access = id !== undefined || secret !== undefined;
+  if (
+    !isValidDtryxRelayUrl(url) ||
+    !token?.trim() ||
+    (access && (!id?.trim() || !secret?.trim()))
+  ) {
+    throw new ServiceError(
+      'CONVENIENCE_RELAY_CONFIG_ERROR',
+      '편의점 릴레이 URL, 토큰 및 Access 설정을 확인하세요.',
+      503,
+      false,
+    );
+  }
+  const headers: Record<string, string> = {
+    ...diagnosticHeaders(),
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+  if (access) {
+    headers['CF-Access-Client-Id'] = id!;
+    headers['CF-Access-Client-Secret'] = secret!;
+  }
+  const { controller, timeoutId } = createTimeoutController(timeout);
+  try {
+    const response = await fetch(`${url!.replace(/\/$/, '')}/v1/convenience/${operation}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      redirect: 'manual',
+      signal: controller.signal,
+    });
+    if (response.status !== 200) {
+      void response.body?.cancel().catch(() => undefined);
+      const status = response.status;
+      throw new ServiceError(
+        'CONVENIENCE_RELAY_FAILED',
+        '편의점 릴레이 요청에 실패했습니다.',
+        status === 429 || status === 503 || status === 504 ? status : 502,
+        status === 429 || status >= 500,
+        status,
+      );
+    }
+    const data: unknown = await response.json();
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      Array.isArray(data) ||
+      ('success' in data && data.success === false) ||
+      'error' in data ||
+      ('resp_cd' in data && data.resp_cd !== '0000')
+    )
+      throw Error('Invalid response');
+    return data as T;
+  } catch (error) {
+    if (error instanceof ServiceError) throw error;
+    if (controller.signal.aborted)
+      throw new ServiceError(
+        'CONVENIENCE_RELAY_TIMEOUT',
+        '편의점 릴레이 요청 시간이 초과되었습니다.',
+        504,
+        true,
+      );
+    throw new ServiceError(
+      'CONVENIENCE_RELAY_FAILED',
+      '편의점 릴레이 요청에 실패했습니다.',
+      502,
+      true,
+    );
+  } finally {
+    clearTimeout(timeoutId);
+    controller.abort();
+  }
+}

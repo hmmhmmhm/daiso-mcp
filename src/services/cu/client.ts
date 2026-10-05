@@ -1,3 +1,4 @@
+import { hasConvenienceRelay, requestConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 import { geocodeLocation } from '../../utils/geocode.js';
 /**
  * CU API 클라이언트
@@ -9,7 +10,7 @@ import { CU_API } from './api.js';
 import { cuStockUnavailableReason } from './upstreamError.js';
 import type { CuStockItem, CuStockMainResponse, CuStore, CuStoreResponse } from './types.js';
 
-interface RequestOptions {
+interface RequestOptions extends ConvenienceTransportOptions {
   timeout?: number;
   apiKey?: string;
   googleMapsApiKey?: string;
@@ -41,7 +42,7 @@ interface FetchCuStockParams {
 
 
 
-const CU_DEFAULT_HEADERS = {
+export const CU_DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
   Accept: 'application/json, text/javascript, */*; q=0.01',
   'X-Requested-With': 'XMLHttpRequest',
@@ -106,6 +107,10 @@ async function requestCuJson<T>(
   body: Record<string, unknown>,
   options: RequestOptions = {},
 ): Promise<T> {
+  if (hasConvenienceRelay(options)) {
+    const operation = path === CU_API.STORE_PATH ? 'cu-store' : 'cu-stock';
+    return requestConvenienceRelay<T>(operation, body, options, options.timeout);
+  }
   return fetchJsonWithZyteFallback<T>(`${CU_API.BASE_URL}${path}`, {
     method: 'POST',
     timeout: options.timeout,
@@ -220,7 +225,7 @@ export async function fetchCuStores(
   const hasLongitude = typeof params.longitude === 'number' && Number.isFinite(params.longitude);
 
   // 좌표가 없고 검색어가 있으면 웹 매장 검색으로 폴백합니다.
-  if (searchWord.length > 0 && (!hasLatitude || !hasLongitude)) {
+  if (!hasConvenienceRelay(options) && searchWord.length > 0 && (!hasLatitude || !hasLongitude)) {
     const html = await requestCuWebHtml(
       CU_API.WEB_STORE_LIST_PATH,
       {
@@ -296,6 +301,10 @@ export async function fetchCuStores(
  * 정책 변경 시 사전 호출이 필요한 경우를 대비한 워밍업 요청입니다.
  */
 export async function primeCuStockDisplay(options: RequestOptions = {}): Promise<void> {
+  if (hasConvenienceRelay(options)) {
+    await requestConvenienceRelay('cu-prime', {}, options, options.timeout);
+    return;
+  }
   await fetchJson(`${CU_API.BASE_URL}${CU_API.STOCK_DISPLAY_PATH}`, {
     method: 'POST',
     timeout: options.timeout,

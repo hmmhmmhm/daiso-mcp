@@ -1,3 +1,4 @@
+import { hasConvenienceRelay, requestConvenienceRelay } from '../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 재고 조회 클라이언트
  *
@@ -61,19 +62,6 @@ const SEVENELEVEN_DEFAULT_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Linux; Android 15)',
 } as const;
 
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : 0;
-  }
-
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-}
-
 function toStringValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
@@ -85,8 +73,8 @@ function normalizeStockStore(raw: StockApiStoreRaw): SevenElevenStockStore {
     address: '',
     latitude: 0,
     longitude: 0,
-    stockQuantity: toNumber(raw.stock),
-    isSoldOut: toNumber(raw.stock) <= 0,
+    stockQuantity: toNullableNumber(raw.stock) ?? -1,
+    isSoldOut: toNullableNumber(raw.stock) === 0,
     distanceM: null,
   };
 }
@@ -272,7 +260,9 @@ async function tryStockApi(
   }
 
   try {
-    const response = await fetchJsonWithZyteFallback<SevenElevenApiEnvelope<StockApiData>>(url, {
+    const response = hasConvenienceRelay(options)
+      ? await requestConvenienceRelay<SevenElevenApiEnvelope<StockApiData>>('seven-stock', payload, options, timeout)
+      : await fetchJsonWithZyteFallback<SevenElevenApiEnvelope<StockApiData>>(url, {
       method: 'POST',
       timeout,
       headers: SEVENELEVEN_DEFAULT_HEADERS,
@@ -384,6 +374,7 @@ export async function checkSevenElevenInventory(
   }
 
   const limited = resultStores.slice(0, storeLimit);
+  stockAvailable = limited.some((store) => store.stockQuantity >= 0);
   const inStockCount = stockAvailable ? limited.filter((s) => s.stockQuantity > 0).length : 0;
 
   return {

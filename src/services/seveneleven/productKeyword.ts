@@ -152,6 +152,7 @@ export async function searchSevenElevenProductsWithVariants(
         sort,
       },
       {
+        ...options,
         timeout,
         zyteApiKey,
       },

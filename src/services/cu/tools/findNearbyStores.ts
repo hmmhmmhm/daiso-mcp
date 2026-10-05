@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * CU 주변 매장 탐색 도구
  */
@@ -6,7 +7,7 @@ import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { fetchCuStores } from '../client.js';
 
-interface FindNearbyStoresArgs {
+interface FindNearbyStoresArgs extends ConvenienceTransportOptions {
   latitude?: number;
   longitude?: number;
   keyword?: string;
@@ -32,6 +33,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
       searchWord: keyword,
     },
     {
+      ...args,
       timeout: timeoutMs,
       apiKey: zyteApiKey,
     },
@@ -62,7 +64,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   };
 }
 
-export function createFindNearbyStoresTool(zyteApiKey?: string): ToolRegistration {
+export function createFindNearbyStoresTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'cu_find_nearby_stores',
     metadata: {
@@ -77,7 +79,7 @@ export function createFindNearbyStoresTool(zyteApiKey?: string): ToolRegistratio
       },
     },
     handler: ((args: FindNearbyStoresArgs) =>
-      findNearbyStores({ ...args, zyteApiKey: zyteApiKey ?? args.zyteApiKey })) as (
+      findNearbyStores({ ...args, ...transport, zyteApiKey: zyteApiKey ?? args.zyteApiKey })) as (
       args: unknown,
     ) => Promise<McpToolResponse>,
   };

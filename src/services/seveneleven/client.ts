@@ -1,9 +1,11 @@
+import { hasConvenienceRelay, requestConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 API 클라이언트
  */
 /* c8 ignore start */
 
-import { withSevenElevenReadCache } from './readCache.js';
+import { requestSevenElevenJson, SEVENELEVEN_DEFAULT_HEADERS, SEVENELEVEN_DEFAULT_FETCH_OPTIONS, type SevenElevenRequestOptions } from './transport.js';
+export type { SevenElevenRequestOptions } from './transport.js';
 import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { SEVENELEVEN_API } from './api.js';
 import type {
@@ -16,11 +18,6 @@ import type {
   SevenElevenStore,
   SevenElevenStoreSearchResult,
 } from './types.js';
-
-export interface SevenElevenRequestOptions {
-  timeout?: number;
-  zyteApiKey?: string;
-}
 
 interface SearchProductsParams {
   query: string;
@@ -59,16 +56,6 @@ interface StockProductData {
   stokMngQty?: number | string;
   stockApplicationRate?: string | number;
 }
-
-const SEVENELEVEN_DEFAULT_HEADERS = {
-  Accept: 'application/json, text/plain, */*',
-  'Content-Type': 'application/json',
-  'User-Agent': 'Mozilla/5.0 (Linux; Android 15)',
-} as const;
-const SEVENELEVEN_DEFAULT_FETCH_OPTIONS = {
-  retries: 1,
-  retryDelayMs: 250,
-} as const;
 
 function toNumber(value: unknown): number {
   if (typeof value === 'number') {
@@ -178,27 +165,6 @@ function normalizeStores(items: unknown[]): SevenElevenStore[] {
     })
     .map(normalizeStore)
     .filter((store) => store.storeCode.length > 0 || store.storeName.length > 0);
-}
-
-async function requestSevenElevenJson<T>(
-  path: string,
-  method: 'GET' | 'POST',
-  body: unknown,
-  options: SevenElevenRequestOptions = {},
-): Promise<SevenElevenApiEnvelope<T>> {
-  const { timeout = 15000, zyteApiKey } = options;
-  const url = `${SEVENELEVEN_API.BASE_URL}${path}`;
-
-  return withSevenElevenReadCache(path, body, timeout, () => fetchJsonWithZyteFallback<SevenElevenApiEnvelope<T>>(url, {
-    ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
-    method,
-    retryUnsafeMethods: method === 'POST',
-    timeout,
-    headers: SEVENELEVEN_DEFAULT_HEADERS,
-    body: method === 'POST' ? JSON.stringify(body || {}) : undefined,
-    zyteApiKey,
-    zyteTags: { service: 'seveneleven' },
-  }));
 }
 
 export async function searchSevenElevenProducts(
@@ -347,7 +313,9 @@ export async function fetchSevenElevenStockProductMeta(
   const encodedItemCode = encodeURIComponent(itemCode.trim());
   const url = `${SEVENELEVEN_API.BASE_URL}${SEVENELEVEN_API.PRODUCT_SEARCH_STOCK_PATH}?itemCd=${encodedItemCode}`;
 
-  const response = await fetchJsonWithZyteFallback<StockProductData>(url, {
+  const response = hasConvenienceRelay(options)
+    ? await requestConvenienceRelay<StockProductData>('seven-stock-meta', { itemCd: itemCode.trim() }, options, timeout)
+    : await fetchJsonWithZyteFallback<StockProductData>(url, {
     ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
     method: 'GET',
     timeout,
@@ -406,7 +374,7 @@ function extractContentArray(data: unknown): unknown[] {
 }
 
 export async function fetchSevenElevenCatalogSnapshot(
-  options: {
+  options: ConvenienceTransportOptions & {
     includeIssues?: boolean;
     includeExhibition?: boolean;
     timeout?: number;
@@ -416,21 +384,27 @@ export async function fetchSevenElevenCatalogSnapshot(
   const { includeIssues = true, includeExhibition = true, timeout = 15000, zyteApiKey } = options;
 
   const tasks: Array<Promise<SevenElevenApiEnvelope<unknown>>> = [
-    requestSevenElevenJson<unknown>(SEVENELEVEN_API.PRODUCT_PAGES_PATH, 'GET', null, { timeout, zyteApiKey }),
+    requestSevenElevenJson<unknown>(SEVENELEVEN_API.PRODUCT_PAGES_PATH, 'GET', null, { ...options, timeout, zyteApiKey }),
     includeIssues
       ? requestSevenElevenJson<unknown>(SEVENELEVEN_API.PRODUCT_ISSUES_PATH, 'GET', null, {
+          ...options,
           timeout,
           zyteApiKey,
         })
       : Promise.resolve({ data: { content: [] } }),
     includeExhibition
       ? requestSevenElevenJson<unknown>(SEVENELEVEN_API.EXHIBITION_MAIN_PATH, 'GET', null, {
+          ...options,
           timeout,
           zyteApiKey,
         })
       : Promise.resolve({ data: [] }),
   ];
 
+  if (hasConvenienceRelay(options)) {
+    const [pages, issues, exhibitions] = await Promise.all(tasks);
+    return { pages: normalizeProducts(extractContentArray(pages.data)), issues: normalizeProducts(extractContentArray(issues.data)), exhibitions: normalizeExhibitions(extractContentArray(exhibitions.data)) };
+  }
   const [pagesResult, issuesResult, exhibitionsResult] = await Promise.allSettled(tasks);
 
   const pagesData = pagesResult.status === 'fulfilled' ? pagesResult.value.data : [];

@@ -1,3 +1,4 @@
+import { hasConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 import { geocodeLocation } from '../../utils/geocode.js';
 /**
  * GS25 API 클라이언트
@@ -24,7 +25,7 @@ export {
   sortGs25Stores,
 } from './storeUtils.js';
 
-interface RequestOptions {
+interface RequestOptions extends ConvenienceTransportOptions {
   timeout?: number;
   googleMapsApiKey?: string;
   kakaoRestApiKey?: string;
@@ -62,7 +63,7 @@ interface CacheEntry {
   stores: Gs25Store[];
 }
 
-const GS25_DEFAULT_HEADERS = {
+export const GS25_DEFAULT_HEADERS = {
   Accept: 'application/json, text/plain, */*',
   'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
   'User-Agent':
@@ -175,7 +176,7 @@ export async function fetchGs25Stores(
     longitude,
   });
 
-  if (useCache) {
+  if (useCache && !hasConvenienceRelay(options)) {
     const cached = gs25StoresCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return {
@@ -227,6 +228,7 @@ export async function fetchGs25Stores(
   const body = await fetchGs25StoreStockResponse(
     endpoint.toString(),
     {
+      ...options,
       timeout,
       zyteApiKey: options.zyteApiKey,
       apiKey: options.apiKey,
@@ -238,7 +240,7 @@ export async function fetchGs25Stores(
     .map(normalizeStore)
     .filter((store) => store.storeCode.length > 0);
 
-  if (useCache) {
+  if (useCache && !hasConvenienceRelay(options)) {
     gs25StoresCache.set(cacheKey, {
       stores,
       expiresAt: Date.now() + GS25_STORES_CACHE_TTL_MS,

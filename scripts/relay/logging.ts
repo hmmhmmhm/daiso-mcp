@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 interface LoggerOptions {
-  service: 'oliveyoung' | 'dtryx';
+  service: 'oliveyoung' | 'dtryx' | 'convenience';
   now?: () => number;
   statfs?: (path: string) => Promise<{ bavail: number; bsize: number }>;
   appendFile?: typeof appendFile;

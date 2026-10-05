@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 매장 검색 도구
  */
@@ -12,7 +13,7 @@ interface SearchStoresArgs {
   timeoutMs?: number;
 }
 
-async function searchStores(args: SearchStoresArgs, zyteApiKey?: string): Promise<McpToolResponse> {
+async function searchStores(args: SearchStoresArgs, zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): Promise<McpToolResponse> {
   const { keyword, limit = 20, timeoutMs = 15000 } = args;
 
   if (!keyword || keyword.trim().length === 0) {
@@ -26,6 +27,7 @@ async function searchStores(args: SearchStoresArgs, zyteApiKey?: string): Promis
     },
     {
       timeout: timeoutMs,
+      ...transport,
       zyteApiKey,
     },
   );
@@ -49,7 +51,7 @@ async function searchStores(args: SearchStoresArgs, zyteApiKey?: string): Promis
   };
 }
 
-export function createSearchStoresTool(zyteApiKey?: string): ToolRegistration {
+export function createSearchStoresTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
   return {
     name: 'seveneleven_search_stores',
     metadata: {
@@ -61,6 +63,6 @@ export function createSearchStoresTool(zyteApiKey?: string): ToolRegistration {
         timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: (args: unknown) => searchStores(args as SearchStoresArgs, zyteApiKey),
+    handler: (args: unknown) => searchStores(args as SearchStoresArgs, zyteApiKey, transport),
   };
 }

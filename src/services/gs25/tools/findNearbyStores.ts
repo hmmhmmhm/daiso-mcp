@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * GS25 주변 매장 탐색 도구
@@ -22,7 +23,7 @@ function getProcessEnvValue(name: string): string | undefined {
   return typeof process !== 'undefined' ? process.env[name] : undefined;
 }
 
-interface FindNearbyStoresArgs {
+interface FindNearbyStoresArgs extends ConvenienceTransportOptions {
   latitude?: number;
   longitude?: number;
   keyword?: string;
@@ -59,8 +60,8 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
     keyword.trim().length > 0
   ) {
     const geocoded = await geocodeGs25Address(keyword, {
-      timeout: timeoutMs,
       ...args,
+      timeout: timeoutMs,
       googleMapsApiKey,
     });
     if (geocoded) {
@@ -78,6 +79,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
       longitude: resolvedLongitude,
     },
     {
+      ...args,
       timeout: timeoutMs,
       zyteApiKey,
       apiKey,
@@ -105,6 +107,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
           useCache: false,
         },
         {
+          ...args,
           timeout: timeoutMs,
           zyteApiKey,
           apiKey,
@@ -172,7 +175,7 @@ export function createFindNearbyStoresTool(
   googleMapsApiKey?: string,
   zyteApiKey?: string,
   apiKey?: string,
-  geocodeOptions: GeocodeOptions = {},
+  geocodeOptions: GeocodeOptions & ConvenienceTransportOptions = {},
 ): ToolRegistration {
   return {
     name: 'gs25_find_nearby_stores',

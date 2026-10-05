@@ -1,3 +1,4 @@
+import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
  * GS25 GET API 핸들러
@@ -64,6 +65,7 @@ export async function handleGs25FindStores(c: ApiContext) {
       },
       {
         timeout: 20000,
+        ...convenienceTransportFromBindings(c.env),
         zyteApiKey: c.env?.ZYTE_API_KEY,
         apiKey: c.env?.GS25_API_KEY,
       },
@@ -91,7 +93,8 @@ export async function handleGs25FindStores(c: ApiContext) {
           },
           {
             timeout: 20000,
-            zyteApiKey: c.env?.ZYTE_API_KEY,
+            ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
@@ -158,7 +161,8 @@ export async function handleGs25SearchProducts(c: ApiContext) {
   try {
     const products = await fetchGs25SearchProducts(keyword, {
       timeout: 20000,
-      zyteApiKey: c.env?.ZYTE_API_KEY,
+      ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
     });
     const limitedProducts = products.slice(0, limit);
 
@@ -237,7 +241,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           },
           {
             timeout: 20000,
-            zyteApiKey: c.env?.ZYTE_API_KEY,
+            ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
@@ -280,13 +285,15 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         },
         {
           timeout: 20000,
-          zyteApiKey: c.env?.ZYTE_API_KEY,
+          ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
           apiKey: c.env?.GS25_API_KEY,
         },
       );
     } else {
       const searchProducts = await fetchGs25SearchProducts(keyword, {
         timeout: 20000,
+        ...convenienceTransportFromBindings(c.env),
         zyteApiKey: c.env?.ZYTE_API_KEY,
       });
       firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
@@ -306,7 +313,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           },
           {
             timeout: 20000,
-            zyteApiKey: c.env?.ZYTE_API_KEY,
+            ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
@@ -322,7 +330,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           },
           {
             timeout: 20000,
-            zyteApiKey: c.env?.ZYTE_API_KEY,
+            ...convenienceTransportFromBindings(c.env),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
