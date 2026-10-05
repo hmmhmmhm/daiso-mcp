@@ -225,7 +225,7 @@ export async function fetchCuStores(
   const hasLongitude = typeof params.longitude === 'number' && Number.isFinite(params.longitude);
 
   // 좌표가 없고 검색어가 있으면 웹 매장 검색으로 폴백합니다.
-  if (!hasConvenienceRelay(options) && searchWord.length > 0 && (!hasLatitude || !hasLongitude)) {
+  if (searchWord.length > 0 && (!hasLatitude || !hasLongitude)) {
     const html = await requestCuWebHtml(
       CU_API.WEB_STORE_LIST_PATH,
       {
@@ -253,6 +253,8 @@ export async function fetchCuStores(
       timeout,
     );
     const stores = parseCuWebStores(html);
+    // 공식 웹은 점포 정보만 제공하므로 중계 재고 조회 전 수량은 미확인입니다.
+    if (hasConvenienceRelay(options)) for (const store of stores) store.stock = -1;
     return {
       totalCount: stores.length,
       stores,
