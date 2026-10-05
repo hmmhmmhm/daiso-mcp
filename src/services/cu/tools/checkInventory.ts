@@ -1,8 +1,10 @@
+import { ServiceError } from '../../../core/errors.js';
 import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * CU 재고 확인 도구
  */
 
+import { selectCuStockItem, cuStockSelectionReason } from '../productSelection.js';
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import { fetchCuStock, fetchCuStores, geocodeCuAddress } from '../client.js';
@@ -65,7 +67,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     },
   );
 
-  const firstStockItem = stockResult.items.find((item) => item.itemCode.trim().length > 0) || null;
+  const firstStockItem = selectCuStockItem(stockResult.items, keyword);
   const hasInputLocation = typeof latitude === 'number' && typeof longitude === 'number';
   const resolvedLatitude = hasInputLocation ? latitude : undefined;
   const resolvedLongitude = hasInputLocation ? longitude : undefined;
@@ -141,6 +143,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       );
     }
   } catch (error) {
+    if (error instanceof ServiceError) throw error;
     storeUnavailableReason =
       error instanceof Error ? error.message : 'CU 매장 조회 중 알 수 없는 오류가 발생했습니다.';
     storeResult = { totalCount: 0, stores: [] };
@@ -167,6 +170,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       totalCount: storeResult.totalCount,
       count: limitedStores.length,
       stockItemCode: firstStockItem?.itemCode || null,
+      selectionReason: cuStockSelectionReason(firstStockItem, keyword),
       stockItemName: firstStockItem?.itemName || null,
       stores: limitedStores,
     },

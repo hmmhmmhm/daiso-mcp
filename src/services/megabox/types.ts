@@ -22,8 +22,8 @@ export interface MegaboxShowtime {
   playDate: string;
   startTime: string;
   endTime: string;
-  totalSeats: number;
-  remainingSeats: number;
+  totalSeats: number | null;
+  remainingSeats: number | null;
 }
 
 export interface MegaboxTheaterInfo {

@@ -1,5 +1,6 @@
 import { compareProducts, parseCompareServices } from '../services/compare/client.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
+import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 
 export async function handleCompareProducts(c: ApiContext) {
   const keyword = c.req.query('keyword') || c.req.query('q') || '';
@@ -15,7 +16,7 @@ export async function handleCompareProducts(c: ApiContext) {
       keyword,
       limit,
       services,
-    });
+    }, convenienceTransportFromBindings(c.env));
 
     return successResponse(c, result, {
       total: result.resultCount,

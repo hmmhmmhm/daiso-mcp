@@ -40,9 +40,19 @@ it('소유 마커를 기록하고 부모 단절 시 종료 확인 후 삭제한�
 it('정상 IPC 종료 및 중복 종료는 한 번만 처리한다', async () => {
   const f = await fixture();
   await runGuard(f.marker, async () => f.server, f.channel, 1, f.snapshot);
-  f.channel.emit('message', 'noop');
+  for (const message of [
+    'noop',
+    null,
+    {},
+    { type: 'other' },
+    { type: 'close' },
+    { type: 'close', deadline: 'bad' },
+    { type: 'close', deadline: Infinity },
+  ])
+    f.channel.emit('message', message);
   f.channel.emit('message', 'close');
   f.channel.emit('SIGTERM');
+  f.channel.emit('message', { type: 'close', deadline: Date.now() + 5000 });
   await vi.waitFor(() => expect(f.channel.exit).toHaveBeenCalledWith(0));
   expect(f.server.close).toHaveBeenCalledTimes(1);
   expect(f.channel.send).toHaveBeenCalledWith({ type: 'closed' });
@@ -74,4 +84,36 @@ it('회수 중 소유권이 사라지면 마커를 보존하고 실패 종료한
   await vi.waitFor(() => expect(f.channel.exit).toHaveBeenCalledWith(1));
   await access(f.marker);
   expect(f.channel.listenerCount('message')).toBe(0);
+});
+it('IPC 공유 기한 안에 느린 close와 소멸 확인을 마치고 마커를 삭제한다', async () => {
+  const f = await fixture();
+  await runGuard(f.marker, async () => f.server, f.channel, 1, f.snapshot);
+  vi.useFakeTimers();
+  const started = Date.now();
+  f.server.close.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 6900)));
+  f.snapshot.mockImplementation(async () => (Date.now() - started < 5900 ? [f.root] : []));
+  const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
+  f.channel.emit('message', { type: 'close', deadline: started + 8000 });
+  await vi.advanceTimersByTimeAsync(7000);
+  kill.mockRestore();
+  vi.useRealTimers();
+  await vi.waitFor(() => expect(f.channel.exit).toHaveBeenCalledWith(0));
+  await expect(access(f.marker)).rejects.toThrow();
+});
+it('최악 경로에서 프로필 종료가 공유 기한을 넘으면 확인 실패와 마커를 보존한다', async () => {
+  const f = await fixture();
+  await runGuard(f.marker, async () => f.server, f.channel, 1, f.snapshot);
+  vi.useFakeTimers();
+  const started = Date.now();
+  f.server.close.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 8900)));
+  f.snapshot.mockImplementation(async () => (Date.now() - started < 5900 ? [f.root] : []));
+  const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
+  f.channel.emit('message', { type: 'close', deadline: started + 8000 });
+  await vi.advanceTimersByTimeAsync(7600);
+  expect(f.channel.exit).toHaveBeenCalledWith(1);
+  expect(f.channel.send).not.toHaveBeenCalledWith({ type: 'closed' });
+  expect(kill).toHaveBeenCalledExactlyOnceWith(-123, 'SIGKILL');
+  kill.mockRestore();
+  vi.useRealTimers();
+  await access(f.marker);
 });

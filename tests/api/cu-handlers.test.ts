@@ -287,6 +287,7 @@ describe('handleCuCheckInventory', () => {
             totalCount: 0,
             stockItemCode: '8801',
             stockItemName: '감자칩',
+            selectionReason: 'first_candidate',
             stores: [],
           },
           inventory: expect.objectContaining({ totalCount: 1 }),

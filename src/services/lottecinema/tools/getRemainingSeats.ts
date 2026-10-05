@@ -1,3 +1,10 @@
+import {
+  validateCinemaOptions,
+  cinemaDateSchema,
+  cinemaLimitSchema,
+  cinemaLatitudeSchema,
+  cinemaLongitudeSchema,
+} from '../../cgv/validation.js';
 import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * 롯데시네마 잔여 좌석 조회 도구
@@ -37,7 +44,10 @@ async function getRemainingSeats(
   let resolvedTheater = null;
   let targetTheaterId = theaterId;
 
-  if (!targetTheaterId && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+  if (
+    !targetTheaterId &&
+    (keyword || typeof latitude === 'number' || typeof longitude === 'number')
+  ) {
     const resolved = await resolveLotteCinemaNearestTheater(
       {
         playDate,
@@ -61,11 +71,11 @@ async function getRemainingSeats(
   const { showtimes } = shouldReturnEmpty
     ? { showtimes: [] }
     : await fetchLotteCinemaNowShowing({
-      playDate,
-      theaterId: targetTheaterId,
-      movieId,
-      timeout: timeoutMs,
-    });
+        playDate,
+        theaterId: targetTheaterId,
+        movieId,
+        timeout: timeoutMs,
+      });
 
   const seats = showtimes
     .filter((item) => (targetTheaterId ? item.theaterId === targetTheaterId : true))
@@ -105,25 +115,37 @@ async function getRemainingSeats(
   };
 }
 
-export function createGetRemainingSeatsTool(googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): ToolRegistration {
+export function createGetRemainingSeatsTool(
+  googleMapsApiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
+): ToolRegistration {
   return {
     name: 'lottecinema_get_remaining_seats',
     metadata: {
       title: '롯데시네마 잔여 좌석 조회',
-      description: '영화/지점/날짜 조건으로 롯데시네마 상영 회차별 남은 좌석 수를 조회합니다. 지점 ID가 없으면 위치 키워드 기준 최근접 극장을 선택할 수 있습니다.',
+      description:
+        '영화/지점/날짜 조건으로 롯데시네마 상영 회차별 남은 좌석 수를 조회합니다. 지점 ID가 없으면 위치 키워드 기준 최근접 극장을 선택할 수 있습니다.',
       inputSchema: {
-        playDate: z.string().optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
+        playDate: cinemaDateSchema.optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
         theaterId: z.string().optional().describe('롯데시네마 지점 ID (예: 1016)'),
         movieId: z.string().optional().describe('롯데시네마 대표 영화 코드 (예: 23816)'),
         keyword: z.string().optional().describe('위치 키워드 (예: 안산 중앙역, 잠실역)'),
-        latitude: z.number().optional().describe('위도'),
-        longitude: z.number().optional().describe('경도'),
-        limit: z.number().optional().default(50).describe('반환할 최대 회차 수 (기본값: 50)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        latitude: cinemaLatitudeSchema.optional().describe('위도'),
+        longitude: cinemaLongitudeSchema.optional().describe('경도'),
+        limit: cinemaLimitSchema
+          .optional()
+          .default(50)
+          .describe('반환할 최대 회차 수 (기본값: 50)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => getRemainingSeats(args as GetRemainingSeatsArgs, googleMapsApiKey, geocodeOptions)) as (
-      args: unknown,
-    ) => Promise<McpToolResponse>,
+    handler: (async (args) => (
+      validateCinemaOptions(args),
+      getRemainingSeats(args as GetRemainingSeatsArgs, googleMapsApiKey, geocodeOptions)
+    )) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

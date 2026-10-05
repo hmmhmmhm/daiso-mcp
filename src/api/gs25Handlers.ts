@@ -1,3 +1,4 @@
+import { ServiceError } from '../core/errors.js';
 import { selectGs25InventoryProduct } from '../services/gs25/productSelection.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 import { geocodeBindings } from '../utils/geocode.js';
@@ -6,7 +7,7 @@ import { geocodeBindings } from '../utils/geocode.js';
  */
 /* c8 ignore start */
 
-import { type ApiContext, errorResponse, successResponse } from './response.js';
+import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
 import {
   attachDistanceToGs25Stores,
   fetchGs25SearchProducts,
@@ -142,6 +143,7 @@ export async function handleGs25FindStores(c: ApiContext) {
       },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'gs25_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'GS25_STORE_SEARCH_FAILED', message, 500);
   }
@@ -187,6 +189,7 @@ export async function handleGs25SearchProducts(c: ApiContext) {
       },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'gs25_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'GS25_PRODUCT_SEARCH_FAILED', message, 500);
   }
@@ -354,9 +357,10 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       null;
     const productPrice =
       filtered.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ?? null;
-    const inStockStoreCount = filtered.filter((item) => item.realStockQuantity > 0).length;
-    const totalStockQuantity = filtered.reduce(
-      (sum, item) => sum + Math.max(item.realStockQuantity, 0),
+    const inStockStoreCount = filtered.filter((item) => item.realStockQuantity !== null && item.realStockQuantity > 0).length;
+    const unknownStockStoreCount = filtered.filter((store) => store.realStockQuantity === null).length;
+    const totalStockQuantity = unknownStockStoreCount === filtered.length ? null : filtered.reduce(
+      (sum, item) => sum + Math.max(item.realStockQuantity ?? 0, 0),
       0,
     );
 
@@ -382,12 +386,14 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         totalStoreCount: stockResult.totalCount,
         matchedStoreCount: filtered.length,
         inStockStoreCount,
+        unknownStockStoreCount,
         totalStockQuantity,
         count: stores.length,
         stores,
       },
     });
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'gs25_request');
     if (isGs25UpstreamUnavailableError(error)) {
       return errorResponse(c, 'GS25_UPSTREAM_UNAVAILABLE', error.message, 503);
     }

@@ -1,3 +1,4 @@
+import { ServiceError } from '../../../core/errors.js';
 import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 상품 검색 도구
@@ -51,6 +52,7 @@ async function searchProducts(args: SearchProductsArgs, zyteApiKey?: string, tra
       products: result.products,
     });
   } catch (error) {
+    if (error instanceof ServiceError) throw error;
     return buildTextResponse({
       query,
       page,

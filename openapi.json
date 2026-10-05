@@ -826,6 +826,7 @@
           },
           "quantity": {
             "type": "integer",
+            "nullable": true,
             "description": "재고 수량",
             "example": 12
           },
@@ -952,6 +953,7 @@
               },
               "onlineStock": {
                 "type": "integer",
+                "nullable": true,
                 "description": "온라인 재고 수량",
                 "example": 150
               },
@@ -965,6 +967,10 @@
                   "inStockCount": {
                     "type": "integer",
                     "description": "재고 있는 매장 수"
+                  },
+                  "unknownStockCount": {
+                    "type": "integer",
+                    "description": "수량을 확인하지 못한 매장 수"
                   },
                   "stores": {
                     "type": "array",
@@ -1075,7 +1081,9 @@
             "type": "string",
             "enum": [
               "in_stock",
-              "out_of_stock"
+              "out_of_stock",
+              "not_sold",
+              "unknown"
             ],
             "example": "in_stock"
           },
@@ -1326,6 +1334,9 @@
                   "outOfStockCount": {
                     "type": "integer"
                   },
+                  "notSoldCount": {
+                    "type": "integer"
+                  },
                   "products": {
                     "type": "array",
                     "items": {
@@ -1421,10 +1432,12 @@
           },
           "totalSeats": {
             "type": "integer",
+            "nullable": true,
             "example": 120
           },
           "remainingSeats": {
             "type": "integer",
+            "nullable": true,
             "example": 42
           }
         }
@@ -1643,6 +1656,7 @@
           },
           "stock": {
             "type": "integer",
+            "nullable": true,
             "example": 10
           },
           "deliveryYn": {
@@ -2058,6 +2072,7 @@
                     },
                     "bizQty": {
                       "type": "integer",
+                      "nullable": true,
                       "example": 3
                     },
                     "storeName": {
@@ -2113,6 +2128,7 @@
           },
           "realStockQuantity": {
             "type": "integer",
+            "nullable": true,
             "example": 3
           },
           "distanceM": {
@@ -2152,8 +2168,13 @@
             "type": "integer",
             "example": 42
           },
+          "unknownStockStoreCount": {
+            "type": "integer",
+            "example": 0
+          },
           "totalStockQuantity": {
             "type": "integer",
+            "nullable": true,
             "example": 110
           }
         }
@@ -2264,8 +2285,13 @@
                     "type": "integer",
                     "example": 35
                   },
+                  "unknownStockStoreCount": {
+                    "type": "integer",
+                    "example": 0
+                  },
                   "totalStockQuantity": {
                     "type": "integer",
+                    "nullable": true,
                     "example": 90
                   },
                   "stores": {
@@ -2591,14 +2617,17 @@
           },
           "totalSeats": {
             "type": "integer",
+            "nullable": true,
             "example": 32
           },
           "bookedSeats": {
             "type": "integer",
+            "nullable": true,
             "example": 4
           },
           "remainingSeats": {
             "type": "integer",
+            "nullable": true,
             "example": 28
           }
         }
@@ -2900,10 +2929,12 @@
           },
           "totalSeats": {
             "type": "integer",
+            "nullable": true,
             "example": 150
           },
           "remainingSeats": {
             "type": "integer",
+            "nullable": true,
             "example": 42
           }
         }

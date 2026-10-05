@@ -77,7 +77,7 @@ const createRegistry = (bindings?: AppBindings) => {
         apiKey: bindings?.GS25_API_KEY,
       }),
     () => createSevenElevenService({ ...convenienceTransportFromBindings(bindings), zyteApiKey: bindings?.ZYTE_API_KEY }),
-    createCompareService,
+    () => createCompareService(convenienceTransportFromBindings(bindings)),
     () =>
       createFeedbackService({
         supabaseUrl: bindings?.SUPABASE_URL,

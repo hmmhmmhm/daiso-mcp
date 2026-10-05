@@ -1,3 +1,9 @@
+import {
+  validateCinemaOptions,
+  cinemaDateSchema,
+  cinemaLatitudeSchema,
+  cinemaLongitudeSchema,
+} from '../../cgv/validation.js';
 import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * 롯데시네마 영화 목록 조회 도구
@@ -18,12 +24,27 @@ interface ListNowShowingArgs {
   timeoutMs?: number;
 }
 
-async function listNowShowing(args: ListNowShowingArgs, googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): Promise<McpToolResponse> {
-  const { playDate = toYyyymmdd(), theaterId, movieId, keyword, latitude, longitude, timeoutMs = 15000 } = args;
+async function listNowShowing(
+  args: ListNowShowingArgs,
+  googleMapsApiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
+): Promise<McpToolResponse> {
+  const {
+    playDate = toYyyymmdd(),
+    theaterId,
+    movieId,
+    keyword,
+    latitude,
+    longitude,
+    timeoutMs = 15000,
+  } = args;
   let resolvedTheater = null;
   let targetTheaterId = theaterId;
 
-  if (!targetTheaterId && (keyword || typeof latitude === 'number' || typeof longitude === 'number')) {
+  if (
+    !targetTheaterId &&
+    (keyword || typeof latitude === 'number' || typeof longitude === 'number')
+  ) {
     const resolved = await resolveLotteCinemaNearestTheater(
       {
         playDate,
@@ -47,11 +68,11 @@ async function listNowShowing(args: ListNowShowingArgs, googleMapsApiKey?: strin
   const { theaters, movies, showtimes } = shouldReturnEmpty
     ? { theaters: [], movies: [], showtimes: [] }
     : await fetchLotteCinemaNowShowing({
-      playDate,
-      theaterId: targetTheaterId,
-      movieId,
-      timeout: timeoutMs,
-    });
+        playDate,
+        theaterId: targetTheaterId,
+        movieId,
+        timeout: timeoutMs,
+      });
 
   return {
     content: [
@@ -85,24 +106,33 @@ async function listNowShowing(args: ListNowShowingArgs, googleMapsApiKey?: strin
   };
 }
 
-export function createListNowShowingTool(googleMapsApiKey?: string, geocodeOptions: GeocodeOptions = {}): ToolRegistration {
+export function createListNowShowingTool(
+  googleMapsApiKey?: string,
+  geocodeOptions: GeocodeOptions = {},
+): ToolRegistration {
   return {
     name: 'lottecinema_list_now_showing',
     metadata: {
       title: '롯데시네마 영화 목록 조회',
-      description: '날짜/지점/영화 조건으로 롯데시네마 영화 및 상영 회차 목록을 조회합니다. 지점 ID가 없으면 위치 키워드 기준 최근접 극장을 선택할 수 있습니다.',
+      description:
+        '날짜/지점/영화 조건으로 롯데시네마 영화 및 상영 회차 목록을 조회합니다. 지점 ID가 없으면 위치 키워드 기준 최근접 극장을 선택할 수 있습니다.',
       inputSchema: {
-        playDate: z.string().optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
+        playDate: cinemaDateSchema.optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
         theaterId: z.string().optional().describe('롯데시네마 지점 ID (예: 1016)'),
         movieId: z.string().optional().describe('롯데시네마 대표 영화 코드 (예: 23816)'),
         keyword: z.string().optional().describe('위치 키워드 (예: 안산 중앙역, 잠실역)'),
-        latitude: z.number().optional().describe('위도'),
-        longitude: z.number().optional().describe('경도'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        latitude: cinemaLatitudeSchema.optional().describe('위도'),
+        longitude: cinemaLongitudeSchema.optional().describe('경도'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args) => listNowShowing(args as ListNowShowingArgs, googleMapsApiKey, geocodeOptions)) as (
-      args: unknown,
-    ) => Promise<McpToolResponse>,
+    handler: (async (args) => (
+      validateCinemaOptions(args),
+      listNowShowing(args as ListNowShowingArgs, googleMapsApiKey, geocodeOptions)
+    )) as (args: unknown) => Promise<McpToolResponse>,
   };
 }

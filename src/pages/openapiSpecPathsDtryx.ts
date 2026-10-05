@@ -31,9 +31,9 @@ const showtime = {
     endTime: text,
     runningMinutes: integer,
     rating: text,
-    totalSeats: integer,
-    remainingSeats: integer,
-    bookedSeats: integer,
+    totalSeats: { ...integer, nullable: true },
+    remainingSeats: { ...integer, nullable: true },
+    bookedSeats: { ...integer, nullable: true },
     planStatus: text,
   },
 };

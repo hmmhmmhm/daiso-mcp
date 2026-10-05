@@ -1,3 +1,10 @@
+import {
+  validateCinemaOptions,
+  cinemaDateSchema,
+  cinemaLimitSchema,
+  cinemaLatitudeSchema,
+  cinemaLongitudeSchema,
+} from '../../cgv/validation.js';
 import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * 메가박스 주변 지점 탐색 도구
@@ -18,7 +25,10 @@ interface FindNearbyTheatersArgs {
   timeoutMs?: number;
 }
 
-async function findNearbyTheaters(args: FindNearbyTheatersArgs, geocodeOptions: GeocodeOptions = {}): Promise<McpToolResponse> {
+async function findNearbyTheaters(
+  args: FindNearbyTheatersArgs,
+  geocodeOptions: GeocodeOptions = {},
+): Promise<McpToolResponse> {
   const {
     keyword,
     latitude,
@@ -42,7 +52,7 @@ async function findNearbyTheaters(args: FindNearbyTheatersArgs, geocodeOptions: 
     {
       ...geocodeOptions,
       timeout: timeoutMs,
-    }
+    },
   );
 
   return {
@@ -50,7 +60,9 @@ async function findNearbyTheaters(args: FindNearbyTheatersArgs, geocodeOptions: 
   };
 }
 
-export function createFindNearbyTheatersTool(geocodeOptions: GeocodeOptions = {}): ToolRegistration {
+export function createFindNearbyTheatersTool(
+  geocodeOptions: GeocodeOptions = {},
+): ToolRegistration {
   return {
     name: 'megabox_find_nearby_theaters',
     metadata: {
@@ -58,14 +70,24 @@ export function createFindNearbyTheatersTool(geocodeOptions: GeocodeOptions = {}
       description: '사용자 좌표 또는 위치 키워드 기준으로 메가박스 지점을 거리순으로 조회합니다.',
       inputSchema: {
         keyword: z.string().optional().describe('위치 키워드 (예: 안산 중앙역, 강남역)'),
-        latitude: z.number().optional().describe('위도 (미입력 시 keyword 해석)'),
-        longitude: z.number().optional().describe('경도 (미입력 시 keyword 해석)'),
-        playDate: z.string().optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
+        latitude: cinemaLatitudeSchema.optional().describe('위도 (미입력 시 keyword 해석)'),
+        longitude: cinemaLongitudeSchema.optional().describe('경도 (미입력 시 keyword 해석)'),
+        playDate: cinemaDateSchema.optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
         areaCode: z.string().optional().describe('지역 코드 (미입력 시 위치로 결정)'),
-        limit: z.number().optional().default(10).describe('반환할 최대 지점 수 (기본값: 10)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        limit: cinemaLimitSchema
+          .optional()
+          .default(10)
+          .describe('반환할 최대 지점 수 (기본값: 10)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args: unknown) => findNearbyTheaters(args as FindNearbyTheatersArgs, geocodeOptions)),
+    handler: async (args: unknown) => (
+      validateCinemaOptions(args),
+      findNearbyTheaters(args as FindNearbyTheatersArgs, geocodeOptions)
+    ),
   };
 }

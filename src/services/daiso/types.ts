@@ -40,7 +40,7 @@ export interface StoreInventory {
   lat: number;
   lng: number;
   distance: string;
-  quantity: number;
+  quantity: number | null;
   options: {
     parking: boolean;
     simCard: boolean;
@@ -65,7 +65,7 @@ export interface Product {
   soldOut?: boolean;
   isNew?: boolean;
   pickupAvailable?: boolean;
-  onlineStock?: number;
+  onlineStock?: number | null;
 }
 
 // 재고 응답용 상품 요약 정보
@@ -109,6 +109,7 @@ export interface OnlineStockResponse {
 }
 
 export interface StoreSearchV2Response {
+  success?: boolean;
   message: string | null;
   data: Array<{
     strCd: string;

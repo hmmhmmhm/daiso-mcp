@@ -14,7 +14,7 @@ export const OPENAPI_CU_COMPONENT_SCHEMAS = {
       latitude: { type: 'number', format: 'float', example: 37.318482 },
       longitude: { type: 'number', format: 'float', example: 126.841838 },
       distanceM: { type: 'number', example: 97 },
-      stock: { type: 'integer', example: 10 },
+      stock: { type: 'integer', nullable: true, example: 10 },
       deliveryYn: { type: 'boolean', example: true },
       pickupYn: { type: 'boolean', example: false },
       reserveYn: { type: 'boolean', example: false },

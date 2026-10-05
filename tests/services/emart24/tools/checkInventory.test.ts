@@ -198,6 +198,6 @@ describe('createCheckInventoryTool', () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.inventory.count).toBe(1);
     expect(parsed.inventory.stores[0].bizNo).toBe('A');
-    expect(parsed.inventory.stores[0].bizQty).toBe(0);
+    expect(parsed.inventory.stores[0].bizQty).toBeNull();
   });
 });

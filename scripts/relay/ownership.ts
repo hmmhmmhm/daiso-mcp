@@ -57,24 +57,33 @@ export async function closeOwnedGroup(
   close: () => Promise<unknown>,
   snapshot = processSnapshot,
   kill: (pid: number, signal: NodeJS.Signals) => unknown = process.kill,
+  deadline = Date.now() + 7000,
 ): Promise<void> {
-  const initial = await snapshot();
+  const remainingMs = () => Math.max(0, deadline - Date.now());
+  const inspect = () => bounded(snapshot(), remainingMs());
+  // 프로세스 소멸을 확인한 뒤에만 Playwright의 종료 거절을 허용합니다.
+  const finishGone = (closing: Promise<unknown>) =>
+    bounded(
+      closing.catch(() => undefined),
+      remainingMs(),
+    );
+  const initial = await inspect();
   const group = members(root, initial);
   if (!group.length) {
-    await bounded(close(), 3000);
+    await finishGone(close());
     return;
   }
   // 루트 프로세스가 이미 종료되었으면 소유권을 새로 추정하지 않습니다.
   const known = ownedGroup(root, initial);
   const closing = close();
   try {
-    await bounded(closing, 3000);
+    await bounded(closing, Math.min(3000, remainingMs()));
   } catch {
     /* 아래에서 정체를 확인한 그룹만 강제 회수합니다. */
   }
-  const remaining = members(root, await snapshot());
+  const remaining = members(root, await inspect());
   if (!remaining.length) {
-    await bounded(closing, 3000);
+    await finishGone(closing);
     return;
   }
   const remainingGroup = remaining.filter((row) => row.pgid === root.pgid);
@@ -96,11 +105,11 @@ export async function closeOwnedGroup(
     }
   }
   for (let attempt = 0; attempt < 30; attempt++) {
-    if (!members(root, await snapshot()).length) {
-      await bounded(closing, 3000);
+    if (!members(root, await inspect()).length) {
+      await finishGone(closing);
       return;
     }
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await bounded(new Promise((resolve) => setTimeout(resolve, 100)), remainingMs());
   }
   throw new Error('Browser process group still alive');
 }

@@ -16,9 +16,9 @@ export async function launchGuardedBrowser(markerPath: string): Promise<BrowserO
       resolve(code);
     }),
   );
-  const closed = async () => {
-    if (!exited && guard.connected) guard.send('close');
-    const code = await bounded(exit, 9000);
+  const closed = async (deadline = Date.now() + 9000) => {
+    if (!exited && guard.connected) guard.send({ type: 'close', deadline });
+    const code = await bounded(exit, Math.max(0, deadline - Date.now()));
     if (code !== 0) throw new Error('Browser guard cleanup unconfirmed');
   };
   try {

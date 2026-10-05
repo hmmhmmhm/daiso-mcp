@@ -58,7 +58,6 @@ const oliveyoungProductSearchCache = new Map<
   { expiresAt: number; result: OliveyoungProductSearchResult }
 >();
 const oliveyoungStoreSearchCache = new Map<string, { expiresAt: number; result: OliveyoungStoreSearchResult }>();
-const oliveyoungStockStoresCache = new Map<string, { expiresAt: number; result: OliveyoungProductStoreInventory }>();
 
 function createOliveyoungProductSearchCacheKey(params: SearchProductsParams): string {
   return JSON.stringify([params.keyword, params.page, params.size, params.sort, params.includeSoldOut]);
@@ -66,10 +65,6 @@ function createOliveyoungProductSearchCacheKey(params: SearchProductsParams): st
 
 function createOliveyoungStoreSearchCacheKey(params: FindStoresParams): string {
   return JSON.stringify([params.latitude, params.longitude, params.pageIdx, params.searchWords]);
-}
-
-function createOliveyoungStockStoresCacheKey(params: StockStoresParams): string {
-  return JSON.stringify([params.productId, params.latitude, params.longitude, params.pageIdx, params.searchWords]);
 }
 
 function cloneOliveyoungProductSearchResult(result: OliveyoungProductSearchResult): OliveyoungProductSearchResult {
@@ -83,16 +78,6 @@ function cloneOliveyoungProductSearchResult(result: OliveyoungProductSearchResul
 function cloneOliveyoungStoreSearchResult(result: OliveyoungStoreSearchResult): OliveyoungStoreSearchResult {
   return {
     totalCount: result.totalCount,
-    stores: result.stores.map((store) => ({ ...store })),
-  };
-}
-
-function cloneOliveyoungStockStoresResult(result: OliveyoungProductStoreInventory): OliveyoungProductStoreInventory {
-  return {
-    totalCount: result.totalCount,
-    inStockCount: result.inStockCount,
-    outOfStockCount: result.outOfStockCount,
-    notSoldCount: result.notSoldCount,
     stores: result.stores.map((store) => ({ ...store })),
   };
 }
@@ -214,7 +199,17 @@ export async function fetchOliveyoungProducts(
   } catch (error) {
     const staleResult = readStaleResult(oliveyoungProductSearchCache, cacheKey, cloneOliveyoungProductSearchResult);
     if (staleResult) {
-      return staleResult;
+      return {
+        ...staleResult,
+        products: staleResult.products.map((product) => ({
+          ...product,
+          o2oStockFlag: false,
+          o2oRemainQuantity: 0,
+          inStock: false,
+          stockStatus: 'unknown',
+          storeInventory: undefined,
+        })),
+      };
     }
     throw error;
   }
@@ -256,43 +251,35 @@ async function fetchOliveyoungStockStores(
   params: StockStoresParams,
   options: RequestOptions = {}
 ): Promise<OliveyoungProductStoreInventory> {
-  const cacheKey = createOliveyoungStockStoresCacheKey(params);
+  const body = await requestOliveyoung(
+    OLIVEYOUNG_API.STOCK_STORES_PATH,
+    {
+      productId: params.productId,
+      lat: params.latitude,
+      lon: params.longitude,
+      pageIdx: params.pageIdx,
+      searchWords: params.searchWords,
+      mapLat: params.latitude,
+      mapLon: params.longitude,
+    },
+    options
+  );
 
-  try {
-    const body = await requestOliveyoung(
-      OLIVEYOUNG_API.STOCK_STORES_PATH,
-      {
-        productId: params.productId,
-        lat: params.latitude,
-        lon: params.longitude,
-        pageIdx: params.pageIdx,
-        searchWords: params.searchWords,
-        mapLat: params.latitude,
-        mapLon: params.longitude,
-      },
-      options
-    );
-
-    const stores = (body.data?.storeList || []).map((store) => resolveOliveyoungStoreStock(store));
-    const inStockCount = stores.filter((store) => store.stockStatus === 'in_stock').length;
-    const notSoldCount = stores.filter((store) => store.stockStatus === 'not_sold').length;
-
-    const result = {
-      totalCount: body.data?.totalCount || 0,
-      inStockCount,
-      outOfStockCount: stores.length - inStockCount - notSoldCount,
-      notSoldCount,
-      stores,
-    };
-    writeStaleResult(oliveyoungStockStoresCache, cacheKey, result, cloneOliveyoungStockStoresResult);
-    return result;
-  } catch (error) {
-    const staleResult = readStaleResult(oliveyoungStockStoresCache, cacheKey, cloneOliveyoungStockStoresResult);
-    if (staleResult) {
-      return staleResult;
-    }
-    throw error;
+  if (!Array.isArray(body.data?.storeList)) {
+    throw new Error('올리브영 매장 재고 응답에 storeList가 없습니다.');
   }
+  const stores = body.data.storeList.map((store) => resolveOliveyoungStoreStock(store));
+  const inStockCount = stores.filter((store) => store.stockStatus === 'in_stock').length;
+  const notSoldCount = stores.filter((store) => store.stockStatus === 'not_sold').length;
+
+  const result = {
+    totalCount: body.data?.totalCount || 0,
+    inStockCount,
+    outOfStockCount: stores.length - inStockCount - notSoldCount,
+    notSoldCount,
+    stores,
+  };
+  return result;
 }
 
 function sortOliveyoungProducts(products: OliveyoungProduct[]): OliveyoungProduct[] {
@@ -353,7 +340,11 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
           }
 
           const inStock = storeInventory.inStockCount > 0;
-          const stockStatus: OliveyoungProduct['stockStatus'] = inStock ? 'in_stock' : 'out_of_stock';
+          const stockStatus: OliveyoungProduct['stockStatus'] = inStock
+            ? 'in_stock'
+            : storeInventory.stores.length > 0 && storeInventory.notSoldCount === storeInventory.stores.length
+              ? 'not_sold'
+              : 'out_of_stock';
           const stockSource: OliveyoungProduct['stockSource'] = 'nearby_store';
 
           return {
@@ -388,5 +379,4 @@ export function __testOnlyClearOliveyoungCaches(): void {
   oliveyoungProductIdCache.clear();
   oliveyoungProductSearchCache.clear();
   oliveyoungStoreSearchCache.clear();
-  oliveyoungStockStoresCache.clear();
 }

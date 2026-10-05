@@ -25,6 +25,12 @@ function toText(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/** 미확인 재고를 실제 0개와 구분합니다. */
+function inventoryText(value: unknown): string {
+  return value === null || value === undefined || (typeof value === 'number' && (!Number.isFinite(value) || value < 0))
+    ? '확인 불가' : toText(value);
+}
+
 function formatMeta(meta: unknown): string[] {
   if (!isRecord(meta)) {
     return [];
@@ -111,12 +117,12 @@ function formatCollection(title: string, items: unknown): string[] {
       entry.distance !== undefined ? `${toText(entry.distance)}km` : undefined,
       entry.distanceKm !== undefined ? `${toText(entry.distanceKm)}km` : undefined,
       entry.distanceM !== undefined ? `${toText(entry.distanceM)}m` : undefined,
-      entry.quantity !== undefined ? `수량 ${toText(entry.quantity)}` : undefined,
-      entry.stock !== undefined ? `수량 ${toText(entry.stock)}` : undefined,
-      entry.realStockQuantity !== undefined ? `수량 ${toText(entry.realStockQuantity)}` : undefined,
-      entry.bizQty !== undefined ? `수량 ${toText(entry.bizQty)}` : undefined,
-      entry.remainQuantity !== undefined ? `수량 ${toText(entry.remainQuantity)}` : undefined,
-      entry.o2oRemainQuantity !== undefined ? `수량 ${toText(entry.o2oRemainQuantity)}` : undefined,
+      entry.quantity !== undefined ? `수량 ${inventoryText(entry.quantity)}` : undefined,
+      entry.stock !== undefined ? `수량 ${inventoryText(entry.stock)}` : undefined,
+      entry.realStockQuantity !== undefined ? `수량 ${inventoryText(entry.realStockQuantity)}` : undefined,
+      entry.bizQty !== undefined ? `수량 ${inventoryText(entry.bizQty)}` : undefined,
+      entry.remainQuantity !== undefined ? `수량 ${inventoryText(entry.remainQuantity)}` : undefined,
+      entry.o2oRemainQuantity !== undefined ? `수량 ${inventoryText(entry.o2oRemainQuantity)}` : undefined,
       entry.stockLabel,
     ].filter((value): value is string | number | boolean => value !== undefined);
     if (detailParts.length > 0) {
@@ -203,7 +209,7 @@ function formatInventory(data: Record<string, unknown>): string[] {
 
   const onlineStock = data.onlineStock;
   if (onlineStock !== undefined) {
-    lines.push(`온라인 재고: ${toText(onlineStock)}`);
+    lines.push(`온라인 재고: ${inventoryText(onlineStock)}`);
   }
 
   const storeInventory = data.storeInventory;

@@ -1,3 +1,9 @@
+import {
+  validateCinemaOptions,
+  cinemaDateSchema,
+  cinemaLatitudeSchema,
+  cinemaLongitudeSchema,
+} from '../../cgv/validation.js';
 import type { GeocodeOptions } from '../../../utils/geocode.js';
 /**
  * 메가박스 영화 목록 조회 도구
@@ -19,7 +25,10 @@ interface ListNowShowingArgs {
   timeoutMs?: number;
 }
 
-async function listNowShowing(args: ListNowShowingArgs, geocodeOptions: GeocodeOptions = {}): Promise<McpToolResponse> {
+async function listNowShowing(
+  args: ListNowShowingArgs,
+  geocodeOptions: GeocodeOptions = {},
+): Promise<McpToolResponse> {
   const {
     playDate = toYyyymmdd(),
     theaterId: inputTheaterId,
@@ -34,7 +43,12 @@ async function listNowShowing(args: ListNowShowingArgs, geocodeOptions: GeocodeO
   let resolvedTheater = null;
   let resolvedLocation = null;
 
-  if (!theaterId && (typeof latitude === 'number' || typeof longitude === 'number' || (keyword || '').trim().length > 0)) {
+  if (
+    !theaterId &&
+    (typeof latitude === 'number' ||
+      typeof longitude === 'number' ||
+      (keyword || '').trim().length > 0)
+  ) {
     const resolved = await resolveMegaboxNearestTheater(
       {
         keyword,
@@ -49,7 +63,8 @@ async function listNowShowing(args: ListNowShowingArgs, geocodeOptions: GeocodeO
         timeout: timeoutMs,
       },
     );
-    theaterId = resolved.theater?.theaterId;
+    if (!resolved.theater) throw new Error('요청 위치의 메가박스 극장을 찾을 수 없습니다.');
+    theaterId = resolved.theater.theaterId;
     resolvedTheater = resolved.theater;
     resolvedLocation = resolved.location;
   }
@@ -97,16 +112,23 @@ export function createListNowShowingTool(geocodeOptions: GeocodeOptions = {}): T
       title: '메가박스 영화 목록 조회',
       description: '날짜/지점 조건으로 메가박스 영화 및 상영 회차 목록을 조회합니다.',
       inputSchema: {
-        playDate: z.string().optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
+        playDate: cinemaDateSchema.optional().describe('조회 날짜(YYYYMMDD, 기본값: 오늘)'),
         theaterId: z.string().optional().describe('메가박스 지점 번호 (예: 1372)'),
         movieId: z.string().optional().describe('메가박스 영화 번호 (예: 25104500)'),
         keyword: z.string().optional().describe('위치 키워드 (예: 안산 중앙역, 강남역)'),
-        latitude: z.number().optional().describe('위도'),
-        longitude: z.number().optional().describe('경도'),
+        latitude: cinemaLatitudeSchema.optional().describe('위도'),
+        longitude: cinemaLongitudeSchema.optional().describe('경도'),
         areaCode: z.string().optional().describe('지역 코드 (미입력 시 위치로 결정)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: ((args: unknown) => listNowShowing(args as ListNowShowingArgs, geocodeOptions)),
+    handler: async (args: unknown) => (
+      validateCinemaOptions(args),
+      listNowShowing(args as ListNowShowingArgs, geocodeOptions)
+    ),
   };
 }

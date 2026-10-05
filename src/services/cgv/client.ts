@@ -2,7 +2,7 @@
  * CGV API 클라이언트
  */
 
-import { formatTime, toNumber, toYyyymmdd } from '../../utils/format.js';
+import { formatTime, toSeatCount, toYyyymmdd } from '../../utils/format.js';
 import { CGV_API } from './api.js';
 import { requestCgv } from './transport.js';
 import type {
@@ -30,7 +30,11 @@ function asArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
-async function resolveTheaterCode(playDate: string, theaterCode: string | undefined, params: CommonFetchParams) {
+async function resolveTheaterCode(
+  playDate: string,
+  theaterCode: string | undefined,
+  params: CommonFetchParams,
+) {
   if (theaterCode) {
     return theaterCode;
   }
@@ -104,8 +108,8 @@ async function fetchTimetableByMovieCode(
       playDate: item.scnYmd as string,
       startTime: formatTime(item.scnsrtTm),
       endTime: formatTime(item.scnendTm),
-      totalSeats: toNumber(item.stcnt),
-      remainingSeats: toNumber(item.frSeatCnt || item.frtmpSeatCnt),
+      totalSeats: toSeatCount(item.stcnt),
+      remainingSeats: toSeatCount(item.frSeatCnt ?? item.frtmpSeatCnt),
     }));
 }
 
@@ -139,8 +143,8 @@ async function fetchTimetableBySite(
       playDate: item.scnYmd as string,
       startTime: formatTime(item.scnsrtTm),
       endTime: formatTime(item.scnendTm),
-      totalSeats: toNumber(item.stcnt),
-      remainingSeats: toNumber(item.frSeatCnt || item.frtmpSeatCnt),
+      totalSeats: toSeatCount(item.stcnt),
+      remainingSeats: toSeatCount(item.frSeatCnt ?? item.frtmpSeatCnt),
     }));
 }
 
@@ -183,10 +187,10 @@ function pickFallbackTheaterCodes(theaters: CgvTheater[]): string[] {
     .map((theater) => theater.theaterCode)
     .filter((code, index, array) => code && array.indexOf(code) === index);
 
-  return [DEFAULT_THEATER_CODE, ...uniqueCodes.filter((code) => code !== DEFAULT_THEATER_CODE)].slice(
-    0,
-    MAX_FALLBACK_THEATERS,
-  );
+  return [
+    DEFAULT_THEATER_CODE,
+    ...uniqueCodes.filter((code) => code !== DEFAULT_THEATER_CODE),
+  ].slice(0, MAX_FALLBACK_THEATERS);
 }
 
 export async function fetchCgvTimetable(params: CommonFetchParams): Promise<CgvTimetable[]> {
@@ -200,8 +204,13 @@ export async function fetchCgvTimetable(params: CommonFetchParams): Promise<CgvT
       if (filteredByMovie.length > 0) {
         return filteredByMovie;
       }
-      const timetableByMovieCode = await fetchTimetableByMovieCode(playDate, theaterCode, params.movieCode, params);
-      return timetableByMovieCode.length > 0 ? timetableByMovieCode : timetableBySite;
+      const timetableByMovieCode = await fetchTimetableByMovieCode(
+        playDate,
+        theaterCode,
+        params.movieCode,
+        params,
+      );
+      return timetableByMovieCode.filter((item) => item.movieCode === params.movieCode);
     }
     return timetableBySite;
   }
@@ -226,7 +235,12 @@ export async function fetchCgvTimetable(params: CommonFetchParams): Promise<CgvT
     const timetableByTheater: CgvTimetable[] = [];
 
     for (const movie of movies) {
-      const timetable = await fetchTimetableByMovieCode(playDate, theaterCode, movie.movieCode, params);
+      const timetable = await fetchTimetableByMovieCode(
+        playDate,
+        theaterCode,
+        movie.movieCode,
+        params,
+      );
       if (timetable.length > 0) {
         timetableByTheater.push(...timetable);
       }

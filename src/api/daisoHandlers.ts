@@ -103,7 +103,7 @@ export async function handleCheckInventory(c: ApiContext) {
       fetchProductById(productId).catch(() => null),
     ]);
 
-    const inStockStores = storeResult.stores.filter((s) => s.quantity > 0);
+    const inStockStores = storeResult.stores.filter((s) => s.quantity !== null && s.quantity > 0);
     const product = productDoc ? toProductSummary(productDoc) : undefined;
 
     const result = {
@@ -114,6 +114,7 @@ export async function handleCheckInventory(c: ApiContext) {
       storeInventory: {
         totalStores: storeResult.totalCount,
         inStockCount: inStockStores.length,
+        unknownStockCount: storeResult.stores.filter((store) => store.quantity === null).length,
         stores: storeResult.stores,
       },
     };

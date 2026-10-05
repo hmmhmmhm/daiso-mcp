@@ -195,10 +195,12 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   const stores = sortGs25Stores(withDistance).slice(0, storeLimit);
 
   const totalInStockCount = filteredByStoreKeyword.filter(
-    (item) => item.realStockQuantity > 0,
+    (item) => (item.realStockQuantity ?? 0) > 0,
   ).length;
-  const totalStockQuantity = filteredByStoreKeyword.reduce(
-    (sum, item) => sum + Math.max(item.realStockQuantity, 0),
+  const knownStockStores = filteredByStoreKeyword.filter((item) => item.realStockQuantity !== null);
+  const unknownStockStoreCount = filteredByStoreKeyword.length - knownStockStores.length;
+  const totalStockQuantity = knownStockStores.length === 0 ? null : knownStockStores.reduce(
+    (sum, item) => sum + Math.max(item.realStockQuantity ?? 0, 0),
     0,
   );
 
@@ -236,6 +238,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
               matchedStoreCount: filteredByStoreKeyword.length,
               inStockStoreCount: totalInStockCount,
               totalStockQuantity,
+              unknownStockStoreCount,
               count: stores.length,
               stores,
             },

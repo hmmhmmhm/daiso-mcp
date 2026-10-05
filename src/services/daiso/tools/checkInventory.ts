@@ -4,6 +4,7 @@
  * 다이소몰 API를 사용하여 매장별 재고를 확인합니다.
  */
 
+import { parseInventoryQuantity } from '../../inventoryQuantity.js';
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type {
@@ -45,18 +46,15 @@ async function fetchInventoryProduct(productId: string): Promise<ProductSummary 
 /**
  * 온라인 재고 조회
  */
-export async function fetchOnlineStock(productNo: string): Promise<number> {
+export async function fetchOnlineStock(productNo: string): Promise<number | null> {
   const data = await fetchDaisoJson<OnlineStockResponse>(DAISOMALL_API.ONLINE_STOCK, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pdNo: productNo }),
   });
 
-  if (!data.success) {
-    return 0;
-  }
-
-  return data.data?.stck || 0;
+  if (data.success === false) throw new Error('다이소 온라인 재고 조회에 실패했습니다.');
+  return parseInventoryQuantity(data.data?.stck);
 }
 
 /**
@@ -84,6 +82,7 @@ export async function fetchStoreInventory(
       }),
     });
 
+    if (storeSearch.success === false) throw new Error('다이소 매장 검색에 실패했습니다.');
     const allStores = storeSearch.data || [];
     const searchedStores = allStores.slice((page - 1) * pageSize, page * pageSize);
     if (searchedStores.length === 0) {
@@ -107,8 +106,9 @@ export async function fetchStoreInventory(
       },
     );
 
+    if (inventoryResponse.success === false) throw new Error('다이소 매장 재고 조회에 실패했습니다.');
     const quantities = new Map(
-      (inventoryResponse.data || []).map((item) => [item.strCd, parseInt(item.stck) || 0]),
+      (inventoryResponse.data || []).map((item) => [item.strCd, parseInventoryQuantity(item.stck)]),
     );
 
     const stores: StoreInventory[] = searchedStores.map((store) => ({
@@ -121,7 +121,7 @@ export async function fetchStoreInventory(
       lat: store.strLttd,
       lng: store.strLitd,
       distance: store.km,
-      quantity: quantities.get(store.strCd) ?? 0,
+      quantity: quantities.get(store.strCd) ?? null,
       options: {
         parking: store.parkYn === 'Y',
         simCard: store.usimYn === 'Y',
@@ -168,7 +168,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   ]);
 
   // 재고 있는 매장과 없는 매장 분류
-  const inStockStores = storeResult.stores.filter((s) => s.quantity > 0);
+  const inStockStores = storeResult.stores.filter((s) => (s.quantity ?? 0) > 0);
   const outOfStockStores = storeResult.stores.filter((s) => s.quantity === 0);
 
   const result = {
@@ -180,6 +180,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
       totalStores: storeResult.totalCount,
       inStockCount: inStockStores.length,
       outOfStockCount: outOfStockStores.length,
+      unknownStockCount: storeResult.stores.filter((store) => store.quantity === null).length,
       page,
       pageSize,
       stores: storeResult.stores,

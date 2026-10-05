@@ -25,8 +25,8 @@ export const OPENAPI_MEGABOX_COMPONENT_SCHEMAS = {
             playDate: { type: 'string', example: '20260304' },
             startTime: { type: 'string', example: '09:30' },
             endTime: { type: 'string', example: '11:20' },
-            totalSeats: { type: 'integer', example: 120 },
-            remainingSeats: { type: 'integer', example: 42 },
+            totalSeats: { type: 'integer', nullable: true, example: 120 },
+            remainingSeats: { type: 'integer', nullable: true, example: 42 },
           },
         },
         MegaboxTheaterSearchResponse: {

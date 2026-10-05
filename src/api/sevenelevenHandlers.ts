@@ -1,10 +1,11 @@
+import { ServiceError } from '../core/errors.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 GET API 핸들러
  */
 /* c8 ignore start */
 
-import { type ApiContext, errorResponse, successResponse } from './response.js';
+import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
 import {
   fetchSevenElevenStoresByKeyword,
   fetchSevenElevenCatalogSnapshot,
@@ -71,6 +72,7 @@ export async function handleSevenElevenSearchProducts(c: ApiContext) {
       },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'seveneleven_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEVENELEVEN_PRODUCT_SEARCH_FAILED', message, 500);
   }
@@ -114,6 +116,7 @@ export async function handleSevenElevenSearchStores(c: ApiContext) {
       },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'seveneleven_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEVENELEVEN_STORE_SEARCH_FAILED', message, 500);
   }
@@ -177,6 +180,7 @@ export async function handleSevenElevenCheckInventory(c: ApiContext) {
       },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'seveneleven_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEVENELEVEN_INVENTORY_CHECK_FAILED', message, 500);
   }
@@ -206,6 +210,7 @@ export async function handleSevenElevenGetSearchPopwords(c: ApiContext) {
           : '홈 인기 검색어를 조회했습니다.',
     });
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'seveneleven_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEVENELEVEN_POPWORD_FETCH_FAILED', message, 500);
   }
@@ -248,6 +253,7 @@ export async function handleSevenElevenGetCatalogSnapshot(c: ApiContext) {
       },
     });
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'seveneleven_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'SEVENELEVEN_CATALOG_FETCH_FAILED', message, 500);
   }

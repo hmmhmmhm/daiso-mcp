@@ -2,7 +2,7 @@
  * 롯데시네마 API 클라이언트
  */
 
-import { formatTime, toNumber, toYyyymmdd } from '../../utils/format.js';
+import { formatTime, toNumber, toSeatCount, toYyyymmdd } from '../../utils/format.js';
 import { createTimeoutController } from '../../utils/http.js';
 import { LOTTECINEMA_API } from './api.js';
 import type {
@@ -44,7 +44,10 @@ function toNullableNumber(value: string | number | null | undefined): number | n
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function buildRequestPayload(methodName: string, fields: Record<string, unknown>): Record<string, unknown> {
+function buildRequestPayload(
+  methodName: string,
+  fields: Record<string, unknown>,
+): Record<string, unknown> {
   return {
     MethodName: methodName,
     channelType: 'HO',
@@ -99,7 +102,12 @@ function buildCompositeCinemaId(theater: LotteCinemaTheater): string {
   return `${theater.regionCode}|${theater.regionDetailCode}|${theater.theaterId}`;
 }
 
-function buildScheduleId(playDate: string, theaterId: string, screenId: string, playSequence: string): string {
+function buildScheduleId(
+  playDate: string,
+  theaterId: string,
+  screenId: string,
+  playSequence: string,
+): string {
   return `${playDate}-${theaterId}-${screenId}-${playSequence}`;
 }
 
@@ -114,18 +122,25 @@ export async function fetchLotteCinemaTicketingPage(
     timeout,
   );
 
-  const theaters = Array.from(new Map((response.Cinemas?.Cinemas?.Items || [])
-    .filter((item) => item.CinemaID && item.CinemaNameKR && item.DivisionCode && item.DetailDivisionCode)
-    .map((item) => ({
-      theaterId: String(item.CinemaID),
-      theaterName: item.CinemaNameKR as string,
-      regionCode: String(item.DivisionCode),
-      regionDetailCode: String(item.DetailDivisionCode),
-      latitude: toNullableNumber(item.Latitude),
-      longitude: toNullableNumber(item.Longitude),
-      address: item.CinemaAddrSummary || '',
-    }))
-    .map((theater) => [theater.theaterId, theater] as const)).values());
+  const theaters = Array.from(
+    new Map(
+      (response.Cinemas?.Cinemas?.Items || [])
+        .filter(
+          (item) =>
+            item.CinemaID && item.CinemaNameKR && item.DivisionCode && item.DetailDivisionCode,
+        )
+        .map((item) => ({
+          theaterId: String(item.CinemaID),
+          theaterName: item.CinemaNameKR as string,
+          regionCode: String(item.DivisionCode),
+          regionDetailCode: String(item.DetailDivisionCode),
+          latitude: toNullableNumber(item.Latitude),
+          longitude: toNullableNumber(item.Longitude),
+          address: item.CinemaAddrSummary || '',
+        }))
+        .map((theater) => [theater.theaterId, theater] as const),
+    ).values(),
+  );
 
   const movies = (response.Movies?.Movies?.Items || [])
     .filter((item) => item.RepresentationMovieCode && item.MovieNameKR)
@@ -133,7 +148,8 @@ export async function fetchLotteCinemaTicketingPage(
       movieId: String(item.RepresentationMovieCode),
       movieName: item.MovieNameKR as string,
       rating: item.ViewGradeNameKR || undefined,
-      durationMinutes: item.PlayTime === null || item.PlayTime === undefined ? undefined : toNumber(item.PlayTime),
+      durationMinutes:
+        item.PlayTime === null || item.PlayTime === undefined ? undefined : toNumber(item.PlayTime),
       releaseDate: item.ReleaseDate || undefined,
     }));
 
@@ -157,12 +173,17 @@ async function fetchPlaySequenceByPair(
   );
 
   return (response.PlaySeqs?.Items || [])
-    .filter((item) => item.CinemaID && item.RepresentationMovieCode && item.ScreenID && item.PlaySequence)
+    .filter(
+      (item) => item.CinemaID && item.RepresentationMovieCode && item.ScreenID && item.PlaySequence,
+    )
     .map((item) => {
-      const totalSeats = toNumber(item.TotalSeatCount);
+      const totalSeats = toSeatCount(item.TotalSeatCount);
       // 공식 BookingSeatCount는 예매된 수가 아니라 예매 가능(잔여) 좌석 수다.
-      const remainingSeats = toNumber(item.BookingSeatCount);
-      const bookedSeats = Math.max(totalSeats - remainingSeats, 0);
+      const remainingSeats = toSeatCount(item.BookingSeatCount);
+      const bookedSeats =
+        totalSeats === null || remainingSeats === null
+          ? null
+          : Math.max(totalSeats - remainingSeats, 0);
       const normalizedPlayDate = normalizeDateForOutput(item.PlayDt || playDate);
       const theaterId = String(item.CinemaID);
       const screenId = String(item.ScreenID);
@@ -188,7 +209,11 @@ async function fetchPlaySequenceByPair(
 
 export async function fetchLotteCinemaNowShowing(
   params: CommonFetchParams,
-): Promise<{ theaters: LotteCinemaTheater[]; movies: LotteCinemaMovie[]; showtimes: LotteCinemaShowtime[] }> {
+): Promise<{
+  theaters: LotteCinemaTheater[];
+  movies: LotteCinemaMovie[];
+  showtimes: LotteCinemaShowtime[];
+}> {
   const playDate = params.playDate || toYyyymmdd();
   const timeout = params.timeout || 15000;
   const ticketingPage = await fetchLotteCinemaTicketingPage(timeout);

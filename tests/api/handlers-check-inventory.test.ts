@@ -102,7 +102,7 @@ describe('handleCheckInventory', () => {
   it('위치 파라미터를 처리한다', async () => {
     mockFetch.mockImplementation(async (url: string) => {
       if (url.includes('selOnlStck')) {
-        return new Response(JSON.stringify({ success: false }));
+        return new Response(JSON.stringify({ success: true, data: { stck: 0 } }));
       }
       if (url.includes('/ms/msg/selStr')) {
         return new Response(JSON.stringify({ data: [] }));

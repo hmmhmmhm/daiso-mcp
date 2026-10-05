@@ -1,3 +1,4 @@
+import { hasInvalidCinemaQuery, CINEMA_INVALID_INPUT } from '../services/cgv/validation.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
  * CGV GET API 핸들러
@@ -12,15 +13,15 @@ import {
 import { isCgvUpstreamUnavailableError } from '../services/cgv/errors.js';
 import { fetchCgvNearbyTheaters, resolveCgvNearestTheater } from '../services/cgv/location.js';
 import { filterAndSortTimetable } from '../services/cgv/timetable.js';
-import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
+import {
+  type ApiContext,
+  errorResponse,
+  serviceErrorResponse,
+  successResponse,
+} from './response.js';
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return value === undefined ? undefined : Number(value);
 }
 
 /**
@@ -28,6 +29,8 @@ function parseOptionalNumber(value: string | undefined): number | undefined {
  * GET /api/cgv/theaters?playDate={YYYYMMDD}&regionCode={지역코드}
  */
 export async function handleCgvFindTheaters(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const playDate = c.req.query('playDate') || toYyyymmdd();
   const regionCode = c.req.query('regionCode') || undefined;
   const keyword = c.req.query('keyword') || undefined;
@@ -95,6 +98,8 @@ export async function handleCgvFindTheaters(c: ApiContext) {
  * GET /api/cgv/movies?playDate={YYYYMMDD}&theaterCode={극장코드}
  */
 export async function handleCgvSearchMovies(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const playDate = c.req.query('playDate') || toYyyymmdd();
   let theaterCode = c.req.query('theaterCode') || undefined;
   const keyword = c.req.query('keyword') || undefined;
@@ -167,6 +172,8 @@ export async function handleCgvSearchMovies(c: ApiContext) {
  * GET /api/cgv/timetable?playDate={YYYYMMDD}&theaterCode={극장코드}&movieCode={영화코드}
  */
 export async function handleCgvGetTimetable(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const playDate = c.req.query('playDate') || toYyyymmdd();
   let theaterCode = c.req.query('theaterCode') || undefined;
   const movieCode = c.req.query('movieCode') || undefined;
@@ -213,11 +220,8 @@ export async function handleCgvGetTimetable(c: ApiContext) {
           zyteApiKey: c.env?.ZYTE_API_KEY,
         });
 
-    const exactFiltered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
-    const filterRelaxed = Boolean(movieCode && exactFiltered.length === 0 && timetable.length > 0);
-    const filtered = filterRelaxed
-      ? filterAndSortTimetable(timetable, { theaterCode, limit })
-      : exactFiltered;
+    const filtered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
+    const filterRelaxed = false;
 
     return successResponse(
       c,

@@ -8,6 +8,7 @@ import { fetchJson } from '../../utils/http.js';
 import { fetchJsonWithZyteFallback } from '../../utils/zyteJsonFallback.js';
 import { CU_API } from './api.js';
 import { cuStockUnavailableReason } from './upstreamError.js';
+import { parseInventoryQuantity } from '../inventoryQuantity.js';
 import type { CuStockItem, CuStockMainResponse, CuStore, CuStoreResponse } from './types.js';
 
 interface RequestOptions extends ConvenienceTransportOptions {
@@ -201,7 +202,7 @@ function parseCuWebStores(html: string): CuStore[] {
       latitude: 0,
       longitude: 0,
       distanceM: 0,
-      stock: 0,
+      stock: null,
       deliveryYn: false,
       pickupYn: false,
       reserveYn: false,
@@ -220,7 +221,7 @@ function normalizeCuStore(raw: NonNullable<CuStoreResponse['storeList']>[number]
     latitude: toNumber(raw.latVal),
     longitude: toNumber(raw.longVal),
     distanceM: toNumber(raw.distance),
-    stock: toNumber(raw.stock),
+    stock: parseInventoryQuantity(raw.stock),
     deliveryYn: toYnBoolean(raw.deliveryYn) || toYnBoolean(raw.deliveryPickYn),
     pickupYn: toYnBoolean(raw.jumpoPickYn),
     reserveYn: toYnBoolean(raw.reserveYn),

@@ -10,7 +10,7 @@ export interface CuStore {
   latitude: number;
   longitude: number;
   distanceM: number;
-  stock: number;
+  stock: number | null;
   deliveryYn: boolean;
   pickupYn: boolean;
   reserveYn: boolean;

@@ -10,7 +10,7 @@ it('새 공개 매장 API에서 좌표를 정규화한다', async () => {
   ])));
   vi.stubGlobal('fetch', fetchMock);
   const result = await fetchGs25WebStores('강남');
-  expect(result.stores[0]).toMatchObject({ storeCode: 'VY010', latitude: 37.49, longitude: 127.02 });
+  expect(result.stores[0]).toMatchObject({ storeCode: 'VY010', latitude: 37.49, longitude: 127.02, realStockQuantity:null, pickupStockQuantity:null, deliveryStockQuantity:null, isSoldOut:false });
   const url = new URL(fetchMock.mock.calls[0][0]);
   expect(url.origin).toBe('https://www.gsretail.com');
   expect(url.pathname).toBe('/api/homepage/brand/storeSearch/selectGs25Stores');

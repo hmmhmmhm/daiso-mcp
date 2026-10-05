@@ -1,12 +1,10 @@
+import { hasInvalidCinemaQuery, CINEMA_INVALID_INPUT } from '../services/cgv/validation.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
  * 롯데시네마 GET API 핸들러
  */
 
-import {
-  fetchLotteCinemaNowShowing,
-  toYyyymmdd,
-} from '../services/lottecinema/client.js';
+import { fetchLotteCinemaNowShowing, toYyyymmdd } from '../services/lottecinema/client.js';
 import {
   fetchLotteCinemaNearbyTheaters,
   resolveLotteCinemaNearestTheater,
@@ -14,15 +12,12 @@ import {
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return value === undefined ? undefined : Number(value);
 }
 
 export async function handleLotteCinemaFindNearbyTheaters(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const keyword = c.req.query('keyword') || undefined;
   const latitude = parseOptionalNumber(c.req.query('lat'));
   const longitude = parseOptionalNumber(c.req.query('lng'));
@@ -55,6 +50,8 @@ export async function handleLotteCinemaFindNearbyTheaters(c: ApiContext) {
 }
 
 export async function handleLotteCinemaListNowShowing(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const playDate = c.req.query('playDate') || toYyyymmdd();
   let theaterId = c.req.query('theaterId') || undefined;
   const movieId = c.req.query('movieId') || undefined;
@@ -120,6 +117,8 @@ export async function handleLotteCinemaListNowShowing(c: ApiContext) {
 }
 
 export async function handleLotteCinemaGetRemainingSeats(c: ApiContext) {
+  if (hasInvalidCinemaQuery((key) => c.req.query(key)))
+    return errorResponse(c, 'INVALID_INPUT', CINEMA_INVALID_INPUT, 400);
   const playDate = c.req.query('playDate') || toYyyymmdd();
   let theaterId = c.req.query('theaterId') || undefined;
   const movieId = c.req.query('movieId') || undefined;

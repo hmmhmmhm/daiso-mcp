@@ -216,7 +216,7 @@ export async function searchEmart24Products(
     },
   );
 
-  const products = (body.productList || []).map(toProduct).filter((item) => item.pluCd.length > 0);
+  const products = (body.productList || []).map(toProduct).filter((item) => item.pluCd.length > 0).slice(0, pageSize);
 
   return {
     totalCount: toNumber(body.totalCnt),

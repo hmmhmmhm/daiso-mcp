@@ -207,7 +207,8 @@ export async function runDaisoItemSearch(
   deps.writeOut(`- 매장: ${store.name}`);
 
   if (isRecord(match)) {
-    const quantity = toText(match.quantity) || '0';
+    const quantity = typeof match.quantity === 'number' && Number.isFinite(match.quantity) && match.quantity >= 0
+      ? String(match.quantity) : '확인 불가';
     deps.writeOut(`- 재고 수량: ${quantity}`);
     return;
   }

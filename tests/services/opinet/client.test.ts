@@ -119,7 +119,11 @@ describe('opinet client', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })))
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남역', y: 37.4979, x: 127.0276 }] }),
+          JSON.stringify({
+            documents: [
+              { place_name: '강남역', address_name: '서울 강남역', y: 37.4979, x: 127.0276 },
+            ],
+          }),
         ),
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })));
@@ -191,7 +195,9 @@ describe('opinet client', () => {
     expect(normalizeOpinetSort('2')).toBe('distance');
     expect(() => normalizeFuelCode('BAD')).toThrow('fuelCode');
     await expect(fetchOpinetAveragePrices({ apiKey: '' })).rejects.toThrow('OPINET_API_KEY');
-    await expect(fetchOpinetStationsAround({ x: Number.NaN, y: 1 }, { apiKey: 'key' })).rejects.toThrow('location');
+    await expect(
+      fetchOpinetStationsAround({ x: Number.NaN, y: 1 }, { apiKey: 'key' }),
+    ).rejects.toThrow('location');
     await expect(fetchOpinetStationDetail('', { apiKey: 'key' })).rejects.toThrow('주유소 ID');
   });
 
@@ -200,7 +206,9 @@ describe('opinet client', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response('not-json', { status: 503 }));
 
-    await expect(fetchOpinetAveragePrices({ apiKey: 'key', fetchImpl })).rejects.toThrow('HTTP 503');
+    await expect(fetchOpinetAveragePrices({ apiKey: 'key', fetchImpl })).rejects.toThrow(
+      'HTTP 503',
+    );
   });
 
   it('빈 응답과 기본값 분기를 안정적으로 처리한다', async () => {
@@ -226,16 +234,12 @@ describe('opinet client', () => {
           }),
         ),
       )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: {} })));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ RESULT: { OIL: [] } })));
 
-    await expect(fetchOpinetAveragePrices({ apiKey: 'key', fetchImpl })).resolves.toMatchObject({
-      count: 0,
-    });
-    await expect(fetchOpinetLowestStations({}, { apiKey: 'key', fetchImpl })).resolves.toMatchObject({
-      fuelCode: 'B027',
-      areaCode: null,
-      count: 0,
-    });
+    await expect(fetchOpinetAveragePrices({ apiKey: 'key', fetchImpl })).rejects.toThrow('JSON');
+    await expect(fetchOpinetLowestStations({}, { apiKey: 'key', fetchImpl })).rejects.toThrow(
+      '응답',
+    );
 
     const around = await fetchOpinetStationsAround(
       { x: 1, y: 2, radiusMeters: 1, sort: 'price' },
@@ -250,7 +254,9 @@ describe('opinet client', () => {
       distanceMeters: null,
     });
 
-    await expect(fetchOpinetStationDetail('A0', { apiKey: 'key', fetchImpl })).resolves.toMatchObject({
+    await expect(
+      fetchOpinetStationDetail('A0', { apiKey: 'key', fetchImpl }),
+    ).resolves.toMatchObject({
       station: null,
     });
   });

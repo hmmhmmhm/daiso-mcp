@@ -464,7 +464,7 @@ describe('fetchOliveyoungProducts', () => {
     const fallback = await fetchOliveyoungProducts(params, { apiKey: 'test-key' });
 
     expect(first.products[0].goodsName).toBe('립밤');
-    expect(fallback).toEqual(first);
+    expect(fallback.products[0]).toEqual(expect.objectContaining({ goodsNumber: first.products[0].goodsNumber, stockStatus: 'unknown', inStock: false }));
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -928,7 +928,7 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
     expect(result.products).toEqual(products);
   });
 
-  it('매장 재고 조회 실패 시 같은 조건의 직전 성공 결과를 재사용한다', async () => {
+  it('매장 재고 조회 실패 시 과거 수량을 재사용하지 않는다', async () => {
     const products = [
       {
         goodsNumber: 'A1',
@@ -984,8 +984,8 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
     );
 
     expect(first.checkedCount).toBe(1);
-    expect(fallback.checkedCount).toBe(1);
-    expect(fallback.products[0]).toEqual(first.products[0]);
+    expect(fallback.checkedCount).toBe(0);
+    expect(fallback.products[0]).toEqual(products[0]);
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
@@ -1067,7 +1067,7 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
     );
   });
 
-  it('stock-stores 응답에 빈 데이터가 오면 주변 매장 재고를 품절로 처리한다', async () => {
+  it('stock-stores 응답에 빈 데이터가 오면 재고를 미확인으로 유지한다', async () => {
     mockFetch
       .mockResolvedValueOnce(
         createDirectResponse({
@@ -1106,17 +1106,9 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
       { apiKey: 'test-key' }
     );
 
-    expect(result.checkedCount).toBe(1);
-    expect(result.products[0].stockSource).toBe('nearby_store');
-    expect(result.products[0].inStock).toBe(false);
-    expect(result.products[0].stockStatus).toBe('out_of_stock');
-    expect(result.products[0].storeInventory).toEqual({
-      totalCount: 0,
-      inStockCount: 0,
-      outOfStockCount: 0,
-      notSoldCount: 0,
-      stores: [],
-    });
+    expect(result.checkedCount).toBe(0);
+    expect(result.products[0].stockSource).toBe('global_search');
+    expect(result.products[0].storeInventory).toBeUndefined();
   });
 
   it('stock-stores 항목이 비어 있어도 기본값과 재고 라벨을 계산한다', async () => {

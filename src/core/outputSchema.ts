@@ -74,7 +74,7 @@ function createFallbackOutputSchema(toolName: string): ToolOutputSchema {
       itemCode: z.string().nullable().optional(),
       location: z.unknown().optional(),
       product: z.unknown().optional(),
-      onlineStock: z.number().optional(),
+      onlineStock: z.number().nullable().optional(),
       inventory: z.unknown().optional(),
       storeInventory: z.unknown().optional(),
     };
@@ -100,7 +100,7 @@ function createFallbackOutputSchema(toolName: string): ToolOutputSchema {
 
   if (toolName.includes('theater')) {
     return {
-      keyword: z.string().optional(),
+      keyword: z.string().nullable().optional(),
       location: z.unknown().optional(),
       count: z.number().optional(),
       theaters: z.array(z.unknown()).optional(),
@@ -137,10 +137,11 @@ function createFallbackOutputSchema(toolName: string): ToolOutputSchema {
   }
 
   if (toolName.includes('catalog')) {
+    const section = z.object({ totalCount: z.number(), items: z.array(z.unknown()) });
     return {
-      pages: z.array(z.unknown()).optional(),
-      issues: z.array(z.unknown()).optional(),
-      exhibitions: z.array(z.unknown()).optional(),
+      pages: section.optional(),
+      issues: section.optional(),
+      exhibitions: section.optional(),
       count: z.number().optional(),
     };
   }

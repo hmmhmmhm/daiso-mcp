@@ -218,7 +218,8 @@ describe('searchSevenElevenProductsWithVariants', () => {
       size: 10,
     });
 
-    expect(result.totalCount).toBe(1);
+    expect(result.totalCount).toBe(3);
+    expect(result.products).toHaveLength(1);
     expect(result.products[0].itemCode).toBe('111');
   });
 
