@@ -1,6 +1,8 @@
 # GS25 직접 인증 복구 운영 절차
 
-검증일: 2026-10-05 KST. 이 문서는 정상 네이버 로그인으로 발급받은 **GS 세션**을 Mac HTTP 중계에서 사용한 복구 절차다. 다음 에이전트는 이 문서부터 읽는다. 2026-03의 무인증 리플레이·Frida 문서는 당시 조사 기록이며 현재 운영 복구 절차가 아니다.
+전체 로그인 검증일: 2026-10-05 KST. 공개 로그인 번들 재확인: 2026-10-06 KST. 이 문서는 정상 네이버 로그인으로 발급받은 **GS 세션**을 Mac HTTP 중계에서 사용한 복구 절차다. 다음 에이전트는 이 문서부터 읽는다. 2026-03의 무인증 리플레이·Frida 문서는 당시 조사 기록이며 현재 운영 복구 절차가 아니다.
+
+개인 사이트에서 처음 재현하거나 네이버 로그인 뒤 ‘닫기’ 화면에 멈췄다면 [단계별 로그인 가이드](gs25-auth-login-guide.md)를 먼저 읽으세요. 이 문서는 기존 Mac 중계의 세션 교체·운영 검증을 다룹니다. Windows 전체 검증 기록은 없습니다.
 
 ## 완료된 구조와 근거
 
@@ -26,15 +28,15 @@ REST / MCP / CLI → Worker → Access/Tunnel → Mac 편의점 중계
 
 운영 요청 전에 저장소 `AGENTS.md`, [편의점 중계](convenience-relay.md), [관측 가이드](relay-observability.md)를 읽는다. 현재 main/배포 SHA, 작업트리 변경, 중계 health 및 비밀값을 제외한 로그를 확인한다. 공개 `/health`의 설정 여부만으로 실재고 성공을 판단하지 않는다.
 
-| 관측 | 다음 확인 |
-| --- | --- |
-| 상품 검색 200, 재고 401/403 | GS 세션·만료·권한·갱신 실패. 상품 검색 성공은 재고 인증 성공이 아니다. |
-| 중계 `stage: quota`, 429 | `quota.blockedBy`, `retryAfter`, `resetAt` 확인 후 해당 시각까지 기다린다. 인증을 다시 발급하거나 한도를 올리지 않는다. |
-| 원본 `stage: upstream`, 429 | GS 측 제한이다. 자체 원장 429와 구분한다. |
-| 502/504 | 원본 상태, JSON 계약, Tunnel/Access, 조회/갱신 기한을 분리한다. |
-| Worker 500 또는 MCP `isError` | 중계 로그와 diagnostics의 원본 상태를 본다. REST의 바깥 500만 보고 인증 장애로 단정하지 않는다. |
-| 공개 주소에서 Python 기본 UA만 403 | 실제 CLI/SDK와 같은 요청으로 대조한다. 당시 `daiso-cli/1.2.9` UA는 200이었다. 차단 기준을 추측해 우회하지 않는다. |
-| 200인데 다른 상품/지역 | 상품 코드·상품명·좌표·필터·수량을 검증한다. HTTP 200만으로 복구 완료가 아니다. |
+| 관측                               | 다음 확인                                                                                                               |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 상품 검색 200, 재고 401/403        | GS 세션·만료·권한·갱신 실패. 상품 검색 성공은 재고 인증 성공이 아니다.                                                  |
+| 중계 `stage: quota`, 429           | `quota.blockedBy`, `retryAfter`, `resetAt` 확인 후 해당 시각까지 기다린다. 인증을 다시 발급하거나 한도를 올리지 않는다. |
+| 원본 `stage: upstream`, 429        | GS 측 제한이다. 자체 원장 429와 구분한다.                                                                               |
+| 502/504                            | 원본 상태, JSON 계약, Tunnel/Access, 조회/갱신 기한을 분리한다.                                                         |
+| Worker 500 또는 MCP `isError`      | 중계 로그와 diagnostics의 원본 상태를 본다. REST의 바깥 500만 보고 인증 장애로 단정하지 않는다.                         |
+| 공개 주소에서 Python 기본 UA만 403 | 실제 CLI/SDK와 같은 요청으로 대조한다. 당시 `daiso-cli/1.2.9` UA는 200이었다. 차단 기준을 추측해 우회하지 않는다.       |
+| 200인데 다른 상품/지역             | 상품 코드·상품명·좌표·필터·수량을 검증한다. HTTP 200만으로 복구 완료가 아니다.                                          |
 
 69/분·100,000/일은 편의점 중계의 **합산 자체 상한**이다. 동시 원본 4, 접수 32, 전체 15초, 재고 캐시 30초를 유지한다. CU/Seven의 운영 트래픽도 같은 편의점 원장을 소비한다. 캐시 적중·동일 진행 조회 병합은 원본 소비가 없거나 1회지만 서로 다른 조건은 각각 소비한다. 인증 갱신은 별도 인증 요청이다.
 
@@ -42,16 +44,16 @@ REST / MCP / CLI → Worker → Access/Tunnel → Mac 편의점 중계
 
 현재 설치는 아래 경로를 사용한다. 다른 호스트에서는 실제 LaunchAgent·환경 파일을 찾아 경로를 바꾼다.
 
-| 항목 | 현재 Mac 위치 |
-| --- | --- |
-| 실행 서비스 | `gui/501/page.aka.daiso-dtryx` (UID는 `id -u`로 확인) |
-| LaunchAgent | `~/Library/LaunchAgents/page.aka.daiso-dtryx.plist` |
-| 런타임 | `~/Library/Application Support/DaisoRelay/dtryx-runtime` |
-| 환경 파일 | 같은 기본 디렉터리의 `dtryx.env` |
-| GS 세션 | 같은 기본 디렉터리의 `gs25-auth.json` |
-| 편의점 원장/로그 | `convenience-state/quota.json`, `convenience-state/logs/` |
-| Dtryx 원장/로그 | `dtryx-state/` — 별도 유지 |
-| 로컬 health | `http://127.0.0.1:4320/v1/convenience/health`, `/v1/dtryx/health` |
+| 항목             | 현재 Mac 위치                                                     |
+| ---------------- | ----------------------------------------------------------------- |
+| 실행 서비스      | `gui/501/page.aka.daiso-dtryx` (UID는 `id -u`로 확인)             |
+| LaunchAgent      | `~/Library/LaunchAgents/page.aka.daiso-dtryx.plist`               |
+| 런타임           | `~/Library/Application Support/DaisoRelay/dtryx-runtime`          |
+| 환경 파일        | 같은 기본 디렉터리의 `dtryx.env`                                  |
+| GS 세션          | 같은 기본 디렉터리의 `gs25-auth.json`                             |
+| 편의점 원장/로그 | `convenience-state/quota.json`, `convenience-state/logs/`         |
+| Dtryx 원장/로그  | `dtryx-state/` — 별도 유지                                        |
+| 로컬 health      | `http://127.0.0.1:4320/v1/convenience/health`, `/v1/dtryx/health` |
 
 `GS25_AUTH_SESSION_FILE`은 **Mac 환경 변수**다. Worker secret으로 넣지 않는다. 세션은 현재 실행 사용자 소유의 일반 파일, 최대 16 KiB, 권한 0600이어야 한다. 내용은 `accessToken`, `refreshToken`, `deviceId` 세 필드다. 두 토큰은 `Bearer ` 접두사를 제거한 GS JWT다. `deviceId`는 티켓 발급 때 쓴 값을 유지한다.
 
@@ -91,7 +93,9 @@ JWT의 `exp`만 로컬에서 검사하고 토큰 자체·URL query·JWT 전체 c
 3. 처음 GS bridge에서 채널이 초기화된 뒤 아래 **SPA 이동**을 수행한다. full reload로 `/bridge/naver`를 직접 열면 GS SHOP 채널로 바뀔 수 있다.
 
 ```javascript
-await document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$router.push('/bizmgt/signin/bridge/naver');
+await document
+  .querySelector('#__nuxt')
+  .__vue_app__.config.globalProperties.$router.push('/bizmgt/signin/bridge/naver');
 ```
 
 4. 네이버 공식 화면에 **‘우리동네GS 로그인 중’**이 표시되는지 확인한다. GS SHOP이라면 진행하지 말고 초기 bridge부터 새 티켓으로 다시 시작한다.
@@ -106,9 +110,11 @@ CLI 결과에 GS 티켓 URL이 포함될 수 있으므로 stdout/stderr를 비�
 
 ### 3.2 ‘닫기’만 나타났을 때 정상 GS 코드 교환 완료
 
+[사람이 따라가는 로그인 가이드 4단계](gs25-auth-login-guide.md#4-닫기-화면에서-gs-코드-교환을-실행합니다)에 컨텍스트 검사·최소 교환 스크립트·현재 번들/export 탐색·실제 요청 확인 방법을 정리했습니다. agent-browser가 멈추면 일반 Chrome 개발자 도구 경로를 사용할 수 있습니다.
+
 당시 최초 bridge의 네이버 SDK 호출 전제 때문에 일반 브라우저에서는 ‘네이버 통신 장애’가 발생했다. 게시된 `/bizmgt/signin/bridge/naver` OAuth 라우트를 사용하면 정상 네이버 로그인에 도달했다. 로그인 후 허브 callback의 `code`/`state`는 네이버 승인 코드이며 **GS 재고 토큰이 아니다**.
 
-callback에 ‘닫기’만 나타나는 것은 native 부모에 결과를 전달하려는 앱 흐름이었다. 당시 공식 GS 웹의 로그인 모듈로 정상 교환을 완료했다. 아래는 **2026-10-05에 실제 성공한 호출**이다. 모듈 해시/내보내기 이름은 배포마다 바뀔 수 있다.
+callback에 ‘닫기’만 나타나는 것은 native 부모에 결과를 전달하려는 앱 흐름이었다. 당시 공식 GS 웹의 로그인 모듈로 정상 교환을 완료했다. 아래는 **2026-10-05에 실제 성공한 호출**이다. 2026-10-06 공개 번들에서도 같은 경로·export와 v2 endpoint를 확인했다. 이는 새 계정 로그인 재검증과는 다르다. 모듈 해시/내보내기 이름은 배포마다 바뀔 수 있다.
 
 ```javascript
 const params = new URLSearchParams(location.search);
@@ -116,9 +122,12 @@ const vue = document.querySelector('#__nuxt').__vue_app__;
 const nuxt = vue.config.globalProperties.$nuxt;
 const mod = await import('/_nuxt/login.BDscyujx.js');
 const api = nuxt.runWithContext(() => mod.u());
-await nuxt.runWithContext(() => api.loginNaver({
-  code: params.get('code'), state: params.get('state'),
-}));
+await nuxt.runWithContext(() =>
+  api.loginNaver({
+    code: params.get('code'),
+    state: params.get('state'),
+  }),
+);
 ```
 
 이 호출은 공식 `POST /api/hub/bridge/v2/login/naver`로 승인 코드를 교환하고 GS `authReturn`으로 정상 리다이렉트한다. `code`/`state`를 출력하거나 재사용하지 않는다. 만료/이미 사용된 코드면 새 티켓부터 다시 로그인한다.
@@ -129,7 +138,7 @@ await nuxt.runWithContext(() => api.loginNaver({
 
 최종 주소의 origin은 `https://b2c-bff.woodongs.com`, path는 `/api/bff/v4/grmHub/authReturn`이어야 한다. query의 `result=Y`, `resultCode=0000`, 비어 있지 않은 `token`/`refresh`를 검증한다. 네이버 callback이나 GS SHOP 반환을 GS 성공으로 오인하지 않는다.
 
-[참조 절차](gs25-auth-recovery-reference.md)의 저장 코드는 `agent-browser get url` stdout을 메모리에서 파싱해 URL을 출력하지 않고, 티켓의 `deviceId`와 GS 두 토큰만 0600 새 파일에 저장한다. 실패하면 성공 주소를 추측하지 않는다. capture 파일이 이미 있으면 삭제 덮어쓰기 대신 별도 새 작업 디렉터리를 사용한다.
+[참조 절차](gs25-auth-recovery-reference.md)의 저장 코드는 `agent-browser get url` stdout 또는 `--manual` 숨김 입력을 메모리에서 파싱해 URL을 출력하지 않고, 티켓의 `deviceId`와 GS 두 토큰만 0600 새 파일에 저장한다. 실패하면 성공 주소를 추측하지 않는다. capture 파일이 이미 있으면 삭제 덮어쓰기 대신 별도 새 작업 디렉터리를 사용한다.
 
 ## 4. 재고·갱신을 검증한 뒤 운영 파일을 교체한다
 
