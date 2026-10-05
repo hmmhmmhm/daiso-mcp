@@ -228,7 +228,7 @@ export function isDirectExecution(
 /* c8 ignore start */
 if (isDirectExecution()) {
   runCli(process.argv.slice(2)).then((exitCode) => {
-    process.exit(exitCode);
+    process.exitCode = exitCode;
   });
 }
 /* c8 ignore stop */
