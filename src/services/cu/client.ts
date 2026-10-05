@@ -144,8 +144,23 @@ async function requestCuWebHtml(
   throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
 }
 
+/** 점포 상세 주소에서 확인 가능한 도로명·지번 본주소만 위치 검색에 사용합니다. */
+function cuGeocodeAddress(address: string): string {
+  const trimmed = address.trim();
+  const base = trimmed.match(
+    /^((?:[가-힣]+(?:시|도)|서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s+.+?(?:(?:대로|로|길)\s+\d+(?:-\d+)?|(?:읍|면|동|리)\s+(?:산\s*)?\d+(?:-\d+)?))(?=\s|$)/u,
+  );
+  if (!base) return address;
+  const detail = trimmed.slice(base[1].length);
+  if (/(?:대로|로|길)\s+\d|(?:읍|면|동|리)\s+(?:산\s*)?\d/u.test(detail)) return address;
+  // 층·호수·건물명·괄호 상세만 제거하고 다른 숫자 주소가 섞이면 원문을 유지합니다.
+  return /^(?:\s+(?:\d+(?:층|호)|[A-Za-z가-힣][A-Za-z가-힣0-9]*|\([^)]*\)))*\s*$/u.test(detail)
+    ? base[1]
+    : address;
+}
+
 export async function geocodeCuAddress(address: string, options: RequestOptions = {}) {
-  const location = await geocodeLocation(address, options);
+  const location = await geocodeLocation(cuGeocodeAddress(address), options);
   return location ? { latitude: location.latitude, longitude: location.longitude } : null;
 }
 
@@ -225,7 +240,7 @@ export async function fetchCuStores(
   const hasLongitude = typeof params.longitude === 'number' && Number.isFinite(params.longitude);
 
   // 좌표가 없고 검색어가 있으면 웹 매장 검색으로 폴백합니다.
-  if (!hasConvenienceRelay(options) && searchWord.length > 0 && (!hasLatitude || !hasLongitude)) {
+  if (searchWord.length > 0 && (!hasLatitude || !hasLongitude)) {
     const html = await requestCuWebHtml(
       CU_API.WEB_STORE_LIST_PATH,
       {
@@ -253,6 +268,8 @@ export async function fetchCuStores(
       timeout,
     );
     const stores = parseCuWebStores(html);
+    // 공식 웹은 점포 정보만 제공하므로 중계 재고 조회 전 수량은 미확인입니다.
+    if (hasConvenienceRelay(options)) for (const store of stores) store.stock = -1;
     return {
       totalCount: stores.length,
       stores,
