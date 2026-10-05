@@ -1,3 +1,4 @@
+import { selectGs25InventoryProduct } from '../services/gs25/productSelection.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
@@ -296,7 +297,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         ...convenienceTransportFromBindings(c.env),
         zyteApiKey: c.env?.ZYTE_API_KEY,
       });
-      firstProduct = searchProducts.find((p) => p.itemCode.length > 0);
+      firstProduct = selectGs25InventoryProduct(searchProducts, keyword);
 
       if (firstProduct) {
         resolvedItemCode = firstProduct.itemCode;
