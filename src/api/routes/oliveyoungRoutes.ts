@@ -43,7 +43,7 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'oliveyoung-inventory-v3',
+        keyPrefix: 'oliveyoung-inventory-v4',
       },
       () => handleOliveyoungCheckInventory(c),
     ),

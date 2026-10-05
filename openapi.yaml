@@ -814,9 +814,11 @@ components:
           example: true
         remainQuantity:
           type: integer
+          nullable: true
           example: 3
         o2oRemainQuantity:
           type: integer
+          nullable: true
           example: 2
         stockStatus:
           type: string
@@ -824,6 +826,7 @@ components:
             - in_stock
             - out_of_stock
             - not_sold
+            - unknown
           example: in_stock
         stockLabel:
           type: string

@@ -190,7 +190,7 @@ describe('searchSevenElevenProductsWithVariants', () => {
     ]);
   });
 
-  it('중복 상품과 빈 키 상품은 제외한다', async () => {
+  it('컬렉션 내부 중복 상품은 불완전한 목록으로 거절한다', async () => {
     mockFetch.mockResolvedValueOnce(
       makeProductResponse('핫식스', [
         {
@@ -214,13 +214,7 @@ describe('searchSevenElevenProductsWithVariants', () => {
       ]),
     );
 
-    const result = await searchSevenElevenProductsWithVariants('핫식스', {
-      size: 10,
-    });
-
-    expect(result.totalCount).toBe(3);
-    expect(result.products).toHaveLength(1);
-    expect(result.products[0].itemCode).toBe('111');
+    await expect(searchSevenElevenProductsWithVariants('핫식스', { size: 10 })).rejects.toThrow('전체 상품 검색 결과가 잘렸습니다');
   });
 
   it('itemCode가 없으면 productNo와 itemName을 순서대로 fallback 키로 사용한다', async () => {

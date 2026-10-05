@@ -2,10 +2,7 @@
  * 세븐일레븐 상품 검색어 보정
  */
 
-import {
-  searchSevenElevenProducts,
-  type SevenElevenRequestOptions,
-} from './client.js';
+import { fetchSevenElevenProductSearchResults, type SevenElevenRequestOptions } from './client.js';
 import type { SevenElevenProduct, SevenElevenSearchResult } from './types.js';
 
 interface SearchVariantOptions extends SevenElevenRequestOptions {
@@ -111,7 +108,10 @@ function scoreSevenElevenProduct(product: SevenElevenProduct, rawKeyword: string
     }
   }
 
-  if (hasSandwichSuffix && SANDWICH_SUFFIX_FAMILY.some((suffix) => normalizedName.includes(suffix))) {
+  if (
+    hasSandwichSuffix &&
+    SANDWICH_SUFFIX_FAMILY.some((suffix) => normalizedName.includes(suffix))
+  ) {
     score += 35;
   }
 
@@ -137,29 +137,20 @@ export async function searchSevenElevenProductsWithVariants(
   query: string,
   options: SearchVariantOptions = {},
 ): Promise<SevenElevenSearchResult & { appliedQueries: string[] }> {
-  const { page = 1, size = 20, sort = 'recommend', timeout, zyteApiKey } = options;
+  const { page = 1, size = 20, timeout, zyteApiKey } = options;
   const appliedQueries = buildSevenElevenProductKeywordVariants(query);
   const seenKeys = new Set<string>();
   const collectionIds = new Set<string>();
   const mergedProducts: SevenElevenProduct[] = [];
-  let totalCount = 0;
+  const budget = { remaining: 10 };
 
   for (const candidate of appliedQueries) {
-    const result = await searchSevenElevenProducts(
-      {
-        query: candidate,
-        page,
-        size,
-        sort,
-      },
-      {
-        ...options,
-        timeout,
-        zyteApiKey,
-      },
-    );
+    const result = await fetchSevenElevenProductSearchResults(candidate, {
+      ...options,
+      timeout,
+      zyteApiKey,
+    }, budget);
 
-    totalCount = Math.max(totalCount, result.totalCount);
     for (const collectionId of result.collectionIds) {
       collectionIds.add(collectionId);
     }
@@ -186,11 +177,13 @@ export async function searchSevenElevenProductsWithVariants(
     return 0;
   });
 
-  const pagedProducts = rankedProducts.slice(0, size);
+  const pageSize = Math.max(Math.trunc(size), 1);
+  const offset = Math.max(Math.trunc(page) - 1, 0) * pageSize;
+  const pagedProducts = rankedProducts.slice(offset, offset + pageSize);
 
   return {
     query,
-    totalCount: Math.max(totalCount, rankedProducts.length),
+    totalCount: rankedProducts.length,
     products: pagedProducts,
     collectionIds: [...collectionIds],
     appliedQueries,

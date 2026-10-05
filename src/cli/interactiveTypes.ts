@@ -18,6 +18,7 @@ export interface InteractivePrompt {
 }
 
 export interface InteractiveStore {
+  storeCode?: string;
   name: string;
   address: string;
   phone: string;

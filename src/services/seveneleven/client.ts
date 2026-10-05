@@ -1,3 +1,4 @@
+import { SevenElevenSearchPagination } from './searchPagination.js';
 import { hasConvenienceRelay, requestConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
  * 세븐일레븐 API 클라이언트
@@ -130,9 +131,12 @@ function normalizeStore(raw: Record<string, unknown>): SevenElevenStore {
   return {
     storeCode: toStringValue(raw.storeCode || raw.storeCd || raw.strCd || raw.storCd || raw.shopCd),
     storeName: toStringValue(raw.storeName || raw.storeNm || raw.strNm || raw.storNm || raw.shopNm),
-    address: toStringValue(raw.address || raw.addr || raw.roadAddr || raw.shopAddr) || mergedAddress,
+    address:
+      toStringValue(raw.address || raw.addr || raw.roadAddr || raw.shopAddr) || mergedAddress,
     latitude: toNumber(raw.latitude || raw.storeLat || raw.lat || raw.yPos || raw.y || raw.yCoord),
-    longitude: toNumber(raw.longitude || raw.storeLon || raw.lng || raw.xPos || raw.x || raw.xCoord),
+    longitude: toNumber(
+      raw.longitude || raw.storeLon || raw.lng || raw.xPos || raw.x || raw.xCoord,
+    ),
     pickupEnabled: toBooleanYn(raw.pickupEnabled || raw.pickupYn),
     deliveryEnabled: toBooleanYn(raw.deliveryEnabled || raw.deliveryYn || raw.dlvyYn),
     closeYn: toStringValue(raw.closeYn || raw.storeCloseYn || raw.closeYN || raw.clsYn),
@@ -167,49 +171,63 @@ function normalizeStores(items: unknown[]): SevenElevenStore[] {
     .filter((store) => store.storeCode.length > 0 || store.storeName.length > 0);
 }
 
+/** 전체 검색 결과를 가져와 컬렉션 간 중복을 제거합니다. */
+export async function fetchSevenElevenProductSearchResults(
+  query: string,
+  options: SevenElevenRequestOptions = {},
+  budget = { remaining: 10 },
+): Promise<SevenElevenSearchResult> {
+  const pagination = new SevenElevenSearchPagination();
+  let data: SearchGoodsData = {};
+  let complete = false;
+  // 원본 페이지를 최대 5회 수집하고 불완전한 결과는 명시적으로 거절합니다.
+  for (let startCount = 0; startCount < 5; startCount += 1) {
+    if (budget.remaining <= 0) throw new Error('세븐일레븐 전체 상품 검색 결과가 잘렸습니다: 최대 10회 검색 제한');
+    budget.remaining -= 1;
+    const response = await requestSevenElevenJson<SearchGoodsData>(
+      SEVENELEVEN_API.SEARCH_GOODS_PATH, 'POST',
+      { collection: 'goods', query, sort: 'quantity/desc,itemOnm/asc', startCount, listCount: 100 },
+      options,
+    );
+    data = response.data || {};
+    const collections = data.SearchQueryResult?.Collection;
+    if (!Array.isArray(collections)) {
+      if (startCount === 0 && Array.isArray(data.content)) {
+        if (data.content.length > 500) throw new Error('세븐일레븐 전체 상품 검색 결과가 잘렸습니다: 최대 500개 제한');
+        complete = true;
+        break;
+      }
+      throw new Error('세븐일레븐 전체 상품 검색 결과가 잘렸습니다');
+    }
+    complete = pagination.append(collections);
+    if (complete) break;
+  }
+  if (!complete) throw new Error('세븐일레븐 전체 상품 검색 결과가 잘렸습니다: 최대 5페이지 제한');
+  const rows = normalizeProducts(
+    pagination.documents.length ? pagination.documents : Array.isArray(data.content) ? data.content : [],
+  );
+  const products = [
+    ...new Map(
+      rows.map((product) => [product.itemCode || product.productNo || product.itemName, product]),
+    ).values(),
+  ];
+  return {
+    query: data.SearchQueryResult?.query || query,
+    totalCount: products.length,
+    products,
+    collectionIds: [...pagination.collectionIds],
+  };
+}
+
 export async function searchSevenElevenProducts(
   params: SearchProductsParams,
   options: SevenElevenRequestOptions = {},
 ): Promise<SevenElevenSearchResult> {
   const { query, page = 1, size = 20 } = params;
-  const pageNo = Math.max(Math.trunc(page) - 1, 0);
+  const result = await fetchSevenElevenProductSearchResults(query, options);
   const pageSize = Math.max(Math.trunc(size), 1);
-
-  const response = await requestSevenElevenJson<SearchGoodsData>(
-    SEVENELEVEN_API.SEARCH_GOODS_PATH,
-    'POST',
-    {
-      // 공개 검색 엔드포인트는 pageNo/pageSize만 안정적으로 동작한다.
-      // sort를 함께 보내면 빈 결과가 내려오는 케이스가 확인되어 제외한다.
-      query,
-      pageNo,
-      pageSize,
-    },
-    options,
-  );
-
-  const data = response.data || {};
-  const queryResult = data.SearchQueryResult;
-  const collections = queryResult?.Collection || [];
-  const collectionIds = collections.map((item) => item.CollectionId || '').filter((id) => id.length > 0);
-
-  let totalCount = 0;
-  const allDocuments: unknown[] = [];
-  for (const collection of collections) {
-    totalCount += toNumber(collection.Documentset?.totalCount);
-    allDocuments.push(...(collection.Documentset?.Document || []));
-  }
-
-  const collectionProducts = normalizeProducts(allDocuments);
-  const contentProducts = normalizeProducts(Array.isArray(data.content) ? data.content : []);
-  const products = (collectionProducts.length > 0 ? collectionProducts : contentProducts).slice(0, pageSize);
-
-  return {
-    query: queryResult?.query || query,
-    totalCount,
-    products,
-    collectionIds,
-  };
+  const offset = Math.max(Math.trunc(page) - 1, 0) * pageSize;
+  return { ...result, products: result.products.slice(offset, offset + pageSize) };
 }
 
 export async function fetchSevenElevenStoresByKeyword(

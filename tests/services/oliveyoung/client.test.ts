@@ -1163,10 +1163,10 @@ describe('enrichOliveyoungProductsWithNearbyStoreInventory', () => {
       distance: 0,
       pickupYn: false,
       salesStoreYn: false,
-      remainQuantity: 0,
-      o2oRemainQuantity: 0,
-      stockStatus: 'not_sold',
-      stockLabel: '미판매',
+      remainQuantity: null,
+      o2oRemainQuantity: null,
+      stockStatus: 'unknown',
+      stockLabel: '재고 미확인',
       openYn: false,
     });
   });

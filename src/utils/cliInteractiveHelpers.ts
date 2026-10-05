@@ -4,6 +4,7 @@
 import { buildDaisoStoreKeywordVariants } from './daisoKeyword.js';
 
 interface InteractiveStore {
+  storeCode?: string;
   name: string;
   address: string;
   phone: string;
@@ -48,6 +49,7 @@ export function parseStores(payload: unknown): InteractiveStore[] {
     }
 
     result.push({
+      ...(toText(store.storeCode) ? { storeCode: toText(store.storeCode) } : {}),
       name,
       address: toText(store.address),
       phone: toText(store.phone),

@@ -263,7 +263,7 @@ describe('runInteractiveCli', () => {
           success: true,
           data: {
             inventory: {
-              products: [{ goodsNumber: 'G1', goodsName: '선크림A', priceToPay: 12000, o2oRemainQuantity: 3 }],
+              products: [{ goodsNumber: 'G1', goodsName: '선크림A', priceToPay: 12000, o2oRemainQuantity: 0, storeInventory: { stores: [{ storeName: '올리브영 강남점', address: '서울 강남구', remainQuantity: 3, o2oRemainQuantity: 3, stockStatus: 'in_stock' }] } }],
             },
           },
         }),
@@ -273,7 +273,7 @@ describe('runInteractiveCli', () => {
           success: true,
           data: {
             inventory: {
-              products: [{ goodsNumber: 'G2', goodsName: '립밤B', priceToPay: 8000, o2oRemainQuantity: 1 }],
+              products: [{ goodsNumber: 'G2', goodsName: '립밤B', priceToPay: 8000, o2oRemainQuantity: 0, storeInventory: { stores: [{ storeName: '올리브영 강남점', address: '서울 강남구', remainQuantity: 1, o2oRemainQuantity: 1, stockStatus: 'in_stock' }] } }],
             },
           },
         }),
@@ -372,6 +372,8 @@ describe('runInteractiveCli', () => {
 
     expect(exitCode).toBe(0);
     expect(output.join('\n')).toContain('- 상품: 감자칩');
+    expect(output.join('\n')).toContain('- 재고 수량: 확인 불가');
+    expect(output.join('\n')).toContain('- 픽업 가능: 확인 불가');
     expect(fetchImpl).toHaveBeenNthCalledWith(1, 'https://mcp.aka.page/api/cu/stores?keyword=%EA%B0%95%EB%82%A8&limit=10');
     expect(fetchImpl).toHaveBeenNthCalledWith(
       2,

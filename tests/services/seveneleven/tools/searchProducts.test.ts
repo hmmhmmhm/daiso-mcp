@@ -88,9 +88,11 @@ describe('createSearchProductsTool', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
+          collection: 'goods',
           query: '삼각김밥',
-          pageNo: 0,
-          pageSize: 20,
+          sort: 'quantity/desc,itemOnm/asc',
+          startCount: 0,
+          listCount: 100,
         }),
       }),
     );

@@ -20,7 +20,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'seveneleven-products-v2',
+        keyPrefix: 'seveneleven-products-v3',
       },
       () => handleSevenElevenSearchProducts(c),
     ),

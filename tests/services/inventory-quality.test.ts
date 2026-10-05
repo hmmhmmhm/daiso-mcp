@@ -88,22 +88,19 @@ it('Seven respects unmatched requested region', async () => {
   expect(sevenLocation.stores).toEqual([]);
   expect(sevenLocation.stockAvailable).toBe(false);
 });
-it('Seven preserves upstream page and total', async () => {
+it('Seven paginates the complete deduplicated corpus', async () => {
   clearSevenElevenReadCache();
-  let sevenRequestedPage: number | undefined;
+  let body: unknown;
   globalThis.fetch = async (_input, init) => {
-    sevenRequestedPage = JSON.parse(String(init?.body)).pageNo;
-    return json({ success: true, data: { SearchQueryResult: { Collection: [{ Documentset: {
-      totalCount: 40,
-      Document: Array.from({ length: 20 }, (_, i) => ({ field: { itemCd: `P${20 + i}`, itemOnm: `콜라${20 + i}` } })),
-    } }] } } });
+    body = JSON.parse(String(init?.body));
+    return json({ success: true, data: { SearchQueryResult: { Collection: [{ CollectionId: 'offline', Documentset: {
+    totalCount: 7, Document: Array.from({ length: 7 }, (_, index) => ({ field: { itemCd: String(index + 1), itemOnm: '콜라' } })),
+  } }] } } });
   };
-  const sevenPage = await searchSevenElevenProductsWithVariants('콜라', { page: 2, size: 20 });
-  assert.equal(sevenRequestedPage, 1);
-  assert.equal(sevenPage.products.length, 20);
-  assert.equal(sevenPage.totalCount, 40);
-
-
+  const sevenPage = await searchSevenElevenProductsWithVariants('콜라', { page: 2, size: 3 });
+  expect(sevenPage.totalCount).toBe(7);
+  expect(sevenPage.products.map(p => p.itemCode)).toEqual(['4', '5', '6']);
+  expect(body).toEqual({ collection: 'goods', query: '콜라', sort: 'quantity/desc,itemOnm/asc', startCount: 0, listCount: 100 });
 });
 it('Emart24 absent quantity remains unknown', async () => {
   globalThis.fetch = async input => {

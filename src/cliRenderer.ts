@@ -231,7 +231,14 @@ function formatCompare(data: Record<string, unknown>): string[] {
     );
   }
   lines.push(...formatCollection('가격 후보', data.results));
-  lines.push(...formatCollection('오류', data.errors));
+  if (Array.isArray(data.errors) && data.errors.length > 0) {
+    lines.push(`서비스 조회 실패: ${data.errors.length}건`);
+    for (const error of data.errors) {
+      lines.push(isRecord(error)
+        ? `- ${toText(error.service)}: ${toText(error.message)}`
+        : `- ${toText(error)}`);
+    }
+  }
   if (typeof data.note === 'string') {
     lines.push(`참고: ${data.note}`);
   }
@@ -248,7 +255,11 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
     return JSON.stringify(payload, null, 2);
   }
 
-  const lines: string[] = [`요청 성공: ${url.pathname}`];
+  const partialCompare = command === 'compare' && isRecord(envelope.data) &&
+    Array.isArray(envelope.data.errors) && envelope.data.errors.length > 0;
+  const lines: string[] = [
+    `${partialCompare ? '일부 서비스 조회 실패' : '요청 성공'}: ${url.pathname}`,
+  ];
   lines.push(...formatMeta(envelope.meta));
 
   if (!isRecord(envelope.data)) {

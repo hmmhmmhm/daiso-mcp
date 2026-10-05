@@ -1,0 +1,25 @@
+# 세븐일레븐 상품 검색 페이지 계약
+
+2026-10-05 공식 웹 앱의 `/search/result` 요청과 공개 API 응답을 대조했습니다. 이전의 `pageNo/pageSize` 요청은 페이지를 바꿔도 같은 상품을 반환했습니다.
+
+공식 요청은 `/api/v1/open/search/goods`에 다음 본문을 POST합니다.
+
+```json
+{
+  "collection": "goods",
+  "query": "커피",
+  "sort": "quantity/desc,itemOnm/asc",
+  "startCount": 0,
+  "listCount": 100
+}
+```
+
+`startCount`는 0부터 시작하는 페이지 번호입니다. 각 컬렉션은 따로 페이지를 반환합니다. 컬렉션 사이에 같은 상품이 있으므로 원본 `totalCount`의 합은 고유 상품 수와 다릅니다. 확인 당시 커피는 원본 166행, 고유 상품 122개였습니다.
+
+검색은 원본 목록을 완전히 수집한 뒤 상품 코드로 중복을 제거하고, 보정 검색의 결과를 합쳐 한 번만 페이지를 나눕니다. 응답의 `totalCount`는 고유 상품 수입니다. 마지막 페이지 이후에는 같은 전체 개수와 빈 상품 목록을 반환합니다.
+
+부하를 제한하기 위해 요청당 컬렉션별 100행, 검색어당 최대 5페이지와 원본 합계 500행, 보정 검색 전체 최대 10요청을 허용합니다. 범위가 이 제한을 넘거나 페이지가 반복·누락되면 불완전한 목록을 정상 결과로 반환하지 않습니다. REST는 오류 응답, MCP는 명시적인 `degraded` 응답을 반환합니다. 넓은 검색은 상품명을 더 구체적으로 입력해야 합니다.
+
+Mac 중계는 구형 본문과 공식 본문을 함께 허용합니다. 중계를 먼저 반영한 뒤 Worker를 배포합니다. 중계 인증·GS25 세션·호출 원장은 교체하거나 초기화하지 않습니다. REST 검색 캐시 namespace는 `seveneleven-products-v3`로 갱신했습니다.
+
+확인한 공식 소스: [검색 화면 번들](https://static.7-elevenapp.co.kr/k7app/_nuxt/DH1pJlb5.js), [검색 API 번들](https://static.7-elevenapp.co.kr/k7app/_nuxt/BqIULyu_.js).

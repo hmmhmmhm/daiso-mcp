@@ -7,21 +7,19 @@ import { isRecord, parseDaisoProducts, toText } from '../utils/cliInteractiveHel
 import type { InteractiveCliDeps, InteractivePrompt, InteractiveStore, InteractiveTheater, WriteFn } from './interactiveTypes.js';
 import { askNonEmpty } from './interactivePrompt.js';
 import { fetchEnvelope } from './interactiveFetch.js';
+import { cuStoreStock, oliveyoungStoreStock, printCuStock, printOliveyoungStock, quantityText } from './interactiveStoreInventory.js';
 
 interface OliveyoungProductPreview {
   goodsNumber: string;
   goodsName: string;
   priceToPay: number;
-  o2oRemainQuantity: number;
+  source: Record<string, unknown>;
 }
 
 interface CuInventoryPreview {
   itemCode: string;
   itemName: string;
   price: number;
-  pickupYn: boolean;
-  deliveryYn: boolean;
-  reserveYn: boolean;
 }
 
 interface LotteCinemaMoviePreview {
@@ -245,7 +243,7 @@ export async function runOliveyoungItemSearch(
       goodsNumber: toText(entry.goodsNumber),
       goodsName: toText(entry.goodsName),
       priceToPay: Number.parseInt(toText(entry.priceToPay), 10) || 0,
-      o2oRemainQuantity: Number.parseInt(toText(entry.o2oRemainQuantity), 10) || 0,
+      source: entry,
     }))
     .filter((entry) => entry.goodsName.length > 0);
 
@@ -267,7 +265,7 @@ export async function runOliveyoungItemSearch(
     cancelText: '상품 선택을 취소했습니다.',
     items: products,
     renderItem: (product, index) =>
-      `${index + 1}. ${product.goodsName} (${product.priceToPay}원, 남은수량 ${product.o2oRemainQuantity})`,
+      `${index + 1}. ${product.goodsName} (${product.priceToPay}원, 남은수량 ${quantityText(oliveyoungStoreStock(product.source, store)?.remainQuantity)})`,
     filterText: (product) => `${product.goodsName} ${product.goodsNumber}`,
     indexText: '입력: 번호 선택 | /키워드 필터 | all 전체보기 | 0 취소',
   });
@@ -278,7 +276,23 @@ export async function runOliveyoungItemSearch(
 
   deps.writeOut(`- 상품: ${selected.goodsName}`);
   deps.writeOut(`- 가격: ${selected.priceToPay}원`);
-  deps.writeOut(`- 남은수량: ${selected.o2oRemainQuantity}`);
+  let match = oliveyoungStoreStock(selected.source, store);
+  if (!isRecord(selected.source.storeInventory) && selected.goodsNumber) {
+    try {
+      const refreshed = await fetchEnvelope(deps.fetchImpl, '/api/oliveyoung/inventory', {
+        keyword: selected.goodsName, storeKeyword: store.name, size: '10',
+      });
+      if (isRecord(refreshed) && refreshed.success === true && isRecord(refreshed.data)
+        && isRecord(refreshed.data.inventory) && Array.isArray(refreshed.data.inventory.products)) {
+        const product = refreshed.data.inventory.products.find((entry: unknown) =>
+          isRecord(entry) && toText(entry.goodsNumber) === selected.goodsNumber);
+        match = oliveyoungStoreStock(product, store);
+      }
+    } catch {
+      // 재조회 실패는 품절로 단정하지 않는다.
+    }
+  }
+  printOliveyoungStock(deps.writeOut, match);
 }
 
 export async function runCuItemSearch(
@@ -311,9 +325,6 @@ export async function runCuItemSearch(
       itemCode: toText(entry.itemCode),
       itemName: toText(entry.itemName),
       price: Number.parseInt(toText(entry.price), 10) || 0,
-      pickupYn: toText(entry.pickupYn).toLowerCase() === 'true',
-      deliveryYn: toText(entry.deliveryYn).toLowerCase() === 'true',
-      reserveYn: toText(entry.reserveYn).toLowerCase() === 'true',
     }))
     .filter((entry) => entry.itemName.length > 0);
 
@@ -345,7 +356,16 @@ export async function runCuItemSearch(
 
   deps.writeOut(`- 상품: ${selected.itemName}`);
   deps.writeOut(`- 가격: ${selected.price}원`);
-  deps.writeOut(`- 픽업 가능: ${selected.pickupYn ? '예' : '아니오'}`);
-  deps.writeOut(`- 배달 가능: ${selected.deliveryYn ? '예' : '아니오'}`);
-  deps.writeOut(`- 예약 가능: ${selected.reserveYn ? '예' : '아니오'}`);
+  let stockPayload: unknown = payload;
+  const nearby = payload.data.nearbyStores;
+  if (!isRecord(nearby) || nearby.stockItemCode !== selected.itemCode) {
+    try {
+      stockPayload = await fetchEnvelope(deps.fetchImpl, '/api/cu/inventory', {
+        keyword: selected.itemName, storeKeyword: store.name, size: '10', storeLimit: '10',
+      });
+    } catch {
+      stockPayload = undefined;
+    }
+  }
+  printCuStock(deps.writeOut, cuStoreStock(stockPayload, selected.itemCode, store));
 }

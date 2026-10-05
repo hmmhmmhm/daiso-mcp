@@ -275,7 +275,7 @@ async function fetchOliveyoungStockStores(
   const result = {
     totalCount: body.data?.totalCount || 0,
     inStockCount,
-    outOfStockCount: stores.length - inStockCount - notSoldCount,
+    outOfStockCount: stores.filter((store) => store.stockStatus === 'out_of_stock').length,
     notSoldCount,
     stores,
   };
@@ -344,7 +344,9 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
             ? 'in_stock'
             : storeInventory.stores.length > 0 && storeInventory.notSoldCount === storeInventory.stores.length
               ? 'not_sold'
-              : 'out_of_stock';
+              : storeInventory.stores.some((store) => store.stockStatus === 'unknown')
+                ? 'unknown'
+                : 'out_of_stock';
           const stockSource: OliveyoungProduct['stockSource'] = 'nearby_store';
 
           return {
