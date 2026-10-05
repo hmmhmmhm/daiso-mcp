@@ -1,6 +1,6 @@
 # GS25 정상 로그인 참조 코드
 
-[운영 절차](gs25-auth-recovery-runbook.md)의 3절과 함께 사용한다. 아래 코드는 2026-10-05에 성공한 티켓 시작·callback 저장 절차를 자기 완결된 예제로 정리한 것이다. 임시 scratch의 다른 Python 모듈이 필요하지 않다. **문서 예제의 구문 검증과 당시 정상 흐름의 실증은 서로 다르다.** 다음 실행에서는 현재 공식 계약을 확인하고 결과를 새로 검증한다. 이 예제는 운영 재고 서버나 공개 로그인 endpoint로 배포하지 않는다.
+[단계별 로그인 가이드](gs25-auth-login-guide.md)와 [운영 절차](gs25-auth-recovery-runbook.md)의 3절과 함께 사용한다. 아래 코드는 2026-10-05에 성공한 티켓 시작·callback 저장 절차를 자기 완결된 예제로 정리한 것이다. 임시 scratch의 다른 Python 모듈이 필요하지 않다. **문서 예제의 구문 검증과 당시 정상 흐름의 실증은 서로 다르다.** 다음 실행에서는 현재 공식 계약을 확인하고 결과를 새로 검증한다. 이 예제는 운영 재고 서버나 공개 로그인 endpoint로 배포하지 않는다.
 
 빈 작업 디렉터리와 브라우저 profile을 현재 사용자만 접근할 수 있게 0700으로 만든다. 첫 코드를 `start.py`, 두 번째를 `capture.py`로 저장한다. 티켓·세션 출력은 이 파일들과 같은 비공개 디렉터리에만 생성된다. 성공한 세션을 운영 파일에 설치하는 방법은 운영 절차 4절을 따른다.
 
@@ -91,18 +91,25 @@ finally:
 
 초기 bridge를 읽은 뒤 운영 절차의 SPA 이동·네이버 화면 채널 확인·필요한 경우 공식 `loginNaver` 코드 교환을 수행한다.
 
-## 2. GS authReturn만 비공개 파일로 저장
+## 2. 같은 GS 탭에서 코드 교환
 
-브라우저가 최종 GS 반환 주소에 도달한 뒤 `python3 capture.py`를 실행한다. URL이 아직 네이버/허브 callback이면 저장하지 않는다. 출력은 성공 여부뿐이다. `agent-browser` 자체 명령을 별도로 실행해 callback URL 전체를 터미널에 출력하지 않는다.
+`start.py`는 티켓 발급까지만 하고 `capture.py`는 이미 발급된 GS 토큰을 저장한다. **네이버 로그인 → GS 코드 교환은 이 두 파일에 포함되어 있지 않다.** [로그인 가이드 2~4단계](gs25-auth-login-guide.md#2-gs-초기-bridge를-열고-같은-탭에서-이동합니다)의 초기 SPA 이동·사용자 로그인·최소 교환 스크립트를 순서대로 수행한다. Network에서 공식 v2 코드 교환 요청과 최종 GS 반환을 확인한다.
+
+## 3. GS authReturn만 비공개 파일로 저장
+
+브라우저가 최종 GS 반환 주소에 도달한 뒤 `python3 capture.py`를 실행한다. 일반 Chrome으로 진행했다면 `python3 capture.py --manual`로 본인 터미널의 숨김 입력에 반환 주소를 붙여 넣는다. 숨김 입력이 지원되지 않으면 중단한다. URL이 아직 네이버/허브 callback이면 저장하지 않는다. 출력은 성공 여부뿐이다. `agent-browser` 자체 명령을 별도로 실행해 callback URL 전체를 터미널에 출력하지 않는다.
 
 ```python
 import base64
+import getpass
 import json
 import math
 import os
 import re
 import subprocess
+import sys
 import time
+import warnings
 import urllib.parse
 from pathlib import Path
 
@@ -122,11 +129,19 @@ def valid_token(value):
 
 
 try:
-    result = subprocess.run(
-        ["agent-browser", "--session", "gs25-native-auth", "get", "url"],
-        capture_output=True, text=True, timeout=15, check=True,
-    )
-    url = urllib.parse.urlsplit(result.stdout.strip())
+    if sys.argv[1:] == ["--manual"]:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", getpass.GetPassWarning)
+            raw_url = getpass.getpass("GS 반환 주소 (숨김 입력): ")
+    elif not sys.argv[1:]:
+        result = subprocess.run(
+            ["agent-browser", "--session", "gs25-native-auth", "get", "url"],
+            capture_output=True, text=True, timeout=15, check=True,
+        )
+        raw_url = result.stdout.strip()
+    else:
+        raise ValueError()
+    url = urllib.parse.urlsplit(raw_url)
     if (url.scheme != "https" or url.netloc != "b2c-bff.woodongs.com"
             or url.path != "/api/bff/v4/grmHub/authReturn"):
         raise ValueError()
@@ -158,3 +173,5 @@ except Exception:
 ```
 
 `valid_token`은 형태·만료만 확인한다. 서명 검증 또는 로그인 성공의 대체물이 아니다. 이후 실제 GS 재고·갱신과 운영 REST/MCP/CLI 검증까지 완료해야 한다. 파일이 이미 있으면 덮어쓰지 않고 실패한다. 실패 시 생성된 파일의 토큰을 출력하지 말고 새 작업 디렉터리에서 정상 흐름을 다시 수행한다.
+
+Windows 주의: 이 예제의 0600 생성 인자는 NTFS ACL 보호를 대신하지 않는다. [로그인 가이드](gs25-auth-login-guide.md#1-비공개-작업-폴더를-만들고-시작-코드를-준비합니다)대로 폴더 권한을 먼저 설정한다. Windows 로그인 전체·agent-browser subprocess·중계 권한 검사는 실환경 미검증이다. 수동 입력 경로는 agent-browser 실행 대기 문제를 로그인 단계에서 분리하기 위한 선택지다.
