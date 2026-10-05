@@ -6,7 +6,7 @@ import { Readable } from 'node:stream';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createFileQuota } from './quota.js';
+import { createFileQuota, assertSeparateQuotaDirectories } from './quota.js';
 import { createConvenienceRelay } from './convenience.js';
 import { createDtryxRelay } from './dtryx.js';
 
@@ -34,8 +34,9 @@ async function main() {
   if (process.env.CONVENIENCE_RELAY_TOKEN !== undefined || process.env.CONVENIENCE_RELAY_STATE_DIR !== undefined) {
     const convenienceToken = process.env.CONVENIENCE_RELAY_TOKEN;
     const convenienceDir = process.env.CONVENIENCE_RELAY_STATE_DIR;
-    if (!convenienceToken?.trim() || !convenienceDir || convenienceDir === stateDir) throw Error('Invalid convenience configuration');
+    if (!convenienceToken?.trim() || !convenienceDir) throw Error('Invalid convenience configuration');
     await mkdir(convenienceDir, { recursive: true, mode: 0o700 });
+    await assertSeparateQuotaDirectories(stateDir, convenienceDir);
     convenienceLog = createRelayLogger(join(convenienceDir, 'logs'), { service: 'convenience' });
     const quota = await createFileQuota(join(convenienceDir, 'quota.json'));
     const convenienceHandler = createConvenienceRelay(convenienceToken, { takeQuota: quota, onEvent: convenienceLog.append, gs25ApiKey: process.env.GS25_API_KEY });

@@ -1,5 +1,5 @@
 /** 단일 중계 프로세스에서 사용하는 재시작 보존 호출 상한. */
-import { readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile, rename, writeFile, realpath } from 'node:fs/promises';
 interface Ledger {
   day: number;
   minute: number;
@@ -65,4 +65,10 @@ export async function createFileQuota(
       return { dailyRemaining, minuteRemaining, resetAt, blockedBy, retryAfter };
     },
   });
+}
+
+/** 서비스별 원장이 같은 실제 디렉터리를 공유하지 않도록 검사합니다. */
+export async function assertSeparateQuotaDirectories(first: string, second: string): Promise<void> {
+  const [firstPath, secondPath] = await Promise.all([realpath(first), realpath(second)]);
+  if (firstPath === secondPath) throw new Error('Quota directories must be separate');
 }

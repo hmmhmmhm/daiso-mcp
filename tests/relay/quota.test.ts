@@ -1,8 +1,8 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, symlink, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { createFileQuota } from '../../scripts/relay/quota.js';
+import { createFileQuota, assertSeparateQuotaDirectories } from '../../scripts/relay/quota.js';
 const dirs: string[] = [];
 async function file() {
   const dir = await mkdtemp(join(tmpdir(), 'oy-quota-'));
@@ -105,4 +105,17 @@ it('일일 상한과 시계 역행에도 정확한 상태를 제공한다', asyn
     blockedBy: 'daily',
     retryAfter: 86401,
   });
+});
+
+it('원장 디렉터리의 슬래시·점·심볼릭 링크 별칭을 같은 저장소로 거절한다', async () => {
+  const quotaPath = await file();
+  const directory = join(quotaPath, '..');
+  const link = join(directory, 'alias');
+  await symlink(directory, link);
+  for (const alias of [directory, directory + '/', directory + '/.', link]) {
+    await expect(assertSeparateQuotaDirectories(directory, alias)).rejects.toThrow('separate');
+  }
+  const other = join(directory, 'other');
+  await mkdir(other);
+  await expect(assertSeparateQuotaDirectories(directory, other)).resolves.toBeUndefined();
 });
