@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile, symlink, mkdir } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { createFileQuota, assertSeparateQuotaDirectories } from '../../scripts/relay/quota.js';
+import { CONVENIENCE_QUOTA_LIMITS, createFileQuota, assertSeparateQuotaDirectories } from '../../scripts/relay/quota.js';
 const dirs: string[] = [];
 async function file() {
   const dir = await mkdtemp(join(tmpdir(), 'oy-quota-'));
@@ -118,4 +118,46 @@ it('원장 디렉터리의 슬래시·점·심볼릭 링크 별칭을 같은 저
   const other = join(directory, 'other');
   await mkdir(other);
   await expect(assertSeparateQuotaDirectories(directory, other)).resolves.toBeUndefined();
+});
+
+const convenienceLimits = CONVENIENCE_QUOTA_LIMITS;
+it('편의점 동시 요청과 재시작에도 분당 69회만 허용한다', async () => {
+  const path = await file();
+  let now = Date.UTC(2026, 9, 5) + 1000;
+  const take = await createFileQuota(path, () => now, convenienceLimits);
+  const results = await Promise.all(Array.from({ length: 74 }, () => take()));
+  expect(results.filter(Boolean)).toHaveLength(69);
+  expect(take.status()).toMatchObject({ dailyRemaining: 99931, minuteRemaining: 0, blockedBy: 'minute', retryAfter: 59 });
+  const restarted = await createFileQuota(path, () => now, convenienceLimits);
+  expect(await restarted()).toBe(false);
+  now += 60000;
+  expect(await restarted()).toBe(true);
+  expect(JSON.parse(await readFile(path, 'utf8')).dayCount).toBe(70);
+});
+
+it('편의점 한도를 늘려도 기존 3000회 사용 기록을 초기화하지 않는다', async () => {
+  const path = await file();
+  const now = Date.UTC(2026, 9, 5);
+  await writeFile(path, JSON.stringify({ day: Math.floor(now / 86400000), minute: Math.floor(now / 60000), dayCount: 3000, minuteCount: 0 }));
+  const take = await createFileQuota(path, () => now, convenienceLimits);
+  expect(take.status()).toMatchObject({ dailyRemaining: 97000, minuteRemaining: 69, blockedBy: null });
+  expect(await take()).toBe(true);
+  expect(JSON.parse(await readFile(path, 'utf8')).dayCount).toBe(3001);
+  expect(await (await createFileQuota(path, () => now, convenienceLimits))()).toBe(true);
+  expect(JSON.parse(await readFile(path, 'utf8')).dayCount).toBe(3002);
+});
+
+it('편의점 일일 10만 회를 넘기지 않고 다음 UTC 날짜에 재개한다', async () => {
+  const path = await file();
+  let now = Date.UTC(2026, 9, 5);
+  await writeFile(path, JSON.stringify({ day: Math.floor(now / 86400000), minute: Math.floor(now / 60000), dayCount: 99999, minuteCount: 0 }));
+  const take = await createFileQuota(path, () => now, convenienceLimits);
+  expect(await take()).toBe(true);
+  expect(take.status().dailyRemaining).toBe(0);
+  now += 60000;
+  expect(await take()).toBe(false);
+  expect(JSON.parse(await readFile(path, 'utf8')).dayCount).toBe(100000);
+  now += 86400000;
+  expect(await take()).toBe(true);
+  expect(take.status().dailyRemaining).toBe(99999);
 });

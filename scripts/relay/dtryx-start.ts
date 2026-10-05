@@ -6,7 +6,7 @@ import { Readable } from 'node:stream';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createFileQuota, assertSeparateQuotaDirectories } from './quota.js';
+import { createFileQuota, assertSeparateQuotaDirectories, CONVENIENCE_QUOTA_LIMITS } from './quota.js';
 import { createConvenienceRelay } from './convenience.js';
 import { createGs25SessionTransport } from './gs25-session.js';
 import { createDtryxRelay } from './dtryx.js';
@@ -39,7 +39,7 @@ async function main() {
     await mkdir(convenienceDir, { recursive: true, mode: 0o700 });
     await assertSeparateQuotaDirectories(stateDir, convenienceDir);
     convenienceLog = createRelayLogger(join(convenienceDir, 'logs'), { service: 'convenience' });
-    const quota = await createFileQuota(join(convenienceDir, 'quota.json'));
+    const quota = await createFileQuota(join(convenienceDir, 'quota.json'), Date.now, CONVENIENCE_QUOTA_LIMITS);
     const sessionFile = process.env.GS25_AUTH_SESSION_FILE?.trim();
     const convenienceHandler = createConvenienceRelay(convenienceToken, {
       takeQuota: quota, onEvent: convenienceLog.append, gs25ApiKey: process.env.GS25_API_KEY,
