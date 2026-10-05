@@ -130,3 +130,5 @@ launchctl bootout "gui/$(id -u)/page.aka.daiso-oliveyoung"
 ### 2026-09-15 운영 보강 검증
 
 Playwright Chromium 153.0.8010.12에서 sandbox를 켜고 검증했습니다. 실제 조회 두 건과 부모 SIGKILL 후 잔여 소유 프로세스 0개를 확인했습니다. 모의 브라우저 API 조회 400회로 두 번 교체하고 각 교체 후에도 잔여 프로세스 0개를 확인했습니다. 팝업, 실제 renderer crash, 18초 Node watchdog도 검증했습니다. 메모리는 시점별 약 519~632MiB로 관측됐으며 장기간 무누수나 최고 사용량 보장을 의미하지 않습니다.
+
+`consumer-busy` 대기 복구와 실제 quota 구분, 전체 시간 제한은 [조회 오류 복구와 제한](status-resilience.md)을 참조하세요.

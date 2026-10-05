@@ -7,11 +7,30 @@ import { OLIVEYOUNG_API } from './api.js';
 import type { OliveyoungApiResponse } from './types.js';
 
 const cooldown = createRelayCooldown();
+const MAX_BUSY_RETRIES = 24;
+
+/** 소비자의 일시 점유는 유한한 대기로 복구하고 취소 시 타이머를 정리합니다. */
+function waitForBusy(delay: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+      reject(new DOMException('Request cancelled', 'AbortError'));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', abort);
+      resolve();
+    }, delay);
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
+  });
+}
 
 export interface OliveyoungRequestOptions {
   /** 기존 호출부와의 호환용이며 유료 요청에는 사용하지 않습니다. */
   apiKey?: string;
   timeout?: number;
+  signal?: AbortSignal;
   relayUrl?: string;
   relayToken?: string;
   accessClientId?: string;
@@ -81,12 +100,13 @@ export async function requestOliveyoung(
   if (relayUrl) {
     scope = await relayCredentialScope([relayUrl.replace(/\/$/, ''), relayToken, options.accessClientId, options.accessClientSecret]);
   }
-  let retried = false;
+  let busyRetries = 0;
   while (true) {
     let result: OliveyoungApiResponse;
     const cachedQuota = relayUrl ? cooldown.get(scope, consumer) : undefined;
     try {
       const remaining = deadline - Date.now();
+      if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
       if (remaining <= 0) throw new DOMException('Request deadline exceeded', 'AbortError');
       if (cachedQuota) throw new HttpError(429, '', '', new Headers({
         'x-relay-quota-reason': cachedQuota.quotaReason,
@@ -99,6 +119,7 @@ export async function requestOliveyoung(
         headers,
         body: JSON.stringify(body),
         timeout: remaining,
+        signal: options.signal,
         retries: 0,
         expectedStatus: 200,
       });
@@ -106,11 +127,17 @@ export async function requestOliveyoung(
       if (relayUrl) {
         if (error instanceof HttpError && error.quota) {
           if (!cachedQuota) cooldown.set(scope, consumer, error.quota);
-          if (!retried && error.quota.quotaReason === 'consumer-busy' &&
-              deadline - Date.now() > 1000) {
-            retried = true;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            continue;
+          if (error.quota.quotaReason === 'consumer-busy' && busyRetries < MAX_BUSY_RETRIES) {
+            const delay = (busyRetries === 0 ? 1000 : 2000) + Math.floor(Math.random() * 250);
+            if (deadline - Date.now() > delay) {
+              busyRetries += 1;
+              try {
+                await waitForBusy(delay, options.signal);
+              } catch (cancelled) {
+                throw toOliveyoungRelayError(cancelled);
+              }
+              continue;
+            }
           }
         }
         throw toOliveyoungRelayError(error);

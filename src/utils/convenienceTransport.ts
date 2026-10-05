@@ -2,7 +2,7 @@
 import { ServiceError } from '../core/errors.js';
 import { diagnosticHeaders } from './diagnostics.js';
 import { isValidDtryxRelayUrl } from '../services/dtryx/transport.js';
-import { createTimeoutController } from './http.js';
+import { createTimeoutController, parseRetryAfterDelayMs } from './http.js';
 import { parseRelayQuota } from './relayQuota.js';
 export interface ConvenienceTransportOptions {
   convenienceRelayUrl?: string;
@@ -66,55 +66,103 @@ export async function requestConvenienceRelay<T>(
     headers['CF-Access-Client-Id'] = id!;
     headers['CF-Access-Client-Secret'] = secret!;
   }
-  const { controller, timeoutId } = createTimeoutController(timeout);
+  let requestBody: string | undefined;
   try {
-    const response = await fetch(`${url!.replace(/\/$/, '')}/v1/convenience/${operation}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      redirect: 'manual',
-      signal: controller.signal,
-    });
-    if (response.status !== 200) {
-      void response.body?.cancel().catch(() => undefined);
-      const status = response.status;
-      throw new ServiceError(
-        'CONVENIENCE_RELAY_FAILED',
-        '편의점 릴레이 요청에 실패했습니다.',
-        status === 429 || status === 503 || status === 504 ? status : 502,
-        status === 429 || status >= 500,
-        status,
-        parseRelayQuota(status, response.headers),
-      );
-    }
-    const data: unknown = await response.json();
-    if (
-      !data ||
-      typeof data !== 'object' ||
-      Array.isArray(data) ||
-      ('success' in data && data.success === false) ||
-      'error' in data ||
-      ('resp_cd' in data && data.resp_cd !== '0000')
-    )
-      throw Error('Invalid response');
-    return data as T;
-  } catch (error) {
-    if (error instanceof ServiceError) throw error;
-    if (controller.signal.aborted)
+    requestBody = JSON.stringify(body);
+  } catch {
+    throw new ServiceError(
+      'CONVENIENCE_RELAY_FAILED',
+      '편의점 릴레이 요청에 실패했습니다.',
+      502,
+      false,
+    );
+  }
+  const retryRead = operation === 'gs25-stock' || operation === 'gs25-products';
+  const budget = retryRead ? Math.min(timeout, 15000) : timeout;
+  const deadline = Date.now() + budget;
+  const maxAttempts = retryRead ? 2 : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const remaining = deadline - Date.now();
+    if (retryRead && remaining <= 0) {
       throw new ServiceError(
         'CONVENIENCE_RELAY_TIMEOUT',
         '편의점 릴레이 요청 시간이 초과되었습니다.',
         504,
         true,
       );
-    throw new ServiceError(
-      'CONVENIENCE_RELAY_FAILED',
-      '편의점 릴레이 요청에 실패했습니다.',
-      502,
-      true,
-    );
-  } finally {
-    clearTimeout(timeoutId);
-    controller.abort();
+    }
+    const attemptTimeout =
+      retryRead && attempt === 1 ? Math.max(1, Math.floor((budget - 250) / 2)) : remaining;
+    const { controller, timeoutId } = createTimeoutController(Math.min(attemptTimeout, remaining));
+    let readingResponse = false;
+    try {
+      const response = await fetch(`${url!.replace(/\/$/, '')}/v1/convenience/${operation}`, {
+        method: 'POST',
+        headers,
+        body: requestBody,
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+      if (response.status !== 200) {
+        void response.body?.cancel().catch(() => undefined);
+        const status = response.status;
+        const delay = parseRetryAfterDelayMs(response) ?? 250;
+        if (
+          retryRead &&
+          attempt < maxAttempts &&
+          [502, 503, 504].includes(status) &&
+          delay < deadline - Date.now()
+        ) {
+          clearTimeout(timeoutId);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new ServiceError(
+          'CONVENIENCE_RELAY_FAILED',
+          '편의점 릴레이 요청에 실패했습니다.',
+          status === 429 || status === 503 || status === 504 ? status : 502,
+          status === 429 || status >= 500,
+          status,
+          parseRelayQuota(status, response.headers),
+        );
+      }
+      readingResponse = true;
+      const data: unknown = await response.json();
+      if (
+        !data ||
+        typeof data !== 'object' ||
+        Array.isArray(data) ||
+        ('success' in data && data.success === false) ||
+        'error' in data ||
+        ('resp_cd' in data && data.resp_cd !== '0000')
+      )
+        throw Error('Invalid response');
+      return data as T;
+    } catch (error) {
+      if (error instanceof ServiceError) throw error;
+      if (!readingResponse && retryRead && attempt < maxAttempts && 250 < deadline - Date.now()) {
+        clearTimeout(timeoutId);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        continue;
+      }
+      if (controller.signal.aborted)
+        throw new ServiceError(
+          'CONVENIENCE_RELAY_TIMEOUT',
+          '편의점 릴레이 요청 시간이 초과되었습니다.',
+          504,
+          true,
+        );
+      throw new ServiceError(
+        'CONVENIENCE_RELAY_FAILED',
+        '편의점 릴레이 요청에 실패했습니다.',
+        502,
+        true,
+      );
+    } finally {
+      clearTimeout(timeoutId);
+      controller.abort();
+    }
   }
+  /* v8 ignore next */
+  throw new Error('편의점 릴레이 요청을 완료하지 못했습니다.');
 }

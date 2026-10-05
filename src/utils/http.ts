@@ -7,6 +7,8 @@ import { diagnosticEvent } from './diagnostics.js';
 export interface FetchOptions extends RequestInit {
   fetchImpl?: typeof fetch;
   timeout?: number;
+  /** 모든 시도와 대기 시간을 합친 제한 시간입니다. */
+  totalTimeout?: number;
   /** fetchJson에서 허용할 정확한 HTTP 상태입니다. 생략하면 모든 2xx를 허용합니다. */
   expectedStatus?: number;
   retries?: number;
@@ -73,13 +75,23 @@ function isRetryableStatus(status: number, retryStatusCodes: number[]): boolean 
   return retryStatusCodes.includes(status);
 }
 
-function wait(ms: number): Promise<void> {
+function wait(ms: number, signal?: AbortSignal | null): Promise<void> {
+  signal?.throwIfAborted();
   if (ms <= 0) {
     return Promise.resolve();
   }
 
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }
 
@@ -95,7 +107,7 @@ function canRetryMethod(
   return retryUnsafeMethods || retryMethods.map((item) => item.toUpperCase()).includes(method);
 }
 
-function parseRetryAfterDelayMs(response: Response): number | null {
+export function parseRetryAfterDelayMs(response: Response): number | null {
   const retryAfter = response.headers.get('retry-after');
   if (!retryAfter) {
     return null;
@@ -121,6 +133,8 @@ async function requestWithTimeout<T>(
 ): Promise<T> {
   const {
     timeout = 10000,
+    totalTimeout,
+    signal: callerSignal,
     fetchImpl = fetch,
     retries = 0,
     retryDelayMs = 250,
@@ -135,8 +149,15 @@ async function requestWithTimeout<T>(
   const method = normalizeMethod(restOptions.method);
   const retryAllowed = canRetryMethod(method, retryMethods, retryUnsafeMethods);
 
+  const deadline = totalTimeout === undefined ? Infinity : Date.now() + totalTimeout;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const { controller, timeoutId } = createTimeoutController(timeout);
+    callerSignal?.throwIfAborted();
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new DOMException('Request deadline exceeded', 'TimeoutError');
+    const { controller, timeoutId } = createTimeoutController(Math.min(timeout, remaining));
+    const signal = callerSignal
+      ? AbortSignal.any([controller.signal, callerSignal])
+      : controller.signal;
     let readingResponse = false;
     const started = Date.now();
     let responseStatus: number | undefined;
@@ -144,17 +165,26 @@ async function requestWithTimeout<T>(
     try {
       const response = await fetchImpl(url, {
         ...restOptions,
-        signal: controller.signal,
+        signal,
       });
 
       responseStatus = response.status;
-      diagnosticEvent({ stage: 'http', outcome: response.ok ? 'ok' : 'error', status: response.status, durationMs: Date.now() - started });
+      diagnosticEvent({
+        stage: 'http',
+        outcome: response.ok ? 'ok' : 'error',
+        status: response.status,
+        durationMs: Date.now() - started,
+      });
       if (
         retryAllowed &&
         attempt < maxAttempts &&
         isRetryableStatus(response.status, retryStatusCodes)
       ) {
         const delayMs = parseRetryAfterDelayMs(response) ?? retryDelayMs;
+        if (delayMs >= deadline - Date.now()) {
+          readingResponse = true;
+          return await readResponse(response);
+        }
         onRetry?.({
           attempt,
           maxAttempts,
@@ -165,15 +195,26 @@ async function requestWithTimeout<T>(
           url,
         });
         await response.body?.cancel();
-        await wait(delayMs);
+        await wait(delayMs, callerSignal);
         continue;
       }
 
       readingResponse = true;
       return await readResponse(response);
     } catch (error) {
-      diagnosticEvent({ stage: 'http', outcome: 'error', status: responseStatus, durationMs: Date.now() - started });
-      if (readingResponse || !retryAllowed || attempt >= maxAttempts) {
+      diagnosticEvent({
+        stage: 'http',
+        outcome: 'error',
+        status: responseStatus,
+        durationMs: Date.now() - started,
+      });
+      callerSignal?.throwIfAborted();
+      if (
+        readingResponse ||
+        !retryAllowed ||
+        attempt >= maxAttempts ||
+        retryDelayMs >= deadline - Date.now()
+      ) {
         throw error;
       }
 
@@ -186,7 +227,7 @@ async function requestWithTimeout<T>(
         method,
         url,
       });
-      await wait(retryDelayMs);
+      await wait(retryDelayMs, callerSignal);
     } finally {
       clearTimeout(timeoutId);
     }
@@ -211,7 +252,10 @@ async function readTextResponse(url: string, options: FetchOptions) {
 export async function fetchJson<T>(url: string, options: FetchOptions = {}): Promise<T> {
   const { response, body } = await readTextResponse(url, options);
 
-  if (!response.ok || (options.expectedStatus !== undefined && response.status !== options.expectedStatus)) {
+  if (
+    !response.ok ||
+    (options.expectedStatus !== undefined && response.status !== options.expectedStatus)
+  ) {
     throw new HttpError(response.status, response.statusText, body, response.headers);
   }
 

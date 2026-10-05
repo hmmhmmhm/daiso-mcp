@@ -48,10 +48,15 @@ const EMART24_FORM_HEADERS = {
   Accept: 'application/json, text/javascript, */*; q=0.01',
   'X-Requested-With': 'XMLHttpRequest',
 } as const;
-const EMART24_DEFAULT_FETCH_OPTIONS = {
-  retries: 1,
-  retryDelayMs: 250,
-} as const;
+function emart24FetchOptions(totalTimeout: number) {
+  return {
+    timeout: Math.max(1, Math.floor((totalTimeout - 250) / 2)),
+    totalTimeout,
+    retryStatusCodes: [403, 408, 500, 502, 503, 504, 522, 524],
+    retries: 1,
+    retryDelayMs: 250,
+  };
+}
 
 function buildKeywordVariants(keyword: string): string[] {
   const trimmed = keyword.trim();
@@ -88,7 +93,9 @@ function toBooleanFlag(value: unknown): boolean {
     return value;
   }
 
-  const normalized = String(value || '').trim().toUpperCase();
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase();
   return normalized === '1' || normalized === 'Y' || normalized === 'TRUE';
 }
 
@@ -110,7 +117,9 @@ function toStore(item: NonNullable<Emart24WebStoreResponse['data']>[number]): Em
   };
 }
 
-function toProduct(item: NonNullable<Emart24ProductSearchResponse['productList']>[number]): Emart24Product {
+function toProduct(
+  item: NonNullable<Emart24ProductSearchResponse['productList']>[number],
+): Emart24Product {
   return {
     pluCd: item.pluCd || '',
     goodsName: item.goodsNm || '',
@@ -139,6 +148,7 @@ export async function fetchEmart24Stores(
   const { timeout = 15000 } = options;
   const { keyword = '', area1 = '', area2 = '', page = 1, service24h = false } = params;
   const keywordVariants = buildKeywordVariants(keyword);
+  const deadline = Date.now() + timeout;
   let lastError: number | undefined;
 
   for (let index = 0; index < keywordVariants.length; index += 1) {
@@ -159,9 +169,8 @@ export async function fetchEmart24Stores(
     }
 
     const body = await fetchJson<Emart24WebStoreResponse>(endpoint.toString(), {
-      ...EMART24_DEFAULT_FETCH_OPTIONS,
+      ...emart24FetchOptions(deadline - Date.now()),
       method: 'GET',
-      timeout,
       headers: EMART24_JSON_HEADERS,
     });
 
@@ -188,13 +197,7 @@ export async function searchEmart24Products(
   params: SearchEmart24ProductsParams,
   options: RequestOptions = {},
 ): Promise<{ totalCount: number; products: Emart24Product[] }> {
-  const {
-    keyword,
-    page = 1,
-    pageSize = 10,
-    sortType = 'SALE',
-    saleProductYn = 'N',
-  } = params;
+  const { keyword, page = 1, pageSize = 10, sortType = 'SALE', saleProductYn = 'N' } = params;
   const { timeout = 15000 } = options;
 
   const form = new URLSearchParams();
@@ -207,16 +210,18 @@ export async function searchEmart24Products(
   const body = await fetchJson<Emart24ProductSearchResponse>(
     `${EMART24_API.EVERSE_BASE_URL}${EMART24_API.PRODUCT_SEARCH_PATH}`,
     {
-      ...EMART24_DEFAULT_FETCH_OPTIONS,
+      ...emart24FetchOptions(timeout),
       method: 'POST',
       retryUnsafeMethods: true,
-      timeout,
       headers: EMART24_FORM_HEADERS,
       body: form.toString(),
     },
   );
 
-  const products = (body.productList || []).map(toProduct).filter((item) => item.pluCd.length > 0).slice(0, pageSize);
+  const products = (body.productList || [])
+    .map(toProduct)
+    .filter((item) => item.pluCd.length > 0)
+    .slice(0, pageSize);
 
   return {
     totalCount: toNumber(body.totalCnt),
@@ -246,9 +251,8 @@ export async function searchEmart24StockByStores(
   endpoint.searchParams.set('bizNoArr', filteredBizNos.join(','));
 
   return fetchJson<Emart24StockByStoreResponse>(endpoint.toString(), {
-    ...EMART24_DEFAULT_FETCH_OPTIONS,
+    ...emart24FetchOptions(timeout),
     method: 'GET',
-    timeout,
     headers: EMART24_JSON_HEADERS,
   });
 }
@@ -262,9 +266,8 @@ export async function fetchEmart24StoreDetail(
   return fetchJson<Emart24StoreDetailResponse>(
     `${EMART24_API.EVERSE_BASE_URL}${EMART24_API.STORE_DETAIL_PATH_PREFIX}${encodeURIComponent(bizNo)}`,
     {
-      ...EMART24_DEFAULT_FETCH_OPTIONS,
+      ...emart24FetchOptions(timeout),
       method: 'GET',
-      timeout,
       headers: EMART24_JSON_HEADERS,
     },
   );

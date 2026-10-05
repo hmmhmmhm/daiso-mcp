@@ -571,6 +571,7 @@ it.each([400, 403, 429])('키가 없는 재고 원본 %i 차단은 조회 불가
 });
 
 it.each([
+  ['서울특별시 강남구 테헤란로4길 6, 강남역센트럴푸르지오시티 (역삼동) B1층 110호', '서울특별시 강남구 테헤란로4길 6', '서울 강남구 테헤란로4길 6'],
   ['서울특별시 강남구 테헤란로63길 9 1층 105호', '서울특별시 강남구 테헤란로63길 9', '서울 강남구 테헤란로63길 9'],
   ['서울특별시 강남구 도산대로 529 KRA프라자 (청담동) KRA프라자', '서울특별시 강남구 도산대로 529', '서울 강남구 도산대로 529'],
   ['서울특별시 강남구 논현로 201 (도곡동)', '서울특별시 강남구 논현로 201', '서울 강남구 논현로 201'],
@@ -609,3 +610,19 @@ it('CU 주소의 인식할 수 없는 숫자 상세는 원문에 남긴다', asy
   expect(await geocodeCuAddress(address, { kakaoRestApiKey: 'test-key' })).toBeNull();
   expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe(address);
 });
+
+it.each([
+  '서울특별시 강남구 테헤란로4길 6, 강남대로 111',
+  '서울특별시 강남구 테헤란로4길 6, (경기도 성남시 분당구 정자동 12-3)',
+  '서울특별시 강남구 테헤란로4길 6, 110',
+])('쉼표 뒤 다른 주소나 알 수 없는 숫자는 원문을 유지한다 (%s)', async (address) => {
+  mockFetch.mockResolvedValue(Response.json({ documents: [{ x: '127.03', y: '37.5', address_name: '서울 강남구 테헤란로4길 6' }] }));
+  expect(await geocodeCuAddress(address, { kakaoRestApiKey: 'test-key' })).toBeNull();
+  expect(new URL(mockFetch.mock.calls[0][0]).searchParams.get('query')).toBe(address);
+});
+it.each(['서울 강남구 테헤란로5길 6', '서울 강남구 테헤란로4길 7', '서울 서초구 테헤란로4길 6'])(
+  '쉼표 상세를 제거해도 다른 도로·번호·지역은 거절한다 (%s)', async (canonical) => {
+    mockFetch.mockResolvedValue(Response.json({ documents: [{ x: '127.03', y: '37.5', address_name: canonical }] }));
+    expect(await geocodeCuAddress('서울특별시 강남구 테헤란로4길 6, 예시건물 B1층 110호', { kakaoRestApiKey: 'test-key' })).toBeNull();
+  },
+);
