@@ -8,7 +8,7 @@ const env = {
   CONVENIENCE_RELAY_TOKEN: 'token',
   KAKAO_REST_API_KEY: 'test-key',
 };
-const html = `<table><tr><td><span class="name">강남예시점</span></td><td><address><a href="#" onclick="searchLatLng('서울특별시 강남구 테헤란로63길 9 1층 105호', 'sample');">서울특별시 강남구 테헤란로63길 9 1층 105호</a></address></td></tr></table>`;
+const html = `<table><tr><td><span class="name">강남예시점</span></td><td><address><a href="#" onclick="searchLatLng('서울특별시 강남구 테헤란로4길 6, 강남역센트럴푸르지오시티 (역삼동) B1층 110호', 'sample');">서울특별시 강남구 테헤란로4길 6, 강남역센트럴푸르지오시티 (역삼동) B1층 110호</a></address></td></tr></table>`;
 afterEach(() => vi.unstubAllGlobals());
 function prepare(geocode = true) {
   const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
@@ -16,7 +16,7 @@ function prepare(geocode = true) {
     if (url.startsWith('https://dapi.kakao.com/'))
       return Response.json({
         documents: geocode
-          ? [{ x: '127.03', y: '37.5', address_name: '서울 강남구 테헤란로63길 9' }]
+          ? [{ x: '127.03', y: '37.5', address_name: '서울 강남구 테헤란로4길 6' }]
           : [],
       });
     if (url.endsWith('/cu-prime')) return Response.json({});
@@ -24,7 +24,7 @@ function prepare(geocode = true) {
       return Response.json({
         data: {
           stockResult: {
-            result: { rows: [{ fields: { item_cd: '123', on_item_no: '456', item_nm: '커피' } }] },
+            result: { rows: [{ fields: { item_cd: '123', on_item_no: '456', item_nm: '레쓰비' } }] },
           },
         },
       });
@@ -33,7 +33,7 @@ function prepare(geocode = true) {
       return Response.json({
         storeList:
           body.latVal === '37.5'
-            ? [{ storeCd: 'sample', storeNm: '강남예시점', stock: 3 }]
+            ? [{ storeCd: 'sample', storeNm: '강남예시점', stock: 48 }]
             : [
                 {
                   storeCd: 'wrong',
@@ -61,8 +61,8 @@ it('중계 설정이 있어도 좌표 없는 CU 매장 키워드는 공식 웹�
   expect(result.stores).toEqual([
     expect.objectContaining({
       storeName: '강남예시점',
-      address: '서울특별시 강남구 테헤란로63길 9 1층 105호',
-      stock: -1,
+      address: '서울특별시 강남구 테헤란로4길 6, 강남역센트럴푸르지오시티 (역삼동) B1층 110호',
+      stock: null,
     }),
   ]);
   expect(fetcher).toHaveBeenCalledTimes(1);
@@ -75,14 +75,15 @@ it.each([true, false])(
   async (geocode) => {
     const fetcher = prepare(geocode);
     const response = await app.request(
-      '/api/cu/inventory?keyword=커피&storeKeyword=강남',
+      '/api/cu/inventory?keyword=레쓰비&storeKeyword=강남역&size=1&storeLimit=1',
       undefined,
       env,
     );
     expect(response.status).toBe(200);
     const rest = await response.json();
+    expect(rest.data.location).toEqual(geocode ? { latitude: 37.5, longitude: 127.03 } : null);
     expect(rest.data.nearbyStores.stores).toEqual([
-      expect.objectContaining({ storeName: '강남예시점', stock: geocode ? 3 : -1 }),
+      expect.objectContaining({ storeName: '강남예시점', stock: geocode ? 48 : null }),
     ]);
     const client = new Client({ name: 'test', version: '1' });
     await client.connect(
@@ -93,12 +94,13 @@ it.each([true, false])(
     try {
       const result = await client.callTool({
         name: 'cu_check_inventory',
-        arguments: { keyword: '커피', storeKeyword: '강남' },
+        arguments: { keyword: '레쓰비', storeKeyword: '강남역', size: 1, storeLimit: 1 },
       });
       expect(result.isError).not.toBe(true);
       const content = result.content as Array<{ text: string }>;
+      expect(JSON.parse(content[0].text).location).toEqual(geocode ? { latitude: 37.5, longitude: 127.03 } : null);
       expect(JSON.parse(content[0].text).nearbyStores.stores).toEqual([
-        expect.objectContaining({ storeName: '강남예시점', stock: geocode ? 3 : -1 }),
+        expect.objectContaining({ storeName: '강남예시점', stock: geocode ? 48 : null }),
       ]);
       const stockCalls = fetcher.mock.calls.filter(([url]) => url.endsWith('/cu-store'));
       expect(stockCalls).toHaveLength(geocode ? 2 : 0);
@@ -106,7 +108,7 @@ it.each([true, false])(
         expect(JSON.parse(init!.body as string)).toMatchObject({
           latVal: '37.5',
           longVal: '127.03',
-          searchWord: '강남',
+          searchWord: '강남역',
           itemCd: '123',
           onItemNo: '456',
           isRecommend: 'Y',
@@ -119,14 +121,14 @@ it.each([true, false])(
 );
 it.each([
   ['/api/cu/stores?keyword=강남', 'cu-stores', 86400, 300],
-  ['/api/cu/inventory?keyword=커피&storeKeyword=강남', 'cu-inventory', 600, 60],
+  ['/api/cu/inventory?keyword=레쓰비&storeKeyword=강남역', 'cu-inventory', 600, 60],
 ])(
   'CU 수정 후 일반 사용자 URL의 기존 잘못된 캐시를 우회한다 (%s)',
   async (path, prefix, ttl, swr) => {
     const fetcher = prepare();
     const url = new URL(path as string, 'https://local.test');
     const oldKey = new URL(url);
-    oldKey.searchParams.append('__cache_prefix', `${prefix}-v2`);
+    oldKey.searchParams.append('__cache_prefix', `${prefix}-v4`);
     const entries = new Map<string, Response>([
       [oldKey.href, Response.json({ success: true, data: { storeName: '시청예시점', stock: 0 } })],
     ]);
@@ -141,7 +143,7 @@ it.each([
     expect(text).toContain('강남예시점');
     expect(text).not.toContain('시청예시점');
     const newKey = new URL(url);
-    newKey.searchParams.append('__cache_prefix', `${prefix}-v4`);
+    newKey.searchParams.append('__cache_prefix', `${prefix}-v5`);
     expect(match.mock.calls[0][0].url).toBe(newKey.href);
     expect(put.mock.calls[0][0].url).toBe(newKey.href);
     expect(response.headers.get('Cache-Control')).toContain(`max-age=${ttl}`);

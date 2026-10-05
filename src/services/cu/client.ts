@@ -149,13 +149,13 @@ async function requestCuWebHtml(
 function cuGeocodeAddress(address: string): string {
   const trimmed = address.trim();
   const base = trimmed.match(
-    /^((?:[가-힣]+(?:시|도)|서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s+.+?(?:(?:대로|로|길)\s+\d+(?:-\d+)?|(?:읍|면|동|리)\s+(?:산\s*)?\d+(?:-\d+)?))(?=\s|$)/u,
+    /^((?:[가-힣]+(?:시|도)|서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s+.+?(?:(?:대로|로|길)\s+\d+(?:-\d+)?|(?:읍|면|동|리)\s+(?:산\s*)?\d+(?:-\d+)?))(?=\s|,|$)/u,
   );
   if (!base) return address;
   const detail = trimmed.slice(base[1].length);
   if (/(?:대로|로|길)\s+\d|(?:읍|면|동|리)\s+(?:산\s*)?\d/u.test(detail)) return address;
   // 층·호수·건물명·괄호 상세만 제거하고 다른 숫자 주소가 섞이면 원문을 유지합니다.
-  return /^(?:\s+(?:\d+(?:층|호)|[A-Za-z가-힣][A-Za-z가-힣0-9]*|\([^)]*\)))*\s*$/u.test(detail)
+  return /^(?:\s+(?:\d+(?:층|호)|[A-Za-z가-힣][A-Za-z가-힣0-9]*|\([^)]*\)))*\s*$/u.test(detail.replace(/,/gu, ' '))
     ? base[1]
     : address;
 }
@@ -269,8 +269,6 @@ export async function fetchCuStores(
       timeout,
     );
     const stores = parseCuWebStores(html);
-    // 공식 웹은 점포 정보만 제공하므로 중계 재고 조회 전 수량은 미확인입니다.
-    if (hasConvenienceRelay(options)) for (const store of stores) store.stock = -1;
     return {
       totalCount: stores.length,
       stores,

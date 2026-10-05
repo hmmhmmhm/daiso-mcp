@@ -328,8 +328,8 @@ export async function handleCuCheckInventory(c: ApiContext) {
 
     const firstStockItem = selectCuStockItem(stockResult.items, keyword);
     const hasInputLocation = typeof lat === 'number' && typeof lng === 'number';
-    const resolvedLat = hasInputLocation ? lat : undefined;
-    const resolvedLng = hasInputLocation ? lng : undefined;
+    let resolvedLat = hasInputLocation ? lat : undefined;
+    let resolvedLng = hasInputLocation ? lng : undefined;
     let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null = storeCheck
       ? null
       : { totalCount: 0, stores: [] };
@@ -353,6 +353,8 @@ export async function handleCuCheckInventory(c: ApiContext) {
           ...geocodeBindings(c.env),
         });
         if (geocoded) {
+          resolvedLat = geocoded.latitude;
+          resolvedLng = geocoded.longitude;
           const hasStockSeed = !!firstStockItem?.itemCode;
           storeResult = await fetchCuStores(
             {

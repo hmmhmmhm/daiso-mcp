@@ -18,6 +18,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 function createMockContext(query: Record<string, string> = {}) {
@@ -336,9 +337,18 @@ describe.each([
     ['0', 15000],
     ['-1', 15000],
   ])('요청 제한 %s를 %i ms로 적용한다', async (timeoutMs, expected) => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 0, data: [] })));
-    const timer = vi.spyOn(globalThis, 'setTimeout');
-    await handler(createMockContext({ keyword: '강남', timeoutMs }));
-    expect(timer).toHaveBeenCalledWith(expect.any(Function), expected);
+    vi.useFakeTimers();
+    mockFetch.mockImplementation(async (_url, init) => {
+      await new Promise<void>((resolve) => init.signal.addEventListener('abort', () => resolve()));
+      throw new DOMException('aborted', 'AbortError');
+    });
+    let settled = false;
+    const result = handler(createMockContext({ keyword: '강남', timeoutMs })).then(() => { settled = true; });
+    await vi.advanceTimersByTimeAsync(expected - 2);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(2);
+    await result;
+    expect(settled).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

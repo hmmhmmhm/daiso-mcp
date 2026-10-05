@@ -45,7 +45,7 @@ describe('createSearchProductsTool', () => {
   });
 
   it('외부 API 차단 시 스키마에 맞는 degraded 결과를 반환한다', async () => {
-    mockFetch.mockResolvedValue(new Response('<html>blocked</html>', { status: 403, statusText: 'Forbidden' }));
+    mockFetch.mockImplementation(async () => new Response('<html>blocked</html>', { status: 403, statusText: 'Forbidden' }));
 
     const tool = createSearchProductsTool();
     const result = await tool.handler({ keyword: '커피', pageSize: 1 });

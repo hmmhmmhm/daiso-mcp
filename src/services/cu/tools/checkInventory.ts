@@ -69,8 +69,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
 
   const firstStockItem = selectCuStockItem(stockResult.items, keyword);
   const hasInputLocation = typeof latitude === 'number' && typeof longitude === 'number';
-  const resolvedLatitude = hasInputLocation ? latitude : undefined;
-  const resolvedLongitude = hasInputLocation ? longitude : undefined;
+  let resolvedLatitude = hasInputLocation ? latitude : undefined;
+  let resolvedLongitude = hasInputLocation ? longitude : undefined;
   let storeResult: Awaited<ReturnType<typeof fetchCuStores>> | null =
     storeLimit <= 0 ? { totalCount: 0, stores: [] } : null;
   let storeUnavailableReason: string | null = null;
@@ -97,6 +97,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
           googleMapsApiKey,
         });
         if (geocoded) {
+          resolvedLatitude = geocoded.latitude;
+          resolvedLongitude = geocoded.longitude;
           const hasStockSeed = !!firstStockItem?.itemCode;
           storeResult = await fetchCuStores(
             {

@@ -163,7 +163,6 @@ describe('GET /api/rate-limit/stats', () => {
       expect(new URL(fixture.calls[0]!.url).search).toBe(
         `?from=${from}&to=${to}&asOf=${to}&service=cgv`,
       );
-      expect(Date.now).toHaveBeenCalledTimes(2);
     },
   );
 

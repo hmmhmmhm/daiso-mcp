@@ -23,14 +23,19 @@ it('이마트24 403 이후 같은 검색의 원본을 재호출해 정상 가격
   expect(await first.json()).toMatchObject({ success: true, data: {
     results: [{ service: 'daiso' }], errors: [{ service: 'emart24', message: expect.stringContaining('403') }],
   } });
+  const emartCalls = () => fetcher.mock.calls.filter(([input]) => String(input).includes('everse.emart24.co.kr')).length;
+  expect(emartCalls()).toBe(2);
+  expect(put).not.toHaveBeenCalled();
   recovering = true;
   const recovered = await app.request(url);
   expect(await recovered.json()).toMatchObject({ success: true, data: {
     results: [{ service: 'emart24', name: '복구 콜라' }, { service: 'daiso' }], errors: [], bestPrice: { price: 1300 },
   } });
   expect(first.headers.get('Cache-Control')).toBe('no-store');
-  expect(fetcher).toHaveBeenCalledTimes(4);
+  expect(fetcher).toHaveBeenCalledTimes(5);
+  expect(emartCalls()).toBe(3);
   expect(put).toHaveBeenCalledTimes(1);
   await app.request(url);
-  expect(fetcher).toHaveBeenCalledTimes(4);
+  expect(fetcher).toHaveBeenCalledTimes(5);
+  expect(emartCalls()).toBe(3);
 });
