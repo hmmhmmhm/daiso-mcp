@@ -117,3 +117,38 @@ it.each([true, false])(
     }
   },
 );
+it.each([
+  ['/api/cu/stores?keyword=강남', 'cu-stores', 86400, 300],
+  ['/api/cu/inventory?keyword=커피&storeKeyword=강남', 'cu-inventory', 600, 60],
+])(
+  'CU 수정 후 일반 사용자 URL의 기존 잘못된 캐시를 우회한다 (%s)',
+  async (path, prefix, ttl, swr) => {
+    const fetcher = prepare();
+    const url = new URL(path as string, 'https://local.test');
+    const oldKey = new URL(url);
+    oldKey.searchParams.append('__cache_prefix', `${prefix}-v2`);
+    const entries = new Map<string, Response>([
+      [oldKey.href, Response.json({ success: true, data: { storeName: '시청예시점', stock: 0 } })],
+    ]);
+    const match = vi.fn(async (key: Request) => entries.get(key.url)?.clone());
+    const put = vi.fn(async (key: Request, response: Response) => {
+      entries.set(key.url, response.clone());
+    });
+    vi.stubGlobal('caches', { default: { match, put } });
+    const response = await app.request(url.href, undefined, env);
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text).toContain('강남예시점');
+    expect(text).not.toContain('시청예시점');
+    const newKey = new URL(url);
+    newKey.searchParams.append('__cache_prefix', `${prefix}-v3`);
+    expect(match.mock.calls[0][0].url).toBe(newKey.href);
+    expect(put.mock.calls[0][0].url).toBe(newKey.href);
+    expect(response.headers.get('Cache-Control')).toContain(`max-age=${ttl}`);
+    expect(response.headers.get('Cache-Control')).toContain(`stale-while-revalidate=${swr}`);
+    const calls = fetcher.mock.calls.length;
+    expect(await (await app.request(url.href, undefined, env)).text()).toBe(text);
+    expect(fetcher.mock.calls).toHaveLength(calls);
+    expect(entries.has(oldKey.href)).toBe(true);
+  },
+);
