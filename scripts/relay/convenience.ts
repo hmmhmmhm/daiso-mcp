@@ -80,7 +80,10 @@ const schemas = {
         [v.latVal, v.baseLatVal].every((n) => Math.abs(Number(n)) <= 90) &&
         [v.longVal, v.baseLongVal].every((n) => Math.abs(Number(n)) <= 180),
     ),
-  'seven-goods': z.object({ query: text.min(1), pageNo: count, pageSize: count.min(1) }).strict(),
+  'seven-goods': z.union([
+    z.object({ collection: z.literal('goods'), query: text.min(1), sort: z.literal('quantity/desc,itemOnm/asc'), startCount: count, listCount: count.min(1) }).strict(),
+    z.object({ query: text.min(1), pageNo: count, pageSize: count.min(1) }).strict(),
+  ]),
   'seven-store': z
     .object({
       collection: z.literal('store'),
@@ -246,7 +249,10 @@ const paths: Record<Operation, [string, string, 'GET' | 'POST', z.ZodType]> = {
 };
 export function createConvenienceRelay(
   token: string,
-  options: Pick<HttpRelayOptions, 'takeQuota' | 'fetcher' | 'onEvent'> & { gs25ApiKey?: string; gs25Session?: Gs25SessionTransport },
+  options: Pick<HttpRelayOptions, 'takeQuota' | 'fetcher' | 'onEvent'> & {
+    gs25ApiKey?: string;
+    gs25Session?: Gs25SessionTransport;
+  },
 ) {
   return createHttpRelay(token, {
     ...options,

@@ -9,6 +9,7 @@ interface EdgeCacheOptions {
   ttlSeconds: number;
   staleWhileRevalidateSeconds?: number;
   keyPrefix?: string;
+  shouldCache?: (response: Response) => Promise<boolean>;
 }
 
 function getCacheStorage(): CacheStorage | undefined {
@@ -56,12 +57,12 @@ export async function withEdgeCache(
   const cacheStorage = getCacheStorage();
   const cache = cacheStorage?.default;
 
-  if (!cache) {
+  if (!cache && !options.shouldCache) {
     return fetcher();
   }
 
   const cacheKey = createCacheKey(requestUrl, options.keyPrefix);
-  const cachedResponse = await cache.match(cacheKey);
+  const cachedResponse = await cache?.match(cacheKey);
 
   if (cachedResponse) {
     return cachedResponse;
@@ -69,7 +70,12 @@ export async function withEdgeCache(
 
   const response = await fetcher();
 
-  if (!response.ok) {
+  if (options.shouldCache && !(await options.shouldCache(response.clone()))) {
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+  }
+
+  if (!cache || !response.ok) {
     return response;
   }
 

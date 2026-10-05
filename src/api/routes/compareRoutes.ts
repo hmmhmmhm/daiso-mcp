@@ -10,7 +10,20 @@ export function registerCompareRoutes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'compare-products-v2',
+        keyPrefix: 'compare-products-v3',
+        shouldCache: async (response) => {
+          try {
+            const payload = await response.json() as {
+              success?: unknown;
+              data?: { results?: unknown; errors?: unknown };
+            } | null;
+            return response.ok && payload?.success === true &&
+              Array.isArray(payload.data?.results) &&
+              Array.isArray(payload.data?.errors) && payload.data.errors.length === 0;
+          } catch {
+            return false;
+          }
+        },
       },
       () => handleCompareProducts(c),
     ),

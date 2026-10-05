@@ -377,7 +377,7 @@ describe('cliInteractiveTestables', () => {
       createPrompt(['선크림', '1']),
       store,
     );
-    expect(out.join('\n')).toContain('남은수량: 3');
+    expect(out.join('\n')).toContain('남은수량: 확인 불가');
   });
 
   it('runCuItemSearch의 예외/성공 분기를 처리한다', async () => {
@@ -487,8 +487,8 @@ describe('cliInteractiveTestables', () => {
       createPrompt(['과자', '1']),
       store,
     );
-    expect(out.join('\n')).toContain('픽업 가능: 예');
-    expect(out.join('\n')).toContain('배달 가능: 아니오');
+    expect(out.join('\n')).toContain('픽업 가능: 확인 불가');
+    expect(out.join('\n')).toContain('배달 가능: 확인 불가');
 
     await cliInteractiveTestables.runCuItemSearch(
       {
@@ -518,8 +518,8 @@ describe('cliInteractiveTestables', () => {
       createPrompt(['음료', '1']),
       store,
     );
-    expect(out.join('\n')).toContain('픽업 가능: 아니오');
-    expect(out.join('\n')).toContain('배달 가능: 예');
-    expect(out.join('\n')).toContain('예약 가능: 예');
+    expect(out.join('\n')).toContain('픽업 가능: 확인 불가');
+    expect(out.join('\n')).toContain('배달 가능: 확인 불가');
+    expect(out.join('\n')).toContain('예약 가능: 확인 불가');
   });
 });

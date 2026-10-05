@@ -36,9 +36,9 @@ export interface OliveyoungStockStore {
   distance: number;
   pickupYn: boolean;
   salesStoreYn: boolean;
-  remainQuantity: number;
-  o2oRemainQuantity: number;
-  stockStatus: 'in_stock' | 'out_of_stock' | 'not_sold';
+  remainQuantity: number | null;
+  o2oRemainQuantity: number | null;
+  stockStatus: 'in_stock' | 'out_of_stock' | 'not_sold' | 'unknown';
   stockLabel: string;
   openYn: boolean;
 }

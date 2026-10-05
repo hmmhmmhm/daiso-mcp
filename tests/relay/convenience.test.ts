@@ -35,13 +35,30 @@ describe('편의점 고정 작업 중계', () => {
     expect(
       (
         await relay(
-          req('seven-goods', { query: '커피', pageNo: 0, pageSize: 20, url: 'https://evil' }),
+          req('seven-goods', {
+            query: '커피',
+            collection: 'goods',
+            sort: 'quantity/desc,itemOnm/asc',
+            startCount: 0,
+            listCount: 20,
+            url: 'https://evil',
+          }),
         )
       ).status,
     ).toBe(400);
     expect(fetcher).not.toHaveBeenCalled();
     expect(
-      (await relay(req('seven-goods', { query: '커피', pageNo: 0, pageSize: 20 }))).status,
+      (
+        await relay(
+          req('seven-goods', {
+            query: '커피',
+            collection: 'goods',
+            sort: 'quantity/desc,itemOnm/asc',
+            startCount: 0,
+            listCount: 20,
+          }),
+        )
+      ).status,
     ).toBe(502);
   });
 });
@@ -235,9 +252,42 @@ it.each([
   ],
   ['cu-store', storeBody, { resp_cd: '0000', storeList: [] }, 200],
   ['cu-store', storeBody, { resp_cd: '3000', storeList: [] }, 502],
-  ['seven-goods', { query: '과자', pageNo: 0, pageSize: 20 }, { data: [], code: 199 }, 502],
-  ['seven-goods', { query: '과자', pageNo: 0, pageSize: 20 }, { data: [], code: 300 }, 502],
-  ['seven-goods', { query: '과자', pageNo: 0, pageSize: 20 }, { code: 200 }, 502],
+  [
+    'seven-goods',
+    {
+      query: '과자',
+      collection: 'goods',
+      sort: 'quantity/desc,itemOnm/asc',
+      startCount: 0,
+      listCount: 20,
+    },
+    { data: [], code: 199 },
+    502,
+  ],
+  [
+    'seven-goods',
+    {
+      query: '과자',
+      collection: 'goods',
+      sort: 'quantity/desc,itemOnm/asc',
+      startCount: 0,
+      listCount: 20,
+    },
+    { data: [], code: 300 },
+    502,
+  ],
+  [
+    'seven-goods',
+    {
+      query: '과자',
+      collection: 'goods',
+      sort: 'quantity/desc,itemOnm/asc',
+      startCount: 0,
+      listCount: 20,
+    },
+    { code: 200 },
+    502,
+  ],
 ])('성공 및 실패 코드 검사 %s %j', async (op, body, data, status) => {
   const relay = createConvenienceRelay('convenience', {
     fetcher: async () => Response.json(data),
@@ -284,4 +334,11 @@ it('정수 범위를 벗어나는 재고 문자열을 거절한다', async () =>
     takeQuota: async () => true,
   });
   expect((await relay(req('seven-stock', realStockBody))).status).toBe(502);
+});
+
+it('구형 상품 요청도 호환 중계해 먼저 배포할 수 있다', async () => {
+  const fetcher = vi.fn(async () => Response.json({ data: {} }));
+  const relay = createConvenienceRelay('convenience', { fetcher, takeQuota: async () => true });
+  expect((await relay(req('seven-goods', { query: '커피', pageNo: 0, pageSize: 20 }))).status).toBe(200);
+  expect(fetcher).toHaveBeenCalledTimes(1);
 });

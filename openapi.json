@@ -1141,10 +1141,12 @@
           },
           "remainQuantity": {
             "type": "integer",
+            "nullable": true,
             "example": 3
           },
           "o2oRemainQuantity": {
             "type": "integer",
+            "nullable": true,
             "example": 2
           },
           "stockStatus": {
@@ -1152,7 +1154,8 @@
             "enum": [
               "in_stock",
               "out_of_stock",
-              "not_sold"
+              "not_sold",
+              "unknown"
             ],
             "example": "in_stock"
           },
