@@ -258,12 +258,12 @@ it('만료된 대기는 실행하지 않고 실패한 응답을 캐시하지 않
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
   const queued = relay(request(undefined, JSON.stringify({ goodsNo: 'other' })));
   await new Promise((resolve) => setTimeout(resolve, 0));
-  clock.mockReturnValue(31000);
+  clock.mockReturnValue(41000);
   release({ status: 'SUCCESS' });
   await first;
   expect((await queued).status).toBe(503);
   expect(runner).toHaveBeenCalledTimes(1);
-  clock.mockReturnValue(631000);
+  clock.mockReturnValue(641000);
   expect((await relay(request())).status).toBe(502);
   expect((await relay(request())).status).toBe(502);
   expect(runner).toHaveBeenCalledTimes(3);
@@ -297,7 +297,7 @@ it('비동기 관측 실패도 요청 처리에 영향을 주지 않는다', asy
   });
   expect((await relay(request())).status).toBe(200);
 });
-it('취소된 오래된 요청에 합류한 새 요청은 자기 대기 시간으로 실행한다', async () => {
+it('40초 만료된 요청에 합류한 새 요청은 자기 대기 시간으로 실행한다', async () => {
   const clock = vi.spyOn(Date, 'now').mockReturnValue(1000);
   let release!: (value: { status: string }) => void;
   const runner = vi
@@ -315,13 +315,14 @@ it('취소된 오래된 요청에 합류한 새 요청은 자기 대기 시간�
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
   const old = relay(request());
   await new Promise((resolve) => setTimeout(resolve, 0));
-  clock.mockReturnValue(31000);
+  clock.mockReturnValue(41000);
   const fresh = relay(request());
   await new Promise((resolve) => setTimeout(resolve, 0));
   release({ status: 'SUCCESS' });
   expect((await first).status).toBe(200);
   expect((await old).status).toBe(503);
   expect((await fresh).status).toBe(200);
+  expect(runner).toHaveBeenCalledTimes(2);
   expect(takeQuota).toHaveBeenCalledTimes(2);
   clock.mockRestore();
 });
@@ -407,7 +408,7 @@ it('공유 요청의 부모 ID와 실제 예산 소비를 기록한다', async (
   expect((await child).status).toBe(502);
 });
 
-it('브라우저 교체 중 23초 기다린 작업은 실행하고 30초 대기는 만료로 기록한다', async () => {
+it('브라우저 교체 중 39999밀리초 기다린 작업은 실행하고 40초 대기는 만료로 기록한다', async () => {
   const clock = vi.spyOn(Date, 'now').mockReturnValue(0);
   const events: unknown[] = [];
   let release!: (value: { status: string }) => void;
@@ -418,10 +419,10 @@ it('브라우저 교체 중 23초 기다린 작업은 실행하고 30초 대기�
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
   const expired = relay(request(undefined, JSON.stringify({ goodsNo: 'expired' })));
   await new Promise(resolve => setTimeout(resolve, 0));
-  clock.mockReturnValue(7000);
+  clock.mockReturnValue(1);
   const valid = relay(request(undefined, JSON.stringify({ goodsNo: 'valid' })));
   await new Promise(resolve => setTimeout(resolve, 0));
-  clock.mockReturnValue(30000);
+  clock.mockReturnValue(40000);
   release({ status: 'SUCCESS' });
   expect((await first).status).toBe(200);
   expect((await expired).status).toBe(503);
