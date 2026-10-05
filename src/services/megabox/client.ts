@@ -21,6 +21,26 @@ interface FetchBookingListParams {
   timeout?: number;
 }
 
+function decodeHtmlEntities(value: string): string {
+  const named: Record<string, string> = {
+    amp: '&',
+    quot: '"',
+    apos: "'",
+    lt: '<',
+    gt: '>',
+    nbsp: ' ',
+  };
+  return value.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity: string, code: string) => {
+    if (!code.startsWith('#')) {
+      const name = code.toLowerCase();
+      return Object.hasOwn(named, name) ? named[name] : entity;
+    }
+    const hex = code[1].toLowerCase() === 'x';
+    const point = parseInt(code.slice(hex ? 2 : 1), hex ? 16 : 10);
+    return point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+  });
+}
+
 export async function fetchMegaboxBookingList(
   params: FetchBookingListParams,
 ): Promise<{ theaters: MegaboxTheater[]; movies: MegaboxMovie[]; showtimes: MegaboxShowtime[] }> {
@@ -66,14 +86,14 @@ export async function fetchMegaboxBookingList(
       .filter((item) => item.brchNo && item.brchNm)
       .map((item) => ({
         theaterId: item.brchNo as string,
-        theaterName: item.brchNm as string,
+        theaterName: decodeHtmlEntities(item.brchNm as string),
       }));
 
     const movies = (body.movieList || [])
       .filter((item) => item.movieNo && item.movieNm)
       .map((item) => ({
         movieId: item.movieNo as string,
-        movieName: item.movieNm as string,
+        movieName: decodeHtmlEntities(item.movieNm as string),
         movieStatus: item.movieStatCdNm || undefined,
       }));
 
@@ -82,9 +102,9 @@ export async function fetchMegaboxBookingList(
       .map((item) => ({
         scheduleId: item.playSchdlNo as string,
         movieId: item.movieNo as string,
-        movieName: item.movieNm || '',
+        movieName: decodeHtmlEntities(item.movieNm || ''),
         theaterId: item.brchNo as string,
-        theaterName: item.brchNm || '',
+        theaterName: decodeHtmlEntities(item.brchNm || ''),
         playDate: item.playDe || params.playDate,
         startTime: formatTime(item.playStartTime),
         endTime: formatTime(item.playEndTime),
@@ -118,14 +138,22 @@ function parseCoordinates(html: string): { latitude: number | null; longitude: n
 }
 
 function parseAddress(html: string): string {
+  // 공식 지점 페이지는 도로명주소를 라벨 span 뒤의 li 본문에 제공합니다.
+  const currentRoadAddress = html.match(
+    /<li>\s*<span\b[^>]*>도로명주소\s*:\s*<\/span>([^<]*)<\/li>/i,
+  );
+  if (currentRoadAddress) {
+    return decodeHtmlEntities(currentRoadAddress[1]).trim();
+  }
+
   const roadAddressMatch = html.match(/도로명주소<\/dt>\s*<dd>([^<]+)<\/dd>/i);
   if (roadAddressMatch) {
-    return roadAddressMatch[1].trim();
+    return decodeHtmlEntities(roadAddressMatch[1]).trim();
   }
 
   const addressMatch = html.match(/주소<\/dt>\s*<dd>([^<]+)<\/dd>/i);
   if (addressMatch) {
-    return addressMatch[1].trim();
+    return decodeHtmlEntities(addressMatch[1]).trim();
   }
 
   return '';

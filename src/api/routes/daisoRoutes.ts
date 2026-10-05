@@ -20,7 +20,7 @@ export function registerDaisoRoutes(app: Hono<{ Bindings: AppBindings }>): void 
       {
         ttlSeconds: 60 * 30,
         staleWhileRevalidateSeconds: 60 * 3,
-        keyPrefix: 'daiso-products-v2',
+        keyPrefix: 'daiso-products-v3',
       },
       () => handleSearchProducts(c),
     ),
@@ -44,7 +44,7 @@ export function registerDaisoRoutes(app: Hono<{ Bindings: AppBindings }>): void 
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'daiso-stores-v2',
+        keyPrefix: 'daiso-stores-v3',
       },
       () => handleFindStores(c),
     ),
@@ -56,7 +56,7 @@ export function registerDaisoRoutes(app: Hono<{ Bindings: AppBindings }>): void 
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'daiso-inventory-v2',
+        keyPrefix: 'daiso-inventory-v3',
       },
       () => handleCheckInventory(c),
     ),

@@ -6,6 +6,13 @@
 
 import { parseInventoryQuantity } from '../../inventoryQuantity.js';
 import * as z from 'zod';
+import {
+  positiveIntegerSchema,
+  latitudeSchema,
+  longitudeSchema,
+  validatePagination,
+  resolveCoordinates,
+} from '../validation.js';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
 import type {
   ProductSummary,
@@ -66,8 +73,10 @@ export async function fetchStoreInventory(
   lng: number,
   page: number = 1,
   pageSize: number = 30,
-  keyword: string = ''
+  keyword: string = '',
 ): Promise<{ stores: StoreInventory[]; totalCount: number }> {
+  validatePagination(page, pageSize);
+  resolveCoordinates(lat, lng);
   const searchKeywords = keyword ? buildDaisoStoreKeywordVariants(keyword) : [''];
 
   for (const searchKeyword of searchKeywords) {
@@ -84,13 +93,14 @@ export async function fetchStoreInventory(
 
     if (storeSearch.success === false) throw new Error('다이소 매장 검색에 실패했습니다.');
     const allStores = storeSearch.data || [];
-    const searchedStores = allStores.slice((page - 1) * pageSize, page * pageSize);
-    if (searchedStores.length === 0) {
+    if (allStores.length === 0) {
       if (searchKeyword === searchKeywords[searchKeywords.length - 1]) {
         return { stores: [], totalCount: 0 };
       }
       continue;
     }
+    const searchedStores = allStores.slice((page - 1) * pageSize, page * pageSize);
+    if (searchedStores.length === 0) return { stores: [], totalCount: allStores.length };
 
     const inventoryResponse = await fetchDaisoJsonWithAuth<StoreInventoryV2Response>(
       DAISOMALL_API.STORE_INVENTORY_V2,
@@ -106,7 +116,8 @@ export async function fetchStoreInventory(
       },
     );
 
-    if (inventoryResponse.success === false) throw new Error('다이소 매장 재고 조회에 실패했습니다.');
+    if (inventoryResponse.success === false)
+      throw new Error('다이소 매장 재고 조회에 실패했습니다.');
     const quantities = new Map(
       (inventoryResponse.data || []).map((item) => [item.strCd, parseInventoryQuantity(item.stck)]),
     );
@@ -150,8 +161,8 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   const {
     productId,
     storeQuery = '',
-    latitude = 37.5665, // 기본값: 서울 시청
-    longitude = 126.978,
+    latitude: inputLatitude,
+    longitude: inputLongitude,
     page = 1,
     pageSize = 30,
   } = args;
@@ -159,6 +170,9 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   if (!productId || productId.trim().length === 0) {
     throw new Error('상품 ID(productId)를 입력해주세요.');
   }
+
+  validatePagination(page, pageSize);
+  const { latitude, longitude } = resolveCoordinates(inputLatitude, inputLongitude);
 
   // 온라인 재고와 매장 재고 동시 조회
   const [onlineStock, storeResult, product] = await Promise.all([
@@ -206,11 +220,17 @@ export function createCheckInventoryTool(): ToolRegistration {
         productId: z
           .string()
           .describe('제품 ID. 상품명만 알면 먼저 daiso_search_products로 상품의 id를 확인하세요.'),
-        storeQuery: z.string().optional().describe('매장 검색어 (매장명 또는 주소, 예: 안산 중앙역)'),
-        latitude: z.number().optional().default(37.5665).describe('위도 (기본값: 서울 시청 37.5665)'),
-        longitude: z.number().optional().default(126.978).describe('경도 (기본값: 서울 시청 126.978)'),
-        page: z.number().optional().default(1).describe('페이지 번호 (기본값: 1)'),
-        pageSize: z.number().optional().default(30).describe('페이지당 결과 수 (기본값: 30)'),
+        storeQuery: z
+          .string()
+          .optional()
+          .describe('매장 검색어 (매장명 또는 주소, 예: 안산 중앙역)'),
+        latitude: latitudeSchema.optional().describe('위도 (기본값: 서울 시청 37.5665)'),
+        longitude: longitudeSchema.optional().describe('경도 (기본값: 서울 시청 126.978)'),
+        page: positiveIntegerSchema.optional().default(1).describe('페이지 번호 (기본값: 1)'),
+        pageSize: positiveIntegerSchema
+          .optional()
+          .default(30)
+          .describe('페이지당 결과 수 (기본값: 30)'),
       },
     },
     handler: checkInventory as (args: unknown) => Promise<McpToolResponse>,

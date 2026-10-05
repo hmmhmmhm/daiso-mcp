@@ -30,7 +30,7 @@ export const OPENAPI_PATHS_DAISO = {
               in: 'query',
               required: false,
               description: '페이지당 결과 수',
-              schema: { type: 'integer', default: 30, minimum: 1, maximum: 100 },
+              schema: { type: 'integer', default: 30, minimum: 1 },
             },
           ],
           responses: {
@@ -43,7 +43,7 @@ export const OPENAPI_PATHS_DAISO = {
               },
             },
             '400': {
-              description: '잘못된 요청 (검색어 누락)',
+              description: '잘못된 요청 (검색어 누락 또는 유효하지 않은 페이지)',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -131,7 +131,7 @@ export const OPENAPI_PATHS_DAISO = {
               in: 'query',
               required: false,
               description: '최대 결과 수',
-              schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 },
+              schema: { type: 'integer', default: 50, minimum: 1 },
             },
           ],
           responses: {
@@ -173,16 +173,16 @@ export const OPENAPI_PATHS_DAISO = {
               name: 'lat',
               in: 'query',
               required: false,
-              description: '위도 (기본값: 서울 시청 37.5665)',
-              schema: { type: 'number', format: 'float', default: 37.5665 },
+              description: '경도와 함께 입력하는 위도. 둘 다 생략하면 서울 시청 37.5665를 사용합니다.',
+              schema: { type: 'number', format: 'float', minimum: -90, maximum: 90 },
               example: 37.4979,
             },
             {
               name: 'lng',
               in: 'query',
               required: false,
-              description: '경도 (기본값: 서울 시청 126.978)',
-              schema: { type: 'number', format: 'float', default: 126.978 },
+              description: '위도와 함께 입력하는 경도. 둘 다 생략하면 서울 시청 126.978을 사용합니다.',
+              schema: { type: 'number', format: 'float', minimum: -180, maximum: 180 },
               example: 127.0276,
             },
             {
@@ -204,7 +204,7 @@ export const OPENAPI_PATHS_DAISO = {
               in: 'query',
               required: false,
               description: '페이지당 결과 수',
-              schema: { type: 'integer', default: 30, minimum: 1, maximum: 100 },
+              schema: { type: 'integer', default: 30, minimum: 1 },
             },
           ],
           responses: {
@@ -217,7 +217,7 @@ export const OPENAPI_PATHS_DAISO = {
               },
             },
             '400': {
-              description: '잘못된 요청 (제품 ID 누락)',
+              description: '잘못된 요청 (제품 ID 누락 또는 유효하지 않은 페이지·좌표)',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },

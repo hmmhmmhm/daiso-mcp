@@ -18,7 +18,7 @@ export function registerMegaboxRoutes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
-        keyPrefix: 'megabox-theaters-v3',
+        keyPrefix: 'megabox-theaters-v4',
       },
       () => handleMegaboxFindNearbyTheaters(c),
     ),
@@ -30,7 +30,7 @@ export function registerMegaboxRoutes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'megabox-movies-v3',
+        keyPrefix: 'megabox-movies-v4',
       },
       () => handleMegaboxListNowShowing(c),
     ),
@@ -42,7 +42,7 @@ export function registerMegaboxRoutes(app: Hono<{ Bindings: AppBindings }>): voi
       {
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 30,
-        keyPrefix: 'megabox-seats-v3',
+        keyPrefix: 'megabox-seats-v4',
       },
       () => handleMegaboxGetRemainingSeats(c),
     ),
