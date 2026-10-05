@@ -6,8 +6,7 @@ import { Readable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createBrowserLifecycle } from './lifecycle.js';
-import { launchGuardedBrowser } from './supervisor.js';
+import { createTransportLifecycle } from './transport-lifecycle.js';
 import { createFileQuota } from './quota.js';
 import { createOliveyoungRelay } from './oliveyoung.js';
 
@@ -31,9 +30,15 @@ async function main() {
     60000,
   );
   heartbeat.unref();
-  const lifecycle = createBrowserLifecycle(
-    () => launchGuardedBrowser(join(stateDir, 'browser-owner.json')),
-    (outcome) => log.append({ stage: 'lifecycle', operation: 'browser', outcome }),
+  const lifecycle = await createTransportLifecycle(
+    process.env.OY_RELAY_TRANSPORT,
+    stateDir,
+    (outcome) =>
+      log.append({
+        stage: 'lifecycle',
+        operation: process.env.OY_RELAY_TRANSPORT || 'browser',
+        outcome,
+      }),
   );
   try {
     await lifecycle.start();
@@ -101,7 +106,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   main().catch(async () => {
     logger?.append({ stage: 'process', outcome: 'startup-failed' });
     await logger?.flush();
-    console.error('올리브영 릴레이 시작 실패: 토큰, 포트 및 GUI 브라우저 접속을 확인하세요.');
+    console.error('올리브영 릴레이 시작 실패: 토큰, 포트 및 전송 환경을 확인하세요.');
     process.exitCode = 1;
   });
 }
