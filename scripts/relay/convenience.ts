@@ -6,6 +6,7 @@ import * as z from 'zod';
 import { CU_API } from '../../src/services/cu/api.js';
 import { SEVENELEVEN_API } from '../../src/services/seveneleven/api.js';
 import { GS25_API } from '../../src/services/gs25/api.js';
+import type { Gs25SessionTransport } from './gs25-session.js';
 import {
   createHttpRelay,
   RelayError,
@@ -245,7 +246,7 @@ const paths: Record<Operation, [string, string, 'GET' | 'POST', z.ZodType]> = {
 };
 export function createConvenienceRelay(
   token: string,
-  options: Pick<HttpRelayOptions, 'takeQuota' | 'fetcher' | 'onEvent'> & { gs25ApiKey?: string },
+  options: Pick<HttpRelayOptions, 'takeQuota' | 'fetcher' | 'onEvent'> & { gs25ApiKey?: string; gs25Session?: Gs25SessionTransport },
 ) {
   return createHttpRelay(token, {
     ...options,
@@ -276,14 +277,14 @@ export function createConvenienceRelay(
       }
       if (operation === 'gs25-stock') {
         const key = options.gs25ApiKey?.trim() || body.apiKey;
-        if (!key) throw new RelayError(403);
-        headers['Api-Key'] = String(key);
+        if (!options.gs25Session && !key) throw new RelayError(403);
+        if (!options.gs25Session) headers['Api-Key'] = String(key);
         delete body.apiKey;
       }
       if (method === 'GET' || operation === 'seven-popwords')
         url.search = new URLSearchParams(body as Record<string, string>).toString();
       const response = await abortable(
-        fetcher(url, {
+        (operation === 'gs25-stock' && options.gs25Session ? options.gs25Session : fetcher)(url, {
           method,
           headers,
           redirect: 'manual',
