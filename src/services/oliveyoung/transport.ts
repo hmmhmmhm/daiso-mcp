@@ -1,3 +1,5 @@
+import { requestDirectRoute } from '../../utils/directRoutes.js';
+import { routeOperation, type RouteKey } from '../../utils/routeHealth.js';
 import { diagnosticHeaders, relayConsumer } from '../../utils/diagnostics.js';
 /** 올리브영 무료 직접 요청 및 운영자가 설정한 브라우저 릴레이 전송. */
 import { createRelayCooldown, relayCredentialScope } from '../../utils/relayQuota.js';
@@ -56,7 +58,41 @@ export function isValidOliveyoungRelayUrl(value: string | undefined): boolean {
   );
 }
 
+const operationKeys: Record<string, RouteKey> = {
+  [OLIVEYOUNG_API.STORE_FINDER_PATH]: 'oy-find-store',
+  [OLIVEYOUNG_API.PRODUCT_SEARCH_PATH]: 'oy-product-search',
+  [OLIVEYOUNG_API.STOCK_GOODS_INFO_PATH]: 'oy-goods-info',
+  [OLIVEYOUNG_API.STOCK_STORES_PATH]: 'oy-stock-stores',
+};
 export async function requestOliveyoung(
+  path: string,
+  body: Record<string, unknown>,
+  options: OliveyoungRequestOptions = {},
+): Promise<OliveyoungApiResponse> {
+  const key = operationKeys[path];
+  if (!options.relayUrl || !key) return requestOliveyoungRaw(path, body, options);
+  validateRelay(options);
+  return routeOperation(
+    key,
+    options.timeout ?? 60000,
+    (ms) => requestDirectRoute<OliveyoungApiResponse>(key, body, ms, options.signal),
+    (ms) => requestOliveyoungRaw(path, body, { ...options, timeout: ms }),
+    options.signal,
+  );
+}
+function validateRelay(options: OliveyoungRequestOptions): void {
+  if (!isValidOliveyoungRelayUrl(options.relayUrl)) {
+    throw new Error('올리브영 릴레이 URL은 HTTPS 또는 로컬 HTTP 주소여야 합니다.');
+  }
+  if (!options.relayToken?.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');
+  if (options.accessClientId !== undefined || options.accessClientSecret !== undefined) {
+    if (!options.accessClientId?.trim() || !options.accessClientSecret?.trim()) {
+      throw new Error('올리브영 Access 서비스 토큰 설정이 필요합니다.');
+    }
+  }
+}
+
+async function requestOliveyoungRaw(
   path: string,
   body: Record<string, unknown>,
   options: OliveyoungRequestOptions = {},
@@ -72,22 +108,16 @@ export async function requestOliveyoung(
   let consumer = 'legacy';
   let url = `${OLIVEYOUNG_API.BASE_URL}${path}`;
   if (relayUrl) {
-    if (!isValidOliveyoungRelayUrl(relayUrl)) {
-      throw new Error('올리브영 릴레이 URL은 HTTPS 또는 로컬 HTTP 주소여야 합니다.');
-    }
-    if (!relayToken?.trim()) throw new Error('OY_RELAY_TOKEN이 필요합니다.');
+    validateRelay(options);
     url = `${relayUrl.replace(/\/$/, '')}/v1/oliveyoung/${path.split('/').pop()}`;
     Object.assign(headers, diagnosticHeaders());
     headers.Authorization = `Bearer ${relayToken}`;
-    consumer = (await relayConsumer(relayToken)) || 'legacy';
+    consumer = (await relayConsumer(relayToken!)) || 'legacy';
     if (consumer !== 'legacy') headers['x-relay-consumer'] = consumer;
     const { accessClientId, accessClientSecret } = options;
     if (accessClientId !== undefined || accessClientSecret !== undefined) {
-      if (!accessClientId?.trim() || !accessClientSecret?.trim()) {
-        throw new Error('올리브영 Access 서비스 토큰 설정이 필요합니다.');
-      }
-      headers['CF-Access-Client-Id'] = accessClientId;
-      headers['CF-Access-Client-Secret'] = accessClientSecret;
+      headers['CF-Access-Client-Id'] = accessClientId!;
+      headers['CF-Access-Client-Secret'] = accessClientSecret!;
     }
   } else {
     // 공식 사이트 직접 조회용 헤더는 운영자 릴레이에 전달하지 않습니다.
@@ -98,7 +128,12 @@ export async function requestOliveyoung(
     headers['Accept-Language'] = 'ko-KR,ko;q=0.9';
   }
   if (relayUrl) {
-    scope = await relayCredentialScope([relayUrl.replace(/\/$/, ''), relayToken, options.accessClientId, options.accessClientSecret]);
+    scope = await relayCredentialScope([
+      relayUrl.replace(/\/$/, ''),
+      relayToken,
+      options.accessClientId,
+      options.accessClientSecret,
+    ]);
   }
   let busyRetries = 0;
   while (true) {
@@ -108,10 +143,16 @@ export async function requestOliveyoung(
       const remaining = deadline - Date.now();
       if (options.signal?.aborted) throw new DOMException('Request cancelled', 'AbortError');
       if (remaining <= 0) throw new DOMException('Request deadline exceeded', 'AbortError');
-      if (cachedQuota) throw new HttpError(429, '', '', new Headers({
-        'x-relay-quota-reason': cachedQuota.quotaReason,
-        'retry-after': String(cachedQuota.retryAfter),
-      }));
+      if (cachedQuota)
+        throw new HttpError(
+          429,
+          '',
+          '',
+          new Headers({
+            'x-relay-quota-reason': cachedQuota.quotaReason,
+            'retry-after': String(cachedQuota.retryAfter),
+          }),
+        );
       result = await fetchJson<OliveyoungApiResponse>(url, {
         method: 'POST',
         // Workers는 error 모드를 지원하지 않으므로 따라가지 않고 아래 200 검사로 거절합니다.

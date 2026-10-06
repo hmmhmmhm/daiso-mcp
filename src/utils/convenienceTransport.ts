@@ -1,4 +1,6 @@
 /** 편의점 공통 릴레이 설정과 인증 전송입니다. */
+import { requestDirectRoute } from './directRoutes.js';
+import { isRouteKey, routeOperation } from './routeHealth.js';
 import { ServiceError } from '../core/errors.js';
 import { diagnosticHeaders } from './diagnostics.js';
 import { isValidDtryxRelayUrl } from '../services/dtryx/transport.js';
@@ -37,6 +39,16 @@ export async function requestConvenienceRelay<T>(
   options: ConvenienceTransportOptions,
   timeout = 15000,
 ): Promise<T> {
+  validateRelay(options);
+  if (!isRouteKey(operation)) return requestConvenienceRelayRaw(operation, body, options, timeout);
+  return routeOperation(
+    operation,
+    timeout,
+    (ms) => requestDirectRoute<T>(operation, body, ms),
+    (ms) => requestConvenienceRelayRaw<T>(operation, body, options, ms),
+  );
+}
+function validateRelay(options: ConvenienceTransportOptions): void {
   const {
     convenienceRelayUrl: url,
     convenienceRelayToken: token,
@@ -56,6 +68,21 @@ export async function requestConvenienceRelay<T>(
       false,
     );
   }
+}
+
+async function requestConvenienceRelayRaw<T>(
+  operation: string,
+  body: unknown,
+  options: ConvenienceTransportOptions,
+  timeout = 15000,
+): Promise<T> {
+  const {
+    convenienceRelayUrl: url,
+    convenienceRelayToken: token,
+    convenienceAccessClientId: id,
+    convenienceAccessClientSecret: secret,
+  } = options;
+  const access = id !== undefined || secret !== undefined;
   const headers: Record<string, string> = {
     ...diagnosticHeaders(),
     'Content-Type': 'application/json',

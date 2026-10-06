@@ -7,6 +7,7 @@ import { ServiceError, toServiceErrorDiagnostics, toStandardErrorDiagnostics } f
 
 export interface AppBindings {
   DAILY_RATE_LIMITER?: DurableObjectNamespace;
+  UPSTREAM_ROUTE_HEALTH?: DurableObjectNamespace;
   ZYTE_API_KEY?: string;
   DTRYX_RELAY_URL?: string;
   DTRYX_RELAY_TOKEN?: string;
