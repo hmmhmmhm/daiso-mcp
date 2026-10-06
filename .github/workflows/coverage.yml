@@ -16,8 +16,16 @@ permissions:
   contents: read
 
 jobs:
+  select-runner:
+    uses: ./.github/workflows/select-local-runner.yml
+    with:
+      cloud-runner: ubuntu-latest
+    secrets:
+      status-token: ${{ secrets.LOCAL_RUNNER_STATUS_TOKEN }}
+
   coverage:
-    runs-on: ubuntu-latest
+    needs: select-runner
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runner) }}
     name: Coverage 100%
     steps:
       - name: Checkout
