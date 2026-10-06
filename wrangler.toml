@@ -22,3 +22,14 @@ class_name = "DailyRateLimiter"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["DailyRateLimiter"]
+
+[[durable_objects.bindings]]
+name = "UPSTREAM_ROUTE_HEALTH"
+class_name = "UpstreamRouteHealth"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["UpstreamRouteHealth"]
+
+[triggers]
+crons = ["*/5 * * * *"]

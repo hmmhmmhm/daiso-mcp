@@ -1,3 +1,7 @@
+import { withRouteRouting } from './utils/routeHealth.js';
+import { refreshRouteChecks } from './utils/routeProbes.js';
+import { registerRouteHealthRoutes } from './api/routes/routeHealthRoutes.js';
+export { UpstreamRouteHealth } from './durableObjects/upstreamRouteHealth.js';
 import { convenienceTransportFromBindings } from './utils/convenienceTransport.js';
 import { handleLotteMartFindStores } from './api/lottemartHandlers.js';
 import { geocodeBindings } from './utils/geocode.js';
@@ -347,6 +351,7 @@ app.on(['POST', 'DELETE'], '/', handleRootMcpRequest);
 // 헬스 체크 엔드포인트
 app.get('/health', (c) => c.json({ status: 'ok', config: buildConfigStatus(c.env) }));
 registerHealthRoutes(app);
+registerRouteHealthRoutes(app);
 registerRateLimitStatsRoutes(app);
 registerServiceRoutes(app);
 
@@ -423,7 +428,11 @@ const worker = {
       return createRootInfoResponse(request.method);
     }
 
-    return app.fetch(request, env, executionCtx);
+    return withRouteRouting(env?.UPSTREAM_ROUTE_HEALTH, executionCtx?.waitUntil?.bind(executionCtx),
+      () => app.fetch(request, env, executionCtx));
+  },
+  scheduled(_controller: ScheduledController, env: AppBindings, ctx: ExecutionContext) {
+    ctx.waitUntil(refreshRouteChecks(env));
   },
   request: app.request.bind(app),
 };

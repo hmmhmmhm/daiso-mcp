@@ -1,3 +1,5 @@
+import { requestDirectRoute } from '../../utils/directRoutes.js';
+import { routeOperation } from '../../utils/routeHealth.js';
 import { diagnosticHeaders } from '../../utils/diagnostics.js';
 /** 디트릭스 전용 중계 설정과 인증 전송입니다. */
 import { ServiceError } from '../../core/errors.js';
@@ -52,6 +54,15 @@ export async function requestDtryxRelay<T>(
   options: DtryxTransportOptions,
   timeout: number,
 ): Promise<T> {
+  validateRelay(options);
+  return routeOperation(
+    `dtryx-${path}`,
+    timeout,
+    (ms) => requestDirectRoute<T>(`dtryx-${path}`, body, ms),
+    (ms) => requestDtryxRelayRaw<T>(path, body, options, ms),
+  );
+}
+function validateRelay(options: DtryxTransportOptions): void {
   const { relayUrl, relayToken, accessClientId, accessClientSecret } = options;
   const accessPresent = accessClientId !== undefined || accessClientSecret !== undefined;
   if (
@@ -66,6 +77,16 @@ export async function requestDtryxRelay<T>(
       false,
     );
   }
+}
+
+async function requestDtryxRelayRaw<T>(
+  path: 'movies' | 'play-dates' | 'timetable',
+  body: { brandCode: string; cinemaCode: string; playDate?: string },
+  options: DtryxTransportOptions,
+  timeout: number,
+): Promise<T> {
+  const { relayUrl, relayToken, accessClientId, accessClientSecret } = options;
+  const accessPresent = accessClientId !== undefined || accessClientSecret !== undefined;
   const headers: Record<string, string> = {
     ...diagnosticHeaders(),
     'Content-Type': 'application/json',
