@@ -1,0 +1,56 @@
+name: Local runner smoke
+
+on:
+  push:
+    branches: [local-runner-fallback]
+    paths:
+      - .github/workflows/select-local-runner.yml
+      - .github/workflows/local-runner-smoke.yml
+  workflow_dispatch:
+    inputs:
+      force-cloud:
+        description: Exercise the cloud runner without stopping the Mac service
+        type: boolean
+        default: false
+      probe-local:
+        description: Owner-only installation check that requires the Mac to be online
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  select-runner:
+    uses: ./.github/workflows/select-local-runner.yml
+    with:
+      force-cloud: ${{ inputs.force-cloud || false }}
+    secrets:
+      status-token: ${{ secrets.LOCAL_RUNNER_STATUS_TOKEN }}
+  smoke:
+    needs: select-runner
+    runs-on: ${{ inputs.probe-local && github.actor == github.repository_owner && fromJSON('["self-hosted", "macOS", "ARM64", "personal-mac"]') || fromJSON(needs.select-runner.outputs.runner) }}
+    timeout-minutes: 10
+    steps:
+      - name: Check selected runner
+        shell: bash
+        env:
+          RUNNER_REASON: ${{ needs.select-runner.outputs.reason }}
+          EXPECT_LOCAL: ${{ (inputs.probe-local && github.actor == github.repository_owner) || needs.select-runner.outputs.local == 'true' }}
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          ACTUAL_RUNNER_NAME: ${{ runner.name }}
+          ACTUAL_RUNNER_OS: ${{ runner.os }}
+          ACTUAL_RUNNER_ARCH: ${{ runner.arch }}
+        run: |
+          echo "Selection: $RUNNER_REASON"
+          echo "Runner: $ACTUAL_RUNNER_NAME ($ACTUAL_RUNNER_OS/$ACTUAL_RUNNER_ARCH)"
+          if [ "$EXPECT_LOCAL" = "true" ]; then
+            test "$RUNNER_ENVIRONMENT" = "self-hosted"
+            test "$ACTUAL_RUNNER_OS" = "macOS"
+            test "$ACTUAL_RUNNER_ARCH" = "ARM64"
+          else
+            test "$RUNNER_ENVIRONMENT" = "github-hosted"
+          fi
+          printf 'Selection: %s\nRunner: %s (%s/%s)\n' \
+            "$RUNNER_REASON" "$ACTUAL_RUNNER_NAME" "$ACTUAL_RUNNER_OS" "$ACTUAL_RUNNER_ARCH" \
+            >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,84 @@
+name: Select local runner
+
+on:
+  workflow_call:
+    inputs:
+      cloud-runner:
+        type: string
+        default: ubuntu-latest
+      force-cloud:
+        type: boolean
+        default: false
+    secrets:
+      status-token:
+        required: false
+    outputs:
+      runner:
+        value: ${{ jobs.select.outputs.runner }}
+      local:
+        value: ${{ jobs.select.outputs.local }}
+      reason:
+        value: ${{ jobs.select.outputs.reason }}
+
+permissions:
+  contents: read
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      runner: ${{ steps.runner.outputs.runner }}
+      local: ${{ steps.runner.outputs.local }}
+      reason: ${{ steps.runner.outputs.reason }}
+    steps:
+      - name: Select local Mac when online
+        id: runner
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          CLOUD_RUNNER: ${{ inputs.cloud-runner }}
+          FORCE_CLOUD: ${{ inputs.force-cloud }}
+          HAS_STATUS_TOKEN: ${{ secrets.status-token != '' }}
+        with:
+          github-token: ${{ secrets.status-token || github.token }}
+          script: |
+            const localLabels = ['self-hosted', 'macOS', 'ARM64', 'personal-mac'];
+            let labels = [process.env.CLOUD_RUNNER];
+            let reason = 'cloud';
+            const pr = context.payload.pull_request;
+            const trusted = context.actor === context.repo.owner &&
+              (!pr || (pr.user.login === context.repo.owner &&
+                pr.head.repo?.full_name === `${context.repo.owner}/${context.repo.repo}`));
+
+            if (process.env.FORCE_CLOUD === 'true') {
+              reason = 'forced-cloud';
+            } else if (!trusted) {
+              reason = 'untrusted-event';
+            } else if (process.env.HAS_STATUS_TOKEN !== 'true') {
+              reason = 'status-token-missing';
+              core.warning('LOCAL_RUNNER_STATUS_TOKEN is missing; using GitHub-hosted runner.');
+            } else {
+              try {
+                const runners = await github.paginate(github.rest.actions.listSelfHostedRunnersForRepo, {
+                  ...context.repo, per_page: 100,
+                });
+                const available = runners.some(runner =>
+                  runner.name === `personal-mac-${context.repo.repo}` &&
+                  runner.status === 'online' &&
+                  localLabels.every(label => runner.labels.some(item => item.name === label)));
+                if (available) {
+                  labels = localLabels;
+                  reason = 'local-online';
+                } else {
+                  reason = 'local-offline-or-absent';
+                }
+              } catch (error) {
+                reason = 'status-api-unavailable';
+                core.warning(`Runner status query failed (${error.status || 'network error'}); using GitHub-hosted runner.`);
+              }
+            }
+
+            core.info(`Runner selection: ${reason} -> ${JSON.stringify(labels)}`);
+            core.setOutput('runner', JSON.stringify(labels));
+            core.setOutput('local', String(reason === 'local-online'));
+            core.setOutput('reason', reason);
