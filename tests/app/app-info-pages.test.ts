@@ -11,7 +11,7 @@ setupFetchMock(mockFetch);
 
 describe('GET /', () => {
   it('서버 정보를 반환한다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
 
     expect(res.status).toBe(200);
 
@@ -27,7 +27,7 @@ describe('GET /', () => {
   });
 
   it('Worker fetch 엔트리에서 루트 정보를 빠른 경로로 반환한다', async () => {
-    const res = await app.fetch(new Request('https://mcp.aka.page/'));
+    const res = await app.fetch(new Request('https://mcp.aka.page/', { headers: { Accept: 'application/json' } }));
 
     expect(res.status).toBe(200);
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
@@ -54,7 +54,7 @@ describe('GET /', () => {
   });
 
   it('다이소 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const daisoService = data.services.find((s: { id: string }) => s.id === 'daiso');
@@ -63,7 +63,7 @@ describe('GET /', () => {
   });
 
   it('올리브영 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const oliveyoungService = data.services.find((s: { id: string }) => s.id === 'oliveyoung');
@@ -72,7 +72,7 @@ describe('GET /', () => {
   });
 
   it('CU 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const cuService = data.services.find((s: { id: string }) => s.id === 'cu');
@@ -81,7 +81,7 @@ describe('GET /', () => {
   });
 
   it('GS25 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const gs25Service = data.services.find((s: { id: string }) => s.id === 'gs25');
@@ -90,7 +90,7 @@ describe('GET /', () => {
   });
 
   it('이마트24 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const emart24Service = data.services.find((s: { id: string }) => s.id === 'emart24');
@@ -99,7 +99,7 @@ describe('GET /', () => {
   });
 
   it('종료된 롯데마트 서비스는 등록하지 않는다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const lotteMartService = data.services.find((s: { id: string }) => s.id === 'lottemart');
@@ -107,7 +107,7 @@ describe('GET /', () => {
   });
 
   it('메가박스 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const megaboxService = data.services.find((s: { id: string }) => s.id === 'megabox');
@@ -116,7 +116,7 @@ describe('GET /', () => {
   });
 
   it('CGV 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const cgvService = data.services.find((s: { id: string }) => s.id === 'cgv');
@@ -125,7 +125,7 @@ describe('GET /', () => {
   });
 
   it('롯데시네마 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const lotteCinemaService = data.services.find((s: { id: string }) => s.id === 'lottecinema');
@@ -134,7 +134,7 @@ describe('GET /', () => {
   });
 
   it('세븐일레븐 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const sevenElevenService = data.services.find((s: { id: string }) => s.id === 'seveneleven');
@@ -143,7 +143,7 @@ describe('GET /', () => {
   });
 
   it('장소 검색 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const placesService = data.services.find((s: { id: string }) => s.id === 'places');
@@ -152,7 +152,7 @@ describe('GET /', () => {
   });
 
   it('개발자 요청 서비스가 등록되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     const feedbackService = data.services.find((s: { id: string }) => s.id === 'feedback');
@@ -161,7 +161,7 @@ describe('GET /', () => {
   });
 
   it('다이소 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('daiso_search_products');
@@ -171,7 +171,7 @@ describe('GET /', () => {
   });
 
   it('올리브영 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('oliveyoung_find_nearby_stores');
@@ -179,7 +179,7 @@ describe('GET /', () => {
   });
 
   it('CU 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('cu_find_nearby_stores');
@@ -187,7 +187,7 @@ describe('GET /', () => {
   });
 
   it('GS25 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('gs25_find_nearby_stores');
@@ -196,7 +196,7 @@ describe('GET /', () => {
   });
 
   it('이마트24 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('emart24_find_nearby_stores');
@@ -205,7 +205,7 @@ describe('GET /', () => {
   });
 
   it('종료된 롯데마트 도구들은 포함하지 않는다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).not.toContain('lottemart_find_nearby_stores');
@@ -213,7 +213,7 @@ describe('GET /', () => {
   });
 
   it('메가박스 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('megabox_find_nearby_theaters');
@@ -222,7 +222,7 @@ describe('GET /', () => {
   });
 
   it('CGV 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('cgv_find_theaters');
@@ -231,7 +231,7 @@ describe('GET /', () => {
   });
 
   it('롯데시네마 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('lottecinema_find_nearby_theaters');
@@ -240,7 +240,7 @@ describe('GET /', () => {
   });
 
   it('세븐일레븐 도구들이 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('seveneleven_search_products');
@@ -250,28 +250,28 @@ describe('GET /', () => {
   });
 
   it('장소 검색 도구가 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('places_search_nearby');
   });
 
   it('개발자 요청 제출 도구가 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('submit_developer_request');
   });
 
   it('통합 비교 도구가 포함되어 있다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.tools).toContain('compare_products');
   });
 
   it('엔드포인트 정보를 포함한다', async () => {
-    const res = await app.request('/');
+    const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
     expect(data.endpoints).toBeDefined();

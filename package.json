@@ -23,6 +23,7 @@
     "deploy": "wrangler deploy",
     "build": "tsc && npx tsx scripts/ops/generate-openapi.ts",
     "build:openapi": "npx tsx scripts/ops/generate-openapi.ts",
+    "build:discovery": "npx tsx scripts/ops/generate-discovery.ts",
     "cli:smoke": "npm run build && npx tsx scripts/ops/cli-smoke.ts",
     "mcp:smoke": "npx tsx scripts/ops/mcp-smoke.ts",
     "update:workers-chart": "npx tsx scripts/ops/update-workers-invocations-chart.ts",

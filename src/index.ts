@@ -37,6 +37,7 @@ import { createCompareService } from './services/compare/index.js';
 import { createFeedbackService } from './services/feedback/index.js';
 import { createAgentStartResponse } from './pages/agentStart.js';
 import { createPromptResponse } from './pages/prompt.js';
+import { buildDiscoveryAssets } from './pages/discovery.js';
 import {
   createFullOpenApiJsonResponse,
   createFullOpenApiYamlResponse,
@@ -142,7 +143,7 @@ const createMcpServer = (bindings?: AppBindings) => {
   return server;
 };
 
-function buildRootInfo() {
+export function buildRootInfo() {
   const registry = createRegistry();
   const services = registry.getServicesInfo();
   const allTools = registry.getAllToolNames();
@@ -170,16 +171,15 @@ function buildRootInfo() {
     totalTools: allTools.length,
   };
 }
-
 const ROOT_INFO_JSON = JSON.stringify(buildRootInfo());
 const ROOT_INFO_BODY = new TextEncoder().encode(ROOT_INFO_JSON);
+const ROOT_HTML_BODY = new TextEncoder().encode(buildDiscoveryAssets(buildRootInfo())['discovery.html']);
 const ROOT_INFO_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
   'Content-Length': String(ROOT_INFO_BODY.byteLength),
   'Access-Control-Allow-Origin': '*',
   'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
 };
-
 function isRootInfoRequest(request: Request): boolean {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return false;
@@ -188,11 +188,14 @@ function isRootInfoRequest(request: Request): boolean {
   const url = new URL(request.url);
   return url.pathname === '/' && url.search === '';
 }
-
-function createRootInfoResponse(method: string): Response {
-  return new Response(method === 'HEAD' ? null : ROOT_INFO_BODY, {
+function createRootInfoResponse(request: Request): Response {
+  const json = request.headers.get('Accept')?.includes('application/json');
+  const body = json ? ROOT_INFO_BODY : ROOT_HTML_BODY;
+  return new Response(request.method === 'HEAD' ? null : body, {
     status: 200,
-    headers: ROOT_INFO_HEADERS,
+    headers: { ...ROOT_INFO_HEADERS,
+      'Content-Type': json ? 'application/json; charset=utf-8' : 'text/html; charset=utf-8',
+      'Content-Length': String(body.byteLength), Vary: 'Accept' },
   });
 }
 
@@ -344,8 +347,9 @@ app.use('/api/*', createDailyRateLimitMiddleware());
 
 // 기본 정보 엔드포인트 (GET 요청만)
 app.get('/', (c) => {
-  return c.body(ROOT_INFO_JSON, 200, ROOT_INFO_HEADERS);
+  return createRootInfoResponse(c.req.raw);
 });
+app.get('/root.json', (c) => c.body(ROOT_INFO_JSON, 200, ROOT_INFO_HEADERS));
 
 // 루트 경로에서 MCP 요청 처리 (POST, DELETE)
 app.on(['POST', 'DELETE'], '/', handleRootMcpRequest);
@@ -430,7 +434,7 @@ app.all('/mcp', handleMcpRequest);
 const worker = {
   fetch(request: Request, env: AppBindings, executionCtx: ExecutionContext) {
     if (isRootInfoRequest(request)) {
-      return createRootInfoResponse(request.method);
+      return createRootInfoResponse(request);
     }
 
     return withRouteRouting(env?.UPSTREAM_ROUTE_HEALTH, executionCtx?.waitUntil?.bind(executionCtx),

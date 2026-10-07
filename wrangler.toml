@@ -3,6 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2025-01-23"
 compatibility_flags = ["nodejs_als"]
 
+[build]
+command = "npm run build:discovery"
+
+[assets]
+directory = "./public-discovery"
+not_found_handling = "none"
+html_handling = "none"
+
 [vars]
 HEALTH_CHECK_BASE_URL = "https://daiso-mcp.hmmhmmhm.workers.dev"
 
