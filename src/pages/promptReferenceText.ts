@@ -5,6 +5,8 @@
 export function buildPromptReferenceText(baseUrl: string): string {
   return `## 응답 형식
 
+아래 JSON은 기본 JSON 응답의 구조입니다. 웹 읽기 전용 에이전트는 같은 API에 format=html을 반드시 포함해 HTML 결과를 읽으세요.
+
 ### 성공 응답
 \`\`\`json
 {
@@ -93,7 +95,7 @@ export function buildPromptReferenceText(baseUrl: string): string {
 5. **재고 확인 워크플로우**:
    - 먼저 /api/daiso/products로 제품 검색
    - 결과에서 원하는 제품의 id 확인
-   - /api/daiso/inventory에 해당 id로 재고 조회
+   - /api/daiso/inventory에 해당 id와 확인한 매장 조건, format=html로 재고 조회
    - 진열 위치가 필요하면 재고 응답의 storeCode를 확인한 뒤 /api/daiso/display-location에 productId + storeCode로 조회
    - 다이소 재고 조회는 storeCode가 필요하지 않습니다.
 6. **최소 정보 요청 처리**:

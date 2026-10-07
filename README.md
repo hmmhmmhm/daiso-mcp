@@ -5,7 +5,7 @@
 에이전트는 [짧은 시작 안내](https://mcp.aka.page/llms.txt)를 참고하세요. 무설치 요청에는 npm 설치나 전체 스키마 탐색이 필요하지 않습니다.
 웹에서는 [공개 첫 화면](https://mcp.aka.page/)에서 시작할 수 있습니다. [검색·크롤러 안내와 배포 구조](docs/web-discovery.md)는 별도 문서에 정리했습니다.
 
-웹 읽기만 가능한 채팅 에이전트는 공개 GET API에 `&format=html`을 추가해 결과를 읽을 수 있습니다. [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html) · [사용 방법](docs/web-discovery.md).
+**웹 읽기 전용 에이전트는 모든 `/api/*` GET 조회 URL에 `format=html`을 반드시 붙이세요.** 상품 검색·상세·매장·재고·후속 조회 모두 적용합니다. [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html) · [사용 방법](docs/web-discovery.md).
 
 ## 원격 MCP로 바로 시작하기
 

@@ -6,7 +6,7 @@ export function buildPromptCoreText(baseUrl: string): string {
   return `# 다이소 MCP API
 
 다이소 제품 검색, 매장 찾기, 재고 확인을 위한 API입니다.
-아래 상세 REST API 요청은 GET 방식이며, 결과는 JSON으로 반환됩니다.
+아래 상세 REST API 요청은 GET 방식입니다. 웹 읽기용 URL 예시는 format=html을 포함합니다. 응답 예시 JSON은 기본 JSON 응답의 구조를 설명하며 HTML에도 같은 실제 필드가 표시됩니다. JSON API 클라이언트는 format을 생략하세요.
 
 Base URL: ${baseUrl}
 
@@ -18,7 +18,7 @@ Base URL: ${baseUrl}
 
 **설명**: 키워드로 다이소 제품을 검색합니다.
 
-**URL**: ${baseUrl}/api/daiso/products?q={검색어}
+**URL**: ${baseUrl}/api/daiso/products?q={검색어}&format=html
 
 **필수 파라미터**:
 - q: 검색 키워드 (예: 수납박스, 펜, 정리함)
@@ -28,8 +28,8 @@ Base URL: ${baseUrl}
 - pageSize: 페이지당 결과 수 (기본값: 30, 최대: 100)
 
 **예시**:
-- ${baseUrl}/api/daiso/products?q=수납박스
-- ${baseUrl}/api/daiso/products?q=펜&page=2&pageSize=10
+- ${baseUrl}/api/daiso/products?q=수납박스&format=html
+- ${baseUrl}/api/daiso/products?q=펜&page=2&pageSize=10&format=html
 
 **응답 예시**:
 \`\`\`json
@@ -58,10 +58,10 @@ Base URL: ${baseUrl}
 
 **설명**: 제품 ID로 상세 정보를 조회합니다.
 
-**URL**: ${baseUrl}/api/daiso/products/{제품ID}
+**URL**: ${baseUrl}/api/daiso/products/{제품ID}?format=html
 
 **예시**:
-- ${baseUrl}/api/daiso/products/1234567890
+- ${baseUrl}/api/daiso/products/1234567890?format=html
 
 **응답 예시**:
 \`\`\`json
@@ -86,7 +86,7 @@ Base URL: ${baseUrl}
 
 **설명**: 키워드 또는 지역으로 다이소 매장을 검색합니다.
 
-**URL**: ${baseUrl}/api/daiso/stores?keyword={키워드}
+**URL**: ${baseUrl}/api/daiso/stores?keyword={키워드}&format=html
 
 **필수 파라미터** (둘 중 하나 필수):
 - keyword: 매장명 또는 주소 키워드 (예: 강남, 홍대, 안산)
@@ -98,9 +98,9 @@ Base URL: ${baseUrl}
 - limit: 최대 결과 수 (기본값: 50)
 
 **예시**:
-- ${baseUrl}/api/daiso/stores?keyword=강남
-- ${baseUrl}/api/daiso/stores?sido=서울&gugun=마포구
-- ${baseUrl}/api/daiso/stores?keyword=홍대&limit=10
+- ${baseUrl}/api/daiso/stores?keyword=강남&format=html
+- ${baseUrl}/api/daiso/stores?sido=서울&gugun=마포구&format=html
+- ${baseUrl}/api/daiso/stores?keyword=홍대&limit=10&format=html
 
 **응답 예시**:
 \`\`\`json
@@ -134,7 +134,7 @@ Base URL: ${baseUrl}
 
 **설명**: 특정 제품의 매장별 재고와 온라인 재고를 확인합니다.
 
-**URL**: ${baseUrl}/api/daiso/inventory?productId={제품ID}
+**URL**: ${baseUrl}/api/daiso/inventory?productId={제품ID}&format=html
 
 **필수 파라미터**:
 - productId: 제품 ID (제품 검색 API에서 조회한 id 값)
@@ -152,9 +152,9 @@ Base URL: ${baseUrl}
 - 안산 중앙역 같은 역명 키워드가 비면 안산중앙역, 안산중앙, 고잔처럼 붙여쓴 변형으로 재시도하세요.
 
 **예시**:
-- ${baseUrl}/api/daiso/inventory?productId=1234567890
-- ${baseUrl}/api/daiso/inventory?productId=1234567890&lat=37.3219&lng=126.8309
-- ${baseUrl}/api/daiso/inventory?productId=1234567890&keyword=안산
+- ${baseUrl}/api/daiso/inventory?productId=1234567890&format=html
+- ${baseUrl}/api/daiso/inventory?productId=1234567890&lat=37.3219&lng=126.8309&format=html
+- ${baseUrl}/api/daiso/inventory?productId=1234567890&keyword=안산&format=html
 
 **응답 예시**:
 \`\`\`json
@@ -197,14 +197,14 @@ Base URL: ${baseUrl}
 
 **설명**: 특정 상품이 특정 매장 내 어디에 진열되어 있는지(구역/층) 조회합니다.
 
-**URL**: ${baseUrl}/api/daiso/display-location?productId={제품ID}&storeCode={매장코드}
+**URL**: ${baseUrl}/api/daiso/display-location?productId={제품ID}&storeCode={매장코드}&format=html
 
 **필수 파라미터**:
 - productId: 제품 ID (제품 검색 API에서 조회한 id 값)
 - storeCode: 매장 코드 (재고 확인 API 결과의 storeCode 값)
 
 **예시**:
-- ${baseUrl}/api/daiso/display-location?productId=1234567890&storeCode=04515
+- ${baseUrl}/api/daiso/display-location?productId=1234567890&storeCode=04515&format=html
 
 ---
 
@@ -212,7 +212,7 @@ Base URL: ${baseUrl}
 
 **설명**: 위치 기반으로 주변 올리브영 매장을 검색합니다.
 
-**URL**: ${baseUrl}/api/oliveyoung/stores?keyword={키워드}
+**URL**: ${baseUrl}/api/oliveyoung/stores?keyword={키워드}&format=html
 
 **선택 파라미터**:
 - keyword: 매장명/지역 키워드 (예: 명동, 강남)
@@ -222,8 +222,8 @@ Base URL: ${baseUrl}
 - limit: 최대 결과 수 (기본값: 20)
 
 **예시**:
-- ${baseUrl}/api/oliveyoung/stores?keyword=명동
-- ${baseUrl}/api/oliveyoung/stores?lat=37.498&lng=127.027&limit=5
+- ${baseUrl}/api/oliveyoung/stores?keyword=명동&format=html
+- ${baseUrl}/api/oliveyoung/stores?lat=37.498&lng=127.027&limit=5&format=html
 
 ---
 
@@ -235,7 +235,7 @@ Base URL: ${baseUrl}
 - 응답의 \`products[].imageUrl\`이 있으면 각 상품 이미지를 반드시 마크다운 이미지로 함께 렌더링합니다.
 - 여러 상품이 나오면 첫 상품만 대표로 보여주지 말고, 이미지가 있는 상품은 전부 표시합니다.
 
-**URL**: ${baseUrl}/api/oliveyoung/products?keyword={검색어}
+**URL**: ${baseUrl}/api/oliveyoung/products?keyword={검색어}&format=html
 
 **필수 파라미터**:
 - keyword: 상품 검색어 (예: 마스크팩, 선크림, 립밤)
@@ -247,8 +247,8 @@ Base URL: ${baseUrl}
 - includeSoldOut: 품절 포함 여부 (기본값: false)
 
 **예시**:
-- ${baseUrl}/api/oliveyoung/products?keyword=마스크팩
-- ${baseUrl}/api/oliveyoung/products?keyword=립밤&size=10
+- ${baseUrl}/api/oliveyoung/products?keyword=마스크팩&format=html
+- ${baseUrl}/api/oliveyoung/products?keyword=립밤&size=10&format=html
 
 ---
 
@@ -256,7 +256,7 @@ Base URL: ${baseUrl}
 
 **설명**: 상품 키워드 기준 올리브영 재고를 조회하고 주변 매장 목록을 함께 반환합니다. 상위 상품에는 storeInventory가 포함되며 매장별 재고 3개, 재고 9개 이상, 품절, 미판매 같은 상태를 제공합니다.
 
-**URL**: ${baseUrl}/api/oliveyoung/inventory?keyword={검색어}
+**URL**: ${baseUrl}/api/oliveyoung/inventory?keyword={검색어}&format=html
 
 **필수 파라미터**:
 - keyword: 상품 검색어 (예: 선크림, 립밤)
@@ -270,8 +270,8 @@ Base URL: ${baseUrl}
 - includeSoldOut: 품절 포함 여부 (기본값: false)
 
 **예시**:
-- ${baseUrl}/api/oliveyoung/inventory?keyword=선크림
-- ${baseUrl}/api/oliveyoung/inventory?keyword=립밤&storeKeyword=명동
+- ${baseUrl}/api/oliveyoung/inventory?keyword=선크림&format=html
+- ${baseUrl}/api/oliveyoung/inventory?keyword=립밤&storeKeyword=명동&format=html
 
 ---
 
