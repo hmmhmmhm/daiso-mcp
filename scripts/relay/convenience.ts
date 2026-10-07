@@ -1,3 +1,4 @@
+import { parseSevenStockFailure } from '../../src/utils/sevenStockFailure.js';
 import { CU_DEFAULT_HEADERS } from '../../src/services/cu/client.js';
 import { GS25_DEFAULT_HEADERS } from '../../src/services/gs25/client.js';
 import { GS25_TOTAL_SEARCH_HEADERS } from '../../src/services/gs25/productSearch.js';
@@ -81,7 +82,15 @@ const schemas = {
         [v.longVal, v.baseLongVal].every((n) => Math.abs(Number(n)) <= 180),
     ),
   'seven-goods': z.union([
-    z.object({ collection: z.literal('goods'), query: text.min(1), sort: z.literal('quantity/desc,itemOnm/asc'), startCount: count, listCount: count.min(1) }).strict(),
+    z
+      .object({
+        collection: z.literal('goods'),
+        query: text.min(1),
+        sort: z.literal('quantity/desc,itemOnm/asc'),
+        startCount: count,
+        listCount: count.min(1),
+      })
+      .strict(),
     z.object({ query: text.min(1), pageNo: count, pageSize: count.min(1) }).strict(),
   ]),
   'seven-store': z
@@ -302,6 +311,16 @@ export function createConvenienceRelay(
         }),
         signal,
       );
+      if (operation === 'seven-stock' && response.status === 400) {
+        const data = await readJson(response.body, 16384, signal, 502);
+        const rejected = z
+          .object({ success: z.literal(false), code: z.literal(501), message: z.string() })
+          .safeParse(data);
+        throw new RelayError(
+          502,
+          rejected.success ? parseSevenStockFailure({ ...rejected.data, status: 400 }) : undefined,
+        );
+      }
       if (response.status !== 200) {
         void response.body?.cancel().catch(() => undefined);
         throw new RelayError(

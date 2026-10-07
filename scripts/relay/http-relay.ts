@@ -1,3 +1,4 @@
+import type { SevenStockFailure } from '../../src/utils/sevenStockFailure.js';
 import { canonicalKey, createResponseCache } from './cache.js';
 /** 공개 API 중계의 인증·용량·기한·동시성 제한입니다. */
 import { randomUUID, timingSafeEqual } from 'node:crypto';
@@ -24,7 +25,10 @@ export interface HttpRelayOptions {
   }) => void | Promise<void>;
 }
 export class RelayError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    readonly upstreamError?: SevenStockFailure,
+  ) {
     super('Relay failure');
   }
 }
@@ -237,7 +241,10 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
             ? error.status
             : 502;
       resultStatus = status;
-      return reply(status, { error: 'Relay request failed' });
+      return reply(status, {
+        error: 'Relay request failed',
+        upstreamError: error instanceof RelayError ? error.upstreamError : undefined,
+      });
     } finally {
       try {
         void Promise.resolve(
