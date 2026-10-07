@@ -274,16 +274,16 @@ async function renderChart(points, summary, metadata) {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-async function updateReadme(section) {
-  const readme = (await fs.readFile(README_PATH, 'utf8')).replaceAll('\r\n', '\n');
+async function updateReadme(section, readmePath = README_PATH) {
+  const readme = (await fs.readFile(readmePath, 'utf8')).replaceAll('\r\n', '\n');
   const pattern = new RegExp(`${README_START}[\\s\\S]*?${README_END}`, 'm');
   if (pattern.test(readme)) {
-    await fs.writeFile(README_PATH, readme.replace(pattern, section), 'utf8');
+    await fs.writeFile(readmePath, readme.replace(pattern, section), 'utf8');
     return;
   }
   const next = `${readme.trimEnd()}\n\n${section}\n`;
 
-  await fs.writeFile(README_PATH, next, 'utf8');
+  await fs.writeFile(readmePath, next, 'utf8');
 }
 
 async function main() {
@@ -397,6 +397,16 @@ async function main() {
     includesRootRedirect: Boolean(payload.rootRedirect),
   });
   await updateReadme(section);
+  const publicReadmePath = path.join(REPO_ROOT, 'README.md');
+  const publicReadme = await fs.readFile(publicReadmePath, 'utf8');
+  if (publicReadme.includes(README_START) && publicReadme.includes(README_END)) {
+    // 상단의 중앙 정렬은 차트 앞에서 시작하고 예시 이미지 뒤에서 끝납니다.
+    const publicSection = section
+      .replace('<div align="center">\n\n', '')
+      .replace('../../assets/analytics/', './assets/analytics/')
+      .replace(README_END, `<div align="center">\n\n${README_END}`);
+    await updateReadme(publicSection, publicReadmePath);
+  }
 
   console.log(
     `[workers-chart] script=${scriptName} days=${points.length} total=${formatNumber(payload.total)}`,

@@ -204,7 +204,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('CLOUDFLARE_ZONE_ID');
     expect(workflow).toContain('WORKERS_CHART_ROOT_REDIRECT_START');
     expect(workflow).toContain(
-      'git add scripts/ops/README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png',
+      'git add README.md scripts/ops/README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png',
     );
     expect(workflow).toContain('git pull --rebase --autostash origin main');
     expect(workflow).toContain('git push origin HEAD:main');
@@ -298,7 +298,11 @@ describe('repository maintenance configuration', () => {
     expect(readme).toContain('Daiso MCP 및 Skill');
     expect(readme).toContain('skills/daiso-cli/SKILL.md');
     expect(readme).toContain('npx daiso');
-    const fastStart = readme.split('\n').slice(0, 100).join('\n');
+    const fastStart = readme
+      .slice(readme.indexOf('다이소·편의점 재고'))
+      .split('\n')
+      .slice(0, 100)
+      .join('\n');
     expect(fastStart).toContain('https://mcp.aka.page');
     expect(fastStart).toContain('Streamable HTTP');
     expect(fastStart).toContain('API 키·토큰·OAuth 설정 불필요');
@@ -307,7 +311,7 @@ describe('repository maintenance configuration', () => {
     expect(fastStart).toContain('"method":"tools/call"');
     expect(fastStart).toContain('"name":"daiso_search_products"');
     expect(fastStart).toContain('"query":"수납박스"');
-    expect(readme).not.toContain('WORKERS_INVOCATIONS_CHART:START');
+    expect(readme).toContain('WORKERS_INVOCATIONS_CHART:START');
     expect(readme).toContain('scripts/ops/README.md');
   });
 
