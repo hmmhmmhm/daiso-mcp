@@ -18,7 +18,7 @@ it('롯데마트 경로는 업스트림 호출 없이 종료를 알린다', asyn
   }
 });
 it('롯데마트는 지원 서비스와 MCP 도구에 없다', async () => {
-  const body = await (await app.request('/')).json();
+  const body = await (await app.request('/root.json')).json();
   expect(body.tools.some((name: string) => name.startsWith('lottemart_'))).toBe(false);
 });
 it.each(['lottemartFindStores', 'lottemartSearchProducts'])('기존 action %s도 업스트림 없이 종료를 알린다', async (action) => {
