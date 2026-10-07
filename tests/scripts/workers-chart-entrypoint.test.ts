@@ -22,7 +22,8 @@ async function fixture() {
   ]) {
     await fs.copyFile(path.join('scripts/ops', name), path.join(root, 'scripts/ops', name));
   }
-  await fs.writeFile(path.join(root, 'README.md'), '# Test\n');
+  await fs.writeFile(path.join(root, 'README.md'), '# Public guide\n');
+  await fs.writeFile(path.join(root, 'scripts/ops/README.md'), '# Test\n');
   const date = formatKstDate(
     new Date(parseKstDateText(formatKstDate(new Date())).getTime() - 86400000),
   );
@@ -94,7 +95,7 @@ describe('workers chart entrypoint', () => {
       }),
     ).toThrow('Incomplete daily traffic');
     expect(await fs.readFile(dataPath, 'utf8')).toBe(original);
-    expect(await fs.readFile(path.join(root, 'README.md'), 'utf8')).toBe('# Test\n');
+    expect(await fs.readFile(path.join(root, 'scripts/ops/README.md'), 'utf8')).toBe('# Test\n');
   });
   it('실시간 실행에서 저장된 완전한 날짜를 읽고 보존한다', async () => {
     const { root, payload, dataPath } = await fixture();
@@ -116,6 +117,10 @@ describe('workers chart entrypoint', () => {
     run(root, { WORKERS_CHART_INPUT_JSON: dataPath });
     const output = JSON.parse(await fs.readFile(dataPath, 'utf8'));
     expect(output).toMatchObject(payload);
+    expect(await fs.readFile(path.join(root, 'README.md'), 'utf8')).toBe('# Public guide\n');
+    const operations = await fs.readFile(path.join(root, 'scripts/ops/README.md'), 'utf8');
+    expect(operations.startsWith('# Test\n')).toBe(true);
+    expect(operations).toContain('../../assets/analytics/workers-invocations.png');
     expect(
       (await fs.stat(path.join(root, 'assets/analytics/workers-invocations.png'))).size,
     ).toBeGreaterThan(0);
@@ -123,11 +128,11 @@ describe('workers chart entrypoint', () => {
   it('CRLF 문서에서도 기존 차트 위치와 앞뒤 내용을 보존한다', async () => {
     const { root, dataPath } = await fixture();
     await fs.writeFile(
-      path.join(root, 'README.md'),
+      path.join(root, 'scripts/ops/README.md'),
       '# Header\r\n\r\n<!-- WORKERS_INVOCATIONS_CHART:START -->\r\nold\r\n<!-- WORKERS_INVOCATIONS_CHART:END -->\r\n\r\n## Footer\r\n',
     );
     run(root, { WORKERS_CHART_INPUT_JSON: dataPath });
-    const readme = await fs.readFile(path.join(root, 'README.md'), 'utf8');
+    const readme = await fs.readFile(path.join(root, 'scripts/ops/README.md'), 'utf8');
     expect(readme.startsWith('# Header\n\n')).toBe(true);
     expect(readme.endsWith('\n\n## Footer\n')).toBe(true);
     expect(readme).toContain('Worker 실행 + 루트 GET 리디렉션 요청');

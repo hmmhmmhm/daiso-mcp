@@ -6,7 +6,7 @@ export function buildPromptCoreText(baseUrl: string): string {
   return `# 다이소 MCP API
 
 다이소 제품 검색, 매장 찾기, 재고 확인을 위한 API입니다.
-모든 요청은 GET 방식이며, 결과는 JSON으로 반환됩니다.
+아래 상세 REST API 요청은 GET 방식이며, 결과는 JSON으로 반환됩니다.
 
 Base URL: ${baseUrl}
 

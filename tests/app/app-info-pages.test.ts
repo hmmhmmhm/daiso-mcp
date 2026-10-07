@@ -18,6 +18,7 @@ describe('GET /', () => {
     const data = await res.json();
     expect(data.name).toBe('multi-service-mcp');
     expect(data.version).toBe('1.0.0');
+    expect(data.endpoints.quickStart).toContain('/llms.txt');
     expect(data.services).toBeDefined();
     expect(data.tools).toBeDefined();
     expect(data.totalServices).toBeGreaterThan(0);
@@ -370,6 +371,18 @@ describe('기본 페이지', () => {
 });
 
 describe('문서 페이지', () => {
+  it('GET /llms.txt는 외부 조회 없이 설치 없는 시작 안내를 반환한다', async () => {
+    const callsBefore = mockFetch.mock.calls.length;
+    const res = await app.fetch(new Request('https://guide.example/llms.txt'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=3600');
+    const text = await res.text();
+    expect(text).toContain('https://guide.example/prompt');
+    expect(text).toContain('daiso_search_products');
+    expect(mockFetch.mock.calls.length).toBe(callsBefore);
+  });
+
   it('GET /openapi.json 응답을 반환한다', async () => {
     const res = await app.request('/openapi.json');
     expect(res.status).toBe(200);

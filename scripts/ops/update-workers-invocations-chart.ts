@@ -23,7 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
-const README_PATH = path.join(REPO_ROOT, 'README.md');
+const README_PATH = path.join(REPO_ROOT, 'scripts', 'ops', 'README.md');
 const OUTPUT_DIR = path.join(REPO_ROOT, 'assets', 'analytics');
 const CHART_PATH = path.join(OUTPUT_DIR, 'workers-invocations.png');
 const DATA_PATH = path.join(OUTPUT_DIR, 'workers-invocations.json');
@@ -281,15 +281,7 @@ async function updateReadme(section) {
     await fs.writeFile(README_PATH, readme.replace(pattern, section), 'utf8');
     return;
   }
-  const withoutSection = readme.replace(pattern, '').replace(/\n{3,}/g, '\n\n');
-  const badgesAnchor = '\n\n<br>\n\n<br>\n\n<img src="https://i.imgur.com/mPwS4Kv.png"';
-
-  const next = withoutSection.includes(badgesAnchor)
-    ? withoutSection.replace(
-        badgesAnchor,
-        `\n\n${section}\n\n<br>\n\n<br>\n\n<img src="https://i.imgur.com/mPwS4Kv.png"`,
-      )
-    : `${section}\n\n${withoutSection}`;
+  const next = `${readme.trimEnd()}\n\n${section}\n`;
 
   await fs.writeFile(README_PATH, next, 'utf8');
 }

@@ -35,6 +35,7 @@ import { createPlacesService } from './services/places/index.js';
 import { createOpinetService } from './services/opinet/index.js';
 import { createCompareService } from './services/compare/index.js';
 import { createFeedbackService } from './services/feedback/index.js';
+import { createAgentStartResponse } from './pages/agentStart.js';
 import { createPromptResponse } from './pages/prompt.js';
 import {
   createFullOpenApiJsonResponse,
@@ -152,6 +153,7 @@ function buildRootInfo() {
     description: 'Multi-Service MCP Server for Cloudflare Workers',
     endpoints: {
       mcp: '/ 또는 /mcp (POST) - MCP 프로토콜 엔드포인트',
+      quickStart: '/llms.txt (GET) - 설치 없는 첫 조회 안내',
       health: '/health (GET) - 헬스 체크',
       healthChecks: '/api/health/checks (GET) - 서비스별 상세 헬스 체크',
       openapi: '/openapi.json (GET) - OpenAI Actions용 축약 OpenAPI',
@@ -354,6 +356,9 @@ registerHealthRoutes(app);
 registerRouteHealthRoutes(app);
 registerRateLimitStatsRoutes(app);
 registerServiceRoutes(app);
+
+// 설치 없는 첫 조회 안내
+app.get('/llms.txt', (c) => createAgentStartResponse(new URL(c.req.url).origin));
 
 // 프롬프트 페이지 (MCP 미지원 에이전트용)
 app.get('/prompt', (c) => {

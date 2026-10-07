@@ -1,707 +1,136 @@
-[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fhmmhmmhm%2Fdaiso-mcp.svg)](https://mcptoplist.com/server/glama%2Fhmmhmmhm%2Fdaiso-mcp)
-
-<div align="center">
-
-<img src="./assets/logo.svg" alt="Daiso MCP" width="120" height="120">
-
-<br>
-<br>
-
 # Daiso MCP 및 Skill
 
-다이소(제품/매장/재고), 상품 가격 비교, 주변 음식점/카페, 주유소/유가, 개발자 요청 제출, GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표), 디트릭스(독립·예술영화관/상영작/잔여 좌석) 조회 기능을 MCP, CLI, Codex Skill로 AI에 연결합니다.
+다이소·편의점 재고, 주변 장소, 주유소 가격, 영화 시간표를 AI에서 조회합니다.
+**공개 원격 MCP에 연결하면 로컬 설치·빌드·API 키 준비 없이 바로 사용할 수 있습니다.**
+에이전트는 [짧은 시작 안내](https://mcp.aka.page/llms.txt)를 참고하세요. 무설치 요청에는 npm 설치나 전체 스키마 탐색이 필요하지 않습니다.
 
-디트릭스의 지원 범위와 CLI 예시는 [독립·예술영화관 조회 가이드](docs/dtryx.md)를 참고하세요.
+## 원격 MCP로 바로 시작하기
 
-<br>
+| 연결 항목 | 값                                  |
+| :-------- | :---------------------------------- |
+| 서버 URL  | `https://mcp.aka.page`              |
+| 전송 방식 | Streamable HTTP (`http`)            |
+| 인증      | 없음: API 키·토큰·OAuth 설정 불필요 |
 
-**MCP:** `https://mcp.aka.page` · **CLI:** `npx daiso` · **Skill:** `clawhub install daiso-cli`
+1. 사용하는 AI 앱의 **원격 MCP 서버 추가** 화면을 엽니다.
+2. 위 URL을 입력하고 전송 방식을 묻는 경우 **HTTP / Streamable HTTP**를 선택합니다.
+3. 연결된 도구를 활성화하고 아래 첫 조회를 요청합니다.
 
-**ClawHub:** [clawhub.ai/hmmhmmhm/daiso-cli](https://clawhub.ai/hmmhmmhm/daiso-cli)
-
-한국 로컬 리테일, 생활 정보, 영화관 조회를 MCP, CLI, Codex Skill로 연결하는 도구입니다.
-사용자는 별도 API 키를 준비하지 않고 바로 사용할 수 있습니다.
-
-<br>
-
-<h3>지원 서비스</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th>분류</th>
-      <th>서비스</th>
-      <th>조회 기능</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>장소</td>
-      <td>네이버 지역 검색</td>
-      <td>음식점, 카페, 디저트, 주변 장소</td>
-    </tr>
-    <tr>
-      <td>교통</td>
-      <td>오피넷</td>
-      <td>전국 평균 유가, 최저가 주유소, 위치 기반 주유소, 주유소 상세정보</td>
-    </tr>
-    <tr>
-      <td>비교</td>
-      <td>다이소, GS25, 세븐일레븐, 이마트24</td>
-      <td>같은 상품의 판매처별 가격 후보 비교</td>
-    </tr>
-    <tr>
-      <td>운영</td>
-      <td>Supabase</td>
-      <td>MCP 오류, 개선 요청, 신규 기능 요청 저장</td>
-    </tr>
-    <tr>
-      <td>리테일</td>
-      <td>다이소, 올리브영</td>
-      <td>상품, 매장, 재고</td>
-    </tr>
-    <tr>
-      <td>편의점</td>
-      <td>GS25, 세븐일레븐, CU, 이마트24</td>
-      <td>상품, 매장, 재고, 인기검색어, 카탈로그</td>
-    </tr>
-    <tr>
-      <td>영화관</td>
-      <td>CGV, 메가박스, 롯데시네마</td>
-      <td>극장, 영화, 시간표, 잔여 좌석</td>
-    </tr>
-  </tbody>
-</table>
-
-<br>
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020.svg)](https://workers.cloudflare.com/)
-[![MCP](https://img.shields.io/badge/MCP-Protocol-8B5CF6.svg)](https://modelcontextprotocol.io/)
-[![Code Coverage](https://img.shields.io/badge/Code%20Coverage-100%25-brightgreen.svg)](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml)
-[![Coverage](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml)
-[![Better Stack Badge](https://uptime.betterstack.com/status-badges/v2/monitor/2mmhx.svg)](https://aka-page.betteruptime.com/)
-
-**[실시간 서비스 상태 보기](https://aka-page.betteruptime.com/)**
-
-<!-- WORKERS_INVOCATIONS_CHART:START -->
-<h3>Cloudflare 요청 수 (2026-09-07 ~ 2026-10-06, 30일)</h3>
-
-<img src="./assets/analytics/workers-invocations.png?v=2026-10-06T20:21:54.180Z" alt="Cloudflare 요청 수 그래프 (2026-09-07 ~ 2026-10-06)" width="100%">
-
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-10-07 05:21 KST</sub>
-<br><sub>집계: Worker 실행 + 루트 GET 리디렉션 요청 · 사용자 수와 다릅니다.</sub>
-
-</div>
-
-> [!IMPORTANT]
-> 최근 공개 서버 사용량이 크게 증가하여 2026년 7월 18일부터 올리브영·CGV·CU·GS25의 검색을 포함한 공개 GET API에 IP당 하루 합산 3,000회(KST 기준)의 호출 제한을 적용합니다. 한도를 초과하는 사용이 필요하다면 Daiso MCP는 오픈 소스이므로 이 저장소를 직접 배포해 이용해 주세요.
-
-<div align="center">
-
-<!-- WORKERS_INVOCATIONS_CHART:END -->
-
-<br>
-
-<br>
-
-<img src="https://i.imgur.com/mPwS4Kv.png" width="400">&nbsp;&nbsp;<img src="https://i.imgur.com/MrndJ3g.png" width="400">
-
-</div>
-
-<br>
-
----
-
-<br>
-
-## AI 앱에서 MCP 연결하기
-
-ChatGPT, Claude, Home Assistant, Grok 같은 AI 앱에서 바로 연결해 사용할 수 있습니다.
-아래 앱별 가이드에서 먼저 연동한 뒤 검색/재고/영화 조회를 요청하세요.
-
-<br>
-
-### ![ChatGPT](https://img.shields.io/badge/ChatGPT-74aa9c?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0id2hpdGUiIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHBhdGggZD0iTTE0Ljk0OSA2LjU0N2EzLjk0IDMuOTQgMCAwIDAtLjM0OC0zLjI3MyA0LjExIDQuMTEgMCAwIDAtNC40LTEuOTM0QTQuMSA0LjEgMCAwIDAgOC40MjMuMiA0LjE1IDQuMTUgMCAwIDAgNi4zMDUuMDg2YTQuMSA0LjEgMCAwIDAtMS44OTEuOTQ4IDQuMDQgNC4wNCAwIDAgMC0xLjE1OCAxLjc1MyA0LjEgNC4xIDAgMCAwLTEuNTYzLjY3OUE0IDQgMCAwIDAgLjU1NCA0LjcyYTMuOTkgMy45OSAwIDAgMCAuNTAyIDQuNzMxIDMuOTQgMy45NCAwIDAgMCAuMzQ2IDMuMjc0IDQuMTEgNC4xMSAwIDAgMCA0LjQwMiAxLjkzM2MuMzgyLjQyNS44NTIuNzY0IDEuMzc3Ljk5NS41MjYuMjMxIDEuMDk1LjM1IDEuNjcuMzQ2IDEuNzguMDAyIDMuMzU4LTEuMTMyIDMuOTAxLTIuODA0YTQuMSA0LjEgMCAwIDAgMS41NjMtLjY4IDQgNCAwIDAgMCAxLjE0LTEuMjUzIDMuOTkgMy45OSAwIDAgMC0uNTA2LTQuNzE2bS02LjA5NyA4LjQwNmEzLjA1IDMuMDUgMCAwIDEtMS45NDUtLjY5NGwuMDk2LS4wNTQgMy4yMy0xLjgzOGEuNTMuNTMgMCAwIDAgLjI2NS0uNDU1di00LjQ5bDEuMzY2Ljc3OHEuMDIuMDExLjAyNS4wMzV2My43MjJjLS4wMDMgMS42NTMtMS4zNjEgMi45OTItMy4wMzcgMi45OTZtLTYuNTMtMi43NWEyLjk1IDIuOTUgMCAwIDEtLjM2LTIuMDFsLjA5NS4wNTdMNS4yOSAxMi4wOWEuNTMuNTMgMCAwIDAgLjUyNyAwbDMuOTQ5LTIuMjQ2djEuNTU1YS4wNS4wNSAwIDAgMS0uMDIyLjA0MUw2LjQ3MyAxMy4zYy0xLjQ1NC44MjYtMy4zMTEuMzM1LTQuMTUtMS4wOThtLS44NS02Ljk0QTMuMDIgMy4wMiAwIDAgMSAzLjA3IDMuOTQ5djMuNzg1YS41MS41MSAwIDAgMCAuMjYyLjQ1MWwzLjkzIDIuMjM3LTEuMzY2Ljc3OWEuMDUuMDUgMCAwIDEtLjA0OCAwTDIuNTg1IDkuMzQyYTIuOTggMi45OCAwIDAgMS0xLjExMy00LjA5NHptMTEuMjE2IDIuNTcxTDguNzQ3IDUuNTc2bDEuMzYyLS43NzZhLjA1LjA1IDAgMCAxIC4wNDggMGwzLjI2NSAxLjg2YTMgMyAwIDAgMSAxLjE3MyAxLjIwNyAyLjk2IDIuOTYgMCAwIDEtLjI3IDMuMiAzLjA1IDMuMDUgMCAwIDEtMS4zNi45OTdWOC4yNzlhLjUyLjUyIDAgMCAwLS4yNzYtLjQ0NW0xLjM2LTIuMDE1LS4wOTctLjA1Ny0zLjIyNi0xLjg1NWEuNTMuNTMgMCAwIDAtLjUzIDBMNi4yNDkgNi4xNTNWNC41OThhLjA0LjA0IDAgMCAxIC4wMTktLjA0TDkuNTMzIDIuN2EzLjA3IDMuMDcgMCAwIDEgMy4yNTcuMTM5Yy40NzQuMzI1Ljg0My43NzggMS4wNjYgMS4zMDMuMjIzLjUyNi4yODkgMS4xMDMuMTkxIDEuNjY0ek01LjUwMyA4LjU3NSA0LjEzOSA3LjhhLjA1LjA1IDAgMCAxLS4wMjYtLjAzN1Y0LjA0OWMwLS41Ny4xNjYtMS4xMjcuNDc2LTEuNjA3cy43NTItLjg2NCAxLjI3NS0xLjEwNWEzLjA4IDMuMDggMCAwIDEgMy4yMzQuNDFsLS4wOTYuMDU0LTMuMjMgMS44MzhhLjUzLjUzIDAgMCAwLS4yNjUuNDU1em0uNzQyLTEuNTc3IDEuNzU4LTEgMS43NjIgMXYybC0xLjc1NSAxLTEuNzYyLTF6Ii8+PC9zdmc+)
-
-> MCP 연동이 어렵다는 피드백이 있어 바로 사용 가능한 GPT 앱을 추가했습니다.
-> 아래 링크로 모바일에서도 간편하게 이용 가능합니다!
-
-**[Daiso MCP GPT 앱 바로가기](https://chatgpt.com/g/g-69a5266c32108191b71a24642dc63f9e-daiso-mcp)**
-
-빠른 사용 예시:
-
-```
+```text
 다이소 mcp로 수납박스 검색해줘
-콜라 어디가 싼지 비교해줘
-올리브영 mcp로 명동 근처 매장 찾아줘
-이마트24 mcp로 강남 근처 매장과 두바이 재고 알려줘
-GS25 mcp로 강남 근처 매장과 오감자 재고 알려줘
-세븐일레븐 mcp로 삼각김밥 검색해줘
-세븐일레븐 mcp로 안산 중앙역 근처 매장 찾아줘
-세븐일레븐 mcp로 안산 중앙역 근처 세븐일레븐에서 핫식스 재고 알려줘
-세븐일레븐 mcp로 인기 검색어와 카탈로그 요약 알려줘
-강남역 근처 카페 찾아줘
-성수동 근처 브런치 음식점 찾아줘
-강남역 근처 제일 싼 주유소 찾아줘
-오늘 전국 평균 휘발유 가격 알려줘
-메가박스 mcp로 강남점 영화와 잔여 좌석 알려줘
-롯데시네마 mcp로 월드타워 근처 지점과 상영 영화 알려줘
-롯데시네마 mcp로 월드타워 잔여 좌석 알려줘
-CGV mcp로 강남 상영 영화와 시간표 알려줘
 ```
 
-에이전트가 고르면 좋은 대표 흐름:
+에이전트가 `daiso_search_products`에 `{"query":"수납박스"}`를 전달하고
+상품 목록과 가격을 반환하면 연결이 완료된 것입니다.
+앱별 화면은 [연결 가이드](docs/client-guide.md#원격-mcp-연결)를 참고하세요.
 
-- 가격 비교: `콜라 어디가 싸?` → `compare_products`
-- 주변 장소: `강남역 근처 카페 찾아줘` → `places_search_nearby`
-- 주유소/유가: `강남역 근처 제일 싼 주유소 찾아줘` → `opinet_search_stations_around`
-- 브랜드 명시 재고: `다이소 핫식스 재고 찾아줘` → 먼저 다이소에서 검색 후 결과 없을 때만 대안 제안
-- 편의점 재고: `GS25 강남 오감자 재고` → 상품 후보 확인 후 재고 조회
-- 영화 시간표: `오늘 강남 CGV 시간표` → KST 오늘 날짜로 극장 검색 후 시간표 조회
-- 개발자 요청: `올리브영 재고 도구가 계속 실패한다고 개발자에게 알려줘` → `submit_developer_request`
+### HTTP POST로 첫 MCP 조회
 
-<br>
+HTTP POST를 실행할 수 있는 에이전트나 터미널에서는 로컬 패키지 설치 없이 호출합니다.
+이 서버의 루트 POST는 initialize 없이 `tools/call`을 지원합니다.
 
-### ![Claude](https://img.shields.io/badge/Claude-D4A27F?logo=anthropic&logoColor=white)
-
-> Pro / Max / Team / Enterprise 플랜 필요 · 웹에서 설정 시 모바일 앱에서도 사용 가능
-
-1. [claude.ai](https://claude.ai)에서 **Settings** → **Connectors** 이동
-2. **Add custom connector** 클릭
-3. 원격 MCP 서버 URL 입력: `https://mcp.aka.page`
-4. **Add** 클릭하여 완료
-5. 대화창에서 **+** 버튼 → **Connectors** → 토글로 활성화
-
-사용 예시:
-
-```
-다이소 mcp를 사용해서 수납박스 검색해줘
-다이소 mcp를 사용해서 강남역 근처 매장 찾아줘
-올리브영 mcp를 사용해서 명동 근처 매장 찾아줘
-올리브영 mcp를 사용해서 선크림 재고 확인해줘
-이마트24 mcp를 사용해서 강남 매장 찾고 두바이 재고 확인해줘
-GS25 mcp를 사용해서 강남 매장 찾고 오감자 재고 확인해줘
-세븐일레븐 mcp를 사용해서 안산 중앙역 근처 매장 찾고 핫식스 재고 확인해줘
-메가박스 mcp를 사용해서 강남역 근처 지점 찾아줘
-메가박스 mcp를 사용해서 강남점 영화 목록이랑 잔여 좌석 확인해줘
-롯데시네마 mcp를 사용해서 잠실 근처 지점 찾아줘
-롯데시네마 mcp를 사용해서 월드타워 영화 목록이랑 잔여 좌석 확인해줘
-CGV mcp를 사용해서 서울 지역 극장 목록 찾아줘
-CGV mcp를 사용해서 강남 CGV 영화랑 시간표 확인해줘
+```bash
+curl -sS -N --max-time 20 'https://mcp.aka.page/' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"daiso_search_products","arguments":{"query":"수납박스","pageSize":1}}}'
 ```
 
-참고: [Claude Remote MCP 가이드](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
+응답의 SSE `data:` 안에 `error`와 `result.isError: true`가 없고,
+`result.structuredContent` 또는 `result.content`에 상품 결과가 있으면 성공입니다.
+일반 MCP 클라이언트의 initialize 흐름은 그대로 지원하며 `/mcp` 경로는 initialize가 필요합니다.
 
-<br>
+### Claude Code
 
-### ![Claude Code](https://img.shields.io/badge/Claude_Code-D4A27F?logo=anthropic&logoColor=white)
-
-> Claude Code CLI에서 MCP 서버 추가
+이미 Claude Code를 사용한다면 다음 한 줄로 공개 서버를 등록합니다.
 
 ```bash
 claude mcp add daiso-mcp https://mcp.aka.page --transport http
 ```
 
-<br>
+새 대화에서 `다이소 mcp로 수납박스 검색해줘`를 요청하세요.
 
-### Home Assistant
+### 더 해볼 수 있는 조회
 
-> Home Assistant Core 2026.7.1에서 MCP 도구 40개를 모두 정상적으로 불러오는 것을 확인했습니다.
-
-1. Home Assistant에서 **Settings** → **Devices & services**로 이동
-2. **Add Integration**을 선택하고 **Model Context Protocol**을 검색
-3. 서버 URL 입력: `https://mcp.aka.page`
-4. 연동을 마친 뒤 사용할 대화 에이전트가 MCP 도구를 사용하도록 설정
-
-참고: [Home Assistant Model Context Protocol 통합 가이드](https://www.home-assistant.io/integrations/mcp)
-
-<br>
-
-### ![Grok](https://img.shields.io/badge/Grok-000000?logo=x&logoColor=white)
-
-> 웹 및 모바일 앱 모두 지원
-
-**프롬프트 페이지 URL:**
-
-```
-https://mcp.aka.page/prompt
+```text
+다이소 mcp로 강남역 근처 매장 찾아줘
+GS25 mcp로 강남 근처 오감자 재고 알려줘
+콜라 어디가 싼지 비교해줘
+오늘 강남 CGV 시간표 알려줘
 ```
 
-사용 방법:
+재고 조회는 먼저 상품을 검색해 ID를 확인한 뒤 진행합니다.
+자세한 선택 규칙은 [AI 지시문](docs/ai-instruction.md)에 있습니다.
 
-1. Grok 모바일 앱에서 `https://mcp.aka.page/prompt` 페이지를 읽어달라고 요청
-2. 에이전트가 API 사용법을 이해하고 GET 요청으로 기능 실행
+## 지원 서비스
 
-예시 대화:
+| 분류      | 서비스                              | 주요 조회               |
+| :-------- | :---------------------------------- | :---------------------- |
+| 리테일    | 다이소, 올리브영                    | 상품·매장·재고          |
+| 편의점    | GS25, 세븐일레븐, CU, 이마트24      | 상품·매장·재고          |
+| 가격 비교 | 다이소, GS25, 세븐일레븐, 이마트24  | 같은 상품의 가격 후보   |
+| 장소·유가 | 네이버 지역 검색, 오피넷            | 카페·음식점·주유소·유가 |
+| 영화관    | CGV, 메가박스, 롯데시네마, 디트릭스 | 지점·영화·시간표·좌석   |
 
-```
-사용자: https://mcp.aka.page/prompt 를 읽어줘
-AI: (페이지를 읽고 API 사용법 이해)
+서비스별 지원 범위와 입력은 [서비스 레퍼런스](docs/service-reference.md)와
+[디트릭스 가이드](docs/dtryx.md)를 참고하세요.
+롯데마트는 지원이 종료되었습니다. 과거 분석과 호환 경로만 보존합니다.
 
-사용자: 수납박스 검색해줘
-AI: (https://mcp.aka.page/api/daiso/products?q=수납박스 호출 후 결과 제공)
+## MCP 연결을 사용할 수 없는 환경
 
-사용자: 안산 중앙역 근처 메가박스 지점 찾아줘
-AI: (https://mcp.aka.page/api/megabox/theaters?keyword=안산%20중앙역 호출 후 결과 제공)
+에이전트가 웹페이지를 읽고 GET 요청을 실행할 수 있다면
+[REST 사용법 페이지](https://mcp.aka.page/prompt)를 읽은 뒤 조회할 수 있습니다.
+이 경로는 HTTP GET 기반 REST이며 원격 MCP 연결과 별개의 대안입니다.
 
-사용자: 잠실 근처 롯데시네마 지점 찾아줘
-AI: (https://mcp.aka.page/api/lottecinema/theaters?keyword=%EC%9E%A0%EC%8B%A4 호출 후 결과 제공)
-
-사용자: 강남 CGV 시간표 알려줘
-AI: (https://mcp.aka.page/api/cgv/timetable?playDate=20260304&theaterCode=0056 호출 후 결과 제공)
-
-사용자: 안산 중앙역 근처 CGV 찾아서 오늘 영화랑 시간표 알려줘
-AI: (https://mcp.aka.page/api/cgv/theaters?playDate=20260315&keyword=안산%20중앙역 호출 후 결과 제공)
-AI: (https://mcp.aka.page/api/cgv/movies?playDate=20260315&keyword=안산%20중앙역 호출 후 결과 제공)
-AI: (https://mcp.aka.page/api/cgv/timetable?playDate=20260315&keyword=안산%20중앙역 호출 후 결과 제공)
-```
-
-<br>
-
-### 바로 실행해보기
-
-AI 앱 연동 없이 터미널에서 바로 확인할 수 있습니다.
+터미널에서는 Node.js 환경이 있을 때 다음 명령으로 조회할 수 있습니다.
 
 ```bash
 npx daiso products 수납박스 --json
-npx daiso places 강남역 --category cafe --limit 5 --json
-npx daiso gs25-inventory 오감자 --storeKeyword 강남 --storeLimit 5 --json
-npx daiso cgv-movies --playDate 20260520 --theaterCode 0056 --json
 ```
 
-<br>
-
-### MCP 서버 URL / CLI (고급)
-
-AI 앱 대신 직접 연결하거나 스크립트에서 사용할 때만 참고하세요.
-
-MCP 서버 URL:
-
-```
-https://mcp.aka.page
-```
-
-CLI (npx):
-
-```bash
-# 인터랙티브 모드 (추천)
-npx daiso
-
-# 인터랙티브 비활성화 (CI/스크립트)
-npx daiso --non-interactive
-
-# 명령형 모드
-npx daiso help
-npx daiso help products
-npx daiso url
-npx daiso health
-npx daiso claude
-
-# AI 없이 직접 조회
-npx daiso products 수납박스
-npx daiso product 1034604
-npx daiso stores 강남역
-npx daiso inventory 1034604 --keyword 강남역
-npx daiso display-location 1034604 04515
-npx daiso compare 콜라 --limit 3
-npx daiso places 강남역 --category cafe --limit 5
-npx daiso places 성수동 --keyword 브런치 --limit 5
-npx daiso get /api/opinet/lowest --fuelCode B027 --areaCode 0113 --count 5 --json
-npx daiso get /api/opinet/average --json
-npx daiso cu-stores 강남
-npx daiso cu-inventory 과자 --storeKeyword 강남
-npx daiso cgv-theaters 강남 --limit 10
-npx daiso cgv-movies --playDate 20260307 --theaterCode 0056
-npx daiso cgv-timetable --playDate 20260307 --theaterCode 0056
-npx daiso emart24-stores 강남 --service24h true
-npx daiso emart24-products 두바이 --pageSize 20
-npx daiso emart24-inventory 8800244010504 --bizNoArr 28339,05015
-npx daiso gs25-stores 강남 --limit 10
-npx daiso gs25-products 오감자 --limit 20
-npx daiso gs25-inventory 오감자 --storeKeyword 강남 --storeLimit 10
-npx daiso seveneleven-products 삼각김밥 --size 20
-npx daiso seveneleven-stores 안산 중앙역 --limit 10
-npx daiso seveneleven-inventory 핫식스 --storeKeyword "안산 중앙역" --storeLimit 10
-npx daiso seveneleven-popwords --label home
-npx daiso seveneleven-catalog --includeIssues true --includeExhibition true --limit 10
-
-# 원본 JSON 필요 시
-npx daiso products 수납박스 --json
-```
+CLI는 로컬 npm 패키지를 실행합니다. 공개 원격 MCP 연결에는 이 명령이 필요하지 않습니다.
+앱·CLI·OpenAPI 대안은 [연결 가이드](docs/client-guide.md)에 있습니다.
 
 ### Codex Skill
 
-이 저장소는 MCP 서버뿐 아니라 에이전트가 `npx daiso` CLI를 직접 고를 수 있게 하는 Codex Skill도 제공합니다.
-
-- ClawHub: `clawhub install daiso-cli`
-- 공개 페이지: `https://clawhub.ai/hmmhmmhm/daiso-cli`
-- 스킬 파일: `skills/daiso-cli/SKILL.md`
-- 명령 맵: `skills/daiso-cli/references/cli-command-map.md`
-- 기본 원칙: 쉘 실행이 가능한 환경에서는 CLI를 우선 사용하고, AI 앱 연결이 필요할 때는 MCP 서버 URL `https://mcp.aka.page`를 사용합니다.
-- 구조화 결과가 필요하면 스킬은 `npx daiso ... --json` 형태를 선택합니다.
-- 상황별 레시피는 `콜라 어디가 싸?`, `강남역 근처 카페`, `다이소 핫식스 재고`, `오늘 강남 CGV 시간표`처럼 실제 사용자 문장 기준으로 정리되어 있습니다.
-
-### OpenAPI 스펙
-
-- OpenAI 챗봇 등록용 축약 스펙: `https://mcp.aka.page/openapi.json`
-- OpenAI 챗봇 등록용 YAML: `https://mcp.aka.page/openapi.yaml`
-- 전체 개별 엔드포인트 스펙(JSON): `https://mcp.aka.page/openapi-full.json`
-- 전체 개별 엔드포인트 스펙(YAML): `https://mcp.aka.page/openapi-full.yaml`
-
-### MCP 표준 응답 모델
-
-MCP 도구 응답은 각 서비스의 원본 필드를 유지하면서, 클라이언트가 공통 UI를 만들 수 있도록 `standard` 필드를 함께 제공합니다.
-
-- `standard.products`: 상품/영화 목록을 `code`, `name`, `price`, `imageUrl`, `raw` 형태로 정규화합니다.
-- `standard.stores`: 매장 목록을 `code`, `name`, `address`, `distanceMeters`, `raw` 형태로 정규화합니다.
-- `standard.theaters`: 영화관 목록을 `code`, `name`, `address`, `distanceMeters`, `raw` 형태로 정규화합니다.
-- `standard.places`: 음식점/카페 같은 장소 목록을 `name`, `address`, `raw` 중심으로 정규화합니다.
-
-### 통합 상품 가격 비교
-
-여러 리테일/편의점 상품 검색 결과를 묶어 같은 상품의 판매처별 가격 후보를 비교합니다.
-
-```bash
-npx daiso compare 콜라 --limit 3 --json
-```
-
-REST:
-
-```text
-GET /api/compare/products?keyword=콜라&limit=3
-```
-
-지원 서비스는 `daiso`, `gs25`, `seveneleven`, `emart24`입니다. GS25처럼 상품 검색 응답에 가격이 없는 서비스는 후보에는 포함되지만 최저가 계산에서는 제외됩니다.
-
-### 오피넷 유가 정보
-
-한국석유공사 오피넷 유가정보 API로 전국 평균 유가, 지역별 최저가 주유소, 반경 내 주유소, 주유소 상세정보를 조회합니다.
-
-MCP 도구:
-
-```text
-opinet_get_average_prices
-opinet_get_lowest_price_stations
-opinet_search_stations_around
-opinet_get_station_detail
-```
-
-REST:
-
-```text
-GET /api/opinet/average
-GET /api/opinet/lowest?fuelCode=B027&areaCode=0113&count=5
-GET /api/opinet/stations/around?lat=37.4979&lng=127.0276&radiusMeters=3000&fuelCode=B027&sort=price
-GET /api/opinet/stations/around?location=강남역&radiusMeters=3000&fuelCode=B027&sort=price
-GET /api/opinet/stations/around?x=314681.8&y=544837&radiusMeters=3000&fuelCode=B027&sort=price
-GET /api/opinet/station?id=A0010207
-```
-
-오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 `lat/lng`, `location`, KATEC `x/y`를 모두 지원하며, `location` 검색에는 `KAKAO_REST_API_KEY`를 설정합니다. 역명·상호명은 네이버 지역 검색으로 보완합니다. 자세한 설정은 [무료 위치 검색 가이드](./docs/free-location-search.md)를 확인하세요.
-
-운영 제약 및 캐싱 정책:
-
-- 오피넷 무료 API는 한국석유공사 공공데이터 활용 가이드 기준 **1일 1,500 call** 한도를 기준으로 운영합니다.
-- 모든 오피넷 응답에는 `source: "한국석유공사 오피넷"`과 `fetchedAt`을 포함합니다.
-- Cloudflare Edge Cache로 동일 GET 요청의 원본 오피넷 호출을 줄입니다.
-- `GET /api/opinet/average`: 60분 캐시, 30분 stale-while-revalidate
-- `GET /api/opinet/lowest`: 30분 캐시, 10분 stale-while-revalidate
-- `GET /api/opinet/stations/around`: 20분 캐시, 5분 stale-while-revalidate
-- `GET /api/opinet/station`: 60분 캐시, 10분 stale-while-revalidate
-- 주소·장소명 변환은 카카오 주소/키워드 검색을 사용합니다. 직접 좌표를 입력하면 위치 변환 API를 호출하지 않습니다.
-- 호출 한도에 자주 도달하면 운영자가 담당 기관인 한국석유공사/오피넷에 문의해 추가 할당량 또는 별도 이용 조건을 협의할 예정입니다.
-
-### 개발자 요청 제출
-
-AI 에이전트가 MCP 기능 오류, 개선 요청, 신규 기능 요청, 문서 문제를 바로 개발자에게 전달할 수 있습니다. 요청은 Supabase `agent_requests` 테이블에 저장됩니다.
-
-MCP 도구:
-
-```text
-submit_developer_request
-```
-
-REST:
-
-```text
-POST /api/feedback/requests
-GET /api/feedback/requests?type=bug&title=제목&description=설명
-```
-
-로컬 실행이나 배포 환경에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 설정하세요. 테이블 스키마는 [supabase-agent-requests.sql](./docs/supabase-agent-requests.sql)에 있습니다.
-
-### 무료 위치 검색
-
-주소·역명·상호명을 좌표로 바꾸는 기능은 카카오맵 무료 API를 사용합니다. Google Geocoding과 Zyte는 호출하지 않습니다. 카카오 무료 쿼터 대상 확인, 환경 변수와 실패 시 동작은 [무료 위치 검색 가이드](./docs/free-location-search.md)에 있습니다.
-
-### 운영 헬스 체크
-
-공개 상태 페이지: **[Daiso MCP Status](https://aka-page.betteruptime.com/)**
-
-주변 음식점/카페 검색은 네이버 지역 검색 API를 사용합니다. 로컬 실행이나 배포 환경에는 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`을 설정하세요.
-
-서비스별 API 상태를 즉시 확인할 때는 `GET /api/health/checks`를 사용합니다. 이 엔드포인트는 `HEALTH_CHECK_SECRET` 환경 변수가 설정되어 있어야 하며, 요청에는 `Authorization: Bearer <secret>` 또는 `x-health-check-key: <secret>` 헤더가 필요합니다. 내부 체크 요청의 기준 URL은 `HEALTH_CHECK_BASE_URL`로 지정할 수 있습니다.
-
-```bash
-curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
-  "https://mcp.aka.page/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000"
-```
-
-주요 쿼리:
-
-- `service=gs25`: 특정 서비스만 확인
-- `check=daiso.products`: 특정 체크만 확인
-- `mode=quick|deep|full`: 체크 모드 선택
-- `fresh=true`: 60초 캐시 우회
-- `includeSamples=true`: 첫 결과 이름 샘플 포함
-- `timeoutMs=20000`: 체크별 요청 제한 시간
-- `slowThresholdMs=9000`: 지정 시간보다 느린 성공 응답을 degraded로 표시
-
-Health Checks 알림은 모든 실패·저하 서비스 ID를 상세 오류보다 먼저 표시합니다. 푸시 알림은 3,500자로 제한되며 전체 오류와 샘플은 해당 실행의 GitHub Actions 요약에 남습니다. 올리브영 릴레이의 설정 완전성은 `config.oliveyoungRelay`로 확인할 수 있습니다. 이 값은 연결 성공을 뜻하지 않으며, [설정 진단 문서](./docs/oliveyoung-free-relay.md#설정-진단)를 참고하세요.
-
-Zyte 유료 요청은 키 설정 여부와 관계없이 비활성화되어 있습니다. 직접 JSON 요청이 실패하면 원래 HTTP 상태와 오류를 유지합니다.
-
-상태 기준:
-
-- `ok`: 필수 응답 구조와 최소 결과가 정상입니다.
-- `degraded`: 기능은 살아 있지만 빈 결과, 느린 응답, 응답 구조 변화 등 확인이 필요합니다.
-- `fail`: 외부 API 오류, 타임아웃, 인증 문제처럼 실제 장애로 봐야 합니다.
-
-Better Stack 같은 외부 모니터링에서는 `fail`을 장애 알림 기준으로 보고, `degraded`는 느린 외부 API나 응답 품질 저하를 추적하는 경고 신호로 봅니다.
-
-### 운영 통계
-
-일일 호출 제한으로 차단한 요청의 집계는 인증된 `GET /api/rate-limit/stats`에서 조회합니다. 헬스 체크와 같은 `HEALTH_CHECK_SECRET`을 사용하며, 다음 두 인증 헤더를 모두 지원합니다.
-
-```bash
-curl -H "Authorization: Bearer $HEALTH_CHECK_SECRET" \
-  "https://mcp.aka.page/api/rate-limit/stats"
-
-curl -H "x-health-check-key: $HEALTH_CHECK_SECRET" \
-  "https://mcp.aka.page/api/rate-limit/stats?service=cgv"
-```
-
-쿼리 필터는 `from`, `to`, `service`입니다. `from`과 `to`는 함께 지정하거나 둘 다 생략해야 하며 날짜 형식은 `YYYY-MM-DD`입니다. `service`에는 `oliveyoung`, `cgv`, `cu`, `gs25`, `lottemart`만 사용할 수 있습니다. `lottemart` 필터는 지원 중단 전 호출 제한 통계를 조회하기 위해 유지합니다. 날짜를 생략하면 현재 KST 일자를 포함한 최근 7일을 조회합니다. 조회 가능한 보관 범위는 현재 KST 일자와 그 이전 29일이며, 한 번에 KST 달력 날짜 기준 최대 30일을 요청할 수 있습니다.
-
-성공 응답은 전체 합계와 일별·서비스별 차단 요청 수와 고유 차단 주체 수를 제공합니다.
-
-```json
-{
-  "success": true,
-  "data": {
-    "totals": {
-      "blockedRequests": 3,
-      "uniqueIdentities": 2
-    },
-    "daily": [
-      {
-        "day": "2026-07-22",
-        "blockedRequests": 3,
-        "uniqueIdentities": 2
-      }
-    ],
-    "services": [
-      {
-        "day": "2026-07-22",
-        "service": "cgv",
-        "blockedRequests": 3,
-        "uniqueIdentities": 2
-      }
-    ]
-  }
-}
-```
-
-데이터는 30일 동안 보관하며 집계 응답은 원본 호출 주체나 IP를 노출하지 않습니다. Worker가 생성한 `DAILY_RATE_LIMIT_EXCEEDED` 결정 중 원장 커밋에 성공한 경우만 정확한 집계 범위에 포함됩니다. Cloudflare 또는 네트워크 계층의 429와 클라이언트 전송 결과, 연결 종료 결과는 이 범위에 포함되지 않습니다. 원장 쓰기에 실패하면 요청을 fail-open 처리하고 애플리케이션 429를 반환하지 않습니다. 통계는 이 기능의 배포 시점부터 수집하며 이전 429는 소급 집계하지 않습니다.
-
-배포 전 로컬에서 CLI 모드까지 확인할 때는 아래 명령을 사용합니다.
-
-```bash
-npm run cli:smoke
-```
-
-기본 `openapi.json`은 OpenAI Actions import 제한에 맞추기 위해 `GET /api/actions/query` 단일 facade만 노출합니다.
-기존 서비스별 GET API는 유지되며, 자세한 배경은 [OpenAPI Actions Facade 문서](./docs/openapi-actions-facade.md)에 정리했습니다.
-
-인터랙티브 예시:
-
-```text
-$ npx daiso
-daiso 인터랙티브 모드
-
-[서비스 선택]
-1. 다이소
-2. 올리브영
-3. CU
-서비스 번호를 선택하세요 (0: 종료): 1
-
-매장 검색 키워드를 입력하세요: 강남
-
-[매장 선택]
-1. 다이소 강남점 | 서울 강남구 ...
-2. 다이소 강남역점 | 서울 강남구 ...
-입력: 번호 선택 | /키워드 필터 | all 전체보기 | 0 다시 검색
-선택: /역점
-선택: 1
-
-[선택한 매장 정보]
-- 매장명: 다이소 강남역점
-- 주소: 서울 강남구 ...
-- 전화: 02-...
-
-찾을 상품 키워드를 입력하세요: 수납박스
-
-[상품 선택]
-1. 손잡이 수납박스 (2000원, ID: 1034604)
-2. 접이식 수납박스 (3000원, ID: 1034605)
-입력: 번호 선택 | /키워드 필터 | all 전체보기 | 0 취소
-선택: 1
-
-[재고 결과]
-- 상품: 손잡이 수납박스
-- 매장: 다이소 강남역점
-- 재고 수량: 7
-
-[다음 동작]
-1. 같은 매장에서 다른 상품 찾기
-2. 다른 매장/서비스 다시 선택하기
-3. 종료하기
-번호를 선택하세요: 3
-인터랙티브 모드를 종료합니다.
-```
-
-<br>
-
-### 미지원 서비스
-
-| 서비스                                                                                                | 상태      |
-| :---------------------------------------------------------------------------------------------------- | :-------- |
-| ![Gemini](https://img.shields.io/badge/Gemini-8E75B2?logo=googlegemini&logoColor=white) Google Gemini | ❌ 미지원 |
-| ![Copilot](https://img.shields.io/badge/Copilot-000000?logo=github&logoColor=white) GitHub Copilot    | ❌ 미지원 |
-
-<br>
-
-## Special Thanks
-
-이 프로젝트에 도움 주신 분들께 감사드립니다.
-
-- [@thecats1105](https://github.com/thecats1105): 다이소 진열 위치 조회 도구(`daiso_get_display_location`) 구현 및 API/테스트 연동
-- [@betterthanhajin](https://github.com/betterthanhajin): CGV 서비스 프로바이더 구현(극장/영화/시간표 도구, 라우트·스펙·테스트 추가)
-- [@LLagoon3](https://github.com/LLagoon3): 다이소 매장 재고 조회 신규 인증 흐름 전환 및 관련 테스트 보강
-- [제로초님](https://youtube.com/shorts/ZgIqA1NCEp0?si=UW0pKsSpqmEi7lXG): 프로젝트 홍보 도움
-
-<br>
-
----
-
-<br>
+에이전트가 CLI 명령을 선택하도록 하는 [Skill](skills/daiso-cli/SKILL.md)도 제공합니다.
+`clawhub install daiso-cli` 설치와 사용 예시는 [연결 가이드](docs/client-guide.md#codex-skill)에 있습니다.
+
+## 응답과 이용 제한
+
+도구 응답은 원본 필드와 함께 공통 결과를 제공합니다.
+`standard.products`는 상품, `standard.stores`는 매장,
+`standard.theaters`는 영화관 목록입니다.
+[응답 모델](docs/service-reference.md#mcp-표준-응답-모델)에서 필드 정의를 확인하세요.
+
+공개 GET API 중 올리브영·CGV·CU·GS25에는 IP당 하루 합산 3,000회(KST 기준) 제한이 적용됩니다.
+조회가 실패하면 [서비스 상태](https://aka-page.betteruptime.com/)를 확인하세요.
+서버 운영과 제한 집계는 [운영 가이드](scripts/ops/README.md)에 있습니다.
 
 ## 상세 문서
 
-`Special Thanks` 이후에 있던 상세 설명은 별도 문서로 분리했습니다.
+이전 README 절의 링크는 아래 상세 가이드로 이어집니다.
 
-- [서비스 레퍼런스](./docs/service-reference.md)
-- [CONTRIBUTING 가이드](./CONTRIBUTING.md)
+<a id="ai-앱에서-mcp-연결하기"></a><a id="chatgpt"></a><a id="claude"></a><a id="claude-code"></a><a id="home-assistant"></a><a id="grok"></a><a id="바로-실행해보기"></a><a id="mcp-서버-url--cli-고급"></a><a id="openapi-스펙"></a><a id="미지원-서비스"></a>
 
-<br>
+- [앱 연결·CLI·Skill·OpenAPI](docs/client-guide.md)
+  <a id="mcp-표준-응답-모델"></a><a id="통합-상품-가격-비교"></a><a id="오피넷-유가-정보"></a><a id="개발자-요청-제출"></a><a id="무료-위치-검색"></a><a id="신규-mcp-기능-추가-시-유의사항"></a>
 
----
+- [서비스 도구·REST API·아키텍처](docs/service-reference.md)
+- [AI 도구 선택·조회 흐름](docs/ai-instruction.md)
+- [개발·설치·직접 배포](CONTRIBUTING.md)
+  <a id="운영-헬스-체크"></a><a id="운영-통계"></a>
 
-<br>
+- [서버 운영·헬스 체크·요청량 차트](scripts/ops/README.md)
+  <a id="docs-문서"></a>
 
-## docs 문서
+- [서비스 분석 문서](docs/service-reference.md#분석-문서)
 
-### 공통 가이드
+## Special Thanks
 
-- [GS25 정상 로그인·직접 인증 복구 운영 절차](./docs/gs25-auth-recovery-runbook.md)
-- [서비스 레퍼런스](./docs/service-reference.md)
-- [스크래핑 플레이북](./docs/scraping-playbook.md)
-- [mitmproxy 가이드](./docs/mitmproxy-guide.md)
-- [AI 지시문](./docs/ai-instruction.md)
-
-### 다이소
-
-- [다이소 네트워크 분석 결과](./docs/daiso-network-analysis-result.md)
-- [다이소 Playwright 네트워크 분석](./docs/daiso-playwright-network-analysis.md)
-- [다이소 리플레이 세션 테스트 HTML](./docs/daiso-replay-session-test.html)
-- [다이소 테스트 리플레이 스크립트](./docs/daiso-test-replay.ts)
-
-### CU
-
-- [CU 네트워크 분석 결과](./docs/cu-network-analysis-result.md)
-- [CU 앱 요청 캡처 가이드](./docs/cu-app-request-capture-guide.md)
-- [CU 앱 스크래핑 리플레이 가이드](./docs/cu-app-scraping-replay-guide.md)
-
-### 이마트24
-
-- [이마트24 네트워크 분석 결과](./docs/emart24-network-analysis-result.md)
-- [이마트24 앱 스크래핑 준비 가이드](./docs/emart24-app-scraping-preparation-guide.md)
-- [이마트24 앱 스크래핑 리플레이 가이드](./docs/emart24-app-scraping-replay-guide.md)
-
-### 롯데마트 과거 분석
-
-롯데마트 지원은 중단했습니다. 기존 REST 경로는 `410 SERVICE_RETIRED`, 기존 CLI 명령은 지원 중단 오류를 반환합니다.
-
-- [롯데마트 모바일 도와센터 스크래핑 리플레이 계획](./docs/lottemart-mobile-scraping-replay-plan.md)
-
-### 공통
-
-- [OpenAPI Actions facade 리팩토링 배경](./docs/openapi-actions-facade.md)
-
-### 올리브영
-
-- [올리브영 네트워크 분석 결과](./docs/oliveyoung-network-analysis-result.md)
-- [올리브영 Playwright MCP 온보딩](./docs/oliveyoung-playwright-mcp-onboarding.md)
-- [올리브영 Playwright 네트워크 분석](./docs/oliveyoung-playwright-network-analysis.md)
-- [올리브영 Lightpanda 검증](./docs/oliveyoung-lightpanda-validation.md)
-- [올리브영 리플레이 세션 테스트 스크립트](./docs/oliveyoung-replay-session-test.ts)
-- [올리브영 Zyte 대역폭 테스트](./docs/oliveyoung-zyte-bandwidth-test.ts)
-- [올리브영 Zyte 리플레이 테스트](./docs/oliveyoung-zyte-replay-test.ts)
-
-### 영화관
-
-- [CGV 네트워크 분석 결과](./docs/cgv-network-analysis-result.md)
-- [메가박스 네트워크 분석 결과](./docs/megabox-network-analysis-result.md)
-- [롯데시네마 네트워크 분석 결과](./docs/lottecinema-network-analysis-result.md)
-
-### GS25
-
-- [GS25 API 리플레이 방법론 (최종)](./docs/gs25-final-replay-methodology.md)
-- [GS25 네트워크 분석 결과 (아카이브)](./docs/archive/gs25-network-analysis-result.md)
-- [GS25 안드로이드 우회 캡처 가이드 (아카이브)](./docs/archive/gs25-android-bypass-capture-guide.md)
-- [GS25 앱 캡처 시도 로그 (2026-03-08, 아카이브)](./docs/archive/gs25-app-capture-attempt-log-20260308.md)
-- [GS25 앱 스크래핑 준비 가이드 (아카이브)](./docs/archive/gs25-app-scraping-preparation-guide.md)
-- [GS25 세션 인계 문서 (2026-03-09, 아카이브)](./docs/archive/gs25-session-handoff-20260309.md)
-
-<br>
-
----
-
-<div align="center">
-
-<br>
+- [@thecats1105](https://github.com/thecats1105): 다이소 진열 위치 조회
+- [@betterthanhajin](https://github.com/betterthanhajin): CGV 서비스
+- [@LLagoon3](https://github.com/LLagoon3): 다이소 재고 인증
+- [제로초님](https://youtube.com/shorts/ZgIqA1NCEp0?si=UW0pKsSpqmEi7lXG): 프로젝트 홍보
 
 MIT License
-
-<br>
-
-</div>
-
----
-
-## 신규 MCP 기능 추가 시 유의사항
-
-새로운 서비스나 도구를 추가할 때는 구현만 끝내지 말고 아래 반영 범위를 함께 확인해야 합니다.
-
-- `MCP`: `src/index.ts` 서비스 등록, 루트 서비스/도구 목록, 관련 테스트 반영
-- `HTTPS`: GET API 핸들러/라우트, 프롬프트 페이지(`src/pages/prompt.ts`), 앱 통합 테스트 반영
-- `CLI`: `src/cli.ts`, `src/cliHelp.ts`, CLI 테스트 반영
-- `AI instruction`: [ai-instruction.md](./docs/ai-instruction.md) 사용 규칙/워크플로우 반영
-- `README`: 지원 서비스 설명, 예시, 문서 링크 반영
-- `OpenAPI`: 기본 `/openapi.json` facade 스펙, `/openapi-full.json` 전체 스펙, 관련 테스트 반영
-
-기능 추가 후 최소 검증 기준:
-
-- `npm run typecheck`
-- `npm test`

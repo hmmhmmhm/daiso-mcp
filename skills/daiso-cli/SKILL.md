@@ -1,6 +1,6 @@
 ---
 name: daiso-cli
-description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
+description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Honor explicit no-install requests with remote MCP first; otherwise prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
 version: 1.0.6
 metadata:
   openclaw:
@@ -19,11 +19,28 @@ metadata:
 
 Use this skill to operate the Daiso MCP project through `npx daiso` and the public MCP endpoint.
 
+## 설치 없이 첫 조회
+
+사용자가 "설치 없이", "무설치"를 명시하면 로컬 CLI·스킬 설치 없이 원격 조회를 먼저 실행합니다. 연결된 원격 MCP 도구가 있으면 `daiso_search_products`를 바로 호출합니다. 원격 MCP 클라이언트의 서버 주소는 `https://mcp.aka.page`입니다.
+
+셸에서 직접 확인할 때는 아래 POST가 실제 MCP 도구 호출입니다. 이 공개 서버는 세션 없이 호출할 수 있으며 응답은 SSE의 `data:` JSON입니다. 범용 MCP 클라이언트 연결은 클라이언트가 initialize와 세션 절차를 처리합니다.
+
+```bash
+curl -fsS --max-time 20 'https://mcp.aka.page' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  --data-binary '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"daiso_search_products","arguments":{"query":"수납박스","pageSize":3}}}'
+```
+
+첫 조회 전에 `npx`, 패키지·스킬 설치, health/help, 전체 스키마나 도구 목록 탐색을 하지 않습니다. 위 예제의 검색어를 사용자 요청으로 바꾸고 조회 결과부터 제공합니다. 사용자 조건이나 호출 오류 때문에 필요한 경우에만 추가 안내를 읽습니다. 호출에 성공하면 추가 진단 없이 결과를 보여줍니다.
+
+`GET https://mcp.aka.page/api/daiso/products?q=수납박스`는 같은 서비스의 REST 직접 조회입니다. GET만 가능한 환경에서는 사용할 수 있지만 MCP 도구를 호출했다고 설명하지 않습니다. HTTP·네트워크 오류만으로 로그인 필요나 서버 장애를 단정하지 않고 실제 오류와 실행 환경을 확인합니다.
+
 ## Core Rule
 
-CLI를 우선 사용한다. The CLI is the most reliable path when you can run shell commands. Use the MCP endpoint when the user is configuring an AI app or explicitly asks for MCP connection details.
+무설치 요청이 아니고 CLI 사용이 허용된 환경에서는 CLI를 우선 사용한다. The CLI is the preferred path when you can run shell commands and package execution is allowed. Use the MCP endpoint when the user is configuring an AI app or explicitly asks for MCP connection details.
 
-## Quick Checks
+## Quick Checks (오류 진단이 필요할 때만)
 
 ```bash
 npx daiso health
@@ -64,6 +81,8 @@ npx daiso cgv-timetable --playDate <YYYYMMDD> --theaterCode <theaterCode> --json
 For more command selection examples, read `references/cli-command-map.md`.
 
 ## Request Recipes
+
+아래 CLI 레시피는 CLI 사용이 허용된 경우에만 적용합니다. 무설치 요청에서는 같은 조회를 원격 MCP 도구로 실행합니다.
 
 - "콜라 어디가 싸?", "컵라면 가격 비교해줘": run `npx daiso compare <keyword> --json` first. Confirm stock or sale prices with service-specific inventory only when the user asks for store-level availability.
 - "강남역 근처 카페", "성수동 브런치 음식점": run `npx daiso places <location> --category cafe|restaurant --json` or use `--keyword` for the food or mood. Do not ask which retail brand they mean.

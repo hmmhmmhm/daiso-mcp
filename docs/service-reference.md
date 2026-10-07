@@ -2,6 +2,92 @@
 
 README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리한 문서입니다.
 
+### MCP 표준 응답 모델
+
+MCP 도구 응답은 각 서비스의 원본 필드를 유지하면서, 클라이언트가 공통 UI를 만들 수 있도록 `standard` 필드를 함께 제공합니다.
+
+- `standard.products`: 상품/영화 목록을 `code`, `name`, `price`, `imageUrl`, `raw` 형태로 정규화합니다.
+- `standard.stores`: 매장 목록을 `code`, `name`, `address`, `distanceMeters`, `raw` 형태로 정규화합니다.
+- `standard.theaters`: 영화관 목록을 `code`, `name`, `address`, `distanceMeters`, `raw` 형태로 정규화합니다.
+- `standard.places`: 음식점/카페 같은 장소 목록을 `name`, `address`, `raw` 중심으로 정규화합니다.
+
+### 통합 상품 가격 비교
+
+여러 리테일/편의점 상품 검색 결과를 묶어 같은 상품의 판매처별 가격 후보를 비교합니다.
+
+```bash
+npx daiso compare 콜라 --limit 3 --json
+```
+
+REST:
+
+```text
+GET /api/compare/products?keyword=콜라&limit=3
+```
+
+지원 서비스는 `daiso`, `gs25`, `seveneleven`, `emart24`입니다. GS25처럼 상품 검색 응답에 가격이 없는 서비스는 후보에는 포함되지만 최저가 계산에서는 제외됩니다.
+
+### 오피넷 유가 정보
+
+한국석유공사 오피넷 유가정보 API로 전국 평균 유가, 지역별 최저가 주유소, 반경 내 주유소, 주유소 상세정보를 조회합니다.
+
+MCP 도구:
+
+```text
+opinet_get_average_prices
+opinet_get_lowest_price_stations
+opinet_search_stations_around
+opinet_get_station_detail
+```
+
+REST:
+
+```text
+GET /api/opinet/average
+GET /api/opinet/lowest?fuelCode=B027&areaCode=0113&count=5
+GET /api/opinet/stations/around?lat=37.4979&lng=127.0276&radiusMeters=3000&fuelCode=B027&sort=price
+GET /api/opinet/stations/around?location=강남역&radiusMeters=3000&fuelCode=B027&sort=price
+GET /api/opinet/stations/around?x=314681.8&y=544837&radiusMeters=3000&fuelCode=B027&sort=price
+GET /api/opinet/station?id=A0010207
+```
+
+오피넷 API 키는 `OPINET_API_KEY` 환경 변수 또는 Cloudflare Worker Secret으로 설정합니다. 키 발급은 오피넷 웹사이트의 `유가관련정보 > 유가정보 API > 인증키 발급`에서 진행합니다. 반경 검색은 `lat/lng`, `location`, KATEC `x/y`를 모두 지원하며, `location` 검색에는 `KAKAO_REST_API_KEY`를 설정합니다. 역명·상호명은 네이버 지역 검색으로 보완합니다. 자세한 설정은 [무료 위치 검색 가이드](./free-location-search.md)를 확인하세요.
+
+운영 제약 및 캐싱 정책:
+
+- 오피넷 무료 API는 한국석유공사 공공데이터 활용 가이드 기준 **1일 1,500 call** 한도를 기준으로 운영합니다.
+- 모든 오피넷 응답에는 `source: "한국석유공사 오피넷"`과 `fetchedAt`을 포함합니다.
+- Cloudflare Edge Cache로 동일 GET 요청의 원본 오피넷 호출을 줄입니다.
+- `GET /api/opinet/average`: 60분 캐시, 30분 stale-while-revalidate
+- `GET /api/opinet/lowest`: 30분 캐시, 10분 stale-while-revalidate
+- `GET /api/opinet/stations/around`: 20분 캐시, 5분 stale-while-revalidate
+- `GET /api/opinet/station`: 60분 캐시, 10분 stale-while-revalidate
+- 주소·장소명 변환은 카카오 주소/키워드 검색을 사용합니다. 직접 좌표를 입력하면 위치 변환 API를 호출하지 않습니다.
+- 호출 한도에 자주 도달하면 운영자가 담당 기관인 한국석유공사/오피넷에 문의해 추가 할당량 또는 별도 이용 조건을 협의할 예정입니다.
+
+### 개발자 요청 제출
+
+AI 에이전트가 MCP 기능 오류, 개선 요청, 신규 기능 요청, 문서 문제를 바로 개발자에게 전달할 수 있습니다. 요청은 Supabase `agent_requests` 테이블에 저장됩니다.
+
+MCP 도구:
+
+```text
+submit_developer_request
+```
+
+REST:
+
+```text
+POST /api/feedback/requests
+GET /api/feedback/requests?type=bug&title=제목&description=설명
+```
+
+로컬 실행이나 배포 환경에는 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 설정하세요. 테이블 스키마는 [supabase-agent-requests.sql](./supabase-agent-requests.sql)에 있습니다.
+
+### 무료 위치 검색
+
+주소·역명·상호명을 좌표로 바꾸는 기능은 카카오맵 무료 API를 사용합니다. Google Geocoding과 Zyte는 호출하지 않습니다. 카카오 무료 쿼터 대상 확인, 환경 변수와 실패 시 동작은 [무료 위치 검색 가이드](./free-location-search.md)에 있습니다.
+
 ## 기능
 
 ### daiso_search_products
@@ -749,6 +835,10 @@ AI: cgv_search_movies / cgv_get_timetable 도구로 영화/시간표 조회
 
 ## 개발
 
+공개 서버에 연결하는 사용자는 이 절의 설치·배포 작업이 필요하지 않습니다.
+개발 환경과 무료 조회 정책은 [CONTRIBUTING.md](../CONTRIBUTING.md)를 참고하세요.
+Zyte 유료 호출은 비활성화되어 있으며 `ZYTE_API_KEY`를 설정해도 활성화되지 않습니다.
+
 ```bash
 # Node 버전 맞추기
 nvm use
@@ -758,7 +848,7 @@ npm ci
 
 # 환경 변수 설정
 cp .env.example .env
-# .env 파일에 ZYTE_API_KEY 값 입력
+# 서비스별 환경 변수는 CONTRIBUTING.md와 운영 정책을 참고
 
 # 품질 검사 (포맷/린트/타입/테스트)
 npm run check
@@ -885,3 +975,83 @@ import { createCuService } from './services/cu/index.js';
 
 registry.registerAll([createDaisoService, createCuService]);
 ```
+
+## 분석 문서
+
+### 공통 가이드
+
+- [GS25 정상 로그인·직접 인증 복구 운영 절차](./gs25-auth-recovery-runbook.md)
+- [서비스 레퍼런스](./service-reference.md)
+- [스크래핑 플레이북](./scraping-playbook.md)
+- [mitmproxy 가이드](./mitmproxy-guide.md)
+- [AI 지시문](./ai-instruction.md)
+
+### 다이소
+
+- [다이소 네트워크 분석 결과](./daiso-network-analysis-result.md)
+- [다이소 Playwright 네트워크 분석](./daiso-playwright-network-analysis.md)
+- [다이소 리플레이 세션 테스트 HTML](./daiso-replay-session-test.html)
+- [다이소 테스트 리플레이 스크립트](./daiso-test-replay.ts)
+
+### CU
+
+- [CU 네트워크 분석 결과](./cu-network-analysis-result.md)
+- [CU 앱 요청 캡처 가이드](./cu-app-request-capture-guide.md)
+- [CU 앱 스크래핑 리플레이 가이드](./cu-app-scraping-replay-guide.md)
+
+### 이마트24
+
+- [이마트24 네트워크 분석 결과](./emart24-network-analysis-result.md)
+- [이마트24 앱 스크래핑 준비 가이드](./emart24-app-scraping-preparation-guide.md)
+- [이마트24 앱 스크래핑 리플레이 가이드](./emart24-app-scraping-replay-guide.md)
+
+### 롯데마트 과거 분석
+
+롯데마트 지원은 중단했습니다. 기존 REST 경로는 `410 SERVICE_RETIRED`, 기존 CLI 명령은 지원 중단 오류를 반환합니다.
+
+- [롯데마트 모바일 도와센터 스크래핑 리플레이 계획](./lottemart-mobile-scraping-replay-plan.md)
+
+### 공통
+
+- [OpenAPI Actions facade 리팩토링 배경](./openapi-actions-facade.md)
+
+### 올리브영
+
+- [올리브영 네트워크 분석 결과](./oliveyoung-network-analysis-result.md)
+- [올리브영 Playwright MCP 온보딩](./oliveyoung-playwright-mcp-onboarding.md)
+- [올리브영 Playwright 네트워크 분석](./oliveyoung-playwright-network-analysis.md)
+- [올리브영 Lightpanda 검증](./oliveyoung-lightpanda-validation.md)
+- [올리브영 리플레이 세션 테스트 스크립트](./oliveyoung-replay-session-test.ts)
+- [올리브영 Zyte 대역폭 테스트](./oliveyoung-zyte-bandwidth-test.ts)
+- [올리브영 Zyte 리플레이 테스트](./oliveyoung-zyte-replay-test.ts)
+
+### 영화관
+
+- [CGV 네트워크 분석 결과](./cgv-network-analysis-result.md)
+- [메가박스 네트워크 분석 결과](./megabox-network-analysis-result.md)
+- [롯데시네마 네트워크 분석 결과](./lottecinema-network-analysis-result.md)
+
+### GS25
+
+- [GS25 API 리플레이 방법론 (최종)](./gs25-final-replay-methodology.md)
+- [GS25 네트워크 분석 결과 (아카이브)](./archive/gs25-network-analysis-result.md)
+- [GS25 안드로이드 우회 캡처 가이드 (아카이브)](./archive/gs25-android-bypass-capture-guide.md)
+- [GS25 앱 캡처 시도 로그 (2026-03-08, 아카이브)](./archive/gs25-app-capture-attempt-log-20260308.md)
+- [GS25 앱 스크래핑 준비 가이드 (아카이브)](./archive/gs25-app-scraping-preparation-guide.md)
+- [GS25 세션 인계 문서 (2026-03-09, 아카이브)](./archive/gs25-session-handoff-20260309.md)
+
+## 신규 MCP 기능 추가 시 유의사항
+
+새로운 서비스나 도구를 추가할 때는 구현만 끝내지 말고 아래 반영 범위를 함께 확인해야 합니다.
+
+- `MCP`: `src/index.ts` 서비스 등록, 루트 서비스/도구 목록, 관련 테스트 반영
+- `HTTPS`: GET API 핸들러/라우트, 프롬프트 페이지(`src/pages/prompt.ts`), 앱 통합 테스트 반영
+- `CLI`: `src/cli.ts`, `src/cliHelp.ts`, CLI 테스트 반영
+- `AI instruction`: [ai-instruction.md](./ai-instruction.md) 사용 규칙/워크플로우 반영
+- `README`: 지원 서비스 설명, 예시, 문서 링크 반영
+- `OpenAPI`: 기본 `/openapi.json` facade 스펙, `/openapi-full.json` 전체 스펙, 관련 테스트 반영
+
+기능 추가 후 최소 검증 기준:
+
+- `npm run typecheck`
+- `npm test`
