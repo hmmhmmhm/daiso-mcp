@@ -1,4 +1,119 @@
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fhmmhmmhm%2Fdaiso-mcp.svg)](https://mcptoplist.com/server/glama%2Fhmmhmmhm%2Fdaiso-mcp)
+
+<div align="center">
+
+<img src="./assets/logo.svg" alt="Daiso MCP" width="120" height="120">
+
+<br>
+<br>
+
 # Daiso MCP 및 Skill
+
+다이소(제품/매장/재고), 상품 가격 비교, 주변 음식점/카페, 주유소/유가, 개발자 요청 제출, GS25(매장/상품/재고), 세븐일레븐(상품/매장/재고/인기검색어/카탈로그), CU(매장/재고), 이마트24(매장/상품/재고), 올리브영(매장/재고), 메가박스(지점/영화/시간표/좌석), 롯데시네마(지점/영화/좌석), CGV(극장/영화/시간표), 디트릭스(독립·예술영화관/상영작/잔여 좌석) 조회 기능을 MCP, CLI, Codex Skill로 AI에 연결합니다.
+
+디트릭스의 지원 범위와 CLI 예시는 [독립·예술영화관 조회 가이드](docs/dtryx.md)를 참고하세요.
+
+<br>
+
+**MCP:** `https://mcp.aka.page` · **CLI:** `npx daiso` · **Skill:** `clawhub install daiso-cli`
+
+**ClawHub:** [clawhub.ai/hmmhmmhm/daiso-cli](https://clawhub.ai/hmmhmmhm/daiso-cli)
+
+한국 로컬 리테일, 생활 정보, 영화관 조회를 MCP, CLI, Codex Skill로 연결하는 도구입니다.
+사용자는 별도 API 키를 준비하지 않고 바로 사용할 수 있습니다.
+
+<br>
+
+<h3>지원 서비스</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>분류</th>
+      <th>서비스</th>
+      <th>조회 기능</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>장소</td>
+      <td>네이버 지역 검색</td>
+      <td>음식점, 카페, 디저트, 주변 장소</td>
+    </tr>
+    <tr>
+      <td>교통</td>
+      <td>오피넷</td>
+      <td>전국 평균 유가, 최저가 주유소, 위치 기반 주유소, 주유소 상세정보</td>
+    </tr>
+    <tr>
+      <td>비교</td>
+      <td>다이소, GS25, 세븐일레븐, 이마트24</td>
+      <td>같은 상품의 판매처별 가격 후보 비교</td>
+    </tr>
+    <tr>
+      <td>운영</td>
+      <td>Supabase</td>
+      <td>MCP 오류, 개선 요청, 신규 기능 요청 저장</td>
+    </tr>
+    <tr>
+      <td>리테일</td>
+      <td>다이소, 올리브영</td>
+      <td>상품, 매장, 재고</td>
+    </tr>
+    <tr>
+      <td>편의점</td>
+      <td>GS25, 세븐일레븐, CU, 이마트24</td>
+      <td>상품, 매장, 재고, 인기검색어, 카탈로그</td>
+    </tr>
+    <tr>
+      <td>영화관</td>
+      <td>CGV, 메가박스, 롯데시네마</td>
+      <td>극장, 영화, 시간표, 잔여 좌석</td>
+    </tr>
+  </tbody>
+</table>
+
+<br>
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020.svg)](https://workers.cloudflare.com/)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-8B5CF6.svg)](https://modelcontextprotocol.io/)
+[![Code Coverage](https://img.shields.io/badge/Code%20Coverage-100%25-brightgreen.svg)](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml)
+[![Coverage](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/hmmhmmhm/daiso-mcp/actions/workflows/coverage.yml)
+[![Better Stack Badge](https://uptime.betterstack.com/status-badges/v2/monitor/2mmhx.svg)](https://aka-page.betteruptime.com/)
+
+**[실시간 서비스 상태 보기](https://aka-page.betteruptime.com/)**
+
+<!-- WORKERS_INVOCATIONS_CHART:START -->
+<h3>Cloudflare 요청 수 (2026-09-07 ~ 2026-10-06, 30일)</h3>
+
+<img src="./assets/analytics/workers-invocations.png?v=2026-10-06T20:21:54.180Z" alt="Cloudflare 요청 수 그래프 (2026-09-07 ~ 2026-10-06)" width="100%">
+
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-10-07 05:21 KST</sub>
+<br><sub>집계: Worker 실행 + 루트 GET 리디렉션 요청 · 사용자 수와 다릅니다.</sub>
+
+</div>
+
+> [!IMPORTANT]
+> 최근 공개 서버 사용량이 크게 증가하여 2026년 7월 18일부터 올리브영·CGV·CU·GS25의 검색을 포함한 공개 GET API에 IP당 하루 합산 3,000회(KST 기준)의 호출 제한을 적용합니다. 한도를 초과하는 사용이 필요하다면 Daiso MCP는 오픈 소스이므로 이 저장소를 직접 배포해 이용해 주세요.
+
+<div align="center">
+
+<!-- WORKERS_INVOCATIONS_CHART:END -->
+
+<br>
+
+<br>
+
+<img src="https://i.imgur.com/mPwS4Kv.png" width="400">&nbsp;&nbsp;<img src="https://i.imgur.com/MrndJ3g.png" width="400">
+
+</div>
+
+<br>
+
+---
+
+<br>
 
 다이소·편의점 재고, 주변 장소, 주유소 가격, 영화 시간표를 AI에서 조회합니다.
 **공개 원격 MCP에 연결하면 로컬 설치·빌드·API 키 준비 없이 바로 사용할 수 있습니다.**
@@ -64,16 +179,6 @@ GS25 mcp로 강남 근처 오감자 재고 알려줘
 
 재고 조회는 먼저 상품을 검색해 ID를 확인한 뒤 진행합니다.
 자세한 선택 규칙은 [AI 지시문](docs/ai-instruction.md)에 있습니다.
-
-## 지원 서비스
-
-| 분류      | 서비스                              | 주요 조회               |
-| :-------- | :---------------------------------- | :---------------------- |
-| 리테일    | 다이소, 올리브영                    | 상품·매장·재고          |
-| 편의점    | GS25, 세븐일레븐, CU, 이마트24      | 상품·매장·재고          |
-| 가격 비교 | 다이소, GS25, 세븐일레븐, 이마트24  | 같은 상품의 가격 후보   |
-| 장소·유가 | 네이버 지역 검색, 오피넷            | 카페·음식점·주유소·유가 |
-| 영화관    | CGV, 메가박스, 롯데시네마, 디트릭스 | 지점·영화·시간표·좌석   |
 
 서비스별 지원 범위와 입력은 [서비스 레퍼런스](docs/service-reference.md)와
 [디트릭스 가이드](docs/dtryx.md)를 참고하세요.

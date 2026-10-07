@@ -137,4 +137,24 @@ describe('workers chart entrypoint', () => {
     expect(readme.endsWith('\n\n## Footer\n')).toBe(true);
     expect(readme).toContain('Worker 실행 + 루트 GET 리디렉션 요청');
   });
+  it('상단 README 차트도 갱신하며 기존 중앙 정렬과 뒤 이미지를 보존한다', async () => {
+    const { root, dataPath } = await fixture();
+    const prefix = '# Header\n<div align="center">\n';
+    const suffix = '\n<img src="example.png">\n</div>\n## Quick start\n';
+    await fs.writeFile(
+      path.join(root, 'README.md'),
+      prefix +
+        '<!-- WORKERS_INVOCATIONS_CHART:START -->\nold chart\n</div>\n> quota\n<div align="center">\n<!-- WORKERS_INVOCATIONS_CHART:END -->' +
+        suffix,
+    );
+    run(root, { WORKERS_CHART_INPUT_JSON: dataPath });
+    const readme = await fs.readFile(path.join(root, 'README.md'), 'utf8');
+    expect(readme.startsWith(prefix)).toBe(true);
+    expect(readme.endsWith(suffix)).toBe(true);
+    expect(readme).toContain('./assets/analytics/workers-invocations.png');
+    expect(readme).not.toContain('old chart');
+    expect(readme.match(/<div align="center">/g)).toHaveLength(2);
+    expect(readme.match(/<\/div>/g)).toHaveLength(2);
+    expect(readme).toContain('IP당 하루 합산 3,000회');
+  });
 });
