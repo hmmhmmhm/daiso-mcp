@@ -1,4 +1,4 @@
-import { buildAgentStartText } from './agentStart.js';
+import { buildAgentStartText, WEB_READ_RULE } from './agentStart.js';
 
 const BASE = 'https://mcp.aka.page';
 
@@ -22,6 +22,7 @@ export function buildDiscoveryAssets(info: { services: { name: string }[]; tools
 <style>body{font-family:system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 24px;line-height:1.7;color:#18222c;background:#fafafa}h1{line-height:1.3}a{color:#075bb5}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf1f5;padding:16px;border-radius:8px}code{font-size:.9em}section{margin:32px 0}footer{border-top:1px solid #d8dee5;padding-top:20px}</style>
 </head><body><main>
 <h1>다이소 MCP</h1><p>설치 없이 상품·매장·재고와 영화관 정보를 조회하세요. 사용자 API 키나 로그인 없이 쓸 수 있는 공개 서비스입니다.</p>
+<p><strong>${escapeHtml(WEB_READ_RULE)}</strong></p>
 <section><h2>바로 조회하기</h2><p><a href="${escapeHtml(firstQuery)}">다이소 수납박스 상품 3개 조회</a></p>
 <p>위 링크는 셸·설치 없이 웹 읽기로 호출하는 공개 REST GET의 HTML 결과입니다. 다른 공개 GET 조회도 기존 파라미터에 <code>format=html</code>을 추가하세요. 검색한 상품의 실제 ID로 재고를 조회하세요. 상품 검색만으로 매장 재고를 단정하지 마세요.</p></section>
 <section><h2>에이전트에서 설치 없이 사용하기</h2><p>원격 MCP 주소: <code>${BASE}</code><br>전송: Streamable HTTP · 인증: 없음</p>
@@ -32,7 +33,7 @@ export function buildDiscoveryAssets(info: { services: { name: string }[]; tools
   -H 'Accept: application/json, text/event-stream' \\
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"daiso_search_products","arguments":{"query":"수납박스","pageSize":3}}}'</code></pre>
 <p>웹 읽기 기능으로 이 페이지를 읽는 것만으로 MCP 연결이 생기지는 않습니다. 샌드박스나 셸 없이 웹 읽기만 가능한 채팅 에이전트는 위 HTML REST 링크를 바로 여세요. 오류를 상품 없음으로 해석하지 마세요.</p>
-<p><a href="/llms.txt">짧은 시작 안내</a> · <a href="/prompt">전체 API 사용 안내</a> · <a href="/root.json">현재 서비스·도구 목록 JSON</a></p></section>
+<p><a href="/llms.txt">짧은 시작 안내</a> · <a href="/prompt">전체 API 사용 안내</a> · <a href="/root.json">개발자용 서비스·도구 목록 JSON</a></p></section>
 <section><h2>지원 서비스</h2><p>${services}</p></section>
 <footer><a href="https://github.com/hmmhmmhm/daiso-mcp">GitHub 문서와 소스</a> · <a href="/privacy">개인정보 처리방침</a></footer>
 </main></body></html>\n`,

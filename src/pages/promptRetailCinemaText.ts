@@ -5,9 +5,9 @@
 export function buildPromptRetailCinemaText(baseUrl: string): string {
   return `### 디트릭스 독립·예술영화관
 
-- 극장 카탈로그: ${baseUrl}/api/dtryx/cinemas?region=서울
-- 상영작: ${baseUrl}/api/dtryx/movies?keyword=모모&includePlayDates=true
-- 회차와 잔여 좌석: ${baseUrl}/api/dtryx/seats?region=서울
+- 극장 카탈로그: ${baseUrl}/api/dtryx/cinemas?region=서울&format=html
+- 상영작: ${baseUrl}/api/dtryx/movies?keyword=모모&includePlayDates=true&format=html
+- 회차와 잔여 좌석: ${baseUrl}/api/dtryx/seats?region=서울&format=html
 
 상영작 조회는 cinemaCode 또는 keyword가 필요합니다. 날짜 기본값은 한국 날짜 기준 오늘이며 YYYYMMDD 또는 YYYY-MM-DD를 받습니다. 지역·극장명·브랜드 필터는 함께 적용합니다. 카탈로그는 확인된 22곳이며 전체 제휴 극장이 아닙니다. 일부 실패는 failedCinemas로 표시하고 전체 조회 실패는 오류입니다.
 
@@ -16,15 +16,15 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 **설명**: 새 외부 API 키 없이 기존 다이소, GS25, 세븐일레븐, 이마트24 상품 검색을 묶어 가격 후보를 비교합니다. 실제 매장 재고와 행사가까지 확정하는 기능이 아니라 "어디가 싸 보이는지"를 빠르게 고르는 1차 검색입니다.
 
 **URL**:
-- ${baseUrl}/api/compare/products?keyword={검색어}
+- ${baseUrl}/api/compare/products?keyword={검색어}&format=html
 
 **선택 파라미터**:
 - services: daiso,gs25,seveneleven,emart24 중 쉼표 구분 목록
 - limit: 서비스별 최대 결과 수 (기본값: 5)
 
 **예시**:
-- ${baseUrl}/api/compare/products?keyword=콜라&limit=3
-- ${baseUrl}/api/compare/products?keyword=컵라면&services=seveneleven,emart24
+- ${baseUrl}/api/compare/products?keyword=콜라&limit=3&format=html
+- ${baseUrl}/api/compare/products?keyword=컵라면&services=seveneleven,emart24&format=html
 
 ---
 
@@ -33,8 +33,8 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 **설명**: 네이버 지역 검색으로 특정 지역의 음식점, 카페, 디저트 가게 등 주변 장소를 조회합니다. 좌표 반경 검색이 아니라 \`강남역 카페\` 같은 키워드 기반 검색입니다.
 
 **URL**:
-- ${baseUrl}/api/places/search?location={지역}&category={카테고리}
-- ${baseUrl}/api/places/search?location={지역}&keyword={검색어}
+- ${baseUrl}/api/places/search?location={지역}&category={카테고리}&format=html
+- ${baseUrl}/api/places/search?location={지역}&keyword={검색어}&format=html
 
 **선택 파라미터**:
 - location: 지역/역/주소 키워드 (예: 강남역, 성수동)
@@ -44,8 +44,8 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - sort: random 또는 comment
 
 **예시**:
-- ${baseUrl}/api/places/search?location=강남역&category=cafe&limit=5
-- ${baseUrl}/api/places/search?location=성수동&keyword=브런치&limit=5
+- ${baseUrl}/api/places/search?location=강남역&category=cafe&limit=5&format=html
+- ${baseUrl}/api/places/search?location=성수동&keyword=브런치&limit=5&format=html
 
 ---
 
@@ -54,10 +54,10 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 **설명**: GS25 매장 탐색, 상품 키워드 검색, 재고 조회를 제공합니다.
 
 **URL**:
-- ${baseUrl}/api/gs25/stores?keyword={키워드}
-- ${baseUrl}/api/gs25/products?keyword={검색어}
-- ${baseUrl}/api/gs25/inventory?keyword={검색어}
-- ${baseUrl}/api/gs25/inventory?itemCode={상품코드}
+- ${baseUrl}/api/gs25/stores?keyword={키워드}&format=html
+- ${baseUrl}/api/gs25/products?keyword={검색어}&format=html
+- ${baseUrl}/api/gs25/inventory?keyword={검색어}&format=html
+- ${baseUrl}/api/gs25/inventory?itemCode={상품코드}&format=html
 
 **선택 파라미터(공통)**:
 - lat: 위도 (선택)
@@ -66,10 +66,10 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - serviceCode: 서비스 코드 (기본값: 01)
 
 **예시**:
-- ${baseUrl}/api/gs25/stores?keyword=강남&limit=10
-- ${baseUrl}/api/gs25/products?keyword=오감자&limit=20
-- ${baseUrl}/api/gs25/inventory?keyword=오감자&storeKeyword=강남&storeLimit=10
-- ${baseUrl}/api/gs25/inventory?itemCode=8801056038861&storeKeyword=안산%20중앙역&storeLimit=10
+- ${baseUrl}/api/gs25/stores?keyword=강남&limit=10&format=html
+- ${baseUrl}/api/gs25/products?keyword=오감자&limit=20&format=html
+- ${baseUrl}/api/gs25/inventory?keyword=오감자&storeKeyword=강남&storeLimit=10&format=html
+- ${baseUrl}/api/gs25/inventory?itemCode=8801056038861&storeKeyword=안산%20중앙역&storeLimit=10&format=html
 
 ---
 
@@ -78,11 +78,11 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 **설명**: 세븐일레븐 상품 검색, 매장 검색, 재고 수량 조회, 인기 검색어, 카탈로그 스냅샷을 제공합니다.
 
 **URL**:
-- ${baseUrl}/api/seveneleven/products?query={검색어}
-- ${baseUrl}/api/seveneleven/stores?keyword={매장키워드}
-- ${baseUrl}/api/seveneleven/inventory?keyword={검색어}
-- ${baseUrl}/api/seveneleven/popwords?label={라벨}
-- ${baseUrl}/api/seveneleven/catalog?includeIssues={true|false}&includeExhibition={true|false}&limit={개수}
+- ${baseUrl}/api/seveneleven/products?query={검색어}&format=html
+- ${baseUrl}/api/seveneleven/stores?keyword={매장키워드}&format=html
+- ${baseUrl}/api/seveneleven/inventory?keyword={검색어}&format=html
+- ${baseUrl}/api/seveneleven/popwords?label={라벨}&format=html
+- ${baseUrl}/api/seveneleven/catalog?includeIssues={true|false}&includeExhibition={true|false}&limit={개수}&format=html
 
 **선택 파라미터**:
 - page: 페이지 번호 (기본값: 1)
@@ -94,11 +94,11 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - label: 인기 검색어 라벨 (기본값: home)
 
 **예시**:
-- ${baseUrl}/api/seveneleven/products?query=삼각김밥&size=20
-- ${baseUrl}/api/seveneleven/stores?keyword=안산%20중앙역&limit=10
-- ${baseUrl}/api/seveneleven/inventory?keyword=핫식스&storeKeyword=안산%20중앙역&storeLimit=10
-- ${baseUrl}/api/seveneleven/popwords?label=home
-- ${baseUrl}/api/seveneleven/catalog?includeIssues=true&includeExhibition=true&limit=10
+- ${baseUrl}/api/seveneleven/products?query=삼각김밥&size=20&format=html
+- ${baseUrl}/api/seveneleven/stores?keyword=안산%20중앙역&limit=10&format=html
+- ${baseUrl}/api/seveneleven/inventory?keyword=핫식스&storeKeyword=안산%20중앙역&storeLimit=10&format=html
+- ${baseUrl}/api/seveneleven/popwords?label=home&format=html
+- ${baseUrl}/api/seveneleven/catalog?includeIssues=true&includeExhibition=true&limit=10&format=html
 
 ---
 
@@ -106,7 +106,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 사용자 좌표 또는 위치 키워드 기준으로 메가박스 지점을 거리순으로 조회합니다.
 
-**URL**: ${baseUrl}/api/megabox/theaters?lat={위도}&lng={경도}
+**URL**: ${baseUrl}/api/megabox/theaters?lat={위도}&lng={경도}&format=html
 
 **선택 파라미터**:
 - keyword: 위치 키워드 (예: 안산 중앙역, 강남역)
@@ -117,9 +117,9 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - limit: 최대 결과 수 (기본값: 10)
 
 **예시**:
-- ${baseUrl}/api/megabox/theaters?keyword=안산%20중앙역&limit=5
-- ${baseUrl}/api/megabox/theaters?lat=37.4982&lng=127.0264
-- ${baseUrl}/api/megabox/theaters?areaCode=11&limit=5
+- ${baseUrl}/api/megabox/theaters?keyword=안산%20중앙역&limit=5&format=html
+- ${baseUrl}/api/megabox/theaters?lat=37.4982&lng=127.0264&format=html
+- ${baseUrl}/api/megabox/theaters?areaCode=11&limit=5&format=html
 
 ---
 
@@ -127,7 +127,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 날짜/지점 조건으로 메가박스 영화와 상영 회차를 조회합니다. theaterId가 없고 위치 키워드/좌표가 있으면 가장 가까운 지점을 먼저 선택합니다.
 
-**URL**: ${baseUrl}/api/megabox/movies?playDate={YYYYMMDD}
+**URL**: ${baseUrl}/api/megabox/movies?playDate={YYYYMMDD}&format=html
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -139,9 +139,9 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - areaCode: 지역 코드 (기본값: 11)
 
 **예시**:
-- ${baseUrl}/api/megabox/movies?playDate=20260315&keyword=안산%20중앙역
-- ${baseUrl}/api/megabox/movies?playDate=20260304&theaterId=1372
-- ${baseUrl}/api/megabox/movies?playDate=20260304&movieId=25104500
+- ${baseUrl}/api/megabox/movies?playDate=20260315&keyword=안산%20중앙역&format=html
+- ${baseUrl}/api/megabox/movies?playDate=20260304&theaterId=1372&format=html
+- ${baseUrl}/api/megabox/movies?playDate=20260304&movieId=25104500&format=html
 
 ---
 
@@ -149,7 +149,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 영화/지점/날짜 기준으로 회차별 잔여 좌석 수를 조회합니다. theaterId가 없고 위치 키워드/좌표가 있으면 가장 가까운 지점을 먼저 선택합니다.
 
-**URL**: ${baseUrl}/api/megabox/seats?playDate={YYYYMMDD}
+**URL**: ${baseUrl}/api/megabox/seats?playDate={YYYYMMDD}&format=html
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -162,9 +162,9 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - limit: 최대 결과 수 (기본값: 50)
 
 **예시**:
-- ${baseUrl}/api/megabox/seats?playDate=20260315&keyword=안산%20중앙역
-- ${baseUrl}/api/megabox/seats?playDate=20260304&theaterId=1372
-- ${baseUrl}/api/megabox/seats?playDate=20260304&movieId=25104500&limit=20
+- ${baseUrl}/api/megabox/seats?playDate=20260315&keyword=안산%20중앙역&format=html
+- ${baseUrl}/api/megabox/seats?playDate=20260304&theaterId=1372&format=html
+- ${baseUrl}/api/megabox/seats?playDate=20260304&movieId=25104500&limit=20&format=html
 
 ---
 
@@ -172,7 +172,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 지역 코드 또는 위치 키워드 기준으로 CGV 극장 목록을 조회합니다.
 
-**URL**: ${baseUrl}/api/cgv/theaters?playDate={YYYYMMDD}
+**URL**: ${baseUrl}/api/cgv/theaters?playDate={YYYYMMDD}&format=html
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -183,9 +183,9 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - limit: 최대 결과 수 (기본값: 30)
 
 **예시**:
-- ${baseUrl}/api/cgv/theaters?playDate=20260304&regionCode=01
-- ${baseUrl}/api/cgv/theaters?playDate=20260315&keyword=안산%20중앙역
-- ${baseUrl}/api/cgv/theaters?playDate=20260304&limit=10
+- ${baseUrl}/api/cgv/theaters?playDate=20260304&regionCode=01&format=html
+- ${baseUrl}/api/cgv/theaters?playDate=20260315&keyword=안산%20중앙역&format=html
+- ${baseUrl}/api/cgv/theaters?playDate=20260304&limit=10&format=html
 
 ---
 
@@ -193,7 +193,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 날짜/극장 조건으로 CGV 영화 목록을 조회합니다. theaterCode가 없으면 keyword 또는 lat,lng 기준으로 가장 가까운 극장을 먼저 선택합니다.
 
-**URL**: ${baseUrl}/api/cgv/movies?playDate={YYYYMMDD}
+**URL**: ${baseUrl}/api/cgv/movies?playDate={YYYYMMDD}&format=html
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -203,8 +203,8 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - lng: 경도
 
 **예시**:
-- ${baseUrl}/api/cgv/movies?playDate=20260304&theaterCode=0056
-- ${baseUrl}/api/cgv/movies?playDate=20260315&keyword=안산%20중앙역
+- ${baseUrl}/api/cgv/movies?playDate=20260304&theaterCode=0056&format=html
+- ${baseUrl}/api/cgv/movies?playDate=20260315&keyword=안산%20중앙역&format=html
 
 ---
 
@@ -212,7 +212,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 날짜/극장/영화 조건으로 CGV 상영 시간표를 조회합니다. theaterCode가 없으면 keyword 또는 lat,lng 기준으로 가장 가까운 극장을 먼저 선택합니다. 잔여 좌석은 각 회차의 \`remainingSeats\` 필드로 함께 내려옵니다.
 
-**URL**: ${baseUrl}/api/cgv/timetable?playDate={YYYYMMDD}
+**URL**: ${baseUrl}/api/cgv/timetable?playDate={YYYYMMDD}&format=html
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -224,9 +224,9 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - limit: 최대 결과 수 (기본값: 50)
 
 **예시**:
-- ${baseUrl}/api/cgv/timetable?playDate=20260304&theaterCode=0056
-- ${baseUrl}/api/cgv/timetable?playDate=20260315&keyword=안산%20중앙역
-- ${baseUrl}/api/cgv/timetable?playDate=20260304&movieCode=200001
+- ${baseUrl}/api/cgv/timetable?playDate=20260304&theaterCode=0056&format=html
+- ${baseUrl}/api/cgv/timetable?playDate=20260315&keyword=안산%20중앙역&format=html
+- ${baseUrl}/api/cgv/timetable?playDate=20260304&movieCode=200001&format=html
 
 ---
 
@@ -234,7 +234,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 위치 키워드 또는 사용자 좌표 기준으로 롯데시네마 지점을 거리순으로 조회합니다.
 
-**URL**: ${baseUrl}/api/lottecinema/theaters?keyword={위치키워드}
+**URL**: ${baseUrl}/api/lottecinema/theaters?keyword={위치키워드}&format=html
 
 **선택 파라미터**:
 - keyword: 위치 키워드 (예: 안산 중앙역, 잠실역)
@@ -244,8 +244,8 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - limit: 최대 결과 수 (기본값: 10)
 
 **예시**:
-- ${baseUrl}/api/lottecinema/theaters?keyword=안산%20중앙역
-- ${baseUrl}/api/lottecinema/theaters?lat=37.5133&lng=127.1042
+- ${baseUrl}/api/lottecinema/theaters?keyword=안산%20중앙역&format=html
+- ${baseUrl}/api/lottecinema/theaters?lat=37.5133&lng=127.1042&format=html
 
 ---
 
@@ -253,7 +253,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 날짜/지점/영화 조건으로 롯데시네마 영화와 상영 회차를 조회합니다. theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택할 수 있습니다.
 
-**URL**: ${baseUrl}/api/lottecinema/movies?playDate={YYYYMMDD}
+**URL**: ${baseUrl}/api/lottecinema/movies?playDate={YYYYMMDD}&format=html
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -264,9 +264,9 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - lng: 경도 (theaterId가 없을 때 사용)
 
 **예시**:
-- ${baseUrl}/api/lottecinema/movies?playDate=20260315&keyword=안산%20중앙역
-- ${baseUrl}/api/lottecinema/movies?playDate=20260310&theaterId=1016
-- ${baseUrl}/api/lottecinema/movies?playDate=20260310&theaterId=1016&movieId=23816
+- ${baseUrl}/api/lottecinema/movies?playDate=20260315&keyword=안산%20중앙역&format=html
+- ${baseUrl}/api/lottecinema/movies?playDate=20260310&theaterId=1016&format=html
+- ${baseUrl}/api/lottecinema/movies?playDate=20260310&theaterId=1016&movieId=23816&format=html
 
 ---
 
@@ -274,7 +274,7 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 
 **설명**: 영화/지점/날짜 기준으로 회차별 잔여 좌석 수를 조회합니다. theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택할 수 있습니다.
 
-**URL**: ${baseUrl}/api/lottecinema/seats?playDate={YYYYMMDD}
+**URL**: ${baseUrl}/api/lottecinema/seats?playDate={YYYYMMDD}&format=html
 
 **선택 파라미터**:
 - playDate: 조회 날짜 (YYYYMMDD, 기본값: 오늘)
@@ -286,8 +286,8 @@ export function buildPromptRetailCinemaText(baseUrl: string): string {
 - limit: 최대 결과 수 (기본값: 50)
 
 **예시**:
-- ${baseUrl}/api/lottecinema/seats?playDate=20260315&keyword=안산%20중앙역
-- ${baseUrl}/api/lottecinema/seats?playDate=20260310&theaterId=1016&movieId=23816
+- ${baseUrl}/api/lottecinema/seats?playDate=20260315&keyword=안산%20중앙역&format=html
+- ${baseUrl}/api/lottecinema/seats?playDate=20260310&theaterId=1016&movieId=23816&format=html
 
 ---
 
