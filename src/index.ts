@@ -1,3 +1,4 @@
+import { apiResultHtml } from './pages/apiResult.js';
 import { withRouteRouting } from './utils/routeHealth.js';
 import { refreshRouteChecks } from './utils/routeProbes.js';
 import { registerRouteHealthRoutes } from './api/routes/routeHealthRoutes.js';
@@ -318,12 +319,10 @@ const handleRootMcpRequest = async (c: Context<{ Bindings: AppBindings }>) => {
   await server.connect(transport);
   return transport.handleRequest(c.req.raw, { parsedBody });
 };
-
 // Hono 앱 생성
 const app = new Hono<{ Bindings: AppBindings }>();
 
 app.use('*', diagnosticsMiddleware);
-
 // CORS 설정
 app.use(
   '*',
@@ -343,6 +342,7 @@ app.use(
 );
 
 // Zyte 연동 공개 GET API의 일일 호출량을 IP별로 제한합니다.
+app.use('/api/*', apiResultHtml);
 app.use('/api/*', createDailyRateLimitMiddleware());
 
 // 기본 정보 엔드포인트 (GET 요청만)

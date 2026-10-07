@@ -34,3 +34,13 @@ robots.txt는 hmart.app과 같은 방식으로 `User-agent: *`와 주요 AI 봇�
 6. 검색/웹 읽기 도구에서 새 HTML이 읽히는지 별도로 확인합니다. HTTP 200과 robots 허용만으로 도구 내부 캐시나 읽기 성공을 보장할 수 없습니다.
 
 OpenAI 검색·사용자 요청·학습 봇의 역할과 공개 IP는 [공식 봇 문서](https://developers.openai.com/api/docs/bots)를 참조합니다. Cloudflare 제공 방식은 [Assets 라우팅 문서](https://developers.cloudflare.com/workers/static-assets/routing/worker-script/)를 참조합니다.
+
+## 웹 읽기만 가능한 채팅 에이전트
+
+샌드박스나 셸 없이 URL만 읽을 수 있다면 [수납박스 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)를 먼저 엽니다. 첫 화면과 llms.txt에도 이 링크를 안내합니다. 결과는 서버에서 생성하므로 JavaScript 실행이 필요 없습니다.
+
+공개 `/api/*` GET 경로의 기존 파라미터에 `format=html`을 추가하면 같은 실제 조회 결과를 HTML로 제공합니다. `format`을 생략하면 기존 JSON 응답입니다. 예: `/api/daiso/stores?keyword=강남&format=html`, `/api/daiso/inventory?productId=실제상품ID&keyword=확인한매장명&lat=확인한위도&lng=확인한경도&format=html`. 상품 목록의 상세 링크도 HTML로 연결합니다. 다른 서비스의 필수 파라미터는 `/prompt`에서 확인합니다.
+
+HTML은 원래 응답의 성공·오류와 HTTP 상태를 보존합니다. 상품 검색 결과를 매장 재고로 단정하거나 오류를 재고 0으로 해석하면 안 됩니다. POST와 MCP 응답 형식은 변경하지 않습니다. 웹 읽기 도구가 HTML 접근도 거부하는 경우에는 이 옵션만으로 도구 내부 문제를 해결하지 못합니다.
+
+`llms.txt`와 `robots.txt`는 정적 Assets에서도 `text/plain; charset=utf-8`을 명시합니다. UTF-8 본문을 다른 인코딩으로 추측하는 클라이언트에서 한글이 깨지는 것을 방지합니다.
