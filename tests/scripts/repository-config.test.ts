@@ -62,7 +62,7 @@ describe('repository maintenance configuration', () => {
       overrides?: Record<string, string | Record<string, string>>;
     };
 
-    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.4', undici: '7.29.1' });
+    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.5', undici: '7.29.1' });
   });
 
   it('brace-expansion은 취약점이 수정된 5.0.8 이상을 사용한다', () => {
@@ -142,11 +142,12 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain("node-version: '24'");
     expect(workflow.match(/npm run build/g)).toHaveLength(1);
     expect(workflow).toContain(
-      'CLI_SMOKE_SERVICES: daiso gs25 seveneleven emart24 lottemart oliveyoung megabox lottecinema cgv opinet',
+      'CLI_SMOKE_SERVICES: daiso gs25 seveneleven emart24 oliveyoung megabox lottecinema cgv opinet',
     );
     expect(workflow).toContain(
       'MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet',
     );
+    expect(workflow).not.toContain('lottemart');
     expect(workflow).toContain('SMOKE_ATTEMPT_TIMEOUT_SECONDS: 90');
     expect(workflow).toContain('for SMOKE_SERVICE in ${CLI_SMOKE_SERVICES}; do');
     expect(workflow).toContain('for SMOKE_SERVICE in ${MCP_SMOKE_SERVICES}; do');
