@@ -2,6 +2,23 @@
 
 README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리한 문서입니다.
 
+## 설치 없이 첫 조회
+
+공개 원격 MCP는 `https://mcp.aka.page`이며 Streamable HTTP 방식이고 인증·API 키가 필요 없습니다.
+에이전트용 짧은 안내는 [빠른 시작](https://mcp.aka.page/llms.txt)에 있습니다. 첫 조회에는 이 상세 레퍼런스나 전체 도구 목록을 먼저 읽을 필요가 없습니다.
+
+HTTP POST를 실행할 수 있다면 아래 한 요청으로 실제 MCP 상품 조회를 완료합니다. 루트 POST가 지원하는 서버 전용 단축 경로여서 initialize나 로컬 패키지 설치가 필요 없습니다.
+
+```bash
+curl -sS -N --max-time 20 'https://mcp.aka.page/' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"daiso_search_products","arguments":{"query":"수납박스","pageSize":3}}}'
+```
+
+SSE `data:`의 JSON에 `error`가 없고 `result.isError`가 true가 아닌지 확인한 뒤 `result.structuredContent.products`에서 실제 상품을 읽습니다. 검색에 성공하면 결과부터 보여주고 추가 진단은 생략합니다.
+범용 MCP 클라이언트는 표준 initialize 흐름을 사용하며 `/mcp`는 초기화가 필요합니다. GET만 가능한 환경의 REST 대안은 위 빠른 시작 안내를 확인하세요.
+
 ### MCP 표준 응답 모델
 
 MCP 도구 응답은 각 서비스의 원본 필드를 유지하면서, 클라이언트가 공통 UI를 만들 수 있도록 `standard` 필드를 함께 제공합니다.
