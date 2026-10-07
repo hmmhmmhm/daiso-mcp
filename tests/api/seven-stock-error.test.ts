@@ -107,3 +107,63 @@ it('원본 400의 오류 형식이 다르면 본문을 전달하지 않는다', 
   );
   expect(await response.json()).toEqual({ error: 'Relay request failed' });
 });
+it('원본 조회 거부는 HTTP 중계 오류 페이지 대신 실패 envelope로 전달한다', async () => {
+  const relay = createConvenienceRelay('token', {
+    takeQuota: async () => true,
+    fetcher: async () => Response.json({ success: false, message, code: 501 }, { status: 400 }),
+  });
+  const response = await relay(
+    new Request('http://localhost/v1/convenience/seven-stock', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer token' },
+      body: JSON.stringify(body),
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    success: false,
+    upstreamError: { status: 400, code: 501, message },
+  });
+});
+it.each([null, 1, {}, { upstreamError: { status: 400, code: 501, message: 'private' } }])(
+  '정상 HTTP에서도 검증되지 않은 진단을 전달하지 않는다 %j',
+  async (value) => {
+    vi.stubGlobal('fetch', async () => Response.json(value));
+    try {
+      if (!value || typeof value !== 'object')
+        await expect(
+          requestConvenienceRelay('seven-stock', body, {
+            convenienceRelayUrl: 'https://relay.example',
+            convenienceRelayToken: 'token',
+          }),
+        ).rejects.toThrow('실패');
+      else
+        expect(
+          await requestConvenienceRelay('seven-stock', body, {
+            convenienceRelayUrl: 'https://relay.example',
+            convenienceRelayToken: 'token',
+          }),
+        ).toEqual(value);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  },
+);
+it('구버전 중계의 HTTP 502 원본 진단도 보존한다', async () => {
+  vi.stubGlobal('fetch', async () =>
+    Response.json(
+      { error: 'Relay request failed', upstreamError: { status: 400, code: 501, message } },
+      { status: 502 },
+    ),
+  );
+  try {
+    await expect(
+      requestConvenienceRelay('seven-stock', body, {
+        convenienceRelayUrl: 'https://relay.example',
+        convenienceRelayToken: 'token',
+      }),
+    ).rejects.toMatchObject({ upstreamStatus: 400, retryable: false });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

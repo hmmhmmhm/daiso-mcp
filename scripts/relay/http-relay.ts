@@ -241,7 +241,8 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
             ? error.status
             : 502;
       resultStatus = status;
-      return reply(status, {
+      return reply(error instanceof RelayError && error.upstreamError ? 200 : status, {
+        ...(error instanceof RelayError && error.upstreamError ? { success: false } : {}),
         error: 'Relay request failed',
         upstreamError: error instanceof RelayError ? error.upstreamError : undefined,
       });

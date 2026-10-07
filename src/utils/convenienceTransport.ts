@@ -173,6 +173,23 @@ async function requestConvenienceRelayRaw<T>(
       }
       readingResponse = true;
       const data: unknown = await response.json();
+      if (operation === 'seven-stock') {
+        const failure = parseSevenStockFailure(
+          data && typeof data === 'object'
+            ? (data as Record<string, unknown>).upstreamError
+            : undefined,
+        );
+        if (failure)
+          throw new ServiceError(
+            'CONVENIENCE_RELAY_FAILED',
+            `${failure.message} ${EXTERNAL_SERVICE_RETRY_HINT}`,
+            502,
+            false,
+            failure.status,
+            undefined,
+            failure,
+          );
+      }
       if (
         !data ||
         typeof data !== 'object' ||
