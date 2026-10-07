@@ -306,7 +306,7 @@ describe('repository maintenance configuration', () => {
     expect(fastStart).toContain('https://mcp.aka.page');
     expect(fastStart).toContain('Streamable HTTP');
     expect(fastStart).toContain('API 키·토큰·OAuth 설정 불필요');
-    expect(fastStart).toContain('로컬 설치·빌드·API 키 준비 없이');
+    expect(readme).toContain('로컬 설치·빌드·API 키 준비 없이');
     expect(fastStart).toContain('Accept: application/json, text/event-stream');
     expect(fastStart).toContain('"method":"tools/call"');
     expect(fastStart).toContain('"name":"daiso_search_products"');

@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> **AI 에이전트 — 설치 없이 MCP 사용:** 공개 원격 서버 `https://mcp.aka.page`에 Streamable HTTP로 연결하면 **로컬 설치·빌드·API 키 준비 없이 바로 사용할 수 있습니다.** 무설치 요청에는 npm 설치나 전체 스키마 탐색을 하지 말고, [짧은 시작 안내](https://mcp.aka.page/llms.txt)를 읽은 뒤 필요한 도구를 호출하세요.
+>
+> **웹 읽기 전용 에이전트 — `format=html` 필수:** MCP 연결 없이 GET으로 조회할 때는 **모든 `/api/*` 조회 URL에 `format=html`을 반드시 붙이세요.** 상품 검색·상세·매장·재고·후속 조회 모두 적용하며, JSON을 읽을 수 있다고 가정해 생략하지 마세요.
+>
+> [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html) · [REST 사용법](https://mcp.aka.page/prompt) · [원격 MCP 연결](#원격-mcp로-바로-시작하기)
+
 [![MCP Toplist](https://mcptoplist.com/badge/glama%2Fhmmhmmhm%2Fdaiso-mcp.svg)](https://mcptoplist.com/server/glama%2Fhmmhmmhm%2Fdaiso-mcp)
 
 <div align="center">
@@ -116,11 +123,7 @@
 <br>
 
 다이소·편의점 재고, 주변 장소, 주유소 가격, 영화 시간표를 AI에서 조회합니다.
-**공개 원격 MCP에 연결하면 로컬 설치·빌드·API 키 준비 없이 바로 사용할 수 있습니다.**
-에이전트는 [짧은 시작 안내](https://mcp.aka.page/llms.txt)를 참고하세요. 무설치 요청에는 npm 설치나 전체 스키마 탐색이 필요하지 않습니다.
 웹에서는 [공개 첫 화면](https://mcp.aka.page/)에서 시작할 수 있습니다. [검색·크롤러 안내와 배포 구조](docs/web-discovery.md)는 별도 문서에 정리했습니다.
-
-**웹 읽기 전용 에이전트는 모든 `/api/*` GET 조회 URL에 `format=html`을 반드시 붙이세요.** 상품 검색·상세·매장·재고·후속 조회 모두 적용합니다. [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html) · [사용 방법](docs/web-discovery.md).
 
 ## 원격 MCP로 바로 시작하기
 
