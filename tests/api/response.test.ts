@@ -34,7 +34,7 @@ describe('errorResponse', () => {
           service: 'gs25',
           operation: 'product_search',
           upstreamStatus: undefined,
-          hint: '일시적인 외부 서비스 오류일 수 있습니다. 잠시 후 다시 시도하세요.',
+          hint: '일시적인 외부 서비스 오류입니다. 잠시 후 재시도해주세요.',
         },
       },
       500,
@@ -89,7 +89,7 @@ describe('설정 오류 진단', () => {
   ])('일반 외부 오류는 재시도 판단을 유지한다: %s %s', (code, message, status, upstreamStatus) => {
     expect(toStandardErrorDiagnostics(code, message, { status, upstreamStatus })).toMatchObject({
       retryable: true,
-      hint: '일시적인 외부 서비스 오류일 수 있습니다. 잠시 후 다시 시도하세요.',
+      hint: '일시적인 외부 서비스 오류입니다. 잠시 후 재시도해주세요.',
     });
   });
 });

@@ -1,3 +1,4 @@
+import { EXTERNAL_SERVICE_RETRY_HINT, type SevenStockFailure } from '../utils/sevenStockFailure.js';
 /**
  * MCP/API 공통 에러 진단 구조
  */
@@ -14,12 +15,14 @@ export interface StandardErrorDiagnostics {
   service?: string;
   operation?: string;
   upstreamStatus?: number;
+  upstreamCode?: number;
+  upstreamMessage?: string;
   quotaReason?: RelayQuota['quotaReason'];
   retryAfter?: number;
   hint: string;
 }
 
-/** 외부 응답 원문 없이 API와 MCP에 전달할 오류 진단입니다. */
+/** 허용된 공개 오류 문구만 API와 MCP에 전달합니다. */
 export class ServiceError extends Error {
   readonly quotaReason?: RelayQuota['quotaReason'];
   readonly retryAfter?: number;
@@ -30,6 +33,7 @@ export class ServiceError extends Error {
     readonly retryable: boolean,
     readonly upstreamStatus?: number,
     quota?: RelayQuota,
+    readonly upstreamError?: SevenStockFailure,
   ) {
     super(message);
     this.name = 'ServiceError';
@@ -91,9 +95,7 @@ function isRetryable(code: string, status?: number): boolean {
 }
 
 function buildHint(retryable: boolean): string {
-  return retryable
-    ? '일시적인 외부 서비스 오류일 수 있습니다. 잠시 후 다시 시도하세요.'
-    : '입력값 또는 요청 조건을 확인하세요.';
+  return retryable ? EXTERNAL_SERVICE_RETRY_HINT : '입력값 또는 요청 조건을 확인하세요.';
 }
 
 export function toStandardErrorDiagnostics(
@@ -114,8 +116,7 @@ export function toStandardErrorDiagnostics(
     'Zyte API 호출 실패: 403 account suspended',
     'ZYTE_API_KEY가 설정되지 않았습니다.',
   ].some((diagnostic) => message.includes(diagnostic));
-  const gs25AuthenticationError =
-    message.includes('GS25 재고 서비스 인증을 사용할 수 없습니다.');
+  const gs25AuthenticationError = message.includes('GS25 재고 서비스 인증을 사용할 수 없습니다.');
   const oliveyoungRelayConfigurationError = [
     '올리브영 릴레이 URL은 HTTPS 또는 로컬 HTTP 주소여야 합니다.',
     'OY_RELAY_TOKEN이 필요합니다.',
@@ -140,12 +141,12 @@ export function toStandardErrorDiagnostics(
     hint: oliveyoungRelayConfigurationError
       ? '운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN 및 브라우저 릴레이 실행 상태를 확인하세요.'
       : costPolicyError
-      ? ZYTE_COST_POLICY_MESSAGE
-      : gs25AuthenticationError
-        ? '운영자는 GS25_API_KEY 설정을 확인하세요.'
-        : configurationError
-          ? '운영자는 ZYTE_API_KEY 설정과 Zyte 계정 상태를 확인하세요.'
-          : buildHint(retryable),
+        ? ZYTE_COST_POLICY_MESSAGE
+        : gs25AuthenticationError
+          ? '운영자는 GS25_API_KEY 설정을 확인하세요.'
+          : configurationError
+            ? '운영자는 ZYTE_API_KEY 설정과 Zyte 계정 상태를 확인하세요.'
+            : buildHint(retryable),
   };
 }
 
@@ -154,7 +155,10 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /** 전송 계층에서 확인한 재시도 가능 여부를 공통 진단에도 유지합니다. */
-export function toServiceErrorDiagnostics(error: ServiceError, operation: string): StandardErrorDiagnostics {
+export function toServiceErrorDiagnostics(
+  error: ServiceError,
+  operation: string,
+): StandardErrorDiagnostics {
   return {
     ...toStandardErrorDiagnostics(error.code, error.message, {
       status: error.status,
@@ -164,6 +168,9 @@ export function toServiceErrorDiagnostics(error: ServiceError, operation: string
     retryable: error.retryable,
     quotaReason: error.quotaReason,
     retryAfter: error.retryAfter,
-    hint: buildHint(error.retryable),
+    ...(error.upstreamError
+      ? { upstreamCode: error.upstreamError.code, upstreamMessage: error.upstreamError.message }
+      : {}),
+    hint: error.upstreamError ? EXTERNAL_SERVICE_RETRY_HINT : buildHint(error.retryable),
   };
 }

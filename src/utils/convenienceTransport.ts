@@ -1,3 +1,4 @@
+import { parseSevenStockFailure, EXTERNAL_SERVICE_RETRY_HINT } from './sevenStockFailure.js';
 /** 편의점 공통 릴레이 설정과 인증 전송입니다. */
 import { requestDirectRoute } from './directRoutes.js';
 import { isRouteKey, routeOperation } from './routeHealth.js';
@@ -131,7 +132,24 @@ async function requestConvenienceRelayRaw<T>(
         signal: controller.signal,
       });
       if (response.status !== 200) {
-        void response.body?.cancel().catch(() => undefined);
+        if (operation === 'seven-stock' && response.status === 502) {
+          const data: unknown = await response.json().catch(() => undefined);
+          const failure = parseSevenStockFailure(
+            data && typeof data === 'object'
+              ? (data as Record<string, unknown>).upstreamError
+              : undefined,
+          );
+          if (failure)
+            throw new ServiceError(
+              'CONVENIENCE_RELAY_FAILED',
+              `${failure.message} ${EXTERNAL_SERVICE_RETRY_HINT}`,
+              502,
+              false,
+              failure.status,
+              undefined,
+              failure,
+            );
+        } else void response.body?.cancel().catch(() => undefined);
         const status = response.status;
         const delay = parseRetryAfterDelayMs(response) ?? 250;
         if (
