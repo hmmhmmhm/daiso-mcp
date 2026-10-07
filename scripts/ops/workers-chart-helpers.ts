@@ -296,9 +296,11 @@ export function buildReadmeSection({
 }) {
   return [
     '<!-- WORKERS_INVOCATIONS_CHART:START -->',
+    '<div align="center">',
+    '',
     `<h3>Cloudflare 요청 수 (${startDate} ~ ${endDate}, ${days}일)</h3>`,
     '',
-    `<img src="./assets/analytics/workers-invocations.png?v=${cacheKey}" alt="Cloudflare 요청 수 그래프 (${startDate} ~ ${endDate})" width="100%">`,
+    `<img src="../../assets/analytics/workers-invocations.png?v=${cacheKey}" alt="Cloudflare 요청 수 그래프 (${startDate} ~ ${endDate})" width="100%">`,
     '',
     `<sub>기준 워커: <code>${scriptName}</code> · 마지막 갱신: ${updatedAt}</sub>`,
     `<br><sub>집계: ${includesRootRedirect ? 'Worker 실행 + 루트 GET 리디렉션 요청' : 'Worker 실행'} · 사용자 수와 다릅니다.</sub>`,
@@ -307,8 +309,6 @@ export function buildReadmeSection({
     '',
     '> [!IMPORTANT]',
     '> 최근 공개 서버 사용량이 크게 증가하여 2026년 7월 18일부터 올리브영·CGV·CU·GS25의 검색을 포함한 공개 GET API에 IP당 하루 합산 3,000회(KST 기준)의 호출 제한을 적용합니다. 한도를 초과하는 사용이 필요하다면 Daiso MCP는 오픈 소스이므로 이 저장소를 직접 배포해 이용해 주세요.',
-    '',
-    '<div align="center">',
     '',
     '<!-- WORKERS_INVOCATIONS_CHART:END -->',
   ].join('\n');

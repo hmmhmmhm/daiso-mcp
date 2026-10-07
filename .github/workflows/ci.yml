@@ -9,6 +9,7 @@ on:
       - main
     paths-ignore:
       - 'README.md'
+      - 'scripts/ops/README.md'
       - 'assets/analytics/**'
 
 permissions:

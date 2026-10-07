@@ -5,6 +5,7 @@
  * 에이전트가 이 페이지를 읽고 GET API를 사용할 수 있습니다.
  */
 
+import { buildAgentStartText } from './agentStart.js';
 import { buildPromptCoreText } from './promptCoreText.js';
 import { buildPromptReferenceText } from './promptReferenceText.js';
 import { buildPromptRetailCinemaText } from './promptRetailCinemaText.js';
@@ -14,6 +15,7 @@ import { buildPromptRetailCinemaText } from './promptRetailCinemaText.js';
  */
 export function generatePromptText(baseUrl: string): string {
   return [
+    buildAgentStartText(baseUrl),
     buildPromptCoreText(baseUrl),
     buildPromptRetailCinemaText(baseUrl),
     buildPromptReferenceText(baseUrl),

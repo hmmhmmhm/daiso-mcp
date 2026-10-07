@@ -31,7 +31,7 @@ describe('buildReadmeSection', () => {
     );
   });
 
-  it('GitHub 알림 카드가 되도록 중앙 정렬 영역 밖에 안내문을 둔다', () => {
+  it('운영 문서 상대 이미지 경로와 독립된 중앙 정렬 영역을 사용한다', () => {
     const section = buildReadmeSection({
       scriptName: 'daiso-mcp',
       updatedAt: '2026-07-17 23:05 KST',
@@ -42,7 +42,10 @@ describe('buildReadmeSection', () => {
     });
 
     expect(section).toContain('</div>\n\n> [!IMPORTANT]');
-    expect(section).toContain('이용해 주세요.\n\n<div align="center">');
+    expect(section).toContain('../../assets/analytics/workers-invocations.png');
+    expect(section).toContain('<!-- WORKERS_INVOCATIONS_CHART:START -->\n<div align="center">');
+    expect(section.match(/<div/g)).toHaveLength(1);
+    expect(section.match(/<\/div>/g)).toHaveLength(1);
   });
 });
 

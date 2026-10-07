@@ -144,9 +144,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain(
       'CLI_SMOKE_SERVICES: daiso gs25 seveneleven emart24 oliveyoung megabox lottecinema cgv opinet',
     );
-    expect(workflow).toContain(
-      'MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet',
-    );
+    expect(workflow).toContain('MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet');
     expect(workflow).not.toContain('lottemart');
     expect(workflow).toContain('SMOKE_ATTEMPT_TIMEOUT_SECONDS: 90');
     expect(workflow).toContain('for SMOKE_SERVICE in ${CLI_SMOKE_SERVICES}; do');
@@ -206,7 +204,7 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('CLOUDFLARE_ZONE_ID');
     expect(workflow).toContain('WORKERS_CHART_ROOT_REDIRECT_START');
     expect(workflow).toContain(
-      'git add README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png',
+      'git add scripts/ops/README.md assets/analytics/workers-invocations.json assets/analytics/workers-invocations.png',
     );
     expect(workflow).toContain('git pull --rebase --autostash origin main');
     expect(workflow).toContain('git push origin HEAD:main');
@@ -225,7 +223,9 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain(
       '/api/health/checks?mode=full&fresh=true&includeSamples=true&timeoutMs=20000&slowThresholdMs=9000',
     );
-    expect(workflow).toContain('/api/health/checks?mode=quick&fresh=true&timeoutMs=5000&slowThresholdMs=3000');
+    expect(workflow).toContain(
+      '/api/health/checks?mode=quick&fresh=true&timeoutMs=5000&slowThresholdMs=3000',
+    );
     expect(workflow).toContain('HEALTH_CHECK_FORCE_FRESH="true"');
     expect(workflow).not.toContain('HEALTH_CHECK_FORCE_FRESH="false"');
     expect(workflow).toContain('x-health-check-force-fresh: ${HEALTH_CHECK_FORCE_FRESH}');
@@ -254,6 +254,7 @@ describe('repository maintenance configuration', () => {
     for (const workflow of [ci, coverage, deploy, codeql]) {
       expect(workflow).toContain('paths-ignore:');
       expect(workflow).toContain("'README.md'");
+      expect(workflow).toContain("'scripts/ops/README.md'");
       expect(workflow).toContain("'assets/analytics/**'");
     }
   });
@@ -297,10 +298,21 @@ describe('repository maintenance configuration', () => {
     expect(readme).toContain('Daiso MCP 및 Skill');
     expect(readme).toContain('skills/daiso-cli/SKILL.md');
     expect(readme).toContain('npx daiso');
+    const fastStart = readme.split('\n').slice(0, 100).join('\n');
+    expect(fastStart).toContain('https://mcp.aka.page');
+    expect(fastStart).toContain('Streamable HTTP');
+    expect(fastStart).toContain('API 키·토큰·OAuth 설정 불필요');
+    expect(fastStart).toContain('로컬 설치·빌드·API 키 준비 없이');
+    expect(fastStart).toContain('Accept: application/json, text/event-stream');
+    expect(fastStart).toContain('"method":"tools/call"');
+    expect(fastStart).toContain('"name":"daiso_search_products"');
+    expect(fastStart).toContain('"query":"수납박스"');
+    expect(readme).not.toContain('WORKERS_INVOCATIONS_CHART:START');
+    expect(readme).toContain('scripts/ops/README.md');
   });
 
   it('운영 문서는 정확한 429 통계 조회 계약과 범위를 설명한다', () => {
-    const readme = readText('README.md');
+    const readme = readText('scripts/ops/README.md');
     const serviceReference = readText('docs/service-reference.md');
     const readmeOperations = readme.slice(
       readme.indexOf('### 운영 통계'),
@@ -312,17 +324,17 @@ describe('repository maintenance configuration', () => {
     );
     const curlBlockMatch = readmeOperations.match(/```bash\r?\n([\s\S]*?)\r?\n```/);
     if (!curlBlockMatch?.[1]) {
-      throw new Error('README 운영 통계 절에 `bash` 코드 블록 호출 예시가 필요합니다.');
+      throw new Error('운영 가이드 통계 절에 `bash` 코드 블록 호출 예시가 필요합니다.');
     }
     const jsonBlockMatch = readmeOperations.match(/```json\r?\n([\s\S]*?)\r?\n```/);
     if (!jsonBlockMatch?.[1]) {
-      throw new Error('README 운영 통계 절에 `json` 코드 블록 성공 응답 예시가 필요합니다.');
+      throw new Error('운영 가이드 통계 절에 `json` 코드 블록 성공 응답 예시가 필요합니다.');
     }
     let statsExample: unknown;
     try {
       statsExample = JSON.parse(jsonBlockMatch[1]);
     } catch (error) {
-      throw new Error(`README 운영 통계 JSON 예시를 파싱할 수 없습니다: ${String(error)}`);
+      throw new Error(`운영 가이드 통계 JSON 예시를 파싱할 수 없습니다: ${String(error)}`);
     }
 
     expect(readmeOperations).toContain('GET /api/rate-limit/stats');

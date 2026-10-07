@@ -5,6 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import app from '../../src/index.js';
+import { buildAgentStartText } from '../../src/pages/agentStart.js';
 import type { AppBindings } from '../../src/api/response.js';
 import { createMockProductResponse } from '../api/testHelpers.js';
 
@@ -48,6 +49,34 @@ async function createLocalMcpClient(bindings?: AppBindings): Promise<Client> {
 }
 
 describe('MCP client smoke', () => {
+  it('시작 안내의 단일 POST가 initialize 없이 실제 상품을 반환한다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify(
+      createMockProductResponse([{ PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '5000' }], 1),
+    )));
+    const guide = buildAgentStartText('https://local.test');
+    const body = guide.match(/--data '([^']+)'/)?.[1];
+    expect(body).toBeDefined();
+    const response = await app.fetch(new Request('https://local.test/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
+      body,
+    }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('mcp-session-id')).toBeNull();
+    expect(response.headers.get('Content-Type')).toContain('text/event-stream');
+    const dataLine = (await response.text()).split('\n').find((line) => line.startsWith('data: '));
+    expect(dataLine).toBeDefined();
+    const message = JSON.parse(dataLine!.slice(6));
+    expect(message.error).toBeUndefined();
+    expect(message.result.isError).not.toBe(true);
+    expect(message.result.structuredContent.products).toEqual([
+      expect.objectContaining({ id: '1049516', name: '수납박스', price: 5000 }),
+    ]);
+    expect(message.result.structuredContent.query).toBe('수납박스');
+    expect(message.result.structuredContent.pageSize).toBe(3);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('SDK 도구 목록의 모든 도구가 outputSchema를 노출한다', async () => {
     const client = await createLocalMcpClient();
     try {
