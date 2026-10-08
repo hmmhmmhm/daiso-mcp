@@ -116,8 +116,11 @@ export function createRelayLogger(directory: string, options: LoggerOptions) {
           if (typeof value === 'number' && Number.isFinite(value) && value >= 0)
             safe[field] = value;
         }
+        const upstreamStatus = (event as Record<string, unknown>).upstreamStatus;
+        if (typeof upstreamStatus === 'number' && Number.isInteger(upstreamStatus) &&
+            upstreamStatus >= 100 && upstreamStatus <= 599) safe.upstreamStatus = upstreamStatus;
         const line = `${JSON.stringify(safe)}\n`;
-        // 허용 필드 7개×64자와 숫자 4개로 각 이벤트는 2KiB 미만입니다.
+        // 허용 필드 7개×64자와 숫자 5개로 각 이벤트는 2KiB 미만입니다.
         if (queued >= 256) {
           dropped++;
           return;

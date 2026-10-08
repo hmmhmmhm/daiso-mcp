@@ -26,7 +26,7 @@ export function createConsumerQuota(now = Date.now, maxEntries = 1024) {
       return {
         reserve() {
           resetMinute();
-          if (entry.count + entry.reserved >= 24) return null;
+          if (entry.count + entry.reserved >= 240) return null;
           entry.reserved++;
           let reserved = true;
           return {

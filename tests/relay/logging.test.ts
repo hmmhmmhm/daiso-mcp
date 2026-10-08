@@ -24,6 +24,19 @@ const event = {
   quotaReason: 'minute',
 };
 const space = async () => ({ bavail: 3 * 1024 ** 3, bsize: 1 });
+it('원본 상태는 HTTP 정수만 기록하며 본문과 헤더는 기록하지 않는다', async () => {
+  const dir = await directory();
+  const logger = createRelayLogger(dir, { service: 'convenience', statfs: space });
+  logger.append({ ...event, upstreamStatus: 403, body: 'private-body', headers: 'private-headers' });
+  for (const upstreamStatus of ['403', undefined, 99, 600, 403.5, NaN, Infinity]) logger.append({ upstreamStatus });
+  await logger.flush();
+  const files = await readdir(dir);
+  const text = (await Promise.all(files.map(name => readFile(join(dir, name), 'utf8')))).join('');
+  const rows = text.trim().split('\n').map(line => JSON.parse(line));
+  expect(rows[0].upstreamStatus).toBe(403);
+  expect(rows.slice(1).every(row => row.upstreamStatus === undefined)).toBe(true);
+  expect(text).not.toContain('private');
+});
 it('허용 필드만 안전한 권한의 JSONL로 기록한다', async () => {
   const dir = await directory();
   const logger = createRelayLogger(dir, { service: 'oliveyoung', statfs: space });

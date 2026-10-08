@@ -215,6 +215,9 @@ CLI는 로컬 npm 패키지를 실행합니다. 공개 원격 MCP 연결에는 �
 [응답 모델](docs/service-reference.md#mcp-표준-응답-모델)에서 필드 정의를 확인하세요.
 
 공개 GET API 중 올리브영·CGV·CU·GS25에는 IP당 하루 합산 3,000회(KST 기준) 제한이 적용됩니다.
+
+Mac 중계의 일일 예산은 100배, 분당 속도는 10배로 증액했습니다. 원본 호출 기준 한도는 편의점 공유 일 1,000만 회·분 690회, 올리브영과 Dtryx·CGV 공유는 각각 일 30만 회·분 300회입니다. 자세한 집계와 재시도 기준은 [중계 한도 안내](docs/health-check-stock-and-quota.md)를 참고하세요.
+
 조회가 실패하면 [서비스 상태](https://aka-page.betteruptime.com/)를 확인하세요.
 서버 운영과 제한 집계는 [운영 가이드](scripts/ops/README.md)에 있습니다.
 
