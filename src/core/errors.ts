@@ -171,6 +171,8 @@ export function toServiceErrorDiagnostics(
     ...(error.upstreamError
       ? { upstreamCode: error.upstreamError.code, upstreamMessage: error.upstreamError.message }
       : {}),
-    hint: error.upstreamError ? EXTERNAL_SERVICE_RETRY_HINT : buildHint(error.retryable),
+    hint: error.quotaReason
+      ? `중계 사용량 제한입니다. ${error.retryAfter}초 후 재시도해주세요.`
+      : error.upstreamError ? EXTERNAL_SERVICE_RETRY_HINT : buildHint(error.retryable),
   };
 }

@@ -306,6 +306,7 @@ describe('기본 페이지', () => {
         accessPairValid: true,
         usedBy: ['oliveyoung'],
       },
+      cgvRelay: { configured: false, urlConfigured: false, urlValid: false, tokenConfigured: false, accessClientIdConfigured: false, accessClientSecretConfigured: false, accessConfigured: false, accessPairValid: true, usedBy: ['cgv'] },
       dtryxRelay: {
         configured: false,
         urlConfigured: false,

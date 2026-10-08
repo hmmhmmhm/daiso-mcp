@@ -1,5 +1,6 @@
 /** 직접 조회와 주기 검사에서 같은 고정 경로·검증기를 사용합니다. */
 import * as z from 'zod';
+import { cgvDirectRouteSpecs } from '../services/cgv/directRoute.js';
 import type { RouteKey } from './routeHealth.js';
 import { OLIVEYOUNG_API as OY } from '../services/oliveyoung/api.js';
 import { DTRYX_API as DT } from '../services/dtryx/api.js';
@@ -10,7 +11,7 @@ import {
 } from './directRouteSpecsConvenience.js';
 
 export interface DirectRouteSpec {
-  build(body: unknown): { url: URL; init: RequestInit };
+  build(body: unknown): { url: URL; init: RequestInit } | Promise<{ url: URL; init: RequestInit }>;
   response: z.ZodType;
   probe: () => unknown;
 }
@@ -240,4 +241,7 @@ Object.entries(dtOperations).forEach(([key, operation]) => {
     },
   };
 });
-export const directRouteSpecs = specs as Record<RouteKey, DirectRouteSpec>;
+export const directRouteSpecs = { ...specs, ...cgvDirectRouteSpecs } as Record<
+  RouteKey,
+  DirectRouteSpec
+>;

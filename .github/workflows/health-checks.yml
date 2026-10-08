@@ -78,7 +78,9 @@ jobs:
           const degradedChecks = (payload.checks || []).filter((check) => check.status === 'degraded');
           const lines = [...failedChecks, ...degradedChecks].map((check) => {
             const sample = check.sample?.first ? ` sample=${check.sample.first}` : '';
-            return `${check.id}:${check.status}:${check.message}${sample}`;
+            const diagnostics = [check.errorCode, check.upstreamStatus === undefined ? '' : `upstreamStatus=${check.upstreamStatus}`,
+              check.quotaReason ? `quotaReason=${check.quotaReason}` : '', check.retryAfter ? `retryAfter=${check.retryAfter}s` : ''].filter(Boolean).join(' ');
+            return `${check.id}:${check.status}:${check.message}${sample}${diagnostics ? ' ' + diagnostics : ''}`;
           });
           const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
           const summary = [
@@ -100,12 +102,9 @@ jobs:
           NODE
           }
 
-          if ! run_health_check; then
-            echo "Health check failed on attempt 1; retrying once"
-            sleep 10
-            HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_ENDPOINT}&cacheBust=true"
-            run_health_check
-          fi
+          # 실패 직후 전체 검사를 반복하면 정상 경로까지 중계 한도를 다시 소비합니다.
+          # 원본 실패와 Retry-After는 첫 검사 기록으로 판단하고 다음 점검에서 재확인합니다.
+          run_health_check
 
       - name: Preserve health check attempts
         if: always()

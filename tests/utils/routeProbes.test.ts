@@ -16,7 +16,7 @@ it('skips scheduling work when namespace is absent', async () => {
   await refreshRouteChecks({});
   expect(checkDirectRoute).not.toHaveBeenCalled();
 });
-it('writes all twenty checks and authenticated health probes with fixed paths', async () => {
+it('writes all twenty-four checks and authenticated health probes with fixed paths', async () => {
   await refreshRouteChecks({
     UPSTREAM_ROUTE_HEALTH: namespace,
     OY_RELAY_URL: 'https://oy.example',
@@ -28,13 +28,14 @@ it('writes all twenty checks and authenticated health probes with fixed paths', 
     DTRYX_RELAY_URL: 'https://dt.example',
     DTRYX_RELAY_TOKEN: 'dt',
   });
-  expect(checkDirectRoute).toHaveBeenCalledTimes(20);
+  expect(checkDirectRoute).toHaveBeenCalledTimes(24);
   expect(vi.mocked(boundedRouteJson).mock.calls.map(([url]) => String(url))).toEqual([
+    'https://dt.example/v1/cgv/health',
     'https://oy.example/health',
     'https://cv.example/v1/convenience/health',
     'https://dt.example/v1/dtryx/health',
   ]);
-  expect(vi.mocked(boundedRouteJson).mock.calls[1][1].headers).toMatchObject({
+  expect(vi.mocked(boundedRouteJson).mock.calls[2][1].headers).toMatchObject({
     Authorization: 'Bearer cv',
     'CF-Access-Client-Id': 'id',
     'CF-Access-Client-Secret': 'secret',
@@ -44,7 +45,7 @@ it('writes all twenty checks and authenticated health probes with fixed paths', 
     (fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
   );
   expect(payload.checks.map((c: { key: string }) => c.key)).toEqual(ROUTE_KEYS);
-  expect(payload.relays).toHaveLength(3);
+  expect(payload.relays).toHaveLength(4);
 });
 it('writes partial failures independently without exposing exception details', async () => {
   vi.mocked(checkDirectRoute).mockRejectedValueOnce(new Error('private'));
@@ -107,7 +108,10 @@ it('rejects incomplete Access credentials, unsafe URL and invalid health bodies'
   const payload = JSON.parse(
     (fetcher.mock.calls.at(-1) as unknown as [string, RequestInit])[1].body as string,
   );
-  expect(payload.relays.at(-1)).toMatchObject({ healthy: false, reason: 'network-error' });
+  expect(payload.relays.find((relay: { group: string }) => relay.group === 'cgv')).toMatchObject({
+    healthy: false,
+    reason: 'network-error',
+  });
 });
 
 it('limits outstanding probes to four and retains all independently completed checks', async () => {

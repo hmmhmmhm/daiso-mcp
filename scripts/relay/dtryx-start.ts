@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { createFileQuota, assertSeparateQuotaDirectories, CONVENIENCE_QUOTA_LIMITS } from './quota.js';
 import { createConvenienceRelay } from './convenience.js';
 import { createGs25SessionTransport } from './gs25-session.js';
+import { createCgvRelay } from './cgv.js';
 import { createDtryxRelay } from './dtryx.js';
 
 let logger: ReturnType<typeof createRelayLogger> | undefined;
@@ -63,9 +64,17 @@ async function main() {
     }
     return response;
   }, log.append);
+  const cgvRelay = createCgvRelay(token, { takeQuota, onEvent: log.append });
+  const cgvHandler = observeRelay(async (request) => {
+    const response = await cgvRelay(request);
+    if (response.ok && new URL(request.url).pathname === '/v1/cgv/health') {
+      return Response.json({ ...(await response.json()), quota: takeQuota.status(), logging: log.status() });
+    }
+    return response;
+  }, log.append);
   const handler = (request: Request) => new URL(request.url).pathname.startsWith('/v1/convenience/')
     ? convenience ? convenience(request) : Promise.resolve(Response.json({ error: 'Not found' }, { status: 404 }))
-    : dtryxHandler(request);
+    : new URL(request.url).pathname.startsWith('/v1/cgv/') ? cgvHandler(request) : dtryxHandler(request);
   const server = createServer(async (req, res) => {
     const controller = new AbortController();
     res.once('close', () => controller.abort());

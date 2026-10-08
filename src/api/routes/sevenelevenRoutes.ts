@@ -4,6 +4,7 @@
 
 import type { Hono } from 'hono';
 import { withEdgeCache } from '../../utils/cache.js';
+import { shouldCacheSevenElevenInventory } from '../../services/seveneleven/inventoryCache.js';
 import type { AppBindings } from '../response.js';
 import {
   handleSevenElevenCheckInventory,
@@ -42,9 +43,10 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
     withEdgeCache(
       c.req.url,
       {
-        ttlSeconds: 60 * 10,
-        staleWhileRevalidateSeconds: 60,
-        keyPrefix: 'seveneleven-inventory-v2',
+        ttlSeconds: 30,
+        staleWhileRevalidateSeconds: 0,
+        keyPrefix: 'seveneleven-inventory-v3',
+        shouldCache: shouldCacheSevenElevenInventory,
       },
       () => handleSevenElevenCheckInventory(c),
     ),

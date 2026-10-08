@@ -9,6 +9,10 @@ export interface AppBindings {
   DAILY_RATE_LIMITER?: DurableObjectNamespace;
   UPSTREAM_ROUTE_HEALTH?: DurableObjectNamespace;
   ZYTE_API_KEY?: string;
+  CGV_RELAY_URL?: string;
+  CGV_RELAY_TOKEN?: string;
+  CGV_ACCESS_CLIENT_ID?: string;
+  CGV_ACCESS_CLIENT_SECRET?: string;
   DTRYX_RELAY_URL?: string;
   DTRYX_RELAY_TOKEN?: string;
   DTRYX_ACCESS_CLIENT_ID?: string;

@@ -236,7 +236,10 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain('failed=');
     expect(workflow).toContain('degraded=');
     expect(workflow).toContain('run=');
-    expect(workflow).toContain('Health check failed on attempt 1; retrying once');
+    expect(workflow).not.toContain('sleep 10');
+    expect(workflow).not.toContain('&cacheBust=true');
+    expect(workflow).toContain('quotaReason=');
+    expect(workflow).toContain('retryAfter=');
     expect(workflow).toContain('console.log(summary)');
     expect(workflow).toContain("payload.status === 'fail'");
     expect(workflow).toContain('Health Checks Failed');

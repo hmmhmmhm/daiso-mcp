@@ -1,3 +1,4 @@
+import type { CgvTransportOptions } from './relayTransport.js';
 import type { GeocodeOptions } from '../../utils/geocode.js';
 /**
  * CGV 서비스 프로바이더
@@ -17,7 +18,9 @@ const CGV_METADATA: ServiceMetadata = {
 };
 
 class CgvService implements ServiceProvider {
-  constructor(private readonly options: GeocodeOptions & { zyteApiKey?: string } = {}) {}
+  constructor(
+    private readonly options: GeocodeOptions & CgvTransportOptions & { zyteApiKey?: string } = {},
+  ) {}
 
   readonly metadata = CGV_METADATA;
 
@@ -30,7 +33,9 @@ class CgvService implements ServiceProvider {
   }
 }
 
-export function createCgvService(options: GeocodeOptions & { zyteApiKey?: string } = {}): ServiceProvider {
+export function createCgvService(
+  options: GeocodeOptions & CgvTransportOptions & { zyteApiKey?: string } = {},
+): ServiceProvider {
   return new CgvService(options);
 }
 

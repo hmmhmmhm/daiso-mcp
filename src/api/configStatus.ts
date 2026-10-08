@@ -1,3 +1,4 @@
+import { cgvTransportFromBindings } from '../services/cgv/relayTransport.js';
 import { isValidDtryxRelayUrl } from '../services/dtryx/transport.js';
 import { isValidOliveyoungRelayUrl } from '../services/oliveyoung/transport.js';
 import type { AppBindings } from './response.js';
@@ -18,6 +19,7 @@ export interface ConfigStatus {
     accessPairValid: boolean;
   };
   dtryxRelay: ConfigStatus['oliveyoungRelay'];
+  cgvRelay: ConfigStatus['oliveyoungRelay'];
   convenienceRelay: ConfigStatus['oliveyoungRelay'];
   googleMapsApiKey: ConfigStatusItem & { enabled: false };
   kakaoRestApiKey: ConfigStatusItem;
@@ -62,7 +64,20 @@ export function buildConfigStatus(bindings?: AppBindings): ConfigStatus {
   const convenienceUrl = isValidDtryxRelayUrl(bindings?.CONVENIENCE_RELAY_URL);
   const convenienceToken = isConfigured(bindings?.CONVENIENCE_RELAY_TOKEN);
   const conveniencePair = (bindings?.CONVENIENCE_ACCESS_CLIENT_ID === undefined && bindings?.CONVENIENCE_ACCESS_CLIENT_SECRET === undefined) || (convenienceId && convenienceSecret);
+  const cgv = cgvTransportFromBindings(bindings);
+  const cgvUrl = isValidDtryxRelayUrl(cgv.cgvRelayUrl);
+  const cgvToken = isConfigured(cgv.cgvRelayToken);
+  const cgvId = isConfigured(cgv.cgvAccessClientId);
+  const cgvSecret = isConfigured(cgv.cgvAccessClientSecret);
+  const cgvPair = (cgv.cgvAccessClientId === undefined && cgv.cgvAccessClientSecret === undefined) || (cgvId && cgvSecret);
   return {
+    cgvRelay: {
+      configured: cgvUrl && cgvToken && cgvPair,
+      urlConfigured: isConfigured(cgv.cgvRelayUrl), urlValid: cgvUrl,
+      tokenConfigured: cgvToken, accessClientIdConfigured: cgvId,
+      accessClientSecretConfigured: cgvSecret, accessConfigured: cgvId && cgvSecret,
+      accessPairValid: cgvPair, usedBy: ['cgv'],
+    },
     convenienceRelay: {
       configured: convenienceUrl && convenienceToken && conveniencePair,
       urlConfigured: isConfigured(bindings?.CONVENIENCE_RELAY_URL), urlValid: convenienceUrl,
