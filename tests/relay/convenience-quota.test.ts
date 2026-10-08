@@ -22,7 +22,10 @@ it('분당 69회 원본 호출 후에도 캐시는 응답하며 최초 동시 �
     expect(fetcher).toHaveBeenCalledTimes(1);
     for (let index = 1; index < 69; index++) expect((await relay(request(index))).status).toBe(200);
     expect((await relay(request(0))).status).toBe(200);
-    expect((await relay(request(69))).status).toBe(429);
+    const denied = await relay(request(69));
+    expect(denied.status).toBe(429);
+    expect(denied.headers.get('x-relay-quota-reason')).toBe('minute');
+    expect(denied.headers.get('Retry-After')).toBe('60');
     expect(fetcher).toHaveBeenCalledTimes(69);
     expect(JSON.parse(await readFile(path, 'utf8')).dayCount).toBe(69);
     now += 60000;

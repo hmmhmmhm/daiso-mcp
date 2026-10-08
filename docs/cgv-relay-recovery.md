@@ -12,6 +12,8 @@ CGV 전용 설정이 하나도 없으면 `DTRYX_RELAY_URL`, `DTRYX_RELAY_TOKEN`,
 
 `/health`의 `config.cgvRelay`에서 `configured`, `urlValid`, `tokenConfigured`, `accessPairValid`를 확인합니다. 응답에는 URL·토큰·Access 원문을 노출하지 않습니다. 불완전한 설정은 `CGV_RELAY_CONFIG_ERROR`, 중계 실패는 `CGV_RELAY_FAILED`로 반환하며 HTTP 상태와 공개 진단을 REST·MCP에 보존합니다.
 
+Cloudflare Tunnel의 공개 호스트 경로도 4320으로 연결해야 합니다. 운영 `oy-relay.aka.page`에서는 기존 Dtryx 규칙을 `^/v1/(dtryx|cgv)/.*$`로 지정하고, 올리브영 포트 4319의 `*` 규칙보다 앞에 둡니다. `/v1/convenience/`도 기존 4320 규칙을 유지합니다. CGV 경로가 4319로 전달되면 로컬 건강 응답이 정상이어도 공개 호출은 잘못된 토큰으로 HTTP 401을 받습니다. 호스트 인증과 Access 정책은 그대로 유지합니다.
+
 ## 반영 및 확인
 
 1. 같은 검증된 Git 상태의 `src`와 `scripts`를 런타임에 함께 반영합니다. 시작 파일 한 개만 복사하면 새 CGV 모듈·전송 계층·경로 선택 모듈이 누락될 수 있습니다. 상태 디렉터리와 호출 원장은 유지합니다.
