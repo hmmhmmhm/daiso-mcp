@@ -1,3 +1,5 @@
+import type { RelayQuota } from '../../src/utils/relayQuota.js';
+import type { QuotaStatus } from './quota.js';
 import type { SevenStockFailure } from '../../src/utils/sevenStockFailure.js';
 import { canonicalKey, createResponseCache } from './cache.js';
 /** 공개 API 중계의 인증·용량·기한·동시성 제한입니다. */
@@ -13,7 +15,7 @@ export interface HttpRelayOptions {
     signal: AbortSignal,
     fetcher: typeof fetch,
   ) => Promise<unknown>;
-  takeQuota: () => Promise<boolean>;
+  takeQuota: (() => Promise<boolean>) & { status?: () => Pick<QuotaStatus, 'blockedBy' | 'retryAfter'> };
   fetcher?: typeof fetch;
   onEvent?: (event: {
     stage: string;
@@ -28,14 +30,15 @@ export class RelayError extends Error {
   constructor(
     readonly status: number,
     readonly upstreamError?: SevenStockFailure,
+    readonly quota?: RelayQuota,
   ) {
     super('Relay failure');
   }
 }
-const reply = (status: number, body: unknown) =>
+const reply = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   Response.json(body, {
     status,
-    headers: { 'Cache-Control': 'no-store' },
+    headers: { 'Cache-Control': 'no-store', ...headers },
   });
 
 /** 취소 신호를 무시하는 외부 처리도 기한 안에 반환합니다. */
@@ -147,7 +150,21 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
           }),
           controller.signal,
         );
-        if (!allowed) throw new RelayError(429);
+        if (!allowed) {
+          let quota: RelayQuota | undefined;
+          try {
+            const snapshot = options.takeQuota.status?.();
+            const reason = snapshot?.blockedBy;
+            const retry = snapshot?.retryAfter;
+            if ((reason === 'minute' || reason === 'daily') && typeof retry === 'number' &&
+                Number.isInteger(retry) && retry >= 1 && retry <= 86400) {
+              quota = { quotaReason: reason, retryAfter: retry };
+            }
+          } catch {
+            // 상태 조회 실패는 기존 제한 응답을 바꾸지 않습니다.
+          }
+          throw new RelayError(429, undefined, quota);
+        }
         controller.signal.throwIfAborted();
         work.stage = 'upstream';
         const data = await abortable(
@@ -245,7 +262,9 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
         ...(error instanceof RelayError && error.upstreamError ? { success: false } : {}),
         error: 'Relay request failed',
         upstreamError: error instanceof RelayError ? error.upstreamError : undefined,
-      });
+      }, status === 429 && work?.stage === 'quota' && error instanceof RelayError && error.quota
+        ? { 'x-relay-quota-reason': error.quota.quotaReason, 'Retry-After': String(error.quota.retryAfter) }
+        : {});
     } finally {
       try {
         void Promise.resolve(
