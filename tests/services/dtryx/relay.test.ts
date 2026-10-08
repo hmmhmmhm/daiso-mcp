@@ -168,3 +168,22 @@ it('실패 응답 이후 연결도 중단한다', async () => {
   await expect(fetchDtryxNowShowing(params, options)).rejects.toMatchObject({ status: 502 });
   expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
 });
+
+it('중계의 자체 429 원인과 대기 시간을 공개 진단에 보존한다', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response('', {
+          status: 429,
+          headers: { 'x-relay-quota-reason': 'minute', 'Retry-After': '30' },
+        }),
+      ),
+  );
+  await expect(fetchDtryxNowShowing(params, options)).rejects.toMatchObject({
+    code: 'DTRYX_RELAY_FAILED',
+    quotaReason: 'minute',
+    retryAfter: 30,
+  });
+});

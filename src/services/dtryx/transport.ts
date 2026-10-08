@@ -2,6 +2,7 @@ import { requestDirectRoute } from '../../utils/directRoutes.js';
 import { routeOperation } from '../../utils/routeHealth.js';
 import { diagnosticHeaders } from '../../utils/diagnostics.js';
 /** 디트릭스 전용 중계 설정과 인증 전송입니다. */
+import { parseRelayQuota } from '../../utils/relayQuota.js';
 import { ServiceError } from '../../core/errors.js';
 import { createTimeoutController } from '../../utils/http.js';
 
@@ -117,6 +118,7 @@ async function requestDtryxRelayRaw<T>(
         mapped,
         status === 429 || status >= 500,
         status,
+        parseRelayQuota(status, response.headers),
       );
     }
     const result: unknown = await response.json();

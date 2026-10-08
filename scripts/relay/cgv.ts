@@ -53,6 +53,8 @@ export function createCgvRelay(
 ) {
   return createHttpRelay(token, {
     ...options,
+    cacheTtl: (operation) =>
+      ['timetable', 'timetable-movie'].includes(operation) ? 30000 : 300000,
     prefix: '/v1/cgv/',
     operations: Object.keys(paths),
     validate,
