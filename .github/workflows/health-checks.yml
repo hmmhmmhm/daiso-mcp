@@ -21,6 +21,10 @@ jobs:
     timeout-minutes: 10
     name: Service health checks
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - name: Run health checks
         env:
           HEALTH_CHECK_SECRET: ${{ secrets.HEALTH_CHECK_SECRET }}
@@ -55,18 +59,13 @@ jobs:
             fi
             cp health-checks.json "health-checks-attempt-${HEALTH_CHECK_ATTEMPT}.json" || return 1
 
-            node <<'NODE'
+            HEALTH_CHECK_ENDPOINT="${HEALTH_CHECK_ENDPOINT}" node <<'NODE'
           const fs = require('node:fs');
+          (async () => {
+          const { isValidHealthPayload, retryMinuteChecks } = await import('./scripts/ops/health-check-retry.ts');
           let payload;
           try { payload = JSON.parse(fs.readFileSync('health-checks.json', 'utf8')); } catch {}
-          const statuses = ['ok', 'degraded', 'fail'];
-          const valid = payload && statuses.includes(payload.status) &&
-            Array.isArray(payload.checks) && payload.checks.length > 0 &&
-            payload.checks.every(check => check && typeof check.id === 'string' && check.id.length > 0 &&
-              [...statuses, 'skipped'].includes(check.status) && typeof check.message === 'string') &&
-            new Set(payload.checks.map(check => check.id)).size === payload.checks.length &&
-            payload.status === (payload.checks.some(check => check.status === 'fail') ? 'fail' :
-              payload.checks.some(check => check.status === 'degraded') ? 'degraded' : 'ok');
+          const valid = isValidHealthPayload(payload);
           if (!valid) {
             const summary = 'Health check returned an invalid or inconsistent payload';
             fs.writeFileSync('health-check-summary.txt', summary);
@@ -74,6 +73,14 @@ jobs:
             console.log(summary);
             process.exitCode = 1;
           } else {
+          const firstFailures = payload.checks.filter(check => check.status === 'fail');
+          fs.writeFileSync('health-check-summary-first.txt', JSON.stringify({ status: payload.status, failedChecks: firstFailures }, null, 2));
+          const recovery = await retryMinuteChecks(payload, { endpoint: process.env.HEALTH_CHECK_ENDPOINT, secret: process.env.HEALTH_CHECK_SECRET });
+          for (const attempt of recovery.attempts) {
+            fs.writeFileSync(`health-checks-recheck-${attempt.id}.json`, JSON.stringify(attempt, null, 2));
+          }
+          payload = recovery.payload;
+          fs.writeFileSync('health-checks.json', JSON.stringify(payload, null, 2));
           const failedChecks = (payload.checks || []).filter((check) => check.status === 'fail');
           const degradedChecks = (payload.checks || []).filter((check) => check.status === 'degraded');
           const lines = [...failedChecks, ...degradedChecks].map((check) => {
@@ -89,6 +96,9 @@ jobs:
             `degraded=${degradedChecks.length}`,
             `failedIds=${failedChecks.map((check) => check.id).join(',') || 'none'}`,
             `degradedIds=${degradedChecks.map((check) => check.id).join(',') || 'none'}`,
+            `firstFailedIds=${firstFailures.map(check => check.id).join(',') || 'none'}`,
+            `retryCount=${recovery.attempts.length}`,
+            `recheckedIds=${recovery.attempts.map(attempt => attempt.id).join(',') || 'none'}`,
             `run=${runUrl}`,
             lines.join(' | '),
           ].filter(Boolean).join(' ');
@@ -99,11 +109,17 @@ jobs:
             process.exitCode = 1;
           }
           }
+          })().catch(() => {
+            const summary = 'Health check retry runner failed; original attempts remain available';
+            fs.writeFileSync('health-check-summary.txt', summary);
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
+            process.exitCode = 1;
+          });
           NODE
           }
 
           # 실패 직후 전체 검사를 반복하면 정상 경로까지 중계 한도를 다시 소비합니다.
-          # 원본 실패와 Retry-After는 첫 검사 기록으로 판단하고 다음 점검에서 재확인합니다.
+          # 검증된 분당 제한만 만료 후 해당 ID를 한 번 재확인하고 최초 실패를 보존합니다.
           run_health_check
 
       - name: Preserve health check attempts
@@ -115,6 +131,9 @@ jobs:
             health-checks-attempt-*.json
             health-checks-attempt-*.txt
             health-check-summary.txt
+            health-check-summary-first.txt
+            health-checks-recheck-*.json
+            health-checks.json
           retention-days: 7
           if-no-files-found: warn
 

@@ -2,12 +2,13 @@
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { isValidHealthPayload, retryMinuteChecks } from '../../scripts/ops/health-check-retry.js';
 
 const workflow = readFileSync('.github/workflows/health-checks.yml', 'utf8').replace(/\r\n/g, '\n');
 const script = workflow.split("node <<'NODE'\n")[1].split('\n          NODE')[0];
 
 describe('Health Checks 알림 요약', () => {
-  it('긴 상세 오류보다 모든 실패·저하 ID를 앞에 두고 Actions에는 전체를 남긴다', () => {
+  it('긴 상세 오류보다 모든 실패·저하 ID를 앞에 두고 Actions에는 전체를 남긴다', async () => {
     const checks = Array.from({ length: 12 }, (_, index) => ({
       id: `service-${index}`,
       status: index % 2 ? 'degraded' : 'fail',
@@ -24,7 +25,8 @@ describe('Health Checks 알림 요약', () => {
       },
       exitCode: 0,
     };
-    runInNewContext(script, {
+    await runInNewContext(script.replace("await import('./scripts/ops/health-check-retry.ts')", 'helpers'), {
+      helpers: { isValidHealthPayload, retryMinuteChecks },
       require: () => ({
         readFileSync: () => JSON.stringify({ status: 'fail', checks }),
         writeFileSync: (name: string, text: string) => {
