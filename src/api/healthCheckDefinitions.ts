@@ -199,7 +199,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     service: 'seveneleven',
     target: 'inventory',
     mode: 'deep',
-    path: '/api/seveneleven/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&storeLimit=1',
+    path: '/api/seveneleven/inventory?keyword=%ED%95%AB%EC%8B%9D%EC%8A%A4&storeKeyword=%EA%B0%95%EB%82%A8&storeLimit=1',
     collectionKey: 'inventoryStores',
     requiredFields: ['storeCode', 'storeName', 'name'],
     degradedFailurePatterns: SEVENELEVEN_UPSTREAM_403_PATTERNS,

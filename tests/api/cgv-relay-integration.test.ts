@@ -8,7 +8,7 @@ const env = { CGV_RELAY_URL: 'https://relay.example', CGV_RELAY_TOKEN: 'test-tok
 afterEach(() => vi.unstubAllGlobals());
 function mockRelay(status = 200) {
   const mock = vi.fn().mockImplementation((url: string) => Promise.resolve(
-    url.startsWith('https://api.cgv.co.kr')
+    new URL(String(url)).origin === 'https://api.cgv.co.kr'
       ? new Response('blocked', { status: 403 })
       : status === 200 ? Response.json({ statusCode: 0, data: [] }) : new Response('test-secret', { status, headers: { 'x-relay-quota-reason': 'minute', 'Retry-After': '30' } }),
   ));
@@ -19,7 +19,7 @@ it.each(['theaters', 'movies?theaterCode=0056', 'timetable?theaterCode=0056'])('
   const mock = mockRelay();
   const response = await app.request(`/api/cgv/${path}`, undefined, env);
   expect(response.status).toBe(200);
-  expect(mock.mock.calls.some(call => String(call[0]).startsWith('https://relay.example/v1/cgv/'))).toBe(true);
+  expect(mock.mock.calls.some(call => new URL(String(call[0])).origin === 'https://relay.example' && new URL(String(call[0])).pathname.startsWith('/v1/cgv/'))).toBe(true);
 });
 it.each(['theaters?lat=37.5&lng=127', 'movies?lat=37.5&lng=127', 'timetable?lat=37.5&lng=127'])('REST 위치 경로 %s도 중계를 사용한다', async path => {
   const mock = mockRelay();
@@ -44,7 +44,7 @@ it('MCP가 CGV 서비스에 중계 바인딩을 전달한다', async () => {
       const result = await client.callTool({ name, arguments: { theaterCode: '0056' } });
       expect(result.isError).not.toBe(true);
     }
-    expect(mock.mock.calls.filter(call => String(call[0]).startsWith('https://relay.example/v1/cgv/'))).toHaveLength(4);
+    expect(mock.mock.calls.filter(call => new URL(String(call[0])).origin === 'https://relay.example' && new URL(String(call[0])).pathname.startsWith('/v1/cgv/'))).toHaveLength(4);
   } finally { await client.close(); }
 });
 it('설정 진단은 유효성과 Access 완전성만 공개한다', () => {

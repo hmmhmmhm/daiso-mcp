@@ -35,6 +35,7 @@ describe('실제 재고 헬스체크', () => {
     for (const id of ['cu.inventory', 'gs25.inventory', 'seveneleven.inventory', 'oliveyoung.inventory']) {
       const url = new URL(HEALTH_CHECKS.find(check => check.id === id)!.path, 'https://test.invalid');
       expect(url.searchParams.get('storeLimit')).toBe('1');
+      if (id === 'seveneleven.inventory') expect(url.searchParams.get('keyword')).toBe('핫식스');
       if (id === 'cu.inventory') expect(url.searchParams.get('storeCheck')).toBe('true');
       if (id === 'oliveyoung.inventory') expect(url.searchParams.get('stockCheckLimit')).toBe('1');
     }
