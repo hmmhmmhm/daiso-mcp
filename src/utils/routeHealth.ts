@@ -24,9 +24,13 @@ export const ROUTE_KEYS = [
   'dtryx-movies',
   'dtryx-play-dates',
   'dtryx-timetable',
+  'cgv-theaters',
+  'cgv-movies',
+  'cgv-timetable',
+  'cgv-timetable-movie',
 ] as const;
 export type RouteKey = (typeof ROUTE_KEYS)[number];
-export const ROUTE_GROUPS = ['oliveyoung', 'convenience', 'dtryx'] as const;
+export const ROUTE_GROUPS = ['oliveyoung', 'convenience', 'dtryx', 'cgv'] as const;
 export type RelayGroup = (typeof ROUTE_GROUPS)[number];
 export interface RouteCheck {
   key: RouteKey;
@@ -216,7 +220,13 @@ function background(ctx: Context, task: Promise<unknown>) {
   ctx.waitUntil(task.catch(() => undefined));
 }
 function groupFor(key: RouteKey): RelayGroup {
-  return key.startsWith('oy-') ? 'oliveyoung' : key.startsWith('dtryx-') ? 'dtryx' : 'convenience';
+  return key.startsWith('cgv-')
+    ? 'cgv'
+    : key.startsWith('oy-')
+      ? 'oliveyoung'
+      : key.startsWith('dtryx-')
+        ? 'dtryx'
+        : 'convenience';
 }
 function fresh(at: number, now: number) {
   return at <= now && now - at <= ROUTE_MAX_AGE_MS;

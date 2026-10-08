@@ -1,3 +1,4 @@
+import type { CgvTransportOptions } from './relayTransport.js';
 /**
  * CGV API 클라이언트
  */
@@ -14,7 +15,7 @@ import type {
   CgvTimetableResponse,
 } from './types.js';
 
-interface CommonFetchParams {
+interface CommonFetchParams extends CgvTransportOptions {
   playDate?: string;
   theaterCode?: string;
   movieCode?: string;
@@ -40,10 +41,8 @@ async function resolveTheaterCode(
   }
 
   const theaters = await fetchCgvTheaters({
+    ...params,
     playDate,
-    regionCode: params.regionCode,
-    timeout: params.timeout,
-    zyteApiKey: params.zyteApiKey,
   });
 
   return theaters[0]?.theaterCode || DEFAULT_THEATER_CODE;
@@ -65,6 +64,7 @@ async function fetchMoviesByTheaterCode(
     searchParams,
     params.timeout,
     params.zyteApiKey,
+    params,
   );
 
   return asArray(response.data)
@@ -95,6 +95,7 @@ async function fetchTimetableByMovieCode(
     searchParams,
     params.timeout,
     params.zyteApiKey,
+    params,
   );
 
   return asArray(response.data)
@@ -130,6 +131,7 @@ async function fetchTimetableBySite(
     searchParams,
     params.timeout,
     params.zyteApiKey,
+    params,
   );
 
   return asArray(response.data)
@@ -158,6 +160,7 @@ export async function fetchCgvTheaters(params: CommonFetchParams): Promise<CgvTh
     searchParams,
     params.timeout,
     params.zyteApiKey,
+    params,
   );
 
   const list = asArray(response.data).flatMap((region) =>
@@ -223,10 +226,8 @@ export async function fetchCgvTimetable(params: CommonFetchParams): Promise<CgvT
     ? [params.theaterCode]
     : pickFallbackTheaterCodes(
         await fetchCgvTheaters({
+          ...params,
           playDate,
-          regionCode: params.regionCode,
-          timeout: params.timeout,
-          zyteApiKey: params.zyteApiKey,
         }),
       );
 

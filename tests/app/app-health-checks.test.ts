@@ -581,6 +581,9 @@ describe('GET /api/health/checks', () => {
       storeName: '강남점',
       movieCode: 'M1',
       movieName: '영화',
+      realStockQuantity: 0,
+      stockQuantity: 0,
+      stockStatus: 'in_stock', stockSource: 'nearby_store', storeInventory: { stores: [{ stockStatus: 'in_stock' }] },
       theaterCode: 'T1',
       theaterName: '강남점',
     };
@@ -595,7 +598,9 @@ describe('GET /api/health/checks', () => {
                 stores: [representative],
                 theaters: [representative],
                 movies: [representative],
+                nearbyStores: { stores: [{ stock: 0 }] },
                 inventory: {
+                  stockCheckedCount: 1,
                   products: [representative],
                   items: [representative],
                   stores: [representative],

@@ -34,6 +34,10 @@ export interface HealthCheckResult {
   durationMs: number;
   message: string;
   httpStatus?: number;
+  errorCode?: string;
+  upstreamStatus?: number;
+  quotaReason?: 'minute' | 'daily' | 'consumer' | 'consumer-busy';
+  retryAfter?: number;
   sample?: {
     first?: string;
   };

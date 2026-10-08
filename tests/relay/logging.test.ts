@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm, stat, writeFile, utimes } from 'node:fs/promises';
+import { appendFile, mkdtemp, readdir, readFile, rm, stat, writeFile, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -245,4 +245,63 @@ it('busy 및 취소 분류를 기록하면서 소비자 식별자와 본문은 �
   const line = await readFile(join(dir, name), 'utf8');
   expect(JSON.parse(line)).toMatchObject({ stage: 'queue', outcome: 'canceled', quotaReason: 'consumer-busy' });
   expect(line).not.toContain('private');
+});
+
+it('버스트 로그는 파일·전체 상한 이내의 묶음으로 기록한다', async () => {
+  const dir = await directory();
+  const write = vi.fn(appendFile);
+  const statfs = vi.fn(space);
+  const logger = createRelayLogger(dir, { service: 'convenience', appendFile: write, statfs });
+  for (let i = 0; i < 256; i++) logger.append({ ...event, requestId: `burst_${i}` });
+  await logger.flush();
+  expect(logger.status()).toMatchObject({ written: 256, queued: 0, dropped: 0, errors: 0 });
+  expect(write.mock.calls.length).toBeLessThanOrEqual(5);
+  expect(statfs.mock.calls.length).toBe(write.mock.calls.length);
+  const [name] = await readdir(dir);
+  const lines = (await readFile(join(dir, name), 'utf8')).trim().split('\n');
+  expect(lines.map((line) => JSON.parse(line).requestId)).toEqual(
+    Array.from({ length: 256 }, (_, i) => `burst_${i}`),
+  );
+});
+
+it('묶음 쓰기 실패는 각 이벤트를 누락으로 집계하고 다음 묶음을 기록한다', async () => {
+  const dir = await directory();
+  const write = vi.fn(appendFile)
+    .mockImplementationOnce(appendFile)
+    .mockRejectedValueOnce(new Error('ENOSPC'));
+  const logger = createRelayLogger(dir, { service: 'convenience', appendFile: write, statfs: space });
+  for (let i = 0; i < 129; i++) logger.append({ requestId: `burst_${i}` });
+  await logger.flush();
+  expect(logger.status()).toEqual({ written: 65, dropped: 64, errors: 1, queued: 0, lowSpace: false });
+  const [name] = await readdir(dir);
+  const lines = (await readFile(join(dir, name), 'utf8')).trim().split('\n');
+  expect(lines.map((line) => JSON.parse(line).requestId)).toEqual([
+    'burst_0', ...Array.from({ length: 64 }, (_, i) => `burst_${i + 65}`),
+  ]);
+});
+it('여유 공간 검사는 묶음 전체 바이트를 예약하고 누락 이벤트를 집계한다', async () => {
+  const dir = await directory();
+  const statfs = vi.fn().mockResolvedValueOnce({ bavail: 3 * 1024 ** 3, bsize: 1 })
+    .mockResolvedValue({ bavail: 2 * 1024 ** 3 + 100, bsize: 1 });
+  const logger = createRelayLogger(dir, { service: 'convenience', statfs });
+  for (let i = 0; i < 5; i++) logger.append(event);
+  await logger.flush();
+  expect(logger.status()).toMatchObject({ written: 1, dropped: 4, errors: 0, lowSpace: true });
+  const [name] = await readdir(dir);
+  expect((await readFile(join(dir, name), 'utf8')).trim().split('\n')).toHaveLength(1);
+});
+it('전체 상한이 파일 상한보다 작아도 여러 이벤트 묶음을 기록한다', async () => {
+  const dir = await directory();
+  const write = vi.fn(appendFile);
+  const logger = createRelayLogger(dir, {
+    service: 'convenience', appendFile: write, statfs: space,
+    maxFileBytes: 2000, maxTotalBytes: 700,
+  });
+  for (let i = 0; i < 9; i++) logger.append(event);
+  await logger.flush();
+  expect(logger.status()).toMatchObject({ written: 9, dropped: 0, errors: 0 });
+  expect(write.mock.calls.length).toBeLessThan(9);
+  const names = await readdir(dir);
+  const sizes = await Promise.all(names.map(async (name) => (await stat(join(dir, name))).size));
+  expect(sizes.reduce((sum, size) => sum + size, 0)).toBeLessThanOrEqual(700);
 });

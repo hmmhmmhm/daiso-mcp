@@ -1,3 +1,4 @@
+import type { CgvTransportOptions } from './relayTransport.js';
 /**
  * CGV 위치 해석 및 근처 극장 조회 보조 모듈
  */
@@ -11,7 +12,7 @@ import {
 import { fetchCgvTheaters } from './client.js';
 import type { CgvTheater } from './types.js';
 
-interface RequestOptions {
+interface RequestOptions extends CgvTransportOptions {
   timeout?: number;
   googleMapsApiKey?: string;
   kakaoRestApiKey?: string;
@@ -149,6 +150,7 @@ export async function fetchCgvNearbyTheaters(
     playDate: params.playDate,
     regionCode: params.regionCode,
     timeout,
+    ...options,
     zyteApiKey: options.zyteApiKey,
   });
   const location = await resolveCgvLocation(params, options);

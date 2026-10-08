@@ -1,3 +1,4 @@
+import { healthFailureDiagnostics, hasCheckedStoreStock } from './healthCheckEvidence.js';
 import { isKnownCgvBlock, type HealthFailureDetails } from './healthFailurePolicy.js';
 /**
  * 개별 서비스 헬스 체크 실행기
@@ -218,7 +219,7 @@ async function runCliContractCheck(
         success?: boolean;
         status?: string;
         error?: { message?: string; code?: string };
-      diagnostics?: { upstreamStatus?: number };
+      diagnostics?: { upstreamStatus?: number; quotaReason?: unknown; retryAfter?: unknown };
       };
 
       if (!response.ok || !isCliCompatibleEnvelope(path, body)) {
@@ -236,6 +237,7 @@ async function runCliContractCheck(
           durationMs: params.now() - startedAt,
           httpStatus: response.status,
           message,
+          ...healthFailureDiagnostics(body),
         };
       }
     } catch (error) {
@@ -290,7 +292,7 @@ async function runSingleCheck(
       success?: boolean;
       data?: unknown;
       error?: { message?: string; code?: string };
-      diagnostics?: { upstreamStatus?: number };
+      diagnostics?: { upstreamStatus?: number; quotaReason?: unknown; retryAfter?: unknown };
       meta?: { total?: number };
     };
     const durationMs = params.now() - startedAt;
@@ -305,6 +307,7 @@ async function runSingleCheck(
         durationMs,
         httpStatus: response.status,
         message,
+        ...healthFailureDiagnostics(body),
       };
     }
 
@@ -328,10 +331,13 @@ async function runSingleCheck(
       check.collectionKey,
       check.requiredFields,
     );
+    const stockUnchecked = shapeOk && count !== 0 && !hasCheckedStoreStock(check.id, body.data);
     const slowThresholdMs = params.slowThresholdMs || DEFAULT_HEALTH_CHECK_SLOW_THRESHOLD_MS;
     const slow = slowThresholdMs > 0 && durationMs > slowThresholdMs;
     const optionalEmpty = check.allowEmpty === true && count === 0;
-    const status: HealthCheckStatus = slow
+    const status: HealthCheckStatus = stockUnchecked
+      ? 'fail'
+      : slow
       ? 'degraded'
       : optionalEmpty
         ? 'skipped'
@@ -347,7 +353,9 @@ async function runSingleCheck(
           ? 'response count unavailable'
           : !shapeOk && count !== 0
             ? `response missing required fields: ${check.requiredFields!.join(', ')}`
-            : `${count} item(s) returned`;
+            : stockUnchecked
+              ? 'store stock was not verified'
+              : `${count} item(s) returned`;
 
     return {
       id: check.id,

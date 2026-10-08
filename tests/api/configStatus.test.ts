@@ -89,3 +89,15 @@ describe('올리브영 릴레이 설정 상태', () => {
     expect(JSON.stringify(status)).not.toContain('test-secret');
   });
 });
+
+it.each([
+  [undefined, undefined, true],
+  ['test-id', undefined, false],
+  [undefined, 'test-secret', false],
+  ['test-id', 'test-secret', true],
+])('편의점 설정 진단도 Access 쌍의 완전성을 확인한다: %s/%s', (id, secret, valid) => {
+  expect(buildConfigStatus({
+    CONVENIENCE_RELAY_URL: 'https://relay.example', CONVENIENCE_RELAY_TOKEN: 'test-token',
+    CONVENIENCE_ACCESS_CLIENT_ID: id, CONVENIENCE_ACCESS_CLIENT_SECRET: secret,
+  }).convenienceRelay).toMatchObject({ configured: valid, accessPairValid: valid });
+});

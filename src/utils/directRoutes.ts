@@ -90,7 +90,7 @@ export async function requestDirectRoute<T>(
 ): Promise<T> {
   if (key === 'gs25-stock') throw new DirectRouteError('pinned-relay');
   const spec = directRouteSpecs[key];
-  const request = spec.build(body);
+  const request = await spec.build(body);
   const result = await boundedRouteJson(request.url, request.init, timeoutMs, signal);
   if (!spec.response.safeParse(result).success) throw new DirectRouteError('invalid-response');
   return result as T;

@@ -1,9 +1,14 @@
 /** 주기 검사는 재고 중계를 소비하지 않고 직접 경로와 인증 상태만 기록합니다. */
+import { cgvTransportFromBindings } from '../services/cgv/relayTransport.js';
 import { ROUTE_KEYS, writeRouteChecks, type RouteCheck, type RelayCheck } from './routeHealth.js';
 import { boundedRouteJson, checkDirectRoute } from './directRoutes.js';
 
 export interface RouteProbeBindings {
   UPSTREAM_ROUTE_HEALTH?: DurableObjectNamespace;
+  CGV_RELAY_URL?: string;
+  CGV_RELAY_TOKEN?: string;
+  CGV_ACCESS_CLIENT_ID?: string;
+  CGV_ACCESS_CLIENT_SECRET?: string;
   OY_RELAY_URL?: string;
   OY_RELAY_TOKEN?: string;
   OY_ACCESS_CLIENT_ID?: string;
@@ -81,7 +86,9 @@ export async function refreshRouteChecks(env: RouteProbeBindings): Promise<void>
       checks.push({ key, direct: false, checkedAt, reason: 'network-error' });
     }
   });
+  const cgv = cgvTransportFromBindings(env);
   const relayTasks = [
+    ['cgv', cgv.cgvRelayUrl, cgv.cgvRelayToken, cgv.cgvAccessClientId, cgv.cgvAccessClientSecret],
     [
       'oliveyoung',
       env.OY_RELAY_URL,

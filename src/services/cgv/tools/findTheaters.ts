@@ -1,3 +1,4 @@
+import type { CgvTransportOptions } from '../relayTransport.js';
 import {
   validateCinemaOptions,
   cinemaDateSchema,
@@ -29,7 +30,7 @@ async function findTheaters(
   args: FindTheatersArgs,
   apiKey?: string,
   googleMapsApiKey?: string,
-  geocodeOptions: GeocodeOptions = {},
+  geocodeOptions: GeocodeOptions & CgvTransportOptions = {},
 ): Promise<McpToolResponse> {
   const {
     playDate = toYyyymmdd(),
@@ -69,6 +70,7 @@ async function findTheaters(
     playDate,
     regionCode,
     timeout: timeoutMs,
+    ...geocodeOptions,
     zyteApiKey: apiKey,
   });
 
@@ -94,7 +96,7 @@ async function findTheaters(
 export function createFindTheatersTool(
   apiKey?: string,
   googleMapsApiKey?: string,
-  geocodeOptions: GeocodeOptions = {},
+  geocodeOptions: GeocodeOptions & CgvTransportOptions = {},
 ): ToolRegistration {
   return {
     name: 'cgv_find_theaters',

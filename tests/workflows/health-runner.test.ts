@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync, readFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -76,13 +76,13 @@ describe('실제 Health workflow shell', () => {
     expect(result.status).not.toBe(0);
     expect(readFileSync(join(dir, 'health-check-summary.txt'), 'utf8')).toContain('invalid');
   });
-  it('매 요청을 fresh로 검사하고 재시도 원본을 보존한다', () => {
+  it('fresh 실패 원본을 보존하고 전체 검사를 즉시 반복하지 않는다', () => {
     const { dir, result } = execute(
       `printf '%s\\n' "$@" >> calls.txt\nif ! [[ "$*" == *fresh=true* && "$*" == *"x-health-check-force-fresh: true"* ]]; then exit 22; fi\nif [ ! -e first ]; then touch first; printf '%s' '${payload.replace('"status":"ok"', '"status":"fail"').replace('"status":"ok"', '"status":"fail"')}' > health-checks.json; else printf '%s' '${payload}' > health-checks.json; fi`,
     );
-    expect(result.status, result.stderr + result.stdout).toBe(0);
+    expect(result.status, result.stderr + result.stdout).toBe(1);
     expect(readFileSync(join(dir, 'health-checks-attempt-1.json'), 'utf8')).toContain('fail');
-    expect(readFileSync(join(dir, 'health-checks-attempt-2.json'), 'utf8')).toContain('ok');
-    expect(readFileSync(join(dir, 'calls.txt'), 'utf8')).toContain('cacheBust=true');
+    expect(existsSync(join(dir, 'health-checks-attempt-2.json'))).toBe(false);
+    expect(readFileSync(join(dir, 'calls.txt'), 'utf8')).not.toContain('cacheBust=true');
   });
 });

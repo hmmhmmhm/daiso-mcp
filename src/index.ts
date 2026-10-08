@@ -26,6 +26,7 @@ import { createDaisoService } from './services/daiso/index.js';
 import { createOliveyoungService } from './services/oliveyoung/index.js';
 import { createDtryxService } from './services/dtryx/index.js';
 import { createMegaboxService } from './services/megabox/index.js';
+import { cgvTransportFromBindings } from './services/cgv/relayTransport.js';
 import { createCgvService } from './services/cgv/index.js';
 import { createLotteCinemaService } from './services/lottecinema/index.js';
 import { createCuService } from './services/cu/index.js';
@@ -114,6 +115,7 @@ const createRegistry = (bindings?: AppBindings) => {
       }),
     () =>
       createCgvService({
+        ...cgvTransportFromBindings(bindings),
         zyteApiKey: bindings?.ZYTE_API_KEY,
         ...geocodeBindings(bindings),
       }),
@@ -128,7 +130,6 @@ const createRegistry = (bindings?: AppBindings) => {
 
   return registry;
 };
-
 /**
  * MCP 서버 생성 함수
  */

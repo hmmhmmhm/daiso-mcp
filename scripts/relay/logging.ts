@@ -28,7 +28,7 @@ export function createRelayLogger(directory: string, options: LoggerOptions) {
   let active: string | undefined;
   let initialized = false;
 
-  async function persist(line: string) {
+  async function persist(line: string, count: number) {
     if (!initialized) {
       await mkdir(directory, { recursive: true, mode: 0o700 });
       await chmod(directory, 0o700);
@@ -48,7 +48,7 @@ export function createRelayLogger(directory: string, options: LoggerOptions) {
     files.sort((a, b) => a.created - b.created || a.name.localeCompare(b.name));
     const bytes = Buffer.byteLength(line);
     if (bytes > maxFileBytes || bytes > maxTotalBytes) {
-      dropped++;
+      dropped += count;
       return;
     }
     let total = files.reduce((sum, file) => sum + file.bytes, 0);
@@ -60,7 +60,7 @@ export function createRelayLogger(directory: string, options: LoggerOptions) {
     const disk = await available(directory);
     lowSpace = disk.bavail * disk.bsize - bytes < 2 * 1024 ** 3;
     if (lowSpace) {
-      dropped++;
+      dropped += count;
       return;
     }
     const current = files.find((file) => file.name === active);
@@ -68,18 +68,26 @@ export function createRelayLogger(directory: string, options: LoggerOptions) {
       active = `${options.service}-${now()}-${randomUUID()}.jsonl`;
     }
     await write(join(directory, active!), line, { mode: 0o600 });
-    written++;
+    written += count;
   }
   async function drain() {
     while (queue.length) {
-      const line = queue.shift()!;
+      const batch = [queue.shift()!];
+      let bytes = Buffer.byteLength(batch[0]);
+      // 이벤트 64개씩 묶되 파일·전체 상한보다 큰 묶음은 만들지 않습니다.
+      while (queue.length && batch.length < 64) {
+        const nextBytes = Buffer.byteLength(queue[0]);
+        if (bytes + nextBytes > Math.min(maxFileBytes, maxTotalBytes)) break;
+        batch.push(queue.shift()!);
+        bytes += nextBytes;
+      }
       try {
-        await persist(line);
+        await persist(batch.join(''), batch.length);
       } catch {
         errors++;
-        dropped++;
+        dropped += batch.length;
       } finally {
-        queued--;
+        queued -= batch.length;
       }
     }
     running = undefined;

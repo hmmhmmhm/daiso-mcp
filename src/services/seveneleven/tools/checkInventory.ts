@@ -29,10 +29,8 @@ function isEncryptedStockFailure(
     return false;
   }
 
-  const codeMatched = stockError.code === 501 || stockError.code === 503;
   const messageSource = `${stockError.message} ${stockError.raw ?? ''}`;
-  const messageMatched = /RSA|복호화|암호화|서비스를 사용할 수 없습니다/i.test(messageSource);
-  return codeMatched || messageMatched;
+  return /RSA|복호화|암호화/i.test(messageSource);
 }
 
 async function checkInventory(args: CheckInventoryArgs, zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): Promise<McpToolResponse> {

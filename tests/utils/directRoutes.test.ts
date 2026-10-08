@@ -8,7 +8,7 @@ afterEach(() => {
 });
 describe('direct routes', () => {
   it('defines only fixed official routes and pins GS inventory without network access', async () => {
-    expect(Object.keys(directRouteSpecs)).toHaveLength(20);
+    expect(Object.keys(directRouteSpecs)).toHaveLength(24);
     const fetcher = vi.fn();
     vi.stubGlobal('fetch', fetcher);
     await expect(requestDirectRoute('gs25-stock', {}, 3000)).rejects.toThrow('pinned-relay');

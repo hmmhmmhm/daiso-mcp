@@ -136,6 +136,9 @@ describe('runHealthChecks', () => {
       storeName: '매장',
       movieCode: 'M1',
       movieName: '영화',
+      realStockQuantity: 0,
+      stockQuantity: 0,
+      stockStatus: 'in_stock', stockSource: 'nearby_store', storeInventory: { stores: [{ stockStatus: 'in_stock' }] },
       theaterCode: 'T1',
       theaterName: '극장',
     };
@@ -150,7 +153,9 @@ describe('runHealthChecks', () => {
                 stores: [representative],
                 theaters: [representative],
                 movies: [representative],
+                nearbyStores: { stores: [{ stock: 0 }] },
                 inventory: {
+                  stockCheckedCount: 1,
                   products: [representative],
                   items: [representative],
                   stores: [representative],
@@ -210,7 +215,8 @@ describe('runHealthChecks', () => {
         success: true,
         data: {
           inventory: {
-            products: [{ goodsNumber: 'A1', goodsName: '선크림' }],
+            stockCheckedCount: 1,
+            products: [{ goodsNumber: 'A1', goodsName: '선크림', stockStatus: 'in_stock', stockSource: 'nearby_store', storeInventory: { stores: [{ stockStatus: 'in_stock' }] } }],
           },
         },
         meta: { total: 1 },
@@ -235,7 +241,7 @@ describe('runHealthChecks', () => {
       }),
     );
     expect(String(fetchImpl.mock.calls[0][0])).toContain('/api/oliveyoung/inventory?');
-    expect(String(fetchImpl.mock.calls[0][0])).toContain('stockCheckLimit=0');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('stockCheckLimit=1');
     expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=7000');
   });
 
@@ -274,7 +280,8 @@ describe('runHealthChecks', () => {
         success: true,
         data: {
           inventory: {
-            products: [{ goodsNumber: 'A1', goodsName: '선크림' }],
+            stockCheckedCount: 1,
+            products: [{ goodsNumber: 'A1', goodsName: '선크림', stockStatus: 'in_stock', stockSource: 'nearby_store', storeInventory: { stores: [{ stockStatus: 'in_stock' }] } }],
           },
         },
       }),
@@ -303,6 +310,7 @@ describe('runHealthChecks', () => {
       jsonResponse({
         success: true,
         data: {
+          nearbyStores: { stores: [{ stock: 0 }] },
           inventory: {
             items: [{ itemCode: 'C1', itemName: '커피' }],
           },
@@ -326,7 +334,7 @@ describe('runHealthChecks', () => {
         sample: { first: '커피' },
       }),
     );
-    expect(String(fetchImpl.mock.calls[0][0])).toContain('storeCheck=false');
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('storeCheck=true');
   });
 
   it('GS25 inventory stores 응답에서 개수와 매장 이름을 읽는다', async () => {
@@ -335,7 +343,7 @@ describe('runHealthChecks', () => {
         success: true,
         data: {
           inventory: {
-            stores: [{ storeCode: 'G1', storeName: '강남점' }],
+            stores: [{ storeCode: 'G1', storeName: '강남점', realStockQuantity: 0 }],
           },
         },
       }),

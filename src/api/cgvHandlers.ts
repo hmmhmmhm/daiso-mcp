@@ -10,7 +10,8 @@ import {
   fetchCgvTimetable,
   toYyyymmdd,
 } from '../services/cgv/client.js';
-import { isCgvUpstreamUnavailableError } from '../services/cgv/errors.js';
+import { ServiceError } from '../core/errors.js';
+import { cgvTransportFromBindings } from '../services/cgv/relayTransport.js';
 import { fetchCgvNearbyTheaters, resolveCgvNearestTheater } from '../services/cgv/location.js';
 import { filterAndSortTimetable } from '../services/cgv/timetable.js';
 import {
@@ -54,6 +55,7 @@ export async function handleCgvFindTheaters(c: ApiContext) {
         {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
+          ...cgvTransportFromBindings(c.env),
           ...geocodeBindings(c.env),
         },
       );
@@ -66,6 +68,7 @@ export async function handleCgvFindTheaters(c: ApiContext) {
       regionCode,
       timeout: timeoutMs,
       zyteApiKey: c.env?.ZYTE_API_KEY,
+          ...cgvTransportFromBindings(c.env),
     });
 
     const sliced = theaters.slice(0, limit);
@@ -85,7 +88,7 @@ export async function handleCgvFindTheaters(c: ApiContext) {
       { total: sliced.length, pageSize: limit },
     );
   } catch (error) {
-    if (isCgvUpstreamUnavailableError(error)) {
+    if (error instanceof ServiceError) {
       return serviceErrorResponse(c, error, 'theaters');
     }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
@@ -125,6 +128,7 @@ export async function handleCgvSearchMovies(c: ApiContext) {
         {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
+          ...cgvTransportFromBindings(c.env),
           ...geocodeBindings(c.env),
         },
       );
@@ -141,6 +145,7 @@ export async function handleCgvSearchMovies(c: ApiContext) {
           theaterCode,
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
+          ...cgvTransportFromBindings(c.env),
         });
 
     return successResponse(
@@ -159,7 +164,7 @@ export async function handleCgvSearchMovies(c: ApiContext) {
       { total: movies.length },
     );
   } catch (error) {
-    if (isCgvUpstreamUnavailableError(error)) {
+    if (error instanceof ServiceError) {
       return serviceErrorResponse(c, error, 'movies');
     }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
@@ -201,6 +206,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
         {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
+          ...cgvTransportFromBindings(c.env),
           ...geocodeBindings(c.env),
         },
       );
@@ -218,6 +224,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
           movieCode,
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
+          ...cgvTransportFromBindings(c.env),
         });
 
     const filtered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });
@@ -241,7 +248,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
       { total: filtered.length, pageSize: limit },
     );
   } catch (error) {
-    if (isCgvUpstreamUnavailableError(error)) {
+    if (error instanceof ServiceError) {
       return serviceErrorResponse(c, error, 'timetable');
     }
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';

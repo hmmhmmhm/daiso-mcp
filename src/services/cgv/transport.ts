@@ -5,6 +5,16 @@
  */
 
 import { createTimeoutController } from '../../utils/http.js';
+import { requestDirectRoute } from '../../utils/directRoutes.js';
+import { routeOperation, type RouteKey } from '../../utils/routeHealth.js';
+import {
+  hasCgvRelay,
+  requestCgvRelay,
+  CGV_RELAY_ROUTES,
+  cgvRelayBody,
+  validateCgvRelay,
+  type CgvTransportOptions,
+} from './relayTransport.js';
 import { CGV_API } from './api.js';
 import { CgvUpstreamUnavailableError } from './errors.js';
 
@@ -45,6 +55,19 @@ async function createSignature(
   return toBase64(new Uint8Array(signed));
 }
 
+export async function createCgvHeaders(path: string): Promise<Record<string, string>> {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  return {
+    Accept: 'application/json',
+    'Accept-Language': 'ko-KR',
+    // 실제 직접 요청에서 허용된 브라우저 헤더를 유지합니다.
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+    'X-TIMESTAMP': timestamp,
+    'X-SIGNATURE': await createSignature(path, '', timestamp),
+  };
+}
+
 async function parseJsonResponse<TResponse>(response: Response): Promise<TResponse> {
   const text = await response.text();
 
@@ -60,23 +83,27 @@ export async function requestCgv<TResponse>(
   searchParams: URLSearchParams,
   timeout = 15000,
   _zyteApiKey?: string,
+  options: CgvTransportOptions = {},
 ): Promise<TResponse> {
+  if (hasCgvRelay(options)) {
+    validateCgvRelay(path, options);
+    const key = `cgv-${CGV_RELAY_ROUTES[path]}` as RouteKey;
+    return routeOperation(
+      key,
+      timeout,
+      (ms) => requestDirectRoute<TResponse>(key, cgvRelayBody(path, searchParams), ms),
+      (ms) => requestCgvRelay<TResponse>(path, searchParams, options, ms),
+    );
+  }
   const url = `${CGV_API.BASE_URL}${path}?${searchParams.toString()}`;
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const signature = await createSignature(path, '', timestamp);
+  const headers = await createCgvHeaders(path);
   const { controller, timeoutId } = createTimeoutController(timeout);
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Accept-Language': 'ko-KR',
-        // 기본 fetch User-Agent는 CGV 앞단에서 403으로 차단된다.
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-        'X-TIMESTAMP': timestamp,
-        'X-SIGNATURE': signature,
-      },
+      headers,
+      redirect: 'manual',
       signal: controller.signal,
     });
 

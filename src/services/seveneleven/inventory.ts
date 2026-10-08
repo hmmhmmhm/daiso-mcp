@@ -1,6 +1,7 @@
 import { parseInventoryQuantity } from '../inventoryQuantity.js';
 import { ServiceError } from '../../core/errors.js';
 import { hasConvenienceRelay, requestConvenienceRelay } from '../../utils/convenienceTransport.js';
+import { requestStockStoresIndividually, type StockApiAttemptResult } from './stockRequests.js';
 /**
  * 세븐일레븐 재고 조회 클라이언트
  *
@@ -36,11 +37,6 @@ interface CheckInventoryParams {
 interface StockApiData {
   smCd?: string;
   storeList?: unknown[];
-}
-
-interface StockApiAttemptResult {
-  stores: SevenElevenStockStore[] | null;
-  error: SevenElevenStockError | null;
 }
 
 interface RealStockRequestPayload {
@@ -314,14 +310,28 @@ export async function checkSevenElevenInventory(
   const storeResult = await fetchSevenElevenStoresByKeyword({ keyword: storeKeyword, limit: 100 }, options);
   const matchedStores = filterStoresByKeyword(storeResult.stores, storeKeyword);
 
+  // 반환할 거리순 점포를 먼저 선택하여 제한 밖 점포에는 재고 API를 호출하지 않습니다.
+  const refStore = matchedStores.find((s) => s.latitude !== 0 && s.longitude !== 0);
+  const orderedStores = [...matchedStores];
+  if (refStore) {
+    const distance = (store: SevenElevenStore) =>
+      store.latitude === 0 && store.longitude === 0
+        ? Infinity
+        : haversineDistanceM(refStore.latitude, refStore.longitude, store.latitude, store.longitude);
+    orderedStores.sort((a, b) => distance(a) - distance(b));
+  }
+  const selectedStores = orderedStores.slice(0, storeLimit);
+
   // 3) 재고 API 시도 (실패 시 graceful fallback)
   let stockStores: SevenElevenStockStore[] | null = null;
   let stockError: SevenElevenStockError | null = null;
-  if (matchedStores.length > 0 && firstProduct && firstProduct.itemCode.length > 0) {
+  if (selectedStores.length > 0 && firstProduct && firstProduct.itemCode.length > 0) {
     try {
       const stockProduct = await fetchSevenElevenStockProductMeta(firstProduct.itemCode, options);
       if (stockProduct) {
-        const stockAttempt = await tryStockApi(stockProduct, matchedStores, options);
+        const stockAttempt = await requestStockStoresIndividually(selectedStores, (store) =>
+          tryStockApi(stockProduct, [store], options),
+        );
         stockStores = stockAttempt.stores;
         stockError = stockAttempt.error;
       }
@@ -338,7 +348,7 @@ export async function checkSevenElevenInventory(
   if (stockStores !== null && stockStores.length > 0) {
     stockAvailable = true;
     const stockMap = new Map(stockStores.map((store) => [store.storeCode, store]));
-    resultStores = matchedStores.map((store) => {
+    resultStores = selectedStores.map((store) => {
       const stockStore = stockMap.get(store.storeCode);
       return {
         storeCode: store.storeCode,
@@ -353,7 +363,7 @@ export async function checkSevenElevenInventory(
     });
   } else {
     stockAvailable = false;
-    resultStores = matchedStores.map((store) => ({
+    resultStores = selectedStores.map((store) => ({
       storeCode: store.storeCode,
       storeName: store.storeName,
       address: store.address,
@@ -366,7 +376,6 @@ export async function checkSevenElevenInventory(
   }
 
   // 거리 계산: 첫 번째 매장 좌표를 기준으로 정렬
-  const refStore = matchedStores.find((s) => s.latitude !== 0 && s.longitude !== 0);
   if (refStore) {
     resultStores = attachDistanceToStockStores(resultStores, refStore.latitude, refStore.longitude);
     resultStores.sort((a, b) => {
@@ -393,7 +402,7 @@ export async function checkSevenElevenInventory(
       : null,
     stockAvailable,
     stockError,
-    totalStoreCount: resultStores.length,
+    totalStoreCount: matchedStores.length,
     inStockStoreCount: inStockCount,
     stores: limited,
   };
