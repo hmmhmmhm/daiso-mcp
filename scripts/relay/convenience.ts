@@ -311,43 +311,50 @@ export function createConvenienceRelay(
         }),
         signal,
       );
-      if (operation === 'seven-stock' && response.status === 400) {
-        const data = await readJson(response.body, 16384, signal, 502);
-        const rejected = z
-          .object({ success: z.literal(false), code: z.literal(501), message: z.string() })
-          .safeParse(data);
-        throw new RelayError(
-          502,
-          rejected.success ? parseSevenStockFailure({ ...rejected.data, status: 400 }) : undefined,
-        );
+      try {
+        if (operation === 'seven-stock' && response.status === 400) {
+          const data = await readJson(response.body, 16384, signal, 502);
+          const rejected = z
+            .object({ success: z.literal(false), code: z.literal(501), message: z.string() })
+            .safeParse(data);
+          throw new RelayError(
+            502,
+            rejected.success ? parseSevenStockFailure({ ...rejected.data, status: 400 }) : undefined,
+          );
+        }
+        if (response.status !== 200) {
+          void response.body?.cancel().catch(() => undefined);
+          throw new RelayError(
+            operation === 'gs25-stock' && [401, 403].includes(response.status)
+              ? response.status
+              : 502,
+          );
+        }
+        const data = await readJson(response.body, 2 * 1024 * 1024, signal, 502);
+        if (
+          operation === 'cu-store' &&
+          body.itemCd &&
+          !z
+            .object({ storeList: z.array(z.object({ stock: quantity }).passthrough()) })
+            .safeParse(data).success
+        )
+          throw new RelayError(502);
+        if (
+          operation === 'gs25-stock' &&
+          (body.itemCode || body.keyword) &&
+          !z
+            .object({ stores: z.array(z.object({ realStockQuantity: quantity }).passthrough()) })
+            .safeParse(data).success
+        )
+          throw new RelayError(502);
+        if (!successSchema.and(schema).safeParse(data).success) throw new RelayError(502);
+        return data;
+      } catch (error) {
+        // 원본 본문·인증·검색 조건은 보존하지 않고 Seven 오류의 HTTP 상태만 기록합니다.
+        if (operation.startsWith('seven-') && error instanceof RelayError)
+          throw new RelayError(error.status, error.upstreamError, error.quota, response.status);
+        throw error;
       }
-      if (response.status !== 200) {
-        void response.body?.cancel().catch(() => undefined);
-        throw new RelayError(
-          operation === 'gs25-stock' && [401, 403].includes(response.status)
-            ? response.status
-            : 502,
-        );
-      }
-      const data = await readJson(response.body, 2 * 1024 * 1024, signal, 502);
-      if (
-        operation === 'cu-store' &&
-        body.itemCd &&
-        !z
-          .object({ storeList: z.array(z.object({ stock: quantity }).passthrough()) })
-          .safeParse(data).success
-      )
-        throw new RelayError(502);
-      if (
-        operation === 'gs25-stock' &&
-        (body.itemCode || body.keyword) &&
-        !z
-          .object({ stores: z.array(z.object({ realStockQuantity: quantity }).passthrough()) })
-          .safeParse(data).success
-      )
-        throw new RelayError(502);
-      if (!successSchema.and(schema).safeParse(data).success) throw new RelayError(502);
-      return data;
     },
   });
 }

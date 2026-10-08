@@ -17,8 +17,8 @@ export interface QuotaLimits {
   readonly daily: number;
   readonly minute: number;
 }
-export const CONVENIENCE_QUOTA_LIMITS: QuotaLimits = { daily: 100000, minute: 69 };
-const DEFAULT_QUOTA_LIMITS: QuotaLimits = { daily: 3000, minute: 30 };
+export const CONVENIENCE_QUOTA_LIMITS: QuotaLimits = { daily: 10000000, minute: 690 };
+const DEFAULT_QUOTA_LIMITS: QuotaLimits = { daily: 300000, minute: 300 };
 export type FileQuota = (() => Promise<boolean>) & { status: () => QuotaStatus };
 export async function createFileQuota(
   path: string,

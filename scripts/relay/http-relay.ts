@@ -23,16 +23,21 @@ export interface HttpRelayOptions {
     requestId: string;
     outcome: string;
     status: number;
+    upstreamStatus?: number;
     durationMs: number;
   }) => void | Promise<void>;
 }
 export class RelayError extends Error {
+  readonly upstreamStatus?: number;
   constructor(
     readonly status: number,
     readonly upstreamError?: SevenStockFailure,
     readonly quota?: RelayQuota,
+    upstreamStatus?: number,
   ) {
     super('Relay failure');
+    if (typeof upstreamStatus === 'number' && Number.isInteger(upstreamStatus) &&
+        upstreamStatus >= 100 && upstreamStatus <= 599) this.upstreamStatus = upstreamStatus;
   }
 }
 const reply = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -92,6 +97,7 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
     waiters: number;
     done: boolean;
     stage: string;
+    upstreamStatus?: number;
   }
   const pending = new Map<string, SharedWork>();
   let outstanding = 0;
@@ -177,6 +183,7 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
         if (cache) cache.set(key, body, options.cacheTtl!(name));
         return body;
       } catch (error) {
+        if (error instanceof RelayError) work.upstreamStatus = error.upstreamStatus;
         if (expired) throw new RelayError(504);
         throw error;
       } finally {
@@ -274,6 +281,7 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
             requestId,
             outcome: resultStatus === 200 ? 'ok' : 'error',
             status: resultStatus,
+            ...(work?.upstreamStatus === undefined ? {} : { upstreamStatus: work.upstreamStatus }),
             durationMs: performance.now() - deadline + 15000,
           }),
         ).catch(() => undefined);
