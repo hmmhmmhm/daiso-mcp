@@ -51,7 +51,7 @@ export async function requestSevenElevenJson<T>(
   }
   const url = `${SEVENELEVEN_API.BASE_URL}${path}`;
 
-  return withSevenElevenReadCache(path, body, timeout, () =>
+  const request = () =>
     fetchJsonWithZyteFallback<SevenElevenApiEnvelope<T>>(url, {
       ...SEVENELEVEN_DEFAULT_FETCH_OPTIONS,
       method,
@@ -61,6 +61,6 @@ export async function requestSevenElevenJson<T>(
       body: method === 'POST' ? JSON.stringify(body || {}) : undefined,
       zyteApiKey,
       zyteTags: { service: 'seveneleven' },
-    }),
-  );
+    });
+  return options.bypassCache ? request() : withSevenElevenReadCache(path, body, timeout, request);
 }

@@ -102,7 +102,8 @@ describe('GS25 인증 장애 안내', () => {
       { status: 503 },
     );
     expect(diagnostics.retryable).toBe(false);
-    expect(diagnostics.hint).toContain('GS25_API_KEY');
+    expect(diagnostics.hint).toContain('GS25_AUTH_SESSION_FILE');
+    expect(diagnostics.hint).toContain('갱신');
   });
 });
 
@@ -127,7 +128,7 @@ describe('올리브영 무료 중계 설정 안내', () => {
     '올리브영 직접 요청 실패. 운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN으로 브라우저 릴레이를 설정해주세요.',
   ])('설정이 필요한 오류는 재시도를 권하지 않는다: %s', (message) => {
     expect(toStandardErrorDiagnostics('OLIVEYOUNG_PRODUCT_SEARCH_FAILED', message, { status: 500 }))
-      .toMatchObject({ retryable: false, hint: '운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN 및 브라우저 릴레이 실행 상태를 확인하세요.' });
+      .toMatchObject({ retryable: false, hint: '운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN 및 릴레이 실행 상태를 확인하세요.' });
   });
   it.each(['올리브영 브라우저 릴레이 요청 실패', '올리브영 API 요청 시간 초과'])('일시적인 실행 오류의 재시도는 유지한다: %s', (message) => {
     expect(toStandardErrorDiagnostics('OLIVEYOUNG_PRODUCT_SEARCH_FAILED', message, { status: 500 }).retryable).toBe(true);

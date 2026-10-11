@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from './operationalFreshness.js';
 import { hasInvalidCinemaQuery, CINEMA_INVALID_INPUT } from '../services/cgv/validation.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
@@ -43,6 +44,7 @@ export async function handleMegaboxFindNearbyTheaters(c: ApiContext) {
       },
       {
         ...geocodeBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         timeout: timeoutMs,
       },
     );
@@ -86,6 +88,7 @@ export async function handleMegaboxListNowShowing(c: ApiContext) {
         },
         {
           ...geocodeBindings(c.env),
+          bypassCache: await isFreshOperationalRequest(c),
           timeout: timeoutMs,
         },
       );
@@ -162,6 +165,7 @@ export async function handleMegaboxGetRemainingSeats(c: ApiContext) {
         },
         {
           ...geocodeBindings(c.env),
+          bypassCache: await isFreshOperationalRequest(c),
           timeout: timeoutMs,
         },
       );

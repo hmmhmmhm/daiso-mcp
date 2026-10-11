@@ -15,7 +15,9 @@ export interface HttpRelayOptions {
     signal: AbortSignal,
     fetcher: typeof fetch,
   ) => Promise<unknown>;
-  takeQuota: (() => Promise<boolean>) & { status?: () => Pick<QuotaStatus, 'blockedBy' | 'retryAfter'> };
+  takeQuota: (() => Promise<boolean>) & {
+    status?: () => Pick<QuotaStatus, 'blockedBy' | 'retryAfter'>;
+  };
   fetcher?: typeof fetch;
   onEvent?: (event: {
     stage: string;
@@ -36,8 +38,13 @@ export class RelayError extends Error {
     upstreamStatus?: number,
   ) {
     super('Relay failure');
-    if (typeof upstreamStatus === 'number' && Number.isInteger(upstreamStatus) &&
-        upstreamStatus >= 100 && upstreamStatus <= 599) this.upstreamStatus = upstreamStatus;
+    if (
+      typeof upstreamStatus === 'number' &&
+      Number.isInteger(upstreamStatus) &&
+      upstreamStatus >= 100 &&
+      upstreamStatus <= 599
+    )
+      this.upstreamStatus = upstreamStatus;
   }
 }
 const reply = (status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -122,7 +129,13 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
       queue.push(start);
     });
   }
-  function startWork(key: string, name: string, params: unknown, deadline: number): SharedWork {
+  function startWork(
+    key: string,
+    name: string,
+    params: unknown,
+    deadline: number,
+    bypassCache = false,
+  ): SharedWork {
     const controller = new AbortController();
     const work: SharedWork = {
       controller,
@@ -162,8 +175,13 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
             const snapshot = options.takeQuota.status?.();
             const reason = snapshot?.blockedBy;
             const retry = snapshot?.retryAfter;
-            if ((reason === 'minute' || reason === 'daily') && typeof retry === 'number' &&
-                Number.isInteger(retry) && retry >= 1 && retry <= 86400) {
+            if (
+              (reason === 'minute' || reason === 'daily') &&
+              typeof retry === 'number' &&
+              Number.isInteger(retry) &&
+              retry >= 1 &&
+              retry <= 86400
+            ) {
               quota = { quotaReason: reason, retryAfter: retry };
             }
           } catch {
@@ -180,7 +198,7 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
         controller.signal.throwIfAborted();
         const body = JSON.stringify(data);
         if (body === undefined) throw new RelayError(502);
-        if (cache) cache.set(key, body, options.cacheTtl!(name));
+        if (cache && !bypassCache) cache.set(key, body, options.cacheTtl!(name));
         return body;
       } catch (error) {
         if (error instanceof RelayError) work.upstreamStatus = error.upstreamStatus;
@@ -197,7 +215,7 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
         }
       }
     })();
-    if (cache) pending.set(key, work);
+    if (cache && !bypassCache) pending.set(key, work);
     return work;
   }
   return async (request: Request): Promise<Response> => {
@@ -237,7 +255,8 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
     try {
       const p = options.validate(await readJson(request.body, 16384, controller.signal, 400), name);
       const key = canonicalKey(name, p as Record<string, unknown>);
-      const cached = cache?.get(key);
+      const bypassCache = request.headers.get('x-relay-cache-bypass') === 'true';
+      const cached = bypassCache ? undefined : cache?.get(key);
       if (cached !== undefined) {
         controller.signal.throwIfAborted();
         stage = 'cache';
@@ -247,9 +266,9 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
       }
       controller.signal.throwIfAborted();
       workKey = key;
-      work = cache ? pending.get(key) : undefined;
+      work = cache && !bypassCache ? pending.get(key) : undefined;
       const shared = work !== undefined;
-      work ??= startWork(key, name, p, deadline);
+      work ??= startWork(key, name, p, deadline, bypassCache);
       work.waiters++;
       stage = shared ? 'coalesced' : 'upstream';
       const body = await abortable(work.result, controller.signal);
@@ -265,13 +284,20 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
             ? error.status
             : 502;
       resultStatus = status;
-      return reply(error instanceof RelayError && error.upstreamError ? 200 : status, {
-        ...(error instanceof RelayError && error.upstreamError ? { success: false } : {}),
-        error: 'Relay request failed',
-        upstreamError: error instanceof RelayError ? error.upstreamError : undefined,
-      }, status === 429 && work?.stage === 'quota' && error instanceof RelayError && error.quota
-        ? { 'x-relay-quota-reason': error.quota.quotaReason, 'Retry-After': String(error.quota.retryAfter) }
-        : {});
+      return reply(
+        error instanceof RelayError && error.upstreamError ? 200 : status,
+        {
+          ...(error instanceof RelayError && error.upstreamError ? { success: false } : {}),
+          error: 'Relay request failed',
+          upstreamError: error instanceof RelayError ? error.upstreamError : undefined,
+        },
+        status === 429 && work?.stage === 'quota' && error instanceof RelayError && error.quota
+          ? {
+              'x-relay-quota-reason': error.quota.quotaReason,
+              'Retry-After': String(error.quota.retryAfter),
+            }
+          : {},
+      );
     } finally {
       try {
         void Promise.resolve(

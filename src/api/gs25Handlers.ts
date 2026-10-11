@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from './operationalFreshness.js';
 import { ServiceError } from '../core/errors.js';
 import { selectGs25InventoryProduct } from '../services/gs25/productSelection.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
@@ -7,7 +8,12 @@ import { geocodeBindings } from '../utils/geocode.js';
  */
 /* c8 ignore start */
 
-import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
+import {
+  type ApiContext,
+  errorResponse,
+  serviceErrorResponse,
+  successResponse,
+} from './response.js';
 import {
   attachDistanceToGs25Stores,
   fetchGs25SearchProducts,
@@ -68,6 +74,7 @@ export async function handleGs25FindStores(c: ApiContext) {
       {
         timeout: 20000,
         ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         zyteApiKey: c.env?.ZYTE_API_KEY,
         apiKey: c.env?.GS25_API_KEY,
       },
@@ -79,7 +86,8 @@ export async function handleGs25FindStores(c: ApiContext) {
     });
 
     if (
-      !fallbackUsed && storeResult.stores.length === 0 &&
+      !fallbackUsed &&
+      storeResult.stores.length === 0 &&
       typeof latitude === 'number' &&
       typeof longitude === 'number'
     ) {
@@ -96,7 +104,8 @@ export async function handleGs25FindStores(c: ApiContext) {
           {
             timeout: 20000,
             ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+            bypassCache: await isFreshOperationalRequest(c),
+            zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
@@ -165,7 +174,8 @@ export async function handleGs25SearchProducts(c: ApiContext) {
     const products = await fetchGs25SearchProducts(keyword, {
       timeout: 20000,
       ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+      bypassCache: await isFreshOperationalRequest(c),
+      zyteApiKey: c.env?.ZYTE_API_KEY,
     });
     const limitedProducts = products.slice(0, limit);
 
@@ -246,7 +256,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           {
             timeout: 20000,
             ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+            bypassCache: await isFreshOperationalRequest(c),
+            zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
@@ -290,7 +301,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         {
           timeout: 20000,
           ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+          bypassCache: await isFreshOperationalRequest(c),
+          zyteApiKey: c.env?.ZYTE_API_KEY,
           apiKey: c.env?.GS25_API_KEY,
         },
       );
@@ -298,6 +310,7 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       const searchProducts = await fetchGs25SearchProducts(keyword, {
         timeout: 20000,
         ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         zyteApiKey: c.env?.ZYTE_API_KEY,
       });
       firstProduct = selectGs25InventoryProduct(searchProducts, keyword);
@@ -318,7 +331,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           {
             timeout: 20000,
             ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+            bypassCache: await isFreshOperationalRequest(c),
+            zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
@@ -335,7 +349,8 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           {
             timeout: 20000,
             ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+            bypassCache: await isFreshOperationalRequest(c),
+            zyteApiKey: c.env?.ZYTE_API_KEY,
             apiKey: c.env?.GS25_API_KEY,
           },
         );
@@ -357,12 +372,16 @@ export async function handleGs25CheckInventory(c: ApiContext) {
       null;
     const productPrice =
       filtered.find((item) => item.searchItemSellPrice !== null)?.searchItemSellPrice ?? null;
-    const inStockStoreCount = filtered.filter((item) => item.realStockQuantity !== null && item.realStockQuantity > 0).length;
-    const unknownStockStoreCount = filtered.filter((store) => store.realStockQuantity === null).length;
-    const totalStockQuantity = unknownStockStoreCount === filtered.length ? null : filtered.reduce(
-      (sum, item) => sum + Math.max(item.realStockQuantity ?? 0, 0),
-      0,
-    );
+    const inStockStoreCount = filtered.filter(
+      (item) => item.realStockQuantity !== null && item.realStockQuantity > 0,
+    ).length;
+    const unknownStockStoreCount = filtered.filter(
+      (store) => store.realStockQuantity === null,
+    ).length;
+    const totalStockQuantity =
+      unknownStockStoreCount === filtered.length
+        ? null
+        : filtered.reduce((sum, item) => sum + Math.max(item.realStockQuantity ?? 0, 0), 0);
 
     return successResponse(c, {
       serviceCode,

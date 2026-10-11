@@ -431,3 +431,28 @@ it('브라우저 교체 중 39999밀리초 기다린 작업은 실행하고 40�
   expect(runner).toHaveBeenCalledTimes(2);
   clock.mockRestore();
 });
+it('fresh authenticated calls skip cached and pending values while retaining quotas', async () => {
+  const runner = vi.fn().mockResolvedValue({ status: 'SUCCESS', data: { goodsInfo: {} } });
+  const takeQuota = vi.fn().mockResolvedValue(true);
+  const relay = createOliveyoungRelay('test', runner, { takeQuota });
+  await relay(request());
+  const fresh = () => new Request(request(), { headers: { Authorization: 'Bearer test', ...consumerHeaders(), 'x-relay-cache-bypass': 'true' } });
+  const response = await relay(fresh());
+  expect(response.headers.get('x-relay-cache')).toBe('miss');
+  expect(runner).toHaveBeenCalledTimes(2);
+  expect(takeQuota).toHaveBeenCalledTimes(2);
+  let finish!: (value: unknown) => void;
+  runner.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  const first = relay(fresh());
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(3));
+  const second = relay(fresh());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  finish({ status: 'SUCCESS', data: { goodsInfo: {} } });
+  await Promise.all([first, second]);
+  expect(runner).toHaveBeenCalledTimes(4);
+  expect(takeQuota).toHaveBeenCalledTimes(4);
+  takeQuota.mockResolvedValueOnce(false);
+  expect((await relay(fresh())).status).toBe(429);
+  expect(runner).toHaveBeenCalledTimes(4);
+  expect((await relay(new Request(fresh(), { headers: { Authorization: 'Bearer wrong', 'x-relay-cache-bypass': 'true' } }))).status).toBe(401);
+});

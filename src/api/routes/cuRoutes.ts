@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from '../operationalFreshness.js';
 /**
  * CU GET API 라우트 등록
  */
@@ -12,6 +13,7 @@ export function registerCuRoutes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
         keyPrefix: 'cu-stores-v5',
@@ -24,6 +26,7 @@ export function registerCuRoutes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'cu-inventory-v5',

@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from '../operationalFreshness.js';
 /**
  * 메가박스 GET API 라우트 등록
  */
@@ -16,6 +17,7 @@ export function registerMegaboxRoutes(app: Hono<{ Bindings: AppBindings }>): voi
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
         keyPrefix: 'megabox-theaters-v4',
@@ -28,6 +30,7 @@ export function registerMegaboxRoutes(app: Hono<{ Bindings: AppBindings }>): voi
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'megabox-movies-v4',
@@ -40,6 +43,7 @@ export function registerMegaboxRoutes(app: Hono<{ Bindings: AppBindings }>): voi
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 30,
         keyPrefix: 'megabox-seats-v4',

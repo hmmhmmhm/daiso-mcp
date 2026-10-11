@@ -171,8 +171,9 @@ export function createOliveyoungRelay(
           /* 관측 실패는 요청 처리에 영향을 주지 않습니다. */
         }
       };
-      const key = canonicalKey(operation, body);
-      const cached = cache.get(key);
+      const bypassCache = request.headers.get('x-relay-cache-bypass') === 'true';
+      const key = bypassCache ? randomUUID() : canonicalKey(operation, body);
+      const cached = bypassCache ? undefined : cache.get(key);
       if (cached !== undefined) {
         emit('cache', 'hit');
         return new Response(cached, {
@@ -210,7 +211,7 @@ export function createOliveyoungRelay(
             }
             reservation.commit();
             const result = await run(paths[operation], body);
-            if (result?.status === 'SUCCESS')
+            if (!bypassCache && result?.status === 'SUCCESS')
               cache.set(key, JSON.stringify(result), ttl[operation]);
             emit('upstream', result?.status === 'SUCCESS' ? 'success' : 'error');
             return result;

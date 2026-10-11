@@ -14,7 +14,9 @@ function parseBoolean(value: string | undefined): boolean {
 
 function isBetterStackHealthProbe(userAgent: string | undefined): boolean {
   const normalized = (userAgent || '').toLowerCase();
-  return normalized.includes('better stack better uptime bot') || normalized === 'nginx-ssl early hints';
+  return (
+    normalized.includes('better stack better uptime bot') || normalized === 'nginx-ssl early hints'
+  );
 }
 
 function isEarlyHintsProbe(userAgent: string | undefined): boolean {
@@ -25,7 +27,11 @@ function canForceFresh(headers: Headers): boolean {
   return parseBoolean(headers.get('x-health-check-force-fresh') || undefined);
 }
 
-function isTrustedHealthTarget(target: RequestInfo | URL, requestUrl: string, configuredBaseUrl?: string): boolean {
+function isTrustedHealthTarget(
+  target: RequestInfo | URL,
+  requestUrl: string,
+  configuredBaseUrl?: string,
+): boolean {
   const allowedOrigins = new Set([new URL(requestUrl).origin]);
   if (configuredBaseUrl) {
     allowedOrigins.add(new URL(configuredBaseUrl).origin);
@@ -62,12 +68,22 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
     }
 
     if ((await authorizeOperationalRequest(c.req.raw.headers, secret)) !== 'authorized') {
-      return errorResponse(c, 'UNAUTHORIZED_HEALTH_CHECK', '유효한 헬스 체크 시크릿 키가 필요합니다.', 401);
+      return errorResponse(
+        c,
+        'UNAUTHORIZED_HEALTH_CHECK',
+        '유효한 헬스 체크 시크릿 키가 필요합니다.',
+        401,
+      );
     }
 
     const mode = parseMode(c.req.query('mode'));
     if (!mode) {
-      return errorResponse(c, 'INVALID_HEALTH_CHECK_MODE', 'mode는 quick, deep, full 중 하나여야 합니다.', 400);
+      return errorResponse(
+        c,
+        'INVALID_HEALTH_CHECK_MODE',
+        'mode는 quick, deep, full 중 하나여야 합니다.',
+        400,
+      );
     }
 
     const timeoutMs = Number.parseInt(c.req.query('timeoutMs') || '3000', 10);
@@ -75,13 +91,21 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       c.req.query('slowThresholdMs') || c.env?.HEALTH_CHECK_SLOW_THRESHOLD_MS || '0',
       10,
     );
-    const baseUrl = c.req.query('baseUrl')?.trim() || c.env?.HEALTH_CHECK_BASE_URL?.trim() || new URL(c.req.url).origin;
+    const baseUrl =
+      c.req.query('baseUrl')?.trim() ||
+      c.env?.HEALTH_CHECK_BASE_URL?.trim() ||
+      new URL(c.req.url).origin;
     const transport = c.req.query('transport') || c.env?.HEALTH_CHECK_TRANSPORT || 'internal';
-    const cacheBust = parseBoolean(c.req.query('cacheBust')) || transport === 'network';
+    const fresh =
+      parseBoolean(c.req.query('fresh')) &&
+      canForceFresh(c.req.raw.headers) &&
+      !isBetterStackHealthProbe(userAgent);
+    const cacheBust = fresh || parseBoolean(c.req.query('cacheBust')) || transport === 'network';
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
       const headers = new Headers(init?.headers);
       if (isTrustedHealthTarget(input, c.req.url, c.env?.HEALTH_CHECK_BASE_URL)) {
         headers.set('x-health-check-key', secret);
+        if (fresh) headers.set('x-health-check-force-fresh', 'true');
       }
       const requestInit = { ...init, headers };
 
@@ -97,10 +121,7 @@ export function registerHealthRoutes(app: Hono<{ Bindings: AppBindings }>): void
       timeoutMs,
       slowThresholdMs,
       includeSamples: parseBoolean(c.req.query('includeSamples')),
-      fresh:
-        parseBoolean(c.req.query('fresh')) &&
-        canForceFresh(c.req.raw.headers) &&
-        !isBetterStackHealthProbe(userAgent),
+      fresh,
       cacheBust,
       fetchImpl,
     });

@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from '../operationalFreshness.js';
 /**
  * GS25 GET API 라우트 등록
  */
@@ -16,6 +17,7 @@ export function registerGs25Routes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'gs25-stores-v3',
@@ -28,6 +30,7 @@ export function registerGs25Routes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'gs25-products-v3',
@@ -40,6 +43,7 @@ export function registerGs25Routes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 2,
         staleWhileRevalidateSeconds: 30,
         keyPrefix: 'gs25-inventory-v3',

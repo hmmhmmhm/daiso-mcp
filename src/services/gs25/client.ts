@@ -1,4 +1,7 @@
-import { hasConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
+import {
+  hasConvenienceRelay,
+  type ConvenienceTransportOptions,
+} from '../../utils/convenienceTransport.js';
 import { geocodeLocation } from '../../utils/geocode.js';
 /**
  * GS25 API 클라이언트
@@ -55,8 +58,6 @@ interface Gs25WebLocationStore {
   posX?: string | number;
   posY?: string | number;
 }
-
-
 
 interface CacheEntry {
   expiresAt: number;
@@ -176,7 +177,7 @@ export async function fetchGs25Stores(
     longitude,
   });
 
-  if (useCache && !hasConvenienceRelay(options)) {
+  if (useCache && !options.bypassCache && !hasConvenienceRelay(options)) {
     const cached = gs25StoresCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       return {
@@ -240,7 +241,7 @@ export async function fetchGs25Stores(
     .map(normalizeStore)
     .filter((store) => store.storeCode.length > 0);
 
-  if (useCache && !hasConvenienceRelay(options)) {
+  if (useCache && !options.bypassCache && !hasConvenienceRelay(options)) {
     gs25StoresCache.set(cacheKey, {
       stores,
       expiresAt: Date.now() + GS25_STORES_CACHE_TTL_MS,

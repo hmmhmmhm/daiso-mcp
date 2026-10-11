@@ -198,3 +198,19 @@ it('세븐일레븐 GET·인기어·빈 POST도 고정 작업에 대응한다', 
     vi.unstubAllGlobals();
   }
 });
+
+it('캐시 우회 옵션은 인증된 고정 릴레이 요청 헤더로만 전송한다', async () => {
+  const fetcher = vi.fn(async () => Response.json({ data: [] }));
+  vi.stubGlobal('fetch', fetcher);
+  try {
+    await requestConvenienceRelay('seven-pages', {}, { ...options, bypassCache: true });
+    expect(fetcher.mock.calls[0][1].headers).toEqual(
+      expect.objectContaining({
+        Authorization: 'Bearer token',
+        'x-relay-cache-bypass': 'true',
+      }),
+    );
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

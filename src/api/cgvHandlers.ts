@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from './operationalFreshness.js';
 import { hasInvalidCinemaQuery, CINEMA_INVALID_INPUT } from '../services/cgv/validation.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
@@ -56,6 +57,7 @@ export async function handleCgvFindTheaters(c: ApiContext) {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
           ...cgvTransportFromBindings(c.env),
+          bypassCache: await isFreshOperationalRequest(c),
           ...geocodeBindings(c.env),
         },
       );
@@ -68,7 +70,8 @@ export async function handleCgvFindTheaters(c: ApiContext) {
       regionCode,
       timeout: timeoutMs,
       zyteApiKey: c.env?.ZYTE_API_KEY,
-          ...cgvTransportFromBindings(c.env),
+      ...cgvTransportFromBindings(c.env),
+      bypassCache: await isFreshOperationalRequest(c),
     });
 
     const sliced = theaters.slice(0, limit);
@@ -129,6 +132,7 @@ export async function handleCgvSearchMovies(c: ApiContext) {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
           ...cgvTransportFromBindings(c.env),
+          bypassCache: await isFreshOperationalRequest(c),
           ...geocodeBindings(c.env),
         },
       );
@@ -146,6 +150,7 @@ export async function handleCgvSearchMovies(c: ApiContext) {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
           ...cgvTransportFromBindings(c.env),
+          bypassCache: await isFreshOperationalRequest(c),
         });
 
     return successResponse(
@@ -207,6 +212,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
           ...cgvTransportFromBindings(c.env),
+          bypassCache: await isFreshOperationalRequest(c),
           ...geocodeBindings(c.env),
         },
       );
@@ -225,6 +231,7 @@ export async function handleCgvGetTimetable(c: ApiContext) {
           timeout: timeoutMs,
           zyteApiKey: c.env?.ZYTE_API_KEY,
           ...cgvTransportFromBindings(c.env),
+          bypassCache: await isFreshOperationalRequest(c),
         });
 
     const filtered = filterAndSortTimetable(timetable, { theaterCode, movieCode, limit });

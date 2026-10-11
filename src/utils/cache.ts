@@ -6,6 +6,7 @@
  */
 
 interface EdgeCacheOptions {
+  bypassCache?: boolean;
   ttlSeconds: number;
   staleWhileRevalidateSeconds?: number;
   keyPrefix?: string;
@@ -22,7 +23,7 @@ function createCacheKey(urlString: string, keyPrefix?: string): Request {
   const normalized = new URL(`${url.origin}${url.pathname}`);
 
   const sortedEntries = Array.from(url.searchParams.entries()).sort(([a], [b]) =>
-    a.localeCompare(b)
+    a.localeCompare(b),
   );
 
   for (const [key, value] of sortedEntries) {
@@ -52,8 +53,13 @@ function buildCacheControl(options: EdgeCacheOptions): string {
 export async function withEdgeCache(
   requestUrl: string,
   options: EdgeCacheOptions,
-  fetcher: () => Promise<Response>
+  fetcher: () => Promise<Response>,
 ): Promise<Response> {
+  if (options.bypassCache) {
+    const response = await fetcher();
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+  }
   const cacheStorage = getCacheStorage();
   const cache = cacheStorage?.default;
 

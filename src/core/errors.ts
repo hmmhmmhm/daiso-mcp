@@ -139,11 +139,11 @@ export function toStandardErrorDiagnostics(
     operation: options.operation || inferred.operation,
     upstreamStatus: options.upstreamStatus,
     hint: oliveyoungRelayConfigurationError
-      ? '운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN 및 브라우저 릴레이 실행 상태를 확인하세요.'
+      ? '운영자는 OY_RELAY_URL과 OY_RELAY_TOKEN 및 릴레이 실행 상태를 확인하세요.'
       : costPolicyError
         ? ZYTE_COST_POLICY_MESSAGE
         : gs25AuthenticationError
-          ? '운영자는 GS25_API_KEY 설정을 확인하세요.'
+          ? '운영자는 GS25_AUTH_SESSION_FILE의 인증 갱신 상태와 중계 재시작 여부를 확인하세요. API 키 방식은 GS25_API_KEY 설정을 확인하세요.'
           : configurationError
             ? '운영자는 ZYTE_API_KEY 설정과 Zyte 계정 상태를 확인하세요.'
             : buildHint(retryable),

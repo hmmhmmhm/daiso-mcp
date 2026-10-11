@@ -31,6 +31,7 @@ function waitForBusy(delay: number, signal?: AbortSignal): Promise<void> {
 export interface OliveyoungRequestOptions {
   /** 기존 호출부와의 호환용이며 유료 요청에는 사용하지 않습니다. */
   apiKey?: string;
+  bypassCache?: boolean;
   timeout?: number;
   signal?: AbortSignal;
   relayUrl?: string;
@@ -112,6 +113,7 @@ async function requestOliveyoungRaw(
     url = `${relayUrl.replace(/\/$/, '')}/v1/oliveyoung/${path.split('/').pop()}`;
     Object.assign(headers, diagnosticHeaders());
     headers.Authorization = `Bearer ${relayToken}`;
+    if (options.bypassCache) headers['x-relay-cache-bypass'] = 'true';
     consumer = (await relayConsumer(relayToken!)) || 'legacy';
     if (consumer !== 'legacy') headers['x-relay-consumer'] = consumer;
     const { accessClientId, accessClientSecret } = options;

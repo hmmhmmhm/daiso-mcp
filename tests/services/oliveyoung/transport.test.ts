@@ -92,7 +92,7 @@ it('로컬 릴레이 요청의 실패는 비밀 없이 전달하고 재시도하
   const { requestOliveyoung } = await import('../../../src/services/oliveyoung/transport.js');
   await expect(
     requestOliveyoung('/p', {}, { relayUrl: 'http://127.0.0.1:4319/', relayToken: 'secret' }),
-  ).rejects.toThrow('올리브영 브라우저 릴레이 요청 실패');
+  ).rejects.toThrow('올리브영 릴레이 요청 실패');
   expect(fetch).toHaveBeenCalledTimes(1);
 });
 it('도구의 사용자 입력으로 신뢰한 릴레이 설정을 덮어쓸 수 없다', async () => {

@@ -2,6 +2,7 @@
 import json
 import sys
 import urllib.request
+from urllib.error import HTTPError
 
 ORIGIN = 'https://www.oliveyoung.co.kr'
 PATHS = frozenset([
@@ -23,6 +24,9 @@ HEADERS = {
 
 class RelayError(Exception):
     """상위 응답 본문을 노출하지 않는 고정 오류입니다."""
+    def __init__(self, message, status=None):
+        super().__init__(message)
+        self.status = status
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -40,7 +44,7 @@ def fetch(path, body):
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
         with opener.open(request, timeout=15) as response:
             if response.status != 200:
-                raise RelayError('Upstream unavailable')
+                raise RelayError('Upstream unavailable', response.status)
             raw = response.read(LIMIT + 1)
         if len(raw) > LIMIT:
             raise RelayError('Upstream unavailable')
@@ -48,6 +52,10 @@ def fetch(path, body):
         if not isinstance(result, dict) or result.get('status') != 'SUCCESS' or not isinstance(result.get('data'), dict):
             raise RelayError('Upstream unavailable')
         return result
+    except HTTPError as error:
+        raise RelayError('Upstream unavailable', error.code) from None
+    except RelayError:
+        raise
     except Exception:
         raise RelayError('Upstream unavailable') from None
 
@@ -70,8 +78,10 @@ def main():
             raise RelayError('Upstream unavailable')
         sys.stdout.buffer.write(output)
         return 0
-    except Exception:
-        print('HTTP relay request failed', file=sys.stderr)
+    except Exception as error:
+        status = getattr(error, 'status', None)
+        suffix = f' upstream_status={status}' if type(status) is int and 100 <= status <= 599 else ''
+        print('HTTP relay request failed' + suffix, file=sys.stderr)
         return 1
 
 if __name__ == '__main__':

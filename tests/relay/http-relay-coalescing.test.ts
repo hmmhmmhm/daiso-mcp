@@ -174,3 +174,25 @@ it('공유 요청도 각 request ID와 coalesced 단계를 기록한다', async 
     ['second', 'coalesced'],
   ]);
 });
+
+it('인증된 캐시 우회는 저장 결과와 진행 작업을 사용하지 않고 예산을 적용한다', async () => {
+  const s = setup();
+  const first = s.relay(request());
+  await vi.waitFor(() => expect(s.upstream).toHaveBeenCalledTimes(1));
+  const freshRequest = request();
+  freshRequest.headers.set('x-relay-cache-bypass', 'true');
+  const fresh = s.relay(freshRequest);
+  await vi.waitFor(() => expect(s.upstream).toHaveBeenCalledTimes(2));
+  s.resolve({ quantity: 7 });
+  await Promise.all([first, fresh]);
+  s.upstream.mockResolvedValue({ quantity: 9 });
+  const nextFresh = request();
+  nextFresh.headers.set('x-relay-cache-bypass', 'true');
+  expect(await (await s.relay(nextFresh)).json()).toEqual({ quantity: 9 });
+  expect(await (await s.relay(request())).json()).toEqual({ quantity: 7 });
+  expect(s.takeQuota).toHaveBeenCalledTimes(3);
+  const unauthorized = request(undefined, undefined, 'wrong');
+  unauthorized.headers.set('x-relay-cache-bypass', 'true');
+  expect((await s.relay(unauthorized)).status).toBe(401);
+  expect(s.takeQuota).toHaveBeenCalledTimes(3);
+});

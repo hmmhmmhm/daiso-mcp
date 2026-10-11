@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from '../operationalFreshness.js';
 /**
  * 세븐일레븐 GET API 라우트 등록
  */
@@ -19,6 +20,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'seveneleven-products-v4',
@@ -31,6 +33,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'seveneleven-stores-v2',
@@ -43,6 +46,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 30,
         staleWhileRevalidateSeconds: 0,
         keyPrefix: 'seveneleven-inventory-v3',
@@ -56,6 +60,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'seveneleven-popwords-v2',
@@ -68,6 +73,7 @@ export function registerSevenElevenRoutes(app: Hono<{ Bindings: AppBindings }>):
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'seveneleven-catalog-v2',

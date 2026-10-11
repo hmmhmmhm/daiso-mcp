@@ -6,6 +6,7 @@ import { parseRelayQuota } from '../../utils/relayQuota.js';
 import { createTimeoutController } from '../../utils/http.js';
 import { CGV_API } from './api.js';
 export interface CgvTransportOptions {
+  bypassCache?: boolean;
   cgvRelayUrl?: string;
   cgvRelayToken?: string;
   cgvAccessClientId?: string;
@@ -122,6 +123,7 @@ export async function requestCgvRelay<T>(
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   };
+  if (options.bypassCache) headers['x-relay-cache-bypass'] = 'true';
   if (id && secret) {
     headers['CF-Access-Client-Id'] = id;
     headers['CF-Access-Client-Secret'] = secret;

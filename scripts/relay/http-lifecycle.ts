@@ -15,6 +15,7 @@ export function createHttpLifecycle() {
   let starting: Promise<void> | undefined;
   let active = false;
   let calls = 0;
+  let lastFailure: { status: number | null; at: string } | null = null;
   const execute = (check: boolean, input?: string) => {
     pending = new Promise<string>((resolve, reject) => {
       child = execFile(
@@ -27,7 +28,13 @@ export function createHttpLifecycle() {
           maxBuffer: LIMIT,
           encoding: 'utf8',
         },
-        (error, stdout) => {
+        (error, stdout, stderr) => {
+          if (error && !check && !isClosed()) {
+            const match = /^HTTP relay request failed upstream_status=([1-5][0-9]{2})\n?$/.exec(
+              stderr || '',
+            );
+            lastFailure = { status: match ? Number(match[1]) : null, at: new Date().toISOString() };
+          }
           child = undefined;
           if (error || isClosed()) reject(new Error('HTTP relay request failed'));
           else resolve(stdout);
@@ -59,6 +66,7 @@ export function createHttpLifecycle() {
     if (state !== 'ready') throw new Error('HTTP lifecycle not ready');
     if (active) throw new Error('HTTP lifecycle already active');
     active = true;
+    lastFailure = null;
     calls++;
     try {
       const input = JSON.stringify({ path, body });
@@ -72,8 +80,10 @@ export function createHttpLifecycle() {
         Array.isArray(result.data)
       )
         throw new Error();
+      lastFailure = null;
       return result;
     } catch {
+      lastFailure ??= { status: null, at: new Date().toISOString() };
       throw new Error('HTTP relay request failed');
     } finally {
       active = false;
@@ -90,6 +100,7 @@ export function createHttpLifecycle() {
     status: () => ({
       state,
       transport: 'http',
+      lastFailure,
       browserRequired: false,
       pages: 0,
       active,

@@ -142,6 +142,7 @@ export async function fetchOliveyoungStores(
     writeStaleResult(oliveyoungStoreSearchCache, cacheKey, result, cloneOliveyoungStoreSearchResult);
     return result;
   } catch (error) {
+    if (options.bypassCache) throw error;
     const staleResult = readStaleResult(oliveyoungStoreSearchCache, cacheKey, cloneOliveyoungStoreSearchResult);
     if (staleResult) {
       return staleResult;
@@ -197,6 +198,7 @@ export async function fetchOliveyoungProducts(
     writeStaleResult(oliveyoungProductSearchCache, cacheKey, result, cloneOliveyoungProductSearchResult);
     return result;
   } catch (error) {
+    if (options.bypassCache) throw error;
     const staleResult = readStaleResult(oliveyoungProductSearchCache, cacheKey, cloneOliveyoungProductSearchResult);
     if (staleResult) {
       return {
@@ -226,7 +228,7 @@ async function fetchOliveyoungProductId(
 
   const cached = oliveyoungProductIdCache.get(normalizedGoodsNumber);
   const now = Date.now();
-  if (cached && cached.expiresAt > now) {
+  if (!options.bypassCache && cached && cached.expiresAt > now) {
     return cached.productId;
   }
 
@@ -315,11 +317,13 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
           let productId = '';
           try {
             productId = await fetchOliveyoungProductId(product.goodsNumber, options);
-          } catch {
+          } catch (error) {
+            if (options.bypassCache) throw error;
             return { checked: false, product };
           }
 
           if (!productId) {
+            if (options.bypassCache) throw new Error('올리브영 상품 식별자가 없습니다.');
             return { checked: false, product };
           }
 
@@ -335,7 +339,8 @@ export async function enrichOliveyoungProductsWithNearbyStoreInventory(
               },
               options
             );
-          } catch {
+          } catch (error) {
+            if (options.bypassCache) throw error;
             return { checked: false, product };
           }
 

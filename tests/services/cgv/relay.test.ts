@@ -179,16 +179,21 @@ it('네트워크 실패 응답의 원문은 외부에 노출하지 않는다', a
 it('실패 본문 취소 오류는 요청 오류를 바꾸지 않는다', async () => {
   vi.stubGlobal(
     'fetch',
-    vi
-      .fn()
-      .mockResolvedValue({
-        status: 503,
-        body: { cancel: () => Promise.reject(new Error('private')) },
-        headers: new Headers(),
-      }),
+    vi.fn().mockResolvedValue({
+      status: 503,
+      body: { cancel: () => Promise.reject(new Error('private')) },
+      headers: new Headers(),
+    }),
   );
   await expect(requestCgv(path, params, 1000, undefined, options)).rejects.toMatchObject({
     code: 'CGV_RELAY_FAILED',
     upstreamStatus: 503,
   });
+});
+
+it('운영 fresh 옵션은 CGV 릴레이 캐시를 우회한다', async () => {
+  const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ statusCode: 0, data: [] }));
+  vi.stubGlobal('fetch', fetcher);
+  await requestCgv(path, params, 1000, undefined, { ...options, bypassCache: true });
+  expect(fetcher.mock.calls[0][1].headers).toMatchObject({ 'x-relay-cache-bypass': 'true' });
 });

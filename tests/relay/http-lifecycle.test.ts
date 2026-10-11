@@ -5,7 +5,7 @@ const exec = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', () => ({ execFile: exec }));
 import { createHttpLifecycle } from '../../scripts/relay/http-lifecycle.js';
 let child: EventEmitter & { stdin: PassThrough; kill: ReturnType<typeof vi.fn> };
-let done: (error: Error | null, stdout: string) => void;
+let done: (error: Error | null, stdout: string, stderr?: string) => void;
 beforeEach(() => {
   exec.mockReset();
   exec.mockImplementation((_command, _args, _options, callback) => {
@@ -179,5 +179,46 @@ it('ignores input pipe errors after the child has already exited', async () => {
   done(null, '{"status":"SUCCESS","data":{}}');
   stdin.emit('error', new Error('private'));
   await call;
+  await lifecycle.close();
+});
+
+it('records only numeric upstream failure metadata and clears it on success', async () => {
+  const lifecycle = await ready();
+  const call = lifecycle.run('x', {});
+  done(new Error('secret'), 'secret', 'HTTP relay request failed upstream_status=403\n');
+  await expect(call).rejects.toThrow(/^HTTP relay request failed$/);
+  expect(lifecycle.status()).toMatchObject({
+    lastFailure: { status: 403, at: expect.any(String) },
+  });
+  const retry = lifecycle.run('x', {});
+  done(null, '{"status":"SUCCESS","data":{}}');
+  await retry;
+  expect(lifecycle.status()).toMatchObject({ lastFailure: null });
+  await lifecycle.close();
+});
+it.each([
+  'secret HTTP relay request failed upstream_status=403',
+  'HTTP relay request failed upstream_status=999\n',
+  'HTTP relay request failed upstream_status=403\nsecret',
+  '',
+])('rejects untrusted child diagnostic text: %s', async (stderr) => {
+  const lifecycle = await ready();
+  const call = lifecycle.run('x', {});
+  done(new Error('secret'), '', stderr);
+  await expect(call).rejects.toThrow(/^HTTP relay request failed$/);
+  expect(lifecycle.status()).toMatchObject({
+    lastFailure: { status: null, at: expect.any(String) },
+  });
+  await lifecycle.close();
+});
+it('does not reuse a prior upstream status for a later local serialization failure', async () => {
+  const lifecycle = await ready();
+  const call = lifecycle.run('x', {});
+  done(new Error('private'), '', 'HTTP relay request failed upstream_status=403\n');
+  await expect(call).rejects.toThrow('HTTP relay request failed');
+  await expect(lifecycle.run('x', { value: 1n })).rejects.toThrow('HTTP relay request failed');
+  expect(lifecycle.status()).toMatchObject({
+    lastFailure: { status: null, at: expect.any(String) },
+  });
   await lifecycle.close();
 });

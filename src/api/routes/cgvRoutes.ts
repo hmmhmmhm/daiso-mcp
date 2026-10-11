@@ -1,10 +1,15 @@
+import { isFreshOperationalRequest } from '../operationalFreshness.js';
 /**
  * CGV GET API 라우트 등록
  */
 
 import type { Hono } from 'hono';
 import { withEdgeCache } from '../../utils/cache.js';
-import { handleCgvFindTheaters, handleCgvGetTimetable, handleCgvSearchMovies } from '../cgvHandlers.js';
+import {
+  handleCgvFindTheaters,
+  handleCgvGetTimetable,
+  handleCgvSearchMovies,
+} from '../cgvHandlers.js';
 import type { AppBindings } from '../response.js';
 
 export function registerCgvRoutes(app: Hono<{ Bindings: AppBindings }>): void {
@@ -12,6 +17,7 @@ export function registerCgvRoutes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 60 * 24,
         staleWhileRevalidateSeconds: 60 * 5,
         keyPrefix: 'cgv-theaters-v3',
@@ -24,6 +30,7 @@ export function registerCgvRoutes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'cgv-movies-v3',
@@ -36,6 +43,7 @@ export function registerCgvRoutes(app: Hono<{ Bindings: AppBindings }>): void {
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 3,
         staleWhileRevalidateSeconds: 30,
         keyPrefix: 'cgv-timetable-v3',

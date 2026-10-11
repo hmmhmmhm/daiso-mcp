@@ -8,6 +8,7 @@ import { isValidDtryxRelayUrl } from '../services/dtryx/transport.js';
 import { createTimeoutController, parseRetryAfterDelayMs } from './http.js';
 import { parseRelayQuota } from './relayQuota.js';
 export interface ConvenienceTransportOptions {
+  bypassCache?: boolean;
   convenienceRelayUrl?: string;
   convenienceRelayToken?: string;
   convenienceAccessClientId?: string;
@@ -90,6 +91,7 @@ async function requestConvenienceRelayRaw<T>(
     Accept: 'application/json',
     Authorization: `Bearer ${token}`,
   };
+  if (options.bypassCache) headers['x-relay-cache-bypass'] = 'true';
   if (access) {
     headers['CF-Access-Client-Id'] = id!;
     headers['CF-Access-Client-Secret'] = secret!;

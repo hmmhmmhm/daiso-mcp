@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from './operationalFreshness.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
@@ -66,6 +67,7 @@ export async function handleOliveyoungSearchProducts(c: ApiContext) {
         includeSoldOut,
       },
       {
+        bypassCache: await isFreshOperationalRequest(c),
         relayUrl: c.env?.OY_RELAY_URL,
         relayToken: c.env?.OY_RELAY_TOKEN,
         accessClientId: c.env?.OY_ACCESS_CLIENT_ID,
@@ -115,6 +117,7 @@ export async function handleOliveyoungFindStores(c: ApiContext) {
         searchWords: keyword,
       },
       {
+        bypassCache: await isFreshOperationalRequest(c),
         relayUrl: c.env?.OY_RELAY_URL,
         relayToken: c.env?.OY_RELAY_TOKEN,
         accessClientId: c.env?.OY_ACCESS_CLIENT_ID,
@@ -172,6 +175,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
           searchWords: storeKeyword,
         },
         {
+          bypassCache: await isFreshOperationalRequest(c),
           relayUrl: c.env?.OY_RELAY_URL,
           relayToken: c.env?.OY_RELAY_TOKEN,
           accessClientId: c.env?.OY_ACCESS_CLIENT_ID,
@@ -188,6 +192,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
           includeSoldOut,
         },
         {
+          bypassCache: await isFreshOperationalRequest(c),
           relayUrl: c.env?.OY_RELAY_URL,
           relayToken: c.env?.OY_RELAY_TOKEN,
           accessClientId: c.env?.OY_ACCESS_CLIENT_ID,
@@ -205,6 +210,7 @@ export async function handleOliveyoungCheckInventory(c: ApiContext) {
         maxProducts: Math.min(productResult.products.length, stockCheckLimit),
       },
       {
+        bypassCache: await isFreshOperationalRequest(c),
         relayUrl: c.env?.OY_RELAY_URL,
         relayToken: c.env?.OY_RELAY_TOKEN,
         accessClientId: c.env?.OY_ACCESS_CLIENT_ID,
@@ -267,6 +273,7 @@ export async function handleCuFindStores(c: ApiContext) {
       {
         timeout: 15000,
         ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         apiKey: c.env.ZYTE_API_KEY,
       },
     );
@@ -322,6 +329,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
       {
         timeout: 15000,
         ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         apiKey: c.env?.ZYTE_API_KEY,
       },
     );
@@ -343,6 +351,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
         {
           timeout: 15000,
           ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         apiKey: c.env?.ZYTE_API_KEY,
         },
       );
@@ -371,6 +380,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
             {
               timeout: 15000,
               ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         apiKey: c.env?.ZYTE_API_KEY,
             },
           );
@@ -396,6 +406,7 @@ export async function handleCuCheckInventory(c: ApiContext) {
         {
           timeout: 15000,
           ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         apiKey: c.env?.ZYTE_API_KEY,
         },
       );

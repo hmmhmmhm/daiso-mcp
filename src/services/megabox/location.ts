@@ -1,3 +1,4 @@
+import { clearMegaboxTheaterInfoCache, withMegaboxTheaterInfoCache } from './theaterInfoCache.js';
 /**
  * 메가박스 위치 해석 및 근처 지점 조회 보조 모듈
  */
@@ -6,6 +7,7 @@ import { geocodeLocation, validKoreanCoordinates } from '../../utils/geocode.js'
 import { fetchMegaboxBookingList, fetchMegaboxTheaterInfo } from './client.js';
 
 interface RequestOptions {
+  bypassCache?: boolean;
   timeout?: number;
   googleMapsApiKey?: string;
   kakaoRestApiKey?: string;
@@ -164,7 +166,14 @@ export async function fetchMegaboxNearbyTheaters(
   });
 
   const infoResults = await Promise.allSettled(
-    theaters.map((theater) => fetchMegaboxTheaterInfo(theater.theaterId, timeout)),
+    theaters.map((theater) =>
+      withMegaboxTheaterInfoCache(
+        theater.theaterId,
+        () => fetchMegaboxTheaterInfo(theater.theaterId, timeout),
+        options.bypassCache,
+        timeout,
+      ),
+    ),
   );
 
   const merged = theaters
@@ -234,5 +243,5 @@ export async function resolveMegaboxNearestTheater(
 }
 
 export function __testOnlyClearMegaboxLocationCaches(): void {
-  // 캐시를 유지하지 않으므로 초기화할 상태가 없습니다.
+  clearMegaboxTheaterInfoCache();
 }

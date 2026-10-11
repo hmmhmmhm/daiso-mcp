@@ -52,7 +52,9 @@ describe('fetchGs25Stores', () => {
       'GS25',
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
   it('store/stock 403이어도 Zyte 키가 없으면 원본 에러를 반환한다', async () => {
@@ -258,12 +260,16 @@ describe('fetchGs25SearchProducts', () => {
   });
 
   it('상품 검색 차단 시 유료 호출 없이 원본 오류를 반환한다', async () => {
-    mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403, statusText: 'Forbidden' }));
+    mockFetch.mockResolvedValueOnce(
+      new Response('blocked', { status: 403, statusText: 'Forbidden' }),
+    );
     await expect(fetchGs25SearchProducts('콜라', { zyteApiKey: 'test-key' })).rejects.toThrow(
       'API 요청 실패: 403 Forbidden - blocked',
     );
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com')).toBe(false);
+    expect(
+      mockFetch.mock.calls.some(([url]) => new URL(String(url)).hostname === 'api.zyte.com'),
+    ).toBe(false);
   });
 
   it('상품 검색 403이어도 Zyte 키가 없으면 원본 에러를 반환한다', async () => {
@@ -564,7 +570,16 @@ describe('geocodeGs25Address', () => {
     vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({ documents: [{ place_name: '서울시 강남구', address_name: '경기도 안산시 단원구 중앙대로 885', y: 37.3172, x: 126.8354 }] }),
+        JSON.stringify({
+          documents: [
+            {
+              place_name: '서울시 강남구',
+              address_name: '경기도 안산시 단원구 중앙대로 885',
+              y: 37.3172,
+              x: 126.8354,
+            },
+          ],
+        }),
       ),
     );
 
@@ -589,9 +604,7 @@ describe('geocodeGs25Address', () => {
 
   it('status가 OK가 아니면 null을 반환한다', async () => {
     vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ documents: [] })),
-    );
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ documents: [] })));
 
     const result = await geocodeGs25Address('없는 주소', {
       kakaoRestApiKey: 'test-key',
@@ -601,7 +614,20 @@ describe('geocodeGs25Address', () => {
 
   it('결과 location이 없으면 null을 반환한다', async () => {
     vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ documents: [{ place_name: '서울시 강남구', address_name: '경기도 안산시 단원구 중앙대로 885', y: undefined, x: undefined }] })));
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          documents: [
+            {
+              place_name: '서울시 강남구',
+              address_name: '경기도 안산시 단원구 중앙대로 885',
+              y: undefined,
+              x: undefined,
+            },
+          ],
+        }),
+      ),
+    );
 
     const result = await geocodeGs25Address('서울 강남구', {
       kakaoRestApiKey: 'test-key',
@@ -613,7 +639,16 @@ describe('geocodeGs25Address', () => {
     vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     mockFetch.mockResolvedValue(
       new Response(
-        JSON.stringify({ documents: [{ place_name: '서울시 강남구', address_name: '경기도 안산시 단원구 중앙대로 885', y: 0, x: 0 }] }),
+        JSON.stringify({
+          documents: [
+            {
+              place_name: '서울시 강남구',
+              address_name: '경기도 안산시 단원구 중앙대로 885',
+              y: 0,
+              x: 0,
+            },
+          ],
+        }),
       ),
     );
 
@@ -622,4 +657,20 @@ describe('geocodeGs25Address', () => {
     });
     expect(result).toBeNull();
   });
+});
+
+it('운영 fresh 조회는 GS25 직접 매장 캐시를 읽거나 덮어쓰지 않는다', async () => {
+  mockFetch
+    .mockImplementationOnce(async () =>
+      Response.json({ stores: [{ storeCode: 'VE463', storeName: '기존점' }] }),
+    )
+    .mockImplementationOnce(async () =>
+      Response.json({ stores: [{ storeCode: 'VE463', storeName: '새점' }] }),
+    );
+  await fetchGs25Stores();
+  const fresh = await fetchGs25Stores({}, { bypassCache: true });
+  expect(fresh.stores[0].storeName).toBe('새점');
+  expect(fresh.cacheHit).toBe(false);
+  expect((await fetchGs25Stores()).stores[0].storeName).toBe('기존점');
+  expect(mockFetch).toHaveBeenCalledTimes(2);
 });

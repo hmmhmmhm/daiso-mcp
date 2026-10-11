@@ -64,6 +64,15 @@ class HelperTest(unittest.TestCase):
                 with self.assertRaisesRegex(self.helper.RelayError, '^Upstream unavailable$'):
                     self.helper.fetch(next(iter(self.helper.PATHS)), {})
 
+    def test_main_preserves_only_numeric_upstream_status(self):
+        for status in [403, 302, 503]:
+            opener = self.request()
+            opener.open.side_effect = HTTPError('secret-url', status, 'private', {}, io.BytesIO(b'secret-token'))
+            stdin = unittest.mock.Mock(buffer=io.BytesIO(json.dumps({'path': next(iter(self.helper.PATHS)), 'body': {}}).encode()))
+            with patch.object(self.helper.sys, 'argv', ['helper']), patch.object(self.helper.sys, 'stdin', stdin), patch.object(self.helper.sys, 'stderr', new=io.StringIO()) as output, patch.object(self.helper.urllib.request, 'build_opener', return_value=opener):
+                self.assertEqual(self.helper.main(), 1)
+                self.assertEqual(output.getvalue(), f'HTTP relay request failed upstream_status={status}\n')
+
     def test_main_check_invalid_and_large_input(self):
         with patch.object(self.helper.sys, 'argv', ['helper', '--check']), patch.object(self.helper.sys, 'stdout', new=io.StringIO()) as output:
             self.assertEqual(self.helper.main(), 0)

@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from './operationalFreshness.js';
 import { ServiceError } from '../core/errors.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 /**
@@ -5,7 +6,12 @@ import { convenienceTransportFromBindings } from '../utils/convenienceTransport.
  */
 /* c8 ignore start */
 
-import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
+import {
+  type ApiContext,
+  errorResponse,
+  serviceErrorResponse,
+  successResponse,
+} from './response.js';
 import {
   fetchSevenElevenStoresByKeyword,
   fetchSevenElevenCatalogSnapshot,
@@ -52,8 +58,11 @@ export async function handleSevenElevenSearchProducts(c: ApiContext) {
         size,
         sort,
       },
-      { ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY },
+      {
+        ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
+      },
     );
 
     return successResponse(
@@ -97,8 +106,11 @@ export async function handleSevenElevenSearchStores(c: ApiContext) {
         keyword,
         limit: safeLimit,
       },
-      { ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY },
+      {
+        ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
+        zyteApiKey: c.env?.ZYTE_API_KEY,
+      },
     );
 
     return successResponse(
@@ -148,6 +160,7 @@ export async function handleSevenElevenCheckInventory(c: ApiContext) {
       {
         timeout: safeTimeoutMs,
         ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         zyteApiKey: c.env?.ZYTE_API_KEY,
       },
     );
@@ -196,7 +209,8 @@ export async function handleSevenElevenGetSearchPopwords(c: ApiContext) {
   try {
     const keywords = await fetchSevenElevenSearchPopwords(label, {
       ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+      bypassCache: await isFreshOperationalRequest(c),
+      zyteApiKey: c.env?.ZYTE_API_KEY,
     });
 
     return successResponse(c, {
@@ -230,7 +244,8 @@ export async function handleSevenElevenGetCatalogSnapshot(c: ApiContext) {
       includeIssues,
       includeExhibition,
       ...convenienceTransportFromBindings(c.env),
-        zyteApiKey: c.env?.ZYTE_API_KEY,
+      bypassCache: await isFreshOperationalRequest(c),
+      zyteApiKey: c.env?.ZYTE_API_KEY,
     });
 
     return successResponse(c, {
