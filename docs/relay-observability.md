@@ -47,7 +47,7 @@ rg --fixed-strings '확인할-request-id' "$OY_RELAY_STATE_DIR/logs" "$DTRYX_REL
 
 인증과 payload 검증 뒤 공통 릴레이 캐시를 확인한다. REST와 MCP가 같은 조건을 요청하면 공유된다. 상품 검색/매장은 5분, 상품 ID는 10분, 재고는 1분 TTL이다. 최대 256항목 및 키·값 직렬화 16MiB, 오래된 항목부터 퇴출한다. 성공만 저장하며 동일 진행 요청은 합친다. 탭이나 브라우저를 추가하지 않는다.
 
-캐시 적중은 quota를 소비하지 않는다. `x-relay-cache: hit/miss/coalesced` 및 health.cache로 확인한다. 서로 다른 검색이 대부분이면 절감 효과는 작다. 현재 OY quota는 분당 300회·UTC 일일 300,000회다. 소비자별 신규 원본 작업은 분당 240회이며, 사용한 원장은 유지한다. REST 캐시도 별도로 존재하며 products5분/stores24시간/inventory10분이므로 외부 REST 응답의 최신성은 두 계층의 영향을 받는다. `_healthCheck`는 REST 캐시를 새로 조회하지만 공통 릴레이 캐시는 계속 적용된다.
+캐시 적중은 quota를 소비하지 않는다. `x-relay-cache: hit/miss/coalesced` 및 health.cache로 확인한다. 서로 다른 검색이 대부분이면 절감 효과는 작다. 현재 OY quota는 분당 300회·UTC 일일 300,000회다. 소비자별 신규 원본 작업은 분당 240회이며, 사용한 원장은 유지한다. REST 캐시도 별도로 존재하며 products5분/stores24시간/inventory10분이므로 외부 REST 응답의 최신성은 두 계층의 영향을 받는다. 공개 REST 요청의 `_healthCheck`는 REST 캐시 키만 바꾸며 공통 릴레이 캐시는 계속 적용된다. 운영 인증이 유효한 `x-health-check-force-fresh: true` 요청은 REST 캐시와 OY 내부 캐시를 우회하고, 릴레이에도 `x-relay-cache-bypass: true`를 전달하여 저장 응답과 진행 중인 동일 요청을 재사용하지 않는다. 인증 없는 헤더나 `_healthCheck`만으로 이 우회를 활성화할 수 없다.
 
 
 ## 과거 OY 요청 집중 보호 (1.2.7)
@@ -64,7 +64,7 @@ health.cache의 `hits`, `misses`, `expired`, `evicted`는 프로세스 시작 �
 
 ## GitHub Health Checks 판정과 보존
 
-quick/full 모두 새 검사 요약을 요청한다. 실패 후 한 번 재시도할 때는 REST 캐시도 우회한다. 공통 OY 릴레이 캐시는 유지한다. HTTP 실패 후 이전 성공 파일을 재사용하지 않으며, 비정상 JSON·빈 검사 목록·모순된 요약은 실패로 처리한다. 각 요청은 최대 240초, 전체 job은 최대 10분이다. 시도별 원본 JSON과 오류 요약은 Actions artifact로 7일 보관한다.
+quick/full 모두 운영 인증과 `fresh=true`, `x-health-check-force-fresh: true`를 함께 보내 새 검사 요약을 요청한다. 허용된 원점의 검사 대상에는 운영 인증과 fresh 헤더가 전달되며 REST·OY 내부·공통 릴레이 캐시를 우회한다. 실패 직후 전체 검사를 반복하지 않고, 검증된 분당 중계 한도 429만 만료 후 해당 검사 ID를 한 번 fresh로 재확인한다. HTTP 실패 후 이전 성공 파일을 재사용하지 않으며, 비정상 JSON·빈 검사 목록·모순된 요약은 실패로 처리한다. 각 요청은 최대 240초, 전체 job은 최대 10분이다. 시도별 원본 JSON과 오류 요약은 Actions artifact로 7일 보관한다.
 
 CGV는 `CGV_UPSTREAM_UNAVAILABLE`, API HTTP 503, 원본 HTTP 403이 모두 확인될 때만 `degraded`로 분류한다. 이는 해당 기능이 제한된 상태이며 복구를 뜻하지 않는다. 인증 오류, 타임아웃, JSON 파싱 실패 등은 계속 `fail`이다. 선택 데이터가 없는 `skipped` 검사는 정상 요약에 포함될 수 있다. Actions 성공 여부와 별도로 요약의 저하 서비스 목록을 확인해야 한다. 유료 Zyte 재시도는 활성화하지 않는다.
 
