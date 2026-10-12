@@ -39,7 +39,7 @@ describe('이마트24 기존 직접 경로 선택', () => {
       get: () => ({ fetch: async () => Response.json(snapshot) }),
     } as unknown as DurableObjectNamespace;
     const fetcher = vi.fn(async (url: RequestInfo | URL) =>
-      String(url).startsWith('https://relay.example')
+      new URL(String(url)).origin === 'https://relay.example'
         ? Response.json(products)
         : new Response('403 Forbidden', { status: 403 }),
     );
@@ -62,10 +62,12 @@ describe('이마트24 기존 직접 경로 선택', () => {
     expect(await run()).toEqual(products);
     expect(await run()).toEqual(products);
     expect(
-      fetcher.mock.calls.filter(([url]) => String(url).includes('everse.emart24.co.kr')),
+      fetcher.mock.calls.filter(
+        ([url]) => new URL(String(url)).origin === 'https://everse.emart24.co.kr',
+      ),
     ).toHaveLength(1);
     expect(
-      fetcher.mock.calls.filter(([url]) => String(url).includes('relay.example')),
+      fetcher.mock.calls.filter(([url]) => new URL(String(url)).origin === 'https://relay.example'),
     ).toHaveLength(2);
   });
 });

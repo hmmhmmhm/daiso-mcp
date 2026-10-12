@@ -408,3 +408,52 @@ it('요청 실패 뒤 자동 실행 실패도 처리하며 무한 실행을 만�
   expect(launch).toHaveBeenCalledTimes(2);
   await expect(life.close()).rejects.toThrow('guard uncertain');
 });
+it.each(['context', 'page', 'navigation', 'store-wait'] as const)(
+  '시작 실패는 고정된 %s 단계와 오류 분류만 기록한다',
+  async (phase) => {
+    const a = session();
+    const events: string[] = [];
+    const error = new Error('sentinel-content-not-for-logs');
+    error.name = 'TimeoutError';
+    if (phase === 'context') a.owner.browser.newContext.mockRejectedValueOnce(error);
+    if (phase === 'page') a.context.newPage.mockRejectedValueOnce(error);
+    if (phase === 'navigation') a.page.goto.mockRejectedValueOnce(error);
+    if (phase === 'store-wait') a.page.waitForURL.mockRejectedValueOnce(error);
+    const life = createBrowserLifecycle(vi.fn().mockResolvedValue(a.owner), (e) => {
+      events.push(e);
+    });
+    await expect(life.start()).rejects.toThrow(error);
+    expect(events).toContain(`prepare-${phase}`);
+    expect(events).toContain(`startup-${phase}-timeout`);
+    expect(events).toContain('startup-failed');
+    expect(events.join(' ')).not.toContain('sentinel-content');
+    await life.close();
+  },
+);
+it('시작 오류의 임의 문자열은 기록하지 않고 error로 분류한다', async () => {
+  const a = session();
+  const events: string[] = [];
+  a.page.goto.mockRejectedValueOnce('arbitrary-input');
+  const life = createBrowserLifecycle(vi.fn().mockResolvedValue(a.owner), (e) => {
+    events.push(e);
+  });
+  await expect(life.start()).rejects.toBe('arbitrary-input');
+  expect(events).toContain('startup-navigation-error');
+  expect(events.join(' ')).not.toContain('arbitrary-input');
+  await life.close();
+});
+it('Node 시작 watchdog은 navigation timeout으로 기록한다', async () => {
+  vi.useFakeTimers();
+  const a = session();
+  const events: string[] = [];
+  a.page.goto.mockImplementationOnce(() => new Promise(() => {}));
+  const life = createBrowserLifecycle(vi.fn().mockResolvedValue(a.owner), (e) => {
+    events.push(e);
+  });
+  const starting = life.start();
+  const rejected = expect(starting).rejects.toThrow('watchdog');
+  await vi.advanceTimersByTimeAsync(32000);
+  await rejected;
+  expect(events).toContain('startup-navigation-timeout');
+  await life.close();
+});

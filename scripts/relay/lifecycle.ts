@@ -135,6 +135,8 @@ export function createBrowserLifecycle(
     if (previous) previous.attempted = true;
     preparing = (async () => {
       let session: Session | undefined;
+      let phase: 'ownership' | 'context' | 'page' | 'navigation' | 'store-wait' | 'readiness' =
+        'ownership';
       try {
         await Promise.all([...sessions].filter((s) => s.retired).map((s) => s.closing));
         await sample();
@@ -158,8 +160,12 @@ export function createBrowserLifecycle(
         check();
         await sample();
         if (session.retired) throw new Error('Browser lifecycle unavailable');
+        phase = 'context';
+        emit('prepare-context');
         session.context = await bounded(owner.browser.newContext({ locale: 'ko-KR' }), 10000);
         if (session.retired) throw new Error('Browser lifecycle unavailable');
+        phase = 'page';
+        emit('prepare-page');
         session.page = await bounded(session.context.newPage(), 10000);
         if (session.retired) throw new Error('Browser lifecycle unavailable');
         const owned = session;
@@ -173,6 +179,8 @@ export function createBrowserLifecycle(
         });
         session.page.on('crash', () => invalidate('page-crash'));
         session.page.on('close', () => invalidate('page-closed'));
+        phase = 'navigation';
+        emit('prepare-navigation');
         await bounded(
           session.page.goto('https://www.oliveyoung.co.kr/', {
             waitUntil: 'domcontentloaded',
@@ -181,7 +189,10 @@ export function createBrowserLifecycle(
           32000,
         );
         if (session.retired) throw new Error('Browser lifecycle unavailable');
+        phase = 'store-wait';
+        emit('prepare-store-wait');
         await bounded(session.page.waitForURL('**/store/**', { timeout: 30000 }), 32000);
+        phase = 'readiness';
         await sample();
         check();
         if (session.retired) throw new Error('Browser lifecycle unavailable');
@@ -203,6 +214,12 @@ export function createBrowserLifecycle(
             });
         }, 30000);
       } catch (error) {
+        if (session && !closed) {
+          const timeout =
+            error instanceof Error &&
+            (error.name === 'TimeoutError' || error.message === 'Browser watchdog timeout');
+          emit(`startup-${phase}-${timeout ? 'timeout' : 'error'}`);
+        }
         if (session) await retire(session, closed ? 'shutdown' : 'startup-failed');
         throw error;
       }

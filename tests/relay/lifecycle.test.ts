@@ -340,7 +340,14 @@ it('브라우저 시작/회수 사유를 기록하고 관측기 실패를 격리
   });
   await life.start();
   await life.close();
-  expect(events).toEqual(['ready', 'shutdown']);
+  expect(events).toEqual([
+    'prepare-context',
+    'prepare-page',
+    'prepare-navigation',
+    'prepare-store-wait',
+    'ready',
+    'shutdown',
+  ]);
   const second = createBrowserLifecycle(f.launch, async () => {
     throw Error('async log');
   });
