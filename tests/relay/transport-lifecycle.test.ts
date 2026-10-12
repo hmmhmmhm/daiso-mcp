@@ -12,8 +12,7 @@ it('defaults to the existing browser lifecycle and forwards observer/ownership p
   const observer = vi.fn();
   expect(await createTransportLifecycle(undefined, '/state', observer)).toBe('browser');
   const [launch, observed] = mocks.browser.mock.calls[0] as unknown as [() => unknown, unknown];
-  mocks.launch.mockResolvedValue({ close: vi.fn().mockResolvedValue(undefined) });
-  await launch();
+  launch();
   expect(mocks.launch).toHaveBeenCalledWith('/state/browser-owner.json');
   expect(observed).toBe(observer);
 });
