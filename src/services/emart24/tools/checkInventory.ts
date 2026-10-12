@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 이마트24 재고 확인 도구
  */
@@ -21,7 +22,10 @@ interface CheckInventoryArgs {
   timeoutMs?: number;
 }
 
-async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse> {
+async function checkInventory(
+  args: CheckInventoryArgs,
+  options: ConvenienceTransportOptions,
+): Promise<McpToolResponse> {
   const {
     pluCd,
     keyword = '',
@@ -49,6 +53,7 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     productPage,
     productPageSize,
     storeLimit,
+    ...options,
     timeoutMs,
   });
 
@@ -62,7 +67,9 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
   };
 }
 
-export function createCheckInventoryTool(): ToolRegistration {
+export function createCheckInventoryTool(
+  options: ConvenienceTransportOptions = {},
+): ToolRegistration {
   return {
     name: 'emart24_check_inventory',
     metadata: {
@@ -80,9 +87,13 @@ export function createCheckInventoryTool(): ToolRegistration {
         productPage: z.number().optional().default(1).describe('상품 검색 페이지 (기본값: 1)'),
         productPageSize: z.number().optional().default(10).describe('상품 검색 수 (기본값: 10)'),
         storeLimit: z.number().optional().default(10).describe('조회할 매장 수 (기본값: 10)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: checkInventory as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args) => checkInventory(args as CheckInventoryArgs, options),
   };
 }

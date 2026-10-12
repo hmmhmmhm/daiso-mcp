@@ -9,10 +9,11 @@ import {
   fetchEmart24Stores,
   searchEmart24Products,
   searchEmart24StockByStores,
+  type RequestOptions,
 } from './client.js';
 import type { Emart24Product, Emart24Store, Emart24StoreInventory } from './types.js';
 
-export interface Emart24InventoryLookupArgs {
+export interface Emart24InventoryLookupArgs extends RequestOptions {
   pluCd?: string;
   keyword?: string;
   latitude?: number;
@@ -61,7 +62,12 @@ async function resolvePluCd(
   productPage: number,
   productPageSize: number,
   timeoutMs: number,
-): Promise<{ pluCd: string; products: Emart24Product[]; selectionReason: Emart24InventoryLookupResult['selectionReason'] }> {
+  options: RequestOptions,
+): Promise<{
+  pluCd: string;
+  products: Emart24Product[];
+  selectionReason: Emart24InventoryLookupResult['selectionReason'];
+}> {
   const normalizedPluCd = (pluCd || '').trim();
   if (normalizedPluCd.length > 0) {
     return {
@@ -82,12 +88,18 @@ async function resolvePluCd(
       pageSize: productPageSize,
     },
     {
+      ...options,
       timeout: timeoutMs,
     },
   );
 
-  const firstProduct = productResult.products.find((item) => item.pluCd.trim().length > 0 && item.goodsName.replace(/\s+/g, '').toLowerCase() === keyword.replace(/\s+/g, '').toLowerCase())
-    ?? productResult.products.find((item) => item.pluCd.trim().length > 0);
+  const firstProduct =
+    productResult.products.find(
+      (item) =>
+        item.pluCd.trim().length > 0 &&
+        item.goodsName.replace(/\s+/g, '').toLowerCase() ===
+          keyword.replace(/\s+/g, '').toLowerCase(),
+    ) ?? productResult.products.find((item) => item.pluCd.trim().length > 0);
   if (!firstProduct) {
     throw new Error('상품 검색 결과에서 PLU 코드를 찾을 수 없습니다.');
   }
@@ -95,7 +107,11 @@ async function resolvePluCd(
   return {
     pluCd: firstProduct.pluCd,
     products: productResult.products,
-    selectionReason: firstProduct.goodsName.replace(/\s+/g, '').toLowerCase() === keyword.replace(/\s+/g, '').toLowerCase() ? 'exact_match' : 'first_candidate',
+    selectionReason:
+      firstProduct.goodsName.replace(/\s+/g, '').toLowerCase() ===
+      keyword.replace(/\s+/g, '').toLowerCase()
+        ? 'exact_match'
+        : 'first_candidate',
   };
 }
 
@@ -152,8 +168,17 @@ export async function lookupEmart24Inventory(
     includeRequestedStoresWithoutQty = false,
   } = args;
 
-  const resolved = await resolvePluCd(pluCd, keyword, productPage, productPageSize, timeoutMs);
-  const normalizedBizNos = [...new Set(bizNos.map((value) => value.trim()).filter((value) => value.length > 0))];
+  const resolved = await resolvePluCd(
+    pluCd,
+    keyword,
+    productPage,
+    productPageSize,
+    timeoutMs,
+    args,
+  );
+  const normalizedBizNos = [
+    ...new Set(bizNos.map((value) => value.trim()).filter((value) => value.length > 0)),
+  ];
 
   let nearbyStores: Emart24Store[] = [];
   let nearbyTotalCount = normalizedBizNos.length;
@@ -169,22 +194,28 @@ export async function lookupEmart24Inventory(
         page: 1,
       },
       {
+        ...args,
         timeout: timeoutMs,
       },
     );
 
     appliedStoreKeyword = nearbyStoreResult.appliedKeyword;
     nearbyTotalCount = nearbyStoreResult.totalCount;
-    nearbyStores = sortStoresByDistance(nearbyStoreResult.stores, latitude, longitude).slice(0, storeLimit);
+    nearbyStores = sortStoresByDistance(nearbyStoreResult.stores, latitude, longitude).slice(
+      0,
+      storeLimit,
+    );
   }
 
-  const requestedBizNos = normalizedBizNos.length > 0 ? normalizedBizNos : nearbyStores.map((store) => store.storeCode);
+  const requestedBizNos =
+    normalizedBizNos.length > 0 ? normalizedBizNos : nearbyStores.map((store) => store.storeCode);
   const stockResult = await searchEmart24StockByStores(
     {
       pluCd: resolved.pluCd,
       bizNos: requestedBizNos,
     },
     {
+      ...args,
       timeout: timeoutMs,
     },
   );
@@ -204,7 +235,7 @@ export async function lookupEmart24Inventory(
           .filter((value) => value.length > 0);
 
   const detailResults = await Promise.allSettled(
-    inventoryBizNos.map((bizNo) => fetchEmart24StoreDetail(bizNo, { timeout: timeoutMs })),
+    inventoryBizNos.map((bizNo) => fetchEmart24StoreDetail(bizNo, { ...args, timeout: timeoutMs })),
   );
 
   const nearbyStoreByCode = new Map(nearbyStores.map((store) => [store.storeCode, store]));

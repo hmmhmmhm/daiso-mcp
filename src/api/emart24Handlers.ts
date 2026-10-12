@@ -1,9 +1,15 @@
+import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
+import { isFreshOperationalRequest } from './operationalFreshness.js';
 /**
  * 이마트24 GET API 핸들러
  */
 
 import { type ApiContext, errorResponse, successResponse } from './response.js';
-import { calculateDistanceM, fetchEmart24Stores, searchEmart24Products } from '../services/emart24/client.js';
+import {
+  calculateDistanceM,
+  fetchEmart24Stores,
+  searchEmart24Products,
+} from '../services/emart24/client.js';
 import { lookupEmart24Inventory } from '../services/emart24/inventoryLookup.js';
 
 /**
@@ -18,7 +24,8 @@ export async function handleEmart24FindStores(c: ApiContext) {
   const page = parseInt(c.req.query('page') || '1', 10);
   const limit = parseInt(c.req.query('limit') || '20', 10);
   const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
-  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
+  const timeoutMs =
+    Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
   const rawLat = c.req.query('lat');
   const rawLng = c.req.query('lng');
   const parsedLat = rawLat ? parseFloat(rawLat) : undefined;
@@ -36,13 +43,20 @@ export async function handleEmart24FindStores(c: ApiContext) {
         service24h,
       },
       {
+        ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         timeout: timeoutMs,
       },
     );
 
     const stores = result.stores
       .map((store) => {
-        if (typeof lat !== 'number' || typeof lng !== 'number' || store.latitude === 0 || store.longitude === 0) {
+        if (
+          typeof lat !== 'number' ||
+          typeof lng !== 'number' ||
+          store.latitude === 0 ||
+          store.longitude === 0
+        ) {
           return store;
         }
 
@@ -51,13 +65,19 @@ export async function handleEmart24FindStores(c: ApiContext) {
           distanceM: calculateDistanceM(lat, lng, store.latitude, store.longitude),
         };
       })
-      .sort((a, b) => (a.distanceM ?? Number.MAX_SAFE_INTEGER) - (b.distanceM ?? Number.MAX_SAFE_INTEGER))
+      .sort(
+        (a, b) =>
+          (a.distanceM ?? Number.MAX_SAFE_INTEGER) - (b.distanceM ?? Number.MAX_SAFE_INTEGER),
+      )
       .slice(0, limit);
 
     return successResponse(
       c,
       {
-        location: typeof lat === 'number' && typeof lng === 'number' ? { latitude: lat, longitude: lng } : null,
+        location:
+          typeof lat === 'number' && typeof lng === 'number'
+            ? { latitude: lat, longitude: lng }
+            : null,
         keyword,
         appliedKeyword: result.appliedKeyword,
         area1,
@@ -89,7 +109,8 @@ export async function handleEmart24SearchProducts(c: ApiContext) {
     (c.req.query('sortType') as 'SALE' | 'LATEST' | 'PRICE_ASC' | 'PRICE_DESC' | null) || 'SALE';
   const saleProductYn = (c.req.query('saleProductYn') as 'Y' | 'N' | null) || 'N';
   const parsedTimeoutMs = parseInt(c.req.query('timeoutMs') || '15000', 10);
-  const timeoutMs = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
+  const timeoutMs =
+    Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0 ? parsedTimeoutMs : 15000;
 
   if (keyword.trim().length === 0) {
     return errorResponse(c, 'MISSING_QUERY', '검색어(keyword)를 입력해주세요.');
@@ -105,6 +126,8 @@ export async function handleEmart24SearchProducts(c: ApiContext) {
         saleProductYn,
       },
       {
+        ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
         timeout: timeoutMs,
       },
     );
@@ -154,7 +177,11 @@ export async function handleEmart24CheckInventory(c: ApiContext) {
   const lng = typeof parsedLng === 'number' && Number.isFinite(parsedLng) ? parsedLng : undefined;
 
   if (pluCd.trim().length === 0 && keyword.trim().length === 0) {
-    return errorResponse(c, 'MISSING_PLU_CD', '상품 PLU 코드(pluCd) 또는 검색어(keyword)를 입력해주세요.');
+    return errorResponse(
+      c,
+      'MISSING_PLU_CD',
+      '상품 PLU 코드(pluCd) 또는 검색어(keyword)를 입력해주세요.',
+    );
   }
 
   const bizNos = bizNoArr
@@ -191,6 +218,8 @@ export async function handleEmart24CheckInventory(c: ApiContext) {
       productPageSize,
       storeLimit,
       timeoutMs,
+      ...convenienceTransportFromBindings(c.env),
+      bypassCache: await isFreshOperationalRequest(c),
       bizNos,
       includeRequestedStoresWithoutQty: bizNos.length > 0,
     });

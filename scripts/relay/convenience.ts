@@ -1,3 +1,4 @@
+import { emart24DirectRouteSpecs, isEmart24Operation } from '../../src/services/emart24/relaySpecs.js';
 import { parseSevenStockFailure } from '../../src/utils/sevenStockFailure.js';
 import { CU_DEFAULT_HEADERS } from '../../src/services/cu/client.js';
 import { GS25_DEFAULT_HEADERS } from '../../src/services/gs25/client.js';
@@ -266,15 +267,27 @@ export function createConvenienceRelay(
   return createHttpRelay(token, {
     ...options,
     cacheTtl: (operation) =>
-      ['cu-store', 'seven-stock', 'gs25-stock'].includes(operation) ? 30000 : 300000,
+      ['cu-store', 'seven-stock', 'gs25-stock', 'emart24-stock'].includes(operation) ? 30000 : 300000,
     prefix: '/v1/convenience/',
-    operations: Object.keys(paths),
+    operations: [...Object.keys(paths), ...Object.keys(emart24DirectRouteSpecs)],
     validate(value, operation) {
-      const parsed = schemas[operation as Operation].safeParse(value);
+      const parsed = (isEmart24Operation(operation) ? emart24DirectRouteSpecs[operation].input : schemas[operation as Operation]).safeParse(value);
       if (!parsed.success) throw new RelayError(400);
       return parsed.data;
     },
     async upstream(operation, params, signal, fetcher) {
+      if (isEmart24Operation(operation)) {
+        const spec = emart24DirectRouteSpecs[operation];
+        const { url, init } = spec.build(params);
+        const response = await abortable(fetcher(url, { ...init, redirect: 'manual', signal }), signal);
+        if (response.status !== 200) {
+          void response.body?.cancel().catch(() => undefined);
+          throw new RelayError(502);
+        }
+        const data = await readJson(response.body, 2 * 1024 * 1024, signal, 502);
+        if (!spec.response.safeParse(data).success) throw new RelayError(502);
+        return data;
+      }
       const [base, path, method, schema] = paths[operation as Operation];
       const url = new URL(path, base);
       const body = { ...(params as Record<string, unknown>) };

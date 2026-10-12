@@ -4,7 +4,7 @@
 
 GS25 세션 만료·인증 장애를 복구할 때는 [정상 로그인 복구 운영 절차](gs25-auth-recovery-runbook.md)부터 읽으세요. 티켓·네이버 로그인·GS 토큰 저장·재기동·가상기기 종료 후 검증과 재현용 참조 코드를 포함합니다.
 
-CU PocketCU, 세븐일레븐 공식 앱 API와 GS25 상품·재고 API를 현재 Mac의 브라우저 없는 HTTP 중계로 호출합니다. 정상 API 응답 계약은 유지합니다. Worker에 설정이 없으면 기존 직접 호출을 사용하며, URL·토큰 또는 Access 인증의 부분 설정은 오류를 반환합니다.
+CU PocketCU, 세븐일레븐 공식 앱 API와 GS25 상품·재고 API와 이마트24 공식 웹 API를 현재 Mac의 브라우저 없는 HTTP 중계로 호출합니다. 정상 API 응답 계약은 유지합니다. Worker에 설정이 없으면 기존 직접 호출을 사용하며, URL·토큰 또는 Access 인증의 부분 설정은 오류를 반환합니다.
 
 ## 실행과 설정
 
@@ -15,7 +15,7 @@ CONVENIENCE_RELAY_TOKEN=your_convenience_token
 CONVENIENCE_RELAY_STATE_DIR=/absolute/path/to/convenience-state
 ```
 
-상태 경로는 Dtryx 상태 경로와 다른 디렉터리여야 합니다. 이 디렉터리의 `quota.json`에는 재시작해도 유지되는 호출 원장이, `logs/`에는 입력·토큰·키를 제외한 제한된 관측 로그가 저장됩니다. CU·GS25·세븐일레븐이 공유하는 편의점 예산은 분당 690회, 하루 최대 10,000,000회이며 Dtryx·올리브영 예산과 공유하지 않습니다.
+상태 경로는 Dtryx 상태 경로와 다른 디렉터리여야 합니다. 이 디렉터리의 `quota.json`에는 재시작해도 유지되는 호출 원장이, `logs/`에는 입력·토큰·키를 제외한 제한된 관측 로그가 저장됩니다. CU·GS25·세븐일레븐·이마트24가 공유하는 편의점 예산은 분당 690회, 하루 최대 10,000,000회이며 Dtryx·올리브영 예산과 공유하지 않습니다.
 
 Worker에는 아래 바인딩을 설정합니다. URL은 중계 호스트의 기본 URL이며 `/v1/convenience`를 붙이지 않습니다. HTTPS 또는 로컬 루프백 HTTP만 허용합니다. REST와 MCP가 동일한 설정을 사용합니다.
 
@@ -38,19 +38,23 @@ Access 토큰 만료1분 전 또는 재고401/403 응답 시 정상 `tokenReissu
 
 모든 조회는 `Authorization: Bearer <CONVENIENCE_RELAY_TOKEN>`를 요구합니다. 아래 작업에 JSON POST만 허용하며 임의 URL·헤더·외부 경로 전달은 거절합니다.
 
-| 작업 | 원본 조회 | 입력 |
-| --- | --- | --- |
-| `cu-prime` | 재고 검색 초기화 | `{}` |
-| `cu-stock` | 상품 재고 검색 | 기존 PocketCU 검색 본문 |
-| `cu-store` | 매장별 수량 | 기존 PocketCU 매장 본문 |
-| `seven-goods` | 상품 검색 | `query`, `pageNo`, `pageSize` |
-| `seven-store` | 매장 검색 | `collection: "store"`, `query`, `sort: "Date/desc"`, `listCount` |
-| `seven-popwords` | 인기 검색어 | `label` |
-| `seven-stock-meta` | 재고 상품 메타정보 | `itemCd` |
-| `seven-stock` | 매장별 실재고 | `smCd`, `stokMngCd`, `stokMngQty`, `stockApplicationRate`, `storeList` |
-| `seven-pages`, `seven-issues`, `seven-exhibitions` | 카탈로그 | `{}` |
-| `gs25-products` | 상품 검색 | `query` |
-| `gs25-stock` | 매장·재고 | 기존 BFF 조회 파라미터를 문자열 JSON으로 전달, 선택 `apiKey` |
+| 작업                                               | 원본 조회          | 입력                                                                   |
+| -------------------------------------------------- | ------------------ | ---------------------------------------------------------------------- |
+| `cu-prime`                                         | 재고 검색 초기화   | `{}`                                                                   |
+| `cu-stock`                                         | 상품 재고 검색     | 기존 PocketCU 검색 본문                                                |
+| `cu-store`                                         | 매장별 수량        | 기존 PocketCU 매장 본문                                                |
+| `seven-goods`                                      | 상품 검색          | `query`, `pageNo`, `pageSize`                                          |
+| `seven-store`                                      | 매장 검색          | `collection: "store"`, `query`, `sort: "Date/desc"`, `listCount`       |
+| `seven-popwords`                                   | 인기 검색어        | `label`                                                                |
+| `seven-stock-meta`                                 | 재고 상품 메타정보 | `itemCd`                                                               |
+| `seven-stock`                                      | 매장별 실재고      | `smCd`, `stokMngCd`, `stokMngQty`, `stockApplicationRate`, `storeList` |
+| `seven-pages`, `seven-issues`, `seven-exhibitions` | 카탈로그           | `{}`                                                                   |
+| `gs25-products`                                    | 상품 검색          | `query`                                                                |
+| `gs25-stock`                                       | 매장·재고          | 기존 BFF 조회 파라미터를 문자열 JSON으로 전달, 선택 `apiKey`           |
+| `emart24-products`                                 | 상품 검색          | `currentPage`, `pageCnt`, `sortType`, `saleProductYn`, `searchWord`    |
+| `emart24-stores`                                   | 매장 검색          | `page`, 선택 `search`, `AREA1`, `AREA2`, `SVR_24: "1"`                 |
+| `emart24-stock`                                    | 매장별 수량        | `searchPluCode`, 쉼표로 연결한 `bizNoArr`                              |
+| `emart24-store-detail`                             | 매장 상세          | `bizNo`                                                                |
 
 인증된 GET `/v1/convenience/health`는 실행·대기 수와 원장·로그 상태를 반환합니다. 공개 Worker `/health`의 `config.convenienceRelay`는 설정 여부만 반환합니다.
 
@@ -75,3 +79,11 @@ CU 매장 키워드만 입력한 조회는 공식 웹에서 해당 지역 점포
 이 응답은 공개 API에서 HTTP 502를 유지하고, 오류 문구를 `정상적인 점포 조회 요청이 아닙니다. 일시적인 외부 서비스 오류입니다. 잠시 후 재시도해주세요.`로 표시합니다. API와 MCP의 공통 `diagnostics`에는 원본 `upstreamStatus: 400`, `upstreamCode: 501`, `upstreamMessage`가 남습니다. 확인된 문구만 전달하며 응답 본문 전체나 알 수 없는 오류 문구는 공개하지 않습니다. 이 요청 거부는 `retryable: false`로 표시해 자동 재시도를 하지 않습니다. 안내 문구는 정책이 일시적이라는 확정 진단이 아닙니다.
 
 중계 내부에서는 이 확인된 거부를 HTTP 200의 `success: false` 실패 envelope로 전달해 중간 연결 구간의 5xx 오류 페이지 처리와 분리합니다. Worker는 이를 성공으로 반환하지 않고 HTTP 502로 변환합니다. 실패는 캐시하지 않으며 원본 호출 로그에도 오류로 남습니다. 구버전 중계의 HTTP 502 진단도 계속 읽을 수 있습니다.
+
+## 이마트24 조회 경로
+
+이마트24는 기존 공식 도메인과 고정 경로를 그대로 사용합니다. 상품 검색은 `application/x-www-form-urlencoded` 폼, 나머지는 GET이며 기존 `Accept`·`X-Requested-With` 헤더를 유지합니다. 직접 조회와 Mac HTTP 중계는 같은 입력·응답 검증기를 사용하고 임의 URL·헤더·경로를 받지 않습니다. Worker의 사전 점검이 직접 경로를 정상으로 확인했으면 최대 3초의 직접 조회를 먼저 시도합니다. 실패하면 남은 요청 기한 안에서 기존 인증된 편의점 중계를 사용하고 해당 작업의 직접 실패는 기존 5분 재검사 정책을 따릅니다. 설정이 없는 로컬 CLI는 종전 직접 조회를 유지합니다.
+
+Mac 중계의 이마트24 재고 응답은 30초, 상품·매장 검색·매장 상세는 5분 동안 캐시합니다. 공개 REST의 기존 엣지 캐시는 상품 10분·매장 30분·재고 5분을 유지합니다. 정상 운영 인증과 `x-health-check-force-fresh: true`를 함께 보낸 새 조회는 엣지 캐시와 모든 재고 단계의 중계 캐시를 우회합니다. 비교 조회의 이마트24 검색에도 같은 새 조회 설정을 전달합니다. 인증되지 않은 요청은 새 조회 헤더만으로 캐시를 우회할 수 없습니다.
+
+공식 재고의 `storeGoodsQty: null`은 빈 목록으로 처리합니다. 수량 0은 확인된 0이며 누락·null·빈 문자열·-1은 미확인으로 유지합니다. 실패 JSON·403 HTML·잘못된 수량을 성공이나 품절로 바꾸지 않습니다. 매장 검색의 정상 `error: 0`과 결과 없음 `error: 1`은 기존 키워드 대체 조회 동작을 유지합니다.

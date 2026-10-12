@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from '../operationalFreshness.js';
 /**
  * 이마트24 GET API 라우트 등록
  */
@@ -16,6 +17,7 @@ export function registerEmart24Routes(app: Hono<{ Bindings: AppBindings }>): voi
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 30,
         staleWhileRevalidateSeconds: 60 * 3,
         keyPrefix: 'emart24-stores-v2',
@@ -28,6 +30,7 @@ export function registerEmart24Routes(app: Hono<{ Bindings: AppBindings }>): voi
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 10,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'emart24-products-v2',
@@ -40,6 +43,7 @@ export function registerEmart24Routes(app: Hono<{ Bindings: AppBindings }>): voi
     withEdgeCache(
       c.req.url,
       {
+        bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 5,
         staleWhileRevalidateSeconds: 60,
         keyPrefix: 'emart24-inventory-v2',

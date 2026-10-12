@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { requestDirectRoute, checkDirectRoute } from '../../src/utils/directRoutes.js';
+import { ROUTE_KEYS } from '../../src/utils/routeHealth.js';
 import { directRouteSpecs } from '../../src/utils/directRouteSpecs.js';
 
 afterEach(() => {
@@ -8,7 +9,7 @@ afterEach(() => {
 });
 describe('direct routes', () => {
   it('defines only fixed official routes and pins GS inventory without network access', async () => {
-    expect(Object.keys(directRouteSpecs)).toHaveLength(24);
+    expect(Object.keys(directRouteSpecs)).toHaveLength(ROUTE_KEYS.length);
     const fetcher = vi.fn();
     vi.stubGlobal('fetch', fetcher);
     await expect(requestDirectRoute('gs25-stock', {}, 3000)).rejects.toThrow('pinned-relay');

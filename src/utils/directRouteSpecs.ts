@@ -1,3 +1,4 @@
+import { emart24DirectRouteSpecs } from '../services/emart24/relaySpecs.js';
 /** 직접 조회와 주기 검사에서 같은 고정 경로·검증기를 사용합니다. */
 import * as z from 'zod';
 import { cgvDirectRouteSpecs } from '../services/cgv/directRoute.js';
@@ -241,7 +242,7 @@ Object.entries(dtOperations).forEach(([key, operation]) => {
     },
   };
 });
-export const directRouteSpecs = { ...specs, ...cgvDirectRouteSpecs } as Record<
+export const directRouteSpecs = { ...specs, ...cgvDirectRouteSpecs, ...emart24DirectRouteSpecs } as Record<
   RouteKey,
   DirectRouteSpec
 >;

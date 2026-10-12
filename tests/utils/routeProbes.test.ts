@@ -16,7 +16,7 @@ it('skips scheduling work when namespace is absent', async () => {
   await refreshRouteChecks({});
   expect(checkDirectRoute).not.toHaveBeenCalled();
 });
-it('writes all twenty-four checks and authenticated health probes with fixed paths', async () => {
+it('모든 경로와 고정된 인증 중계 헬스 경로를 점검한다', async () => {
   await refreshRouteChecks({
     UPSTREAM_ROUTE_HEALTH: namespace,
     OY_RELAY_URL: 'https://oy.example',
@@ -28,7 +28,7 @@ it('writes all twenty-four checks and authenticated health probes with fixed pat
     DTRYX_RELAY_URL: 'https://dt.example',
     DTRYX_RELAY_TOKEN: 'dt',
   });
-  expect(checkDirectRoute).toHaveBeenCalledTimes(24);
+  expect(checkDirectRoute).toHaveBeenCalledTimes(ROUTE_KEYS.length);
   expect(vi.mocked(boundedRouteJson).mock.calls.map(([url]) => String(url))).toEqual([
     'https://dt.example/v1/cgv/health',
     'https://oy.example/health',

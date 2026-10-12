@@ -112,7 +112,7 @@ async function searchService(
     pageSize: limit,
     sortType: 'PRICE_ASC',
     saleProductYn: 'N',
-  });
+  }, options);
   return result.products.slice(0, limit).map((product) => ({
     service,
     serviceName: SERVICE_NAMES[service],

@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
  * 이마트24 서비스 프로바이더
  */
@@ -17,14 +18,19 @@ const EMART24_METADATA: ServiceMetadata = {
 
 class Emart24Service implements ServiceProvider {
   readonly metadata = EMART24_METADATA;
+  constructor(private readonly options: ConvenienceTransportOptions = {}) {}
 
   getTools(): ToolRegistration[] {
-    return [createFindNearbyStoresTool(), createSearchProductsTool(), createCheckInventoryTool()];
+    return [
+      createFindNearbyStoresTool(this.options),
+      createSearchProductsTool(this.options),
+      createCheckInventoryTool(this.options),
+    ];
   }
 }
 
-export function createEmart24Service(): ServiceProvider {
-  return new Emart24Service();
+export function createEmart24Service(options: ConvenienceTransportOptions = {}): ServiceProvider {
+  return new Emart24Service(options);
 }
 
 export * from './types.js';

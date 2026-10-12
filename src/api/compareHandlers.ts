@@ -1,3 +1,4 @@
+import { isFreshOperationalRequest } from './operationalFreshness.js';
 import { compareProducts, parseCompareServices } from '../services/compare/client.js';
 import { type ApiContext, errorResponse, successResponse } from './response.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
@@ -12,11 +13,17 @@ export async function handleCompareProducts(c: ApiContext) {
   }
 
   try {
-    const result = await compareProducts({
-      keyword,
-      limit,
-      services,
-    }, convenienceTransportFromBindings(c.env));
+    const result = await compareProducts(
+      {
+        keyword,
+        limit,
+        services,
+      },
+      {
+        ...convenienceTransportFromBindings(c.env),
+        bypassCache: await isFreshOperationalRequest(c),
+      },
+    );
 
     return successResponse(c, result, {
       total: result.resultCount,

@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 이마트24 상품 검색 도구
  */
@@ -22,7 +23,10 @@ function buildTextResponse(payload: Record<string, unknown>): McpToolResponse {
   };
 }
 
-async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse> {
+async function searchProducts(
+  args: SearchProductsArgs,
+  options: ConvenienceTransportOptions,
+): Promise<McpToolResponse> {
   const {
     keyword,
     page = 1,
@@ -46,6 +50,7 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
         saleProductYn,
       },
       {
+        ...options,
         timeout: timeoutMs,
       },
     );
@@ -89,7 +94,9 @@ const searchProductsOutputSchema = {
   message: z.string().optional().describe('degraded 상태의 원인 메시지'),
 };
 
-export function createSearchProductsTool(): ToolRegistration {
+export function createSearchProductsTool(
+  options: ConvenienceTransportOptions = {},
+): ToolRegistration {
   return {
     name: 'emart24_search_products',
     metadata: {
@@ -109,10 +116,14 @@ export function createSearchProductsTool(): ToolRegistration {
           .optional()
           .default('N')
           .describe('행사 상품 여부 필터 (기본값: N)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
       outputSchema: searchProductsOutputSchema,
     },
-    handler: searchProducts as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args) => searchProducts(args as SearchProductsArgs, options),
   };
 }

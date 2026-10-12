@@ -4,6 +4,12 @@
 
 import { fetchJson } from '../../utils/http.js';
 import { EMART24_API } from './api.js';
+import {
+  hasConvenienceRelay,
+  requestConvenienceRelay,
+  type ConvenienceTransportOptions,
+} from '../../utils/convenienceTransport.js';
+import { EMART24_JSON_HEADERS, EMART24_FORM_HEADERS } from './relaySpecs.js';
 import type {
   Emart24Product,
   Emart24ProductSearchResponse,
@@ -13,7 +19,7 @@ import type {
   Emart24WebStoreResponse,
 } from './types.js';
 
-interface RequestOptions {
+export interface RequestOptions extends ConvenienceTransportOptions {
   timeout?: number;
 }
 
@@ -38,16 +44,6 @@ interface SearchEmart24StockByStoresParams {
   bizNos: string[];
 }
 
-const EMART24_JSON_HEADERS = {
-  Accept: 'application/json, text/javascript, */*; q=0.01',
-  'X-Requested-With': 'XMLHttpRequest',
-} as const;
-
-const EMART24_FORM_HEADERS = {
-  'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-  Accept: 'application/json, text/javascript, */*; q=0.01',
-  'X-Requested-With': 'XMLHttpRequest',
-} as const;
 function emart24FetchOptions(totalTimeout: number) {
   return {
     timeout: Math.max(1, Math.floor((totalTimeout - 250) / 2)),
@@ -168,11 +164,18 @@ export async function fetchEmart24Stores(
       endpoint.searchParams.set('SVR_24', '1');
     }
 
-    const body = await fetchJson<Emart24WebStoreResponse>(endpoint.toString(), {
-      ...emart24FetchOptions(deadline - Date.now()),
-      method: 'GET',
-      headers: EMART24_JSON_HEADERS,
-    });
+    const body = hasConvenienceRelay(options)
+      ? await requestConvenienceRelay<Emart24WebStoreResponse>(
+          'emart24-stores',
+          Object.fromEntries(endpoint.searchParams),
+          options,
+          deadline - Date.now(),
+        )
+      : await fetchJson<Emart24WebStoreResponse>(endpoint.toString(), {
+          ...emart24FetchOptions(deadline - Date.now()),
+          method: 'GET',
+          headers: EMART24_JSON_HEADERS,
+        });
 
     if (body.error === 0 || body.error === undefined) {
       const stores = (body.data || []).map(toStore).filter((store) => store.storeCode.length > 0);
@@ -207,16 +210,23 @@ export async function searchEmart24Products(
   form.set('saleProductYn', saleProductYn);
   form.set('searchWord', keyword.trim());
 
-  const body = await fetchJson<Emart24ProductSearchResponse>(
-    `${EMART24_API.EVERSE_BASE_URL}${EMART24_API.PRODUCT_SEARCH_PATH}`,
-    {
-      ...emart24FetchOptions(timeout),
-      method: 'POST',
-      retryUnsafeMethods: true,
-      headers: EMART24_FORM_HEADERS,
-      body: form.toString(),
-    },
-  );
+  const body = hasConvenienceRelay(options)
+    ? await requestConvenienceRelay<Emart24ProductSearchResponse>(
+        'emart24-products',
+        Object.fromEntries(form),
+        options,
+        timeout,
+      )
+    : await fetchJson<Emart24ProductSearchResponse>(
+        `${EMART24_API.EVERSE_BASE_URL}${EMART24_API.PRODUCT_SEARCH_PATH}`,
+        {
+          ...emart24FetchOptions(timeout),
+          method: 'POST',
+          retryUnsafeMethods: true,
+          headers: EMART24_FORM_HEADERS,
+          body: form.toString(),
+        },
+      );
 
   const products = (body.productList || [])
     .map(toProduct)
@@ -250,6 +260,13 @@ export async function searchEmart24StockByStores(
   endpoint.searchParams.set('searchPluCode', pluCd);
   endpoint.searchParams.set('bizNoArr', filteredBizNos.join(','));
 
+  if (hasConvenienceRelay(options))
+    return requestConvenienceRelay<Emart24StockByStoreResponse>(
+      'emart24-stock',
+      Object.fromEntries(endpoint.searchParams),
+      options,
+      timeout,
+    );
   return fetchJson<Emart24StockByStoreResponse>(endpoint.toString(), {
     ...emart24FetchOptions(timeout),
     method: 'GET',
@@ -263,6 +280,13 @@ export async function fetchEmart24StoreDetail(
 ): Promise<Emart24StoreDetailResponse> {
   const { timeout = 15000 } = options;
 
+  if (hasConvenienceRelay(options))
+    return requestConvenienceRelay<Emart24StoreDetailResponse>(
+      'emart24-store-detail',
+      { bizNo },
+      options,
+      timeout,
+    );
   return fetchJson<Emart24StoreDetailResponse>(
     `${EMART24_API.EVERSE_BASE_URL}${EMART24_API.STORE_DETAIL_PATH_PREFIX}${encodeURIComponent(bizNo)}`,
     {

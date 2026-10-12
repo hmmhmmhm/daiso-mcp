@@ -1,4 +1,4 @@
-/** 한 브라우저 세션의 재사용·교체·회수를 직렬화합니다. */
+/** 두 소유 슬롯 안에서 준비·교환·회수를 제한합니다. */
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { createBrowserRunner } from './browser.js';
 import type { BrowserRunner } from './oliveyoung.js';
@@ -21,159 +21,233 @@ export async function bounded<T>(work: Promise<T>, ms: number): Promise<T> {
     clearTimeout(timer!);
   }
 }
+interface Session {
+  owner: BrowserOwner;
+  born: number;
+  calls: number;
+  page?: Page;
+  context?: BrowserContext;
+  ready: boolean;
+  attempted: boolean;
+  retired: boolean;
+  closing?: Promise<void>;
+}
+const MAX_AGE = 30 * 60 * 1000;
+const PREPARE_AGE = 27 * 60 * 1000;
+const MAX_RSS = 2 ** 30;
 export function createBrowserLifecycle(
   launch: () => Promise<BrowserOwner>,
   onEvent?: (reason: string) => void | Promise<void>,
 ) {
-  const emit = (reason: string) => {
+  const emit = (why: string) => {
     try {
-      void Promise.resolve(onEvent?.(reason)).catch(() => undefined);
+      void Promise.resolve(onEvent?.(why)).catch(() => undefined);
     } catch {
-      /* 관측 실패는 브라우저 회수에 영향을 주지 않습니다. */
+      /* 관측 실패는 회수를 방해하지 않습니다. */
     }
   };
-  let owner: BrowserOwner | undefined;
-  let page: Page | undefined;
-  let context: BrowserContext | undefined;
+  const sessions = new Set<Session>();
+  let current: Session | undefined;
+  let candidate: Session | undefined;
+  let preparing: Promise<void> | undefined;
+  let maintenance: Promise<void> | undefined;
   let active = false;
+  let executing = false;
   let closed = false;
   let failed: unknown;
-  let cleanup: Promise<void> = Promise.resolve();
-  let born = 0;
-  let calls = 0;
   let totalCalls = 0;
   let rotations = 0;
   let rssBytes = 0;
   let reason = 'startup';
+  let shutdownDeadline = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
-  let initializing: Promise<void> | undefined;
-  let replacementPending = false;
-  const retire = (why: string) => {
+  const check = () => {
+    if (failed) throw failed;
+    if (closed) throw new Error('Browser lifecycle unavailable');
+  };
+  const retire = (session: Session, why: string, deadline = Date.now() + 10000) => {
+    if (session.closing) return session.closing;
+    deadline = shutdownDeadline || deadline;
+    session.retired = true;
+    session.ready = false;
+    if (current === session) current = undefined;
+    if (candidate === session) candidate = undefined;
+    session.page?.removeAllListeners('crash');
+    session.page?.removeAllListeners('close');
+    session.context?.removeAllListeners('page');
     reason = why;
     emit(why);
-    if (timer) clearInterval(timer);
-    timer = undefined;
-    const previous = owner;
-    if (!previous) return cleanup;
-    owner = undefined;
-    page?.removeAllListeners('crash');
-    page?.removeAllListeners('close');
-    context?.removeAllListeners('page');
-    page = undefined;
-    context = undefined;
-    const deadline = Date.now() + 10000;
-    cleanup = bounded(previous.close(deadline), Math.max(0, deadline - Date.now())).catch(
-      (error) => {
+    session.closing = bounded(session.owner.close(deadline), Math.max(0, deadline - Date.now()))
+      .then(() => {
+        sessions.delete(session);
+      })
+      .catch((error) => {
         failed = error;
         throw error;
-      },
-    );
-    // 이벤트 핸들러에서 발생한 실패도 보존하고 다음 요청/종료에 전달합니다.
-    void cleanup.catch(() => undefined);
-    return cleanup;
-  };
-  const retireQuietly = (why: string) => {
-    void retire(why).catch(() => undefined);
-  };
-  const ensureSession = async () => {
-    await cleanup;
-    if (closed) throw new Error('Browser lifecycle unavailable');
-    if (owner && Date.now() - born >= 30 * 60 * 1000) {
-      await retire('rotation');
-      rotations++;
-    }
-    if (owner) return;
-    try {
-      owner = await launch();
-    } catch (error) {
-      emit('launch-failed');
-      throw error;
-    }
-    born = Date.now();
-    calls = 0;
-    if (closed) {
-      await retire('shutdown');
-      throw new Error('Browser lifecycle unavailable');
-    }
-    try {
-      context = await bounded(owner.browser.newContext({ locale: 'ko-KR' }), 10000);
-      // 초기 페이지를 먼저 지정하여 이후 추가 페이지는 모두 닫습니다.
-      page = await bounded(context.newPage(), 10000);
-      const sessionOwner = owner;
-      context.on('page', (popup) => {
-        void bounded(popup.close(), 3000).catch(() => {
-          if (owner === sessionOwner) retireQuietly('popup-close-failed');
-        });
       });
-      page.on('crash', () => retireQuietly('page-crash'));
-      page.on('close', () => retireQuietly('page-closed'));
-      await bounded(
-        page.goto('https://www.oliveyoung.co.kr/', {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000,
-        }),
-        32000,
-      );
-      await bounded(page.waitForURL('**/store/**', { timeout: 30000 }), 32000);
-      if (closed || owner !== sessionOwner) throw new Error('Browser lifecycle unavailable');
-      emit('ready');
-      timer = setInterval(() => {
-        if (!active && Date.now() - born >= 30 * 60 * 1000) {
-          rotations++;
-          rotate('age-limit');
+    void session.closing.catch(() => undefined);
+    return session.closing;
+  };
+  const quietly = (session: Session, why: string) => {
+    void retire(session, why).catch(() => undefined);
+  };
+  const promote = () => {
+    if (executing || closed || failed || !candidate?.ready) return;
+    const next = candidate;
+    if (Date.now() - next.born >= MAX_AGE) {
+      quietly(next, 'age-limit');
+      return;
+    }
+    const previous = current;
+    candidate = undefined;
+    current = next;
+    emit('ready');
+    if (previous) {
+      rotations++;
+      quietly(previous, 'rotation');
+    }
+  };
+  const sample = async () => {
+    const owned = [...sessions];
+    const values = await Promise.all(
+      owned.map(async (s) => {
+        try {
+          return await bounded(s.owner.rss(), 5000);
+        } catch {
+          if (!s.retired) await retire(s, 'rss-failed');
+          return 0;
+        }
+      }),
+    );
+    const live = owned.filter((s) => sessions.has(s));
+    rssBytes = owned.reduce((sum, s, i) => sum + (sessions.has(s) ? values[i] : 0), 0);
+    if (rssBytes > MAX_RSS) {
+      const preparingSession = live.find((s) => s !== current);
+      if (preparingSession) await retire(preparingSession, 'rss-limit');
+      const index = owned.findIndex((s) => s === current);
+      if (index >= 0 && values[index] > MAX_RSS) await retire(current!, 'rss-limit');
+    }
+  };
+  const prepare = () => {
+    if (preparing) return preparing;
+    if (closed || failed || candidate || sessions.size >= 2) return Promise.resolve();
+    const previous = current;
+    if (previous) previous.attempted = true;
+    preparing = (async () => {
+      let session: Session | undefined;
+      try {
+        await Promise.all([...sessions].filter((s) => s.retired).map((s) => s.closing));
+        await sample();
+        check();
+        if (current && rssBytes > MAX_RSS / 2) {
+          emit('prewarm-skipped-rss');
           return;
         }
-        void bounded(sessionOwner.rss(), 5000)
-          .then((value) => {
-            if (owner !== sessionOwner) return;
-            rssBytes = value;
-            if (value > 2 ** 30) rotate('rss-limit');
-          })
-          .catch(() => {
-            if (owner === sessionOwner) retireQuietly('rss-failed');
-          });
-      }, 30000);
-    } catch (error) {
-      await retire('startup-failed');
-      throw error;
-    }
-  };
-  const ensure = () => {
-    initializing ??= ensureSession().finally(() => {
-      initializing = undefined;
+        const born = Date.now();
+        let owner: BrowserOwner;
+        try {
+          owner = await launch();
+        } catch (error) {
+          failed = error;
+          emit('launch-failed');
+          throw error;
+        }
+        session = { owner, born, calls: 0, ready: false, attempted: false, retired: false };
+        sessions.add(session);
+        candidate = session;
+        check();
+        await sample();
+        if (session.retired) throw new Error('Browser lifecycle unavailable');
+        session.context = await bounded(owner.browser.newContext({ locale: 'ko-KR' }), 10000);
+        if (session.retired) throw new Error('Browser lifecycle unavailable');
+        session.page = await bounded(session.context.newPage(), 10000);
+        if (session.retired) throw new Error('Browser lifecycle unavailable');
+        const owned = session;
+        const invalidate = (why: string) => {
+          if (owned.retired) return;
+          quietly(owned, why);
+          if (!active && !preparing) void prepare().catch(() => undefined);
+        };
+        session.context.on('page', (popup) => {
+          void bounded(popup.close(), 3000).catch(() => invalidate('popup-close-failed'));
+        });
+        session.page.on('crash', () => invalidate('page-crash'));
+        session.page.on('close', () => invalidate('page-closed'));
+        await bounded(
+          session.page.goto('https://www.oliveyoung.co.kr/', {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000,
+          }),
+          32000,
+        );
+        if (session.retired) throw new Error('Browser lifecycle unavailable');
+        await bounded(session.page.waitForURL('**/store/**', { timeout: 30000 }), 32000);
+        await sample();
+        check();
+        if (session.retired) throw new Error('Browser lifecycle unavailable');
+        session.ready = true;
+        promote();
+        timer ??= setInterval(() => {
+          maintenance ??= (async () => {
+            await sample();
+            if (closed || failed) return;
+            if (current && Date.now() - current.born >= MAX_AGE && !executing)
+              await retire(current, 'age-limit');
+            promote();
+            if (current && !current.attempted && Date.now() - current.born >= PREPARE_AGE)
+              await prepare();
+          })()
+            .catch(() => undefined)
+            .finally(() => {
+              maintenance = undefined;
+            });
+        }, 30000);
+      } catch (error) {
+        if (session) await retire(session, closed ? 'shutdown' : 'startup-failed');
+        throw error;
+      }
+    })().finally(() => {
+      preparing = undefined;
     });
-    return initializing;
+    void preparing.catch(() => undefined);
+    return preparing;
   };
-  // 교체당 한 번만 미리 준비하고 실패 시 다음 명시적 요청을 기다립니다.
-  const prepareReplacement = () => {
-    replacementPending = false;
-    void ensure().catch(() => undefined);
-  };
-  const rotate = (why: string) => {
-    replacementPending = true;
-    retireQuietly(why);
-    if (!active) prepareReplacement();
+  const ensure = async () => {
+    check();
+    if (current && (current.calls >= 200 || Date.now() - current.born >= MAX_AGE))
+      await retire(current, 'age-limit');
+    promote();
+    if (!current) {
+      // 실패한 교체를 무한 반복하지 않고 명시적 요청에서만 재시도합니다.
+      await Promise.all([...sessions].filter((s) => s.retired).map((s) => s.closing));
+      await prepare();
+      promote();
+    }
+    check();
+    if (!current?.ready) throw new Error('Browser lifecycle unavailable');
   };
   const run: BrowserRunner = async (path, body) => {
     if (active) throw new Error('Browser already active');
     active = true;
+    let used: Session | undefined;
     try {
       await ensure();
-      const result = await bounded(createBrowserRunner(page!)(path, body), 18000);
-      calls++;
+      used = current!;
+      used.calls++;
       totalCalls++;
-      if (calls >= 200 || Date.now() - born >= 30 * 60 * 1000) {
-        rotations++;
-        replacementPending = true;
-        await retire('rotation');
-      }
-      return result;
+      executing = true;
+      if (used.calls >= 160 && !used.attempted) void prepare().catch(() => undefined);
+      return await bounded(createBrowserRunner(used.page!)(path, body), 18000);
     } catch (error) {
-      await retire('request-failed');
+      if (used) await retire(used, 'request-failed');
       throw error;
     } finally {
+      executing = false;
       active = false;
-      if (replacementPending) prepareReplacement();
+      if (used && !used.retired && (used.calls >= 200 || Date.now() - used.born >= MAX_AGE))
+        quietly(used, 'rotation');
+      promote();
+      if (!current && !closed && !failed && !preparing) void prepare().catch(() => undefined);
     }
   };
   return {
@@ -181,27 +255,39 @@ export function createBrowserLifecycle(
     start: ensure,
     async close() {
       closed = true;
-      await initializing?.catch(() => undefined);
-      await retire('shutdown');
-      await cleanup;
+      shutdownDeadline ||= Date.now() + 10000;
+      for (const session of sessions) quietly(session, 'shutdown');
+      if (timer) clearInterval(timer);
+      timer = undefined;
+      await preparing?.catch(() => undefined);
+      await maintenance;
+      const deadline = shutdownDeadline;
+      const results = await Promise.allSettled(
+        [...sessions].map((s) => retire(s, 'shutdown', deadline)),
+      );
+      const rejected = results.find((r) => r.status === 'rejected');
+      if (rejected) throw rejected.reason;
+      if (failed) throw failed;
     },
     status: () => ({
       state: failed
         ? 'failed'
         : closed
           ? 'closed'
-          : initializing
-            ? 'starting'
-            : owner
-              ? 'ready'
+          : current?.ready
+            ? 'ready'
+            : preparing
+              ? 'starting'
               : 'idle',
       active,
-      calls,
+      calls: current?.calls || 0,
       totalCalls,
       rotations,
       rssBytes,
-      pages: context?.pages().length || 0,
+      pages: current?.context?.pages().length || 0,
       reason,
+      preparing: Boolean(preparing),
+      owned: sessions.size,
     }),
   };
 }

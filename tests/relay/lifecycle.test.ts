@@ -22,13 +22,13 @@ function fixture() {
   const launch = vi.fn().mockResolvedValue(owner);
   return { page, context, owner, launch };
 }
-it('반복 요청은 한 페이지를 재사용하고200회 뒤 이전 세션 종료를 확인한 후 교체한다', async () => {
+it('반복 요청은 페이지를 재사용하고 준비된 교체 뒤 이전 세션을 회수한다', async () => {
   const f = fixture();
   const life = createBrowserLifecycle(f.launch);
   for (let i = 0; i < 201; i++) await life.run('/p', {});
   expect(f.context.newPage).toHaveBeenCalledTimes(2);
   expect(f.owner.close).toHaveBeenCalledTimes(1);
-  expect(f.owner.close.mock.invocationCallOrder[0]).toBeLessThan(
+  expect(f.owner.close.mock.invocationCallOrder[0]).toBeGreaterThan(
     f.launch.mock.invocationCallOrder[1],
   );
   await life.close();
@@ -125,7 +125,7 @@ it('시작 중 종료는 늦게 도착한 소유 브라우저도 회수한다', 
   const life = createBrowserLifecycle(f.launch);
   const pending = life.start();
   const rejected = expect(pending).rejects.toThrow('unavailable');
-  await Promise.resolve();
+  await vi.waitFor(() => expect(f.launch).toHaveBeenCalledTimes(1));
   const closing = life.close();
   finish(f.owner);
   await rejected;
@@ -198,9 +198,10 @@ it('이전 세션 팝업 및 RSS 작업은 새 세션을 회수하지 않는다'
         fail = reject;
       }),
   });
-  await life.close();
+  const closing = life.close();
   rss(2 ** 30 + 1);
   fail(new Error('old popup'));
+  await closing;
   await vi.advanceTimersByTimeAsync(0);
   expect(f.owner.close).toHaveBeenCalledTimes(1);
 });
@@ -217,8 +218,9 @@ it('이전 세션 RSS 실패는 종료 후 추가 작업을 만들지 않는다'
       }),
   );
   await vi.advanceTimersByTimeAsync(30000);
-  await life.close();
+  const closing = life.close();
   fail(new Error('old'));
+  await closing;
   await vi.advanceTimersByTimeAsync(0);
   expect(vi.getTimerCount()).toBe(0);
 });
@@ -235,9 +237,9 @@ it('자동 교체 중 종료는 준비 중인 브라우저를 회수하고 타�
         finish = resolve;
       }),
   );
-  await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+  await vi.advanceTimersByTimeAsync(27 * 60 * 1000);
   expect(f.launch).toHaveBeenCalledTimes(2);
-  expect(life.status().state).toBe('starting');
+  expect(life.status()).toMatchObject({ state: 'ready', preparing: true });
   const closing = life.close();
   finish();
   await closing;
@@ -253,7 +255,7 @@ it('자동 교체 준비 실패는 무한 재시작 없이 유휴 상태에서 �
   f.page.goto.mockRejectedValueOnce(new Error('navigation'));
   await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
   expect(f.launch).toHaveBeenCalledTimes(2);
-  expect(life.status()).toMatchObject({ state: 'idle', reason: 'startup-failed' });
+  expect(life.status()).toMatchObject({ state: 'idle', reason: 'age-limit' });
   await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
   expect(f.launch).toHaveBeenCalledTimes(2);
   await life.close();
@@ -290,7 +292,7 @@ it('자동 교체의 종료 확인 실패는 새 브라우저 실행을 차단�
   await life.start();
   f.owner.close.mockRejectedValue(new Error('uncertain'));
   await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
-  expect(f.launch).toHaveBeenCalledTimes(1);
+  expect(f.launch).toHaveBeenCalledTimes(2);
   expect(life.status().state).toBe('failed');
   await expect(life.close()).rejects.toThrow('uncertain');
 });
@@ -325,9 +327,9 @@ it('자동 준비 중 팝업 회수 실패는 준비 완료로 보고하지 않�
   finish();
   await vi.advanceTimersByTimeAsync(0);
   expect(life.status().state).toBe('idle');
-  expect(vi.getTimerCount()).toBe(0);
   expect(f.launch).toHaveBeenCalledTimes(2);
   await life.close();
+  expect(vi.getTimerCount()).toBe(0);
 });
 it('브라우저 시작/회수 사유를 기록하고 관측기 실패를 격리한다', async () => {
   const f = fixture();
@@ -357,7 +359,7 @@ it('브라우저 프로세스 실행 실패도 별도 사건으로 기록한다'
   );
   await expect(life.start()).rejects.toThrow('launch');
   expect(events).toContain('launch-failed');
-  await life.close();
+  await expect(life.close()).rejects.toThrow('launch');
 });
 it('수명 계층이 종료 시작 때 하나의 기한을 생성한다', async () => {
   vi.useFakeTimers();

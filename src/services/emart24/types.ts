@@ -84,7 +84,7 @@ interface Emart24GoodsInfoRecord {
 
 export interface Emart24StockByStoreResponse {
   storeGoodsInfo?: Emart24GoodsInfoRecord;
-  storeGoodsQty?: Emart24StoreQtyRecord[];
+  storeGoodsQty?: Emart24StoreQtyRecord[] | null;
 }
 
 interface Emart24StoreDetailInfo {

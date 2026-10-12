@@ -117,3 +117,18 @@ it('최악 경로에서 프로필 종료가 공유 기한을 넘으면 확인 �
   vi.useRealTimers();
   await access(f.marker);
 });
+it('두 슬롯의 감시자는 같은 부모 단절에서 각각 소유 회수와 마커 해제를 완료한다', async () => {
+  const slots = await Promise.all([fixture(), fixture()]);
+  await Promise.all(
+    slots.map((f) => runGuard(f.marker, async () => f.server, f.channel, 1, f.snapshot)),
+  );
+  for (const f of slots) {
+    f.channel.connected = false;
+    f.channel.emit('disconnect');
+  }
+  for (const f of slots) {
+    await vi.waitFor(() => expect(f.channel.exit).toHaveBeenCalledWith(0));
+    expect(f.server.close).toHaveBeenCalledTimes(1);
+    await expect(access(f.marker)).rejects.toThrow();
+  }
+});

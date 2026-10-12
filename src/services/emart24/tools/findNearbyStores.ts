@@ -1,3 +1,4 @@
+import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
 /**
  * 이마트24 주변 매장 탐색 도구
  */
@@ -18,7 +19,10 @@ interface FindNearbyStoresArgs {
   timeoutMs?: number;
 }
 
-async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResponse> {
+async function findNearbyStores(
+  args: FindNearbyStoresArgs,
+  options: ConvenienceTransportOptions,
+): Promise<McpToolResponse> {
   const {
     latitude,
     longitude,
@@ -40,6 +44,7 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
       page,
     },
     {
+      ...options,
       timeout: timeoutMs,
     },
   );
@@ -93,12 +98,15 @@ async function findNearbyStores(args: FindNearbyStoresArgs): Promise<McpToolResp
   };
 }
 
-export function createFindNearbyStoresTool(): ToolRegistration {
+export function createFindNearbyStoresTool(
+  options: ConvenienceTransportOptions = {},
+): ToolRegistration {
   return {
     name: 'emart24_find_nearby_stores',
     metadata: {
       title: '이마트24 주변 매장 탐색',
-      description: '키워드/지역 조건으로 이마트24 매장을 조회하고 좌표가 있으면 거리순으로 정렬합니다.',
+      description:
+        '키워드/지역 조건으로 이마트24 매장을 조회하고 좌표가 있으면 거리순으로 정렬합니다.',
       inputSchema: {
         latitude: z.number().optional().describe('위도 (선택)'),
         longitude: z.number().optional().describe('경도 (선택)'),
@@ -108,9 +116,13 @@ export function createFindNearbyStoresTool(): ToolRegistration {
         service24h: z.boolean().optional().default(false).describe('24시간 매장만 조회할지 여부'),
         page: z.number().optional().default(1).describe('조회 페이지 (기본값: 1)'),
         limit: z.number().optional().default(20).describe('반환할 매장 수 (기본값: 20)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: findNearbyStores as (args: unknown) => Promise<McpToolResponse>,
+    handler: (args) => findNearbyStores(args as FindNearbyStoresArgs, options),
   };
 }

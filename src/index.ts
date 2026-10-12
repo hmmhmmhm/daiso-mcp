@@ -106,7 +106,7 @@ const createRegistry = (bindings?: AppBindings) => {
         zyteApiKey: bindings?.ZYTE_API_KEY,
         ...geocodeBindings(bindings),
       }),
-    createEmart24Service,
+    () => createEmart24Service(convenienceTransportFromBindings(bindings)),
     () => createMegaboxService(geocodeBindings(bindings)),
     () => createDtryxService(dtryxTransportFromBindings(bindings)),
     () =>

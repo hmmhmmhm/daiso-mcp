@@ -1,3 +1,4 @@
+import { emart24DirectRouteSpecs, isEmart24Operation } from '../services/emart24/relaySpecs.js';
 import { parseSevenStockFailure, EXTERNAL_SERVICE_RETRY_HINT } from './sevenStockFailure.js';
 /** 편의점 공통 릴레이 설정과 인증 전송입니다. */
 import { requestDirectRoute } from './directRoutes.js';
@@ -42,6 +43,7 @@ export async function requestConvenienceRelay<T>(
   timeout = 15000,
 ): Promise<T> {
   validateRelay(options);
+  if (isEmart24Operation(operation)) emart24DirectRouteSpecs[operation].input.parse(body);
   if (!isRouteKey(operation)) return requestConvenienceRelayRaw(operation, body, options, timeout);
   return routeOperation(
     operation,
@@ -197,7 +199,9 @@ async function requestConvenienceRelayRaw<T>(
         typeof data !== 'object' ||
         Array.isArray(data) ||
         ('success' in data && data.success === false) ||
-        'error' in data ||
+        (isEmart24Operation(operation)
+          ? !emart24DirectRouteSpecs[operation].response.safeParse(data).success
+          : 'error' in data) ||
         ('resp_cd' in data && data.resp_cd !== '0000')
       )
         throw Error('Invalid response');
