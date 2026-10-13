@@ -232,6 +232,7 @@ Mac 중계의 일일 예산은 100배, 분당 속도는 10배로 증액했습니
 
 - [서비스 도구·REST API·아키텍처](docs/service-reference.md)
 - [AI 도구 선택·조회 흐름](docs/ai-instruction.md)
+- [무료 위치 검색·쿼터 보호·공공 주소 DB](docs/geocoding-resilience.md)
 - [개발·설치·직접 배포](CONTRIBUTING.md)
   <a id="운영-헬스-체크"></a><a id="운영-통계"></a>
 

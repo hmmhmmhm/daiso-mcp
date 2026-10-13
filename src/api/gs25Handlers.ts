@@ -2,7 +2,7 @@ import { isFreshOperationalRequest } from './operationalFreshness.js';
 import { ServiceError } from '../core/errors.js';
 import { selectGs25InventoryProduct } from '../services/gs25/productSelection.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
-import { geocodeBindings } from '../utils/geocode.js';
+import { geocodeBindings, validKoreanCoordinates } from '../utils/geocode.js';
 /**
  * GS25 GET API 핸들러
  */
@@ -262,13 +262,15 @@ export async function handleGs25CheckInventory(c: ApiContext) {
           },
         );
 
-        const firstAddress =
-          filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find(
-            (store) => store.address.trim().length > 0,
-          )?.address || '';
-
-        if (firstAddress.length > 0) {
-          const geocoded = await geocodeGs25Address(firstAddress, {
+        const candidates = filterGs25StoresByKeyword(baseStores.stores, storeKeyword);
+        const firstStore =
+          candidates.find((store) => validKoreanCoordinates(store.latitude, store.longitude)) ||
+          candidates.find((store) => store.address.trim().length > 0);
+        if (firstStore && validKoreanCoordinates(firstStore.latitude, firstStore.longitude)) {
+          latitude = firstStore.latitude;
+          longitude = firstStore.longitude;
+        } else if (firstStore?.address.trim()) {
+          const geocoded = await geocodeGs25Address(firstStore.address, {
             timeout: 15000,
             ...geocodeBindings(c.env),
           });
@@ -280,6 +282,10 @@ export async function handleGs25CheckInventory(c: ApiContext) {
         }
       }
     }
+
+    if (storeKeyword.trim() && !validKoreanCoordinates(latitude ?? NaN, longitude ?? NaN))
+      throw new ServiceError('GS25_LOCATION_UNRESOLVED',
+        '요청한 지역의 위치를 확인하지 못했습니다. 좌표를 지정하거나 잠시 후 다시 조회해주세요.', 503, true);
 
     // 1단계: totalSearch API로 키워드 → itemCode 변환
     let firstProduct: Awaited<ReturnType<typeof fetchGs25SearchProducts>>[number] | undefined;

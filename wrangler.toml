@@ -41,3 +41,11 @@ new_sqlite_classes = ["UpstreamRouteHealth"]
 
 [triggers]
 crons = ["*/5 * * * *"]
+
+[[durable_objects.bindings]]
+name = "GEOCODE_GATEWAY"
+class_name = "GeocodeGateway"
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["GeocodeGateway"]

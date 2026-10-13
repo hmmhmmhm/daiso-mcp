@@ -334,39 +334,11 @@ describe('handleGs25CheckInventory', () => {
     (ctx as { env: Record<string, string> }).env = { KAKAO_REST_API_KEY: 'test-google-key' };
 
     mockFetch
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            stores: [
-              {
-                storeCode: 'A1',
-                storeName: 'GS25 안산중앙점',
-                storeAddress: '경기 안산시 단원구 중앙대로 907',
-              },
-            ],
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구', y: 37.3187, x: 126.8389 }] }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            stores: [
-              {
-                storeCode: 'A1',
-                storeName: 'GS25 안산중앙점',
-                storeAddress: '경기 안산시 단원구 중앙대로 907',
-                searchItemName: '핫식스250ML',
-                realStockQuantity: 6,
-              },
-            ],
-          }),
-        ),
-      );
+      .mockResolvedValueOnce(Response.json({ documents: [{ place_name: '안산 중앙역', address_name: '경기 안산시', y: '37.3187', x: '126.8389' }] }))
+      .mockResolvedValueOnce(Response.json({ stores: [{
+        storeCode: 'A1', storeName: 'GS25 안산중앙점', storeAddress: '경기 안산시 단원구 중앙대로 907',
+        searchItemName: '핫식스250ML', realStockQuantity: 6,
+      }] }));
 
     await handleGs25CheckInventory(ctx);
 
@@ -494,52 +466,20 @@ describe('handleGs25CheckInventory', () => {
     expect(String(mockFetch.mock.calls[2][0])).toContain('myPositionYCoordination=37.5');
   });
 
-  it('storeKeyword가 있어도 지오코딩 실패 시 location은 null이다', async () => {
+  it('storeKeyword 위치를 확인하지 못하면 재고 조회 없이 503을 반환한다', async () => {
     vi.stubEnv('KAKAO_REST_API_KEY', 'test-free-key');
     const ctx = createMockContext({ keyword: '오감자', storeKeyword: '강남' });
     (ctx as { env: Record<string, string> }).env = { KAKAO_REST_API_KEY: 'test-google-key' };
-
-    mockFetch
-      // 1. storeKeyword 기준 매장 조회 (지오코딩 주소 획득용)
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            stores: [{ storeCode: 'B', storeName: '강남역점', storeAddress: '서울 강남구' }],
-          }),
-        ),
-      )
-      // 2. 지오코딩 실패
-      .mockResolvedValueOnce(new Response(JSON.stringify({ documents: [] })))
-      // 3. totalSearch API (keyword → itemCode)
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            SearchQueryResult: {
-              Collection: [
-                { Documentset: { Document: [{ field: { itemCode: '123', itemName: '오감자' } }] } },
-              ],
-            },
-          }),
-        ),
-      )
-      // 4. store/stock API (기본 좌표 사용)
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            stores: [
-              { storeCode: '1', storeName: '강남역점', searchItemName: '', realStockQuantity: 0 },
-            ],
-          }),
-        ),
-      );
-
+    mockFetch.mockImplementation(async () => Response.json({ documents: [], stores: [] }));
     await handleGs25CheckInventory(ctx);
-
-    const payload = (ctx.json as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
-      data: { geocodeUsed: boolean; location: null };
-    };
-    expect(payload.data.geocodeUsed).toBe(false);
-    expect(payload.data.location).toBeNull();
+    expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false, error: expect.objectContaining({ code: 'GS25_LOCATION_UNRESOLVED' }),
+    }), 503);
+    expect(mockFetch.mock.calls.some(([url]) => {
+      const params = new URL(String(url)).searchParams;
+      return params.has('itemCode') || params.has('keyword');
+    })).toBe(false);
+    expect(mockFetch.mock.calls.some(([url]) => String(url).includes('totalSearch'))).toBe(false);
   });
 
   it('재고 검색 중 알 수 없는 예외를 처리한다', async () => {

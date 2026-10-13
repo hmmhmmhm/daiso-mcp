@@ -1,6 +1,7 @@
 import { selectGs25InventoryProduct } from '../productSelection.js';
 import type { ConvenienceTransportOptions } from '../../../utils/convenienceTransport.js';
-import type { GeocodeOptions } from '../../../utils/geocode.js';
+import { validKoreanCoordinates, type GeocodeOptions } from '../../../utils/geocode.js';
+import { ServiceError } from '../../../core/errors.js';
 /**
  * GS25 재고 확인 도구
  */
@@ -80,16 +81,18 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
         apiKey,
       },
     );
-    const firstAddress =
-      filterGs25StoresByKeyword(baseStores.stores, storeKeyword).find(
-        (store) => store.address.trim().length > 0,
-      )?.address || '';
-
-    if (firstAddress.length > 0) {
-      const geocoded = await geocodeGs25Address(firstAddress, {
+    const candidates = filterGs25StoresByKeyword(baseStores.stores, storeKeyword);
+    const firstStore =
+      candidates.find((store) => validKoreanCoordinates(store.latitude, store.longitude)) ||
+      candidates.find((store) => store.address.trim().length > 0);
+    if (firstStore && validKoreanCoordinates(firstStore.latitude, firstStore.longitude)) {
+      resolvedLatitude = firstStore.latitude;
+      resolvedLongitude = firstStore.longitude;
+    } else if (firstStore?.address.trim()) {
+      const geocoded = await geocodeGs25Address(firstStore.address, {
         ...args,
         timeout: timeoutMs,
-      googleMapsApiKey,
+        googleMapsApiKey,
       });
       if (geocoded) {
         resolvedLatitude = geocoded.latitude;
@@ -99,7 +102,11 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     }
   }
 
-  // 좌표가 없으면 기본 좌표 (서울 강남) 사용
+  if (storeKeyword.trim() && !validKoreanCoordinates(resolvedLatitude ?? NaN, resolvedLongitude ?? NaN))
+    throw new ServiceError('GS25_LOCATION_UNRESOLVED',
+      '요청한 지역의 위치를 확인하지 못했습니다. 좌표를 지정하거나 잠시 후 다시 조회해주세요.', 503, true);
+
+  // 지역 요청이 없고 좌표가 없으면 기본 좌표 (서울 강남) 사용
   // itemCode 기반 재고 조회는 좌표가 필수
   if (typeof resolvedLatitude !== 'number' || typeof resolvedLongitude !== 'number') {
     resolvedLatitude = 37.4979;

@@ -8,6 +8,7 @@ import { ServiceError, toServiceErrorDiagnostics, toStandardErrorDiagnostics } f
 export interface AppBindings {
   DAILY_RATE_LIMITER?: DurableObjectNamespace;
   UPSTREAM_ROUTE_HEALTH?: DurableObjectNamespace;
+  GEOCODE_GATEWAY?: DurableObjectNamespace;
   ZYTE_API_KEY?: string;
   CGV_RELAY_URL?: string;
   CGV_RELAY_TOKEN?: string;

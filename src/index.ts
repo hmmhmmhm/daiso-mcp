@@ -1,8 +1,9 @@
 import { apiResultHtml } from './pages/apiResult.js';
-import { withRouteRouting } from './utils/routeHealth.js';
+import { withExternalRouting } from './utils/externalRouting.js';
 import { refreshRouteChecks } from './utils/routeProbes.js';
 import { registerRouteHealthRoutes } from './api/routes/routeHealthRoutes.js';
 export { UpstreamRouteHealth } from './durableObjects/upstreamRouteHealth.js';
+export { GeocodeGateway } from './durableObjects/geocodeGateway.js';
 import { convenienceTransportFromBindings } from './utils/convenienceTransport.js';
 import { handleLotteMartFindStores } from './api/lottemartHandlers.js';
 import { geocodeBindings } from './utils/geocode.js';
@@ -438,8 +439,7 @@ const worker = {
       return createRootInfoResponse(request);
     }
 
-    return withRouteRouting(env?.UPSTREAM_ROUTE_HEALTH, executionCtx?.waitUntil?.bind(executionCtx),
-      () => app.fetch(request, env, executionCtx));
+    return withExternalRouting(env, executionCtx, () => app.fetch(request, env, executionCtx));
   },
   scheduled(_controller: ScheduledController, env: AppBindings, ctx: ExecutionContext) {
     ctx.waitUntil(refreshRouteChecks(env));

@@ -102,8 +102,8 @@ it.each([
   expect(await geocodeLocation(query, { kakaoRestApiKey: 'free' })).toBeNull();
   vi.unstubAllGlobals();
 });
-it('주소 검색은 Naver Local로 우회하지 않는다', async () => {
-  const mockFetch = vi.fn();
+it('주소 대체 검색도 정확한 주소 결과가 없으면 선택하지 않는다', async () => {
+  const mockFetch = vi.fn().mockImplementation(async () => Response.json({ items: [] }));
   vi.stubGlobal('fetch', mockFetch);
   expect(
     await geocodeLocation('부산 동구 중앙대로 206', {
@@ -111,7 +111,7 @@ it('주소 검색은 Naver Local로 우회하지 않는다', async () => {
       naverClientSecret: 'secret',
     }),
   ).toBeNull();
-  expect(mockFetch).not.toHaveBeenCalled();
+  expect(mockFetch).toHaveBeenCalledTimes(1);
   vi.unstubAllGlobals();
 });
 it('Kakao 오류는 이름이 일치하는 Naver 장소로 보완한다', async () => {
@@ -269,7 +269,8 @@ it('주소 응답이 누락되었거나 지번과 도로명 번호가 섞이면 
     vi
       .fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ documents: {} })))
-      .mockResolvedValueOnce(
+      .mockResolvedValueOnce(new Response(JSON.stringify({ documents: [] })))
+      .mockImplementation(() => Promise.resolve(
         new Response(
           JSON.stringify({
             documents: [
@@ -282,7 +283,7 @@ it('주소 응답이 누락되었거나 지번과 도로명 번호가 섞이면 
             ],
           }),
         ),
-      ),
+      )),
   );
   expect(await geocodeLocation('서울 강남구 역삼동 123', { kakaoRestApiKey: 'free' })).toBeNull();
   expect(await geocodeLocation('서울 강남구 역삼동 4', { kakaoRestApiKey: 'free' })).toBeNull();

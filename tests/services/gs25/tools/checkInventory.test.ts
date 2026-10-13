@@ -193,7 +193,7 @@ describe('createCheckInventoryTool', () => {
 
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ documents: [{ place_name: '강남역', address_name: '서울 강남구 강남대로 1', y: 37.4979, x: 127.0276 }] }),
+        JSON.stringify({ documents: [{ address_name: '서울 강남구 테헤란로 1', y: 37.4979, x: 127.0276 }] }),
       ),
     );
 

@@ -118,19 +118,6 @@ describe('GET /api/gs25/inventory', () => {
     mockFetch
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({
-            stores: [
-              {
-                storeCode: 'A1',
-                storeName: 'GS25 안산중앙점',
-                storeAddress: '경기 안산시 단원구 중앙대로 907',
-              },
-            ],
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
           JSON.stringify({ documents: [{ place_name: '안산 중앙역', address_name: '', y: 37.3187, x: 126.8389 }] }),
         ),
       )
