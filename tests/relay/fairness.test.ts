@@ -1,8 +1,10 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createOliveyoungRelay } from '../../scripts/relay/oliveyoung.js';
 const request = (goodsNo: string, consumer = 'a'.repeat(64)) => new Request('http://localhost/v1/oliveyoung/stock-goods-info-v3', {
   method: 'POST', headers: { authorization: 'Bearer test', 'x-relay-consumer': consumer }, body: JSON.stringify({ goodsNo }),
 });
+// 같은 분의 예산 검증이 실제 분 경계를 넘는 실행 속도에 의존하지 않도록 고정합니다.
+beforeEach(() => vi.spyOn(Date, 'now').mockReturnValue(0));
 afterEach(() => vi.restoreAllMocks());
 it('한 소비자의 느린 요청이 공용 슬롯을 독점하지 못한다', async () => {
   let finish!: (value: { status: string }) => void;
@@ -20,7 +22,6 @@ it('한 소비자의 느린 요청이 공용 슬롯을 독점하지 못한다', 
   expect((await Promise.all([first, second, other])).map(r => r.status)).toEqual([200, 200, 200]);
 });
 it('캐시와 공유 작업은 분당 예산을 소비하지 않으며 다음 분에 복구한다', async () => {
-  vi.spyOn(Date, 'now').mockReturnValue(0);
   const run = vi.fn().mockResolvedValue({ status: 'SUCCESS' });
   const relay = createOliveyoungRelay('test', run);
   for (let i = 0; i < 240; i++) expect((await relay(request(String(i)))).status).toBe(200);
