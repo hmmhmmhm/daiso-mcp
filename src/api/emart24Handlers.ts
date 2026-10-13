@@ -1,10 +1,11 @@
+import { ServiceError } from '../core/errors.js';
 import { convenienceTransportFromBindings } from '../utils/convenienceTransport.js';
 import { isFreshOperationalRequest } from './operationalFreshness.js';
 /**
  * 이마트24 GET API 핸들러
  */
 
-import { type ApiContext, errorResponse, successResponse } from './response.js';
+import { type ApiContext, errorResponse, serviceErrorResponse, successResponse } from './response.js';
 import {
   calculateDistanceM,
   fetchEmart24Stores,
@@ -236,6 +237,7 @@ export async function handleEmart24CheckInventory(c: ApiContext) {
       stores: result.inventory.stores,
     });
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'emart24_inventory');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'EMART24_INVENTORY_CHECK_FAILED', message, 500);
   }
