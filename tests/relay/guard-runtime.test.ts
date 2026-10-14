@@ -1,9 +1,11 @@
 import { EventEmitter } from 'node:events';
-import { mkdtemp, readFile, access, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, access, rm, rename, mkdir } from 'node:fs/promises';
 import { afterEach, expect, it, vi } from 'vitest';
 import { runGuard } from '../../scripts/relay/guard-runtime.js';
 const dirs: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
   for (const dir of dirs) await rm(dir, { recursive: true, force: true });
 });
 async function fixture() {
@@ -100,20 +102,47 @@ it('IPC 공유 기한 안에 느린 close와 소멸 확인을 마치고 마커�
   await vi.waitFor(() => expect(f.channel.exit).toHaveBeenCalledWith(0));
   await expect(access(f.marker)).rejects.toThrow();
 });
-it('최악 경로에서 프로필 종료가 공유 기한을 넘으면 확인 실패와 마커를 보존한다', async () => {
+it('소멸 확인 후 멈춘 프로필 정리는 기한 뒤 마커를 해제하고 정상 종료한다', async () => {
   const f = await fixture();
   await runGuard(f.marker, async () => f.server, f.channel, 1, f.snapshot);
   vi.useFakeTimers();
   const started = Date.now();
-  f.server.close.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 8900)));
+  f.server.close.mockImplementation(() => new Promise(() => {}));
   f.snapshot.mockImplementation(async () => (Date.now() - started < 5900 ? [f.root] : []));
   const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
   f.channel.emit('message', { type: 'close', deadline: started + 8000 });
   await vi.advanceTimersByTimeAsync(7600);
-  expect(f.channel.exit).toHaveBeenCalledWith(1);
-  expect(f.channel.send).not.toHaveBeenCalledWith({ type: 'closed' });
   expect(kill).toHaveBeenCalledExactlyOnceWith(-123, 'SIGKILL');
   kill.mockRestore();
   vi.useRealTimers();
+  await vi.waitFor(() => expect(f.channel.exit).toHaveBeenCalledWith(0));
+  expect(f.channel.send).toHaveBeenCalledWith({ type: 'closed' });
+  await expect(access(f.marker)).rejects.toThrow();
+});
+it('종료가 멈추고 소유 그룹도 남으면 마커를 보존하고 실패 종료한다', async () => {
+  const f = await fixture();
+  await runGuard(f.marker, async () => f.server, f.channel, 1, f.snapshot);
+  vi.useFakeTimers();
+  f.server.close.mockImplementation(() => new Promise(() => {}));
+  const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
+  f.channel.emit('message', { type: 'close', deadline: Date.now() + 8000 });
+  await vi.advanceTimersByTimeAsync(7600);
+  expect(f.channel.exit).toHaveBeenCalledWith(1);
+  expect(f.channel.send).not.toHaveBeenCalledWith({ type: 'closed' });
+  expect(kill).toHaveBeenCalledExactlyOnceWith(-123, 'SIGKILL');
+  await access(f.marker);
+});
+it('소멸이 확인되어도 마커 파일 해제 실패는 실패 종료로 남긴다', async () => {
+  const f = await fixture();
+  await runGuard(f.marker, async () => f.server, f.channel, 1, f.snapshot);
+  const preserved = f.marker + '/preserved.json';
+  const original = await readFile(f.marker, 'utf8');
+  await rename(f.marker, f.marker + '.backup');
+  await mkdir(f.marker);
+  await rename(f.marker + '.backup', preserved);
+  f.channel.emit('message', 'close');
+  await vi.waitFor(() => expect(f.channel.exit).toHaveBeenCalledWith(1));
+  expect(f.channel.send).not.toHaveBeenCalledWith({ type: 'closed' });
+  expect(await readFile(preserved, 'utf8')).toBe(original);
   await access(f.marker);
 });

@@ -61,12 +61,12 @@ export async function closeOwnedGroup(
 ): Promise<void> {
   const remainingMs = () => Math.max(0, deadline - Date.now());
   const inspect = () => bounded(snapshot(), remainingMs());
-  // 프로세스 소멸을 확인한 뒤에만 Playwright의 종료 거절을 허용합니다.
+  // 소멸 확인 뒤에도 정상 프로필 정리는 기다리지만 종료 거절·기한 초과는 허용합니다.
   const finishGone = (closing: Promise<unknown>) =>
     bounded(
       closing.catch(() => undefined),
       remainingMs(),
-    );
+    ).catch(() => undefined);
   const initial = await inspect();
   const group = members(root, initial);
   if (!group.length) {

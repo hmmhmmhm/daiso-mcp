@@ -1,5 +1,6 @@
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { parseProcesses, ownedGroup, closeOwnedGroup } from '../../scripts/relay/ownership.js';
+afterEach(() => vi.useRealTimers());
 const root = { pid: 100, ppid: 1, pgid: 100, rss: 200, birth: 'Mon Sep 15 09:00:00 2026' };
 const child = { ...root, pid: 101, ppid: 100, rss: 300 };
 it('프로세스 그룹의 전체RSS를 조회하고 PID 재사용을 거절한다', () => {
@@ -195,7 +196,7 @@ it('느린 close와 강제 종료 확인 및 프로필 정리도 한 예산 안�
   vi.useRealTimers();
 });
 
-it('공유 종료 기한을 넘긴 프로필 정리는 실패로 남긴다', async () => {
+it('프로세스 소멸 후 프로필 정리가 공유 기한을 넘겨도 회수를 완료한다', async () => {
   vi.useFakeTimers();
   const started = Date.now();
   const snapshot = vi
@@ -203,10 +204,55 @@ it('공유 종료 기한을 넘긴 프로필 정리는 실패로 남긴다', asy
     .mockImplementation(async () => (Date.now() - started < 5900 ? [root] : []));
   const closing = new Promise<void>((resolve) => setTimeout(resolve, 6900));
   const pending = closeOwnedGroup(root, () => closing, snapshot, vi.fn(), started + 6500);
-  const rejected = expect(pending).rejects.toThrow('watchdog');
+  const completed = expect(pending).resolves.toBeUndefined();
+  void completed.catch(() => undefined);
   await vi.advanceTimersByTimeAsync(7000);
-  await rejected;
+  await completed;
   vi.useRealTimers();
+});
+it('이미 사라진 그룹의 종료가 멈춰도 공유 기한 후 완료한다', async () => {
+  vi.useFakeTimers();
+  const started = Date.now();
+  const kill = vi.fn();
+  let done = false;
+  const pending = closeOwnedGroup(
+    root,
+    () => new Promise(() => {}),
+    async () => [],
+    kill,
+    started + 500,
+  ).then(() => { done = true; });
+  const completed = expect(pending).resolves.toBeUndefined();
+  void completed.catch(() => undefined);
+  await vi.advanceTimersByTimeAsync(499);
+  expect(done).toBe(false);
+  await vi.advanceTimersByTimeAsync(1);
+  await completed;
+  expect(done).toBe(true);
+  expect(kill).not.toHaveBeenCalled();
+});
+it('소멸 확인 후 공유 기한이 지난 종료의 늦은 거절도 처리한다', async () => {
+  vi.useFakeTimers();
+  let rejectClose!: (error: Error) => void;
+  const closing = new Promise<void>((_, reject) => { rejectClose = reject; });
+  const pending = closeOwnedGroup(root, () => closing, async () => [], vi.fn(), Date.now() + 500);
+  const completed = expect(pending).resolves.toBeUndefined();
+  void completed.catch(() => undefined);
+  await vi.advanceTimersByTimeAsync(500);
+  await completed;
+  rejectClose(new Error('late profile cleanup failure'));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(vi.getTimerCount()).toBe(0);
+});
+it('공유 기한까지 소멸 스냅샷을 확인하지 못하면 실패를 유지한다', async () => {
+  vi.useFakeTimers();
+  const snapshot = vi.fn().mockResolvedValueOnce([root]).mockImplementation(() => new Promise(() => {}));
+  const kill = vi.fn();
+  const pending = closeOwnedGroup(root, () => new Promise(() => {}), snapshot, kill, Date.now() + 500);
+  const rejected = expect(pending).rejects.toThrow('watchdog');
+  await vi.advanceTimersByTimeAsync(501);
+  await rejected;
+  expect(kill).not.toHaveBeenCalled();
 });
 it('정상 종료 또는 강제 종료 후 소멸이 확인되어도 close 거절을 허용한다', async () => {
   for (const snapshots of [
