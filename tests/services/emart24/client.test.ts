@@ -289,6 +289,16 @@ describe('searchEmart24StockByStores', () => {
 
     expect(result.storeGoodsQty).toHaveLength(1);
     expect(result.storeGoodsQty?.[0].BIZNO).toBe('28339');
+    const [input, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const endpoint = new URL(input);
+    expect(endpoint.origin).toBe('https://everse.emart24.co.kr');
+    expect(endpoint.pathname).toBe('/api/stock/v3/stock-search/store');
+    expect(Object.fromEntries(endpoint.searchParams)).toEqual({
+      searchPluCode: '8800244010504',
+      bizNoArr: '28339',
+    });
+    expect(init.method).toBe('GET');
+    expect(init.body).toBeUndefined();
   });
 });
 

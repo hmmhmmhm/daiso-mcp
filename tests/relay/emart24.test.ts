@@ -66,9 +66,9 @@ describe('이마트24 고정 HTTP 중계', () => {
       { searchPluCode: '8801115139836', bizNoArr: '00940' },
       {
         storeGoodsInfo: { pluCd: '8801115139836' },
-        storeGoodsQty: [{ BIZNO: '00940', BIZQTY: '0' }],
+        storeGoodsQty: [{ BIZNO: '00940', BIZQTY: 0 }],
       },
-      'https://everse.emart24.co.kr/api/stock/v2/stock-search/store',
+      'https://everse.emart24.co.kr/api/stock/v3/stock-search/store',
     ],
     [
       'emart24-store-detail',
@@ -85,6 +85,7 @@ describe('이마트24 고정 HTTP 중계', () => {
     const [url, init] = fetcher.mock.calls[0] as unknown as [URL, RequestInit];
     expect(url.href.split('?')[0]).toBe(path);
     expect(init.method).toBe('GET');
+    if (operation === 'emart24-stock') expect(Object.fromEntries(url.searchParams)).toEqual(body);
     expect(init.body).toBeUndefined();
   });
   it('임의 URL·경로·필드와 인증 없는 호출은 원본을 호출하지 않는다', async () => {
