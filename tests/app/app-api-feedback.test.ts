@@ -133,6 +133,18 @@ describe('/api/feedback/requests', () => {
     expect(data.error.code).toBe('MISSING_FEEDBACK_TITLE');
   });
 
+  it('null JSON 본문은 빈 요청으로 처리해 필수값 오류를 반환한다', async () => {
+    const res = await app.request('/api/feedback/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'null',
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error.code).toBe('MISSING_FEEDBACK_TITLE');
+  });
+
   it('Supabase 저장 실패를 500으로 반환한다', async () => {
     mockFetch.mockRejectedValue('raw failure');
 

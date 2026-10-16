@@ -9,7 +9,9 @@ async function readJsonBody(c: ApiContext): Promise<Record<string, unknown>> {
   if (c.req.method !== 'POST') {
     return {};
   }
-  return c.req.json<Record<string, unknown>>().catch(() => ({}));
+  const body = await c.req.json<unknown>().catch(() => ({}));
+  // JSON 본문이 null 등 객체가 아니면 빈 요청으로 처리합니다.
+  return typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
 }
 
 function queryInput(c: ApiContext): Partial<DeveloperRequestInput> {
