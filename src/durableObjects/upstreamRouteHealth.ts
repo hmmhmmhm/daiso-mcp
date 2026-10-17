@@ -1,6 +1,8 @@
 /** 내부 바인딩을 통해서만 접근하는 경로별 상태 저장소입니다. */
 import {
   ROUTE_COOLDOWN_MS,
+  ROUTE_KEYS,
+  ROUTE_GROUPS,
   isRouteKey,
   validRelayCheck,
   validRouteCheck,
@@ -33,10 +35,10 @@ export class UpstreamRouteHealth {
     if (path === '/checks') {
       if (
         !Array.isArray(input.checks) ||
-        input.checks.length > 20 ||
+        input.checks.length > ROUTE_KEYS.length ||
         !input.checks.every(validRouteCheck) ||
         !Array.isArray(input.relays) ||
-        input.relays.length > 3 ||
+        input.relays.length > ROUTE_GROUPS.length ||
         !input.relays.every(validRelayCheck)
       )
         return new Response(null, { status: 400 });

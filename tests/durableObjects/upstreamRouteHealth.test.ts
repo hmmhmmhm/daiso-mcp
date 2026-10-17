@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ROUTE_KEYS, ROUTE_GROUPS } from '../../src/utils/routeHealth.js';
 import { UpstreamRouteHealth } from '../../src/durableObjects/upstreamRouteHealth.js';
 function store() {
   let value: unknown;
@@ -20,6 +21,20 @@ function store() {
   return { call };
 }
 describe('upstream route durable object', () => {
+  it('현재 등록된 모든 경로와 중계의 주기 점검 결과를 함께 저장한다', async () => {
+    const s = store();
+    const checkedAt = Date.now();
+    const response = await s.call('/checks', {
+      checks: ROUTE_KEYS.map((key) => ({ key, direct: true, checkedAt })),
+      relays: ROUTE_GROUPS.map((group) => ({ group, healthy: true, checkedAt })),
+    });
+    expect(response.status).toBe(204);
+    const snapshot = await (await s.call('/snapshot')).json();
+    expect(Object.keys(snapshot.routes)).toEqual([...ROUTE_KEYS]);
+    expect(Object.keys(snapshot.relays)).toEqual([...ROUTE_GROUPS]);
+    expect(snapshot.routes['seven-goods']).toMatchObject({ direct: true, checkedAt });
+    expect(snapshot.routes['gs25-stock']).toMatchObject({ direct: false, checkedAt });
+  });
   it('merges partial checks and pins GS stock', async () => {
     const s = store();
     const checkedAt = Date.now();
@@ -127,8 +142,8 @@ describe('durable state edge cases', () => {
     { checks: [], relays: [{ group: 'dtryx', healthy: 'yes', checkedAt: 1 }] },
     { checks: [{ key: 'cu-stock', direct: true, checkedAt: -1 }], relays: [] },
     { checks: [{ key: 'cu-stock', direct: true, checkedAt: Date.now() + 90000 }], relays: [] },
-    { checks: Array(21).fill({ key: 'cu-stock', direct: true, checkedAt: 1 }), relays: [] },
-    { checks: [], relays: Array(4).fill({ group: 'dtryx', healthy: true, checkedAt: 1 }) },
+    { checks: Array(ROUTE_KEYS.length + 1).fill({ key: 'cu-stock', direct: true, checkedAt: 1 }), relays: [] },
+    { checks: [], relays: Array(ROUTE_GROUPS.length + 1).fill({ group: 'dtryx', healthy: true, checkedAt: 1 }) },
   ])('rejects invalid values %j', async (data) => {
     expect((await store().call('/checks', data)).status).toBe(400);
   });
