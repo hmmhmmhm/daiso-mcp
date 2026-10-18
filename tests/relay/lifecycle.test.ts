@@ -389,3 +389,21 @@ it('소멸 확인 뒤 close 거절은 다음 요청의 새 브라우저 실행�
   expect(life.status()).toMatchObject({ state: 'ready', pages: 1 });
   await life.close();
 });
+
+it('문서가 준비됐으면 느린 부가 리소스의 load 이벤트 없이 조회를 시작한다', async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  f.page.waitForURL.mockImplementation((_url, options) => {
+    if (options.waitUntil === 'domcontentloaded') return Promise.resolve();
+    return new Promise((_resolve, reject) => {
+      setTimeout(() => reject(new Error('부가 리소스 load 대기 만료')), 30000);
+    });
+  });
+  const life = createBrowserLifecycle(f.launch);
+  const ready = life.start().then(() => true, () => false);
+  await vi.advanceTimersByTimeAsync(30000);
+  expect(await ready).toBe(true);
+  expect(life.status()).toMatchObject({ state: 'ready', pages: 1 });
+  await expect(life.run('/p', {})).resolves.toEqual({ status: 'SUCCESS' });
+  await life.close();
+});

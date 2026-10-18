@@ -114,7 +114,10 @@ export function createBrowserLifecycle(
         }),
         32000,
       );
-      await bounded(page.waitForURL('**/store/**', { timeout: 30000 }), 32000);
+      await bounded(
+        page.waitForURL('**/store/**', { waitUntil: 'domcontentloaded', timeout: 30000 }),
+        32000,
+      );
       if (closed || owner !== sessionOwner) throw new Error('Browser lifecycle unavailable');
       emit('ready');
       timer = setInterval(() => {
