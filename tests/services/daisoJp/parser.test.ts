@@ -1,3 +1,4 @@
+import * as parser from '../../../src/services/daisoJp/parser.js';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
@@ -203,4 +204,43 @@ it('공식 카테고리 수정 클래스가 있는 계열 브랜드를 보존한
     'Standard Products',
     'THREEPPY',
   ]);
+});
+
+it('상품 HTML의 전용 JSON만 읽고 엔 가격과 온라인 판매 여부를 복원한다', () => {
+  expect(parser.parseProductPage(fixture('product-detail'), '4550746075917')).toMatchObject({
+    country: 'JP',
+    id: '4550746075917',
+    name: 'ステンレスボウル',
+    price: 220,
+    onlineAvailable: false,
+  });
+  expect(
+    parser.parseProductPage(
+      '<script data-product-json type="application/json">{"product":{"handle":"4550746075917","title":"ボウル"}}</script>',
+      '4550746075917',
+    ),
+  ).toMatchObject({ price: null, onlineAvailable: null });
+});
+
+it('누락·차단·오염된 상품 HTML은 빈 결과 대신 안전한 형식 오류로 처리한다', () => {
+  const page = fixture('product-detail');
+  const malformed = page.replace('"price":22000', '"price":invalid');
+  const missingProduct = '<script type="application/json" data-product-json>{}</script>';
+  const nullWrapper = '<script type="application/json" data-product-json>null</script>';
+  for (const html of [
+    '',
+    '<html>secret blocked</html>',
+    page.replace('data-product-json>', 'data-product-json-other>'),
+    page.replace('application/json" data-product-json', 'text/plain" data-product-json'),
+    malformed,
+    missingProduct,
+    nullWrapper,
+    page.replace('4550746075917', '4550746075918'),
+    page.replace('"title":"ステンレスボウル",', ''),
+  ]) {
+    expect(() => parser.parseProductPage(html, '4550746075917')).toThrow(
+      expect.objectContaining({ name: 'ServiceError', code: 'DAISO_JP_PARSE_FAILED', status: 502 }),
+    );
+    expect(() => parser.parseProductPage(html, '4550746075917')).not.toThrow('secret');
+  }
 });

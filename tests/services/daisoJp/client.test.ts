@@ -28,17 +28,15 @@ describe('일본 공식 클라이언트', () => {
     expect(url.searchParams.get('page')).toBe('2');
     expect(vi.mocked(fetch).mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
-  it('상품 JSON을 조회한다', async () => {
-    respond(
-      JSON.stringify({ handle: '4550746075917', title: 'ボウル', price: 22000, available: false }),
-    );
+  it('상품 HTML의 전용 JSON을 조회한다', async () => {
+    respond(fixture('product-detail'));
     expect(await getProduct('4550746075917')).toMatchObject({
       id: '4550746075917',
       price: 220,
       onlineAvailable: false,
     });
     expect(fetch).toHaveBeenCalledWith(
-      'https://jp.daisonet.com/products/4550746075917.js',
+      'https://jp.daisonet.com/products/4550746075917',
       expect.any(Object),
     );
   });

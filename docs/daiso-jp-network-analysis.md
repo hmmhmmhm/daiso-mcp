@@ -37,7 +37,8 @@ npx daiso jp-stores 東京都渋谷区 --json
 ## 원본 경로와 제약
 
 - 상품 검색: `https://jp.daisonet.com/search?q=...&type=product&page=1`의 공개 HTML.
-- 상세: `https://jp.daisonet.com/products/{13자리 상품 ID}.js`의 공개 JSON. 가격의 소수 단위를 엔화로 변환합니다. 검색 HTML은 세금 포함 가격을 사용합니다.
+- 상세: `https://jp.daisonet.com/products/{13자리 상품 ID}`의 공개 HTML에서 `data-product-json` 상품 데이터를 읽습니다. 가격의 소수 단위를 엔화로 변환합니다. 검색 HTML은 세금 포함 가격을 사용합니다.
+- `.js` 상세 JSON은 로컬에서는 200이지만 Cloudflare Worker에서는 403을 확인했습니다. 운영은 공개 상품 HTML 경로를 사용하며 JSON 경로의 접근성을 가정하지 않습니다.
 - 매장: `https://www.daiso-sangyo.co.jp/shop/result?keyword=...`의 공개 HTML. 별도 한국 주소검색을 호출하지 않습니다.
 - Shopify 검색 제안 JSON 경로는 조사 중 HTTP 417을 반환했으므로 사용하지 않습니다.
 - 공식 앱은 회원가입 없는 매장별 재고 검색을 안내하지만, 안정적으로 호출할 재고 경로는 아직 검증하지 않았습니다. 앱 화면이나 온라인몰 구매 가능 여부를 재고 조회 성공으로 취급하지 않습니다.

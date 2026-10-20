@@ -1,6 +1,6 @@
 import { ServiceError } from '../../core/errors.js';
-import { fetchJson, fetchText, HttpError, UnexpectedHtmlResponseError } from '../../utils/http.js';
-import { parseProductDetail, parseProductSearch, parseStoreSearch } from './parser.js';
+import { fetchText, HttpError } from '../../utils/http.js';
+import { parseProductPage, parseProductSearch, parseStoreSearch } from './parser.js';
 import type { JapanProduct, JapanProductSearchResult, JapanStoreSearchResult } from './types.js';
 
 const OPTIONS = { timeout: 20000, retries: 0 };
@@ -20,14 +20,6 @@ async function upstream<T>(action: () => Promise<T>): Promise<T> {
     return await action();
   } catch (error) {
     if (error instanceof ServiceError) throw error;
-    if (error instanceof SyntaxError || error instanceof UnexpectedHtmlResponseError) {
-      throw new ServiceError(
-        'DAISO_JP_PARSE_FAILED',
-        '일본 다이소 원본 응답 형식이 변경되었습니다.',
-        502,
-        false,
-      );
-    }
     throw new ServiceError(
       'DAISO_JP_UPSTREAM_FAILED',
       '일본 다이소 공식 사이트에 연결할 수 없습니다.',
@@ -57,10 +49,7 @@ export async function getProduct(id: string): Promise<JapanProduct> {
     throw new Error('상품 ID는 13자리 숫자여야 합니다.');
   }
   return upstream(async () =>
-    parseProductDetail(
-      await fetchJson<unknown>(`https://jp.daisonet.com/products/${id}.js`, OPTIONS),
-      id,
-    ),
+    parseProductPage(await fetchText(`https://jp.daisonet.com/products/${id}`, OPTIONS), id),
   );
 }
 

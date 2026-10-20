@@ -122,6 +122,20 @@ export function parseProductDetail(data: unknown, id: string): JapanProduct {
   };
 }
 
+export function parseProductPage(html: string, id: string): JapanProduct {
+  const script = html.match(
+    /<script\b(?=[^>]*\stype\s*=\s*["']application\/json["'])(?=[^>]*\sdata-product-json(?=[\s=>]))[^>]*>([\s\S]*?)<\/script\s*>/i,
+  );
+  if (!script) return invalid();
+  let data: { product?: unknown } | null;
+  try {
+    data = JSON.parse(script[1]) as { product?: unknown } | null;
+  } catch {
+    return invalid();
+  }
+  return parseProductDetail(data?.product, id);
+}
+
 function coordinate(value: string | null, limit: number): number | null {
   if (value === null || !value.trim()) return null;
   const number = Number(value);
