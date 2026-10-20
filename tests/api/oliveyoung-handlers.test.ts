@@ -77,6 +77,7 @@ describe('handleOliveyoungFindStores', () => {
   });
 
   it('timeoutMs 쿼리를 올리브영 매장 검색 요청에 전달한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     mockFetch.mockResolvedValue(
       createMockDirectResponse({
@@ -92,6 +93,7 @@ describe('handleOliveyoungFindStores', () => {
   });
 
   it('매장 검색 timeoutMs 쿼리가 유효하지 않으면 기본 제한 시간을 사용한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     mockFetch.mockResolvedValue(
       createMockDirectResponse({
@@ -200,6 +202,7 @@ describe('handleOliveyoungSearchProducts', () => {
   });
 
   it('timeoutMs 쿼리를 올리브영 상품 검색 요청에 전달한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     mockFetch.mockResolvedValue(
       createMockDirectResponse({
@@ -215,6 +218,7 @@ describe('handleOliveyoungSearchProducts', () => {
   });
 
   it('상품 검색 timeoutMs 쿼리가 0 이하이면 기본 제한 시간을 사용한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     mockFetch.mockResolvedValue(
       createMockDirectResponse({
@@ -364,6 +368,7 @@ describe('handleOliveyoungCheckInventory', () => {
   });
 
   it('timeoutMs 쿼리를 올리브영 재고 요청에 전달한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     mockFetch
       .mockResolvedValueOnce(
@@ -402,6 +407,7 @@ describe('handleOliveyoungCheckInventory', () => {
   });
 
   it('timeoutMs 쿼리가 0 이하이면 기본 제한 시간을 사용한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     mockFetch.mockRejectedValue(new Error('inventory fail'));
 
