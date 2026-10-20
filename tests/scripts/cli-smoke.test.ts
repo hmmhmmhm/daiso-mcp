@@ -54,6 +54,9 @@ describe('runCliSmoke', () => {
 
       const stdoutByCommand: Record<string, unknown> = {
         stores: { success: true, data: { stores: [] } },
+        'jp-products': { success: true, data: { country: 'JP', products: [{ id: '4550746075917', name: 'ボウル', currency: 'JPY' }] } },
+        'jp-product': { success: true, data: { country: 'JP', id: '4550746075917', name: 'ボウル', currency: 'JPY', onlineAvailable: true, storeInventorySupported: false } },
+        'jp-stores': { success: true, data: { country: 'JP', stores: [{ id: '0001', name: '渋谷店', brand: 'DAISO' }] } },
         'cu-stores': { success: true, data: { keyword: '강남' } },
         'gs25-products': { success: true, data: { keyword: '콜라' } },
         'gs25-stores': { success: true, data: { keyword: '강남' } },
@@ -235,6 +238,9 @@ describe('runCliSmoke', () => {
       const payloadByCommand: Record<string, unknown> = {
         health: { status: 'ok' },
         stores: { success: true, data: { stores: [] } },
+        'jp-products': { success: true, data: { country: 'JP', products: [{ id: '4550746075917', name: 'ボウル', currency: 'JPY' }] } },
+        'jp-product': { success: true, data: { country: 'JP', id: '4550746075917', name: 'ボウル', currency: 'JPY', onlineAvailable: true, storeInventorySupported: false } },
+        'jp-stores': { success: true, data: { country: 'JP', stores: [{ id: '0001', name: '渋谷店', brand: 'DAISO' }] } },
         'gs25-products': { success: true, data: { keyword: '콜라' } },
         'gs25-stores': { success: true, data: { keyword: '강남' } },
         'seveneleven-products': { success: true, data: { query: '커피' } },

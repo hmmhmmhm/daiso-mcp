@@ -3,6 +3,9 @@
  */
 
 export type CommandName =
+  | 'jp-products'
+  | 'jp-product'
+  | 'jp-stores'
   | 'help'
   | 'version'
   | 'url'
@@ -42,6 +45,9 @@ export type CommandName =
   | 'seveneleven-catalog';
 
 export const COMMAND_LIST: CommandName[] = [
+  'jp-products',
+  'jp-product',
+  'jp-stores',
   'help',
   'version',
   'url',
@@ -80,6 +86,9 @@ export const COMMAND_LIST: CommandName[] = [
 ];
 
 export const COMMAND_SUMMARY: Record<CommandName, string> = {
+  'jp-products': '일본 다이소 온라인 상품 검색 (JPY)',
+  'jp-product': '일본 다이소 온라인 상품 상세',
+  'jp-stores': '일본 다이소 매장 검색 (재고 미지원)',
   help: '도움말 출력',
   version: 'CLI 버전 출력',
   url: 'MCP 엔드포인트 URL 출력',
@@ -154,6 +163,9 @@ export const COMMAND_DETAIL: Record<CommandName, string[]> = {
     '옵션: --json 원본 JSON 출력',
     '예시: daiso get /api/cgv/movies --playDate 20260307 --theaterCode 0056',
   ],
+  'jp-products': ['사용법: daiso jp-products <일본어 검색어> [--page N] [--json]', '예시: daiso jp-products ボウル', '일본 온라인몰 상품과 JPY 가격입니다. 매장 재고는 지원하지 않습니다.'],
+  'jp-product': ['사용법: daiso jp-product <13자리 상품 ID> [--json]', '예시: daiso jp-product 4550746075917', 'onlineAvailable은 온라인 판매 가능 여부이며 매장 재고가 아닙니다.'],
+  'jp-stores': ['사용법: daiso jp-stores <일본어 지역·매장명> [--page N] [--json]', '예시: daiso jp-stores 渋谷', '일본 공식 매장 검색 결과이며 매장 재고는 지원하지 않습니다.'],
   products: [
     '명령: products',
     '설명: 다이소 제품 검색 API를 호출합니다.',

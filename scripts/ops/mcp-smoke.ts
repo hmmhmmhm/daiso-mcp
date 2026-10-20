@@ -7,7 +7,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { DEFAULT_MCP_URL } from '../../src/cli/constants.js';
 
 type WriteFn = (message: string) => void;
-type SmokeService = 'daiso' | 'gs25' | 'seveneleven' | 'emart24' | 'opinet';
+type SmokeService = 'daiso_jp' | 'daiso' | 'gs25' | 'seveneleven' | 'emart24' | 'opinet';
 
 interface ToolListResult {
   tools: Array<{ name: string }>;
@@ -36,6 +36,9 @@ export const MCP_SMOKE_TOOLS: Array<{ service: SmokeService; name: string }> = [
   { service: 'daiso', name: 'daiso_search_products' },
   { service: 'daiso', name: 'daiso_check_inventory' },
   { service: 'daiso', name: 'daiso_find_inventory_by_name' },
+  { service: 'daiso_jp', name: 'daiso_jp_search_products' },
+  { service: 'daiso_jp', name: 'daiso_jp_get_product' },
+  { service: 'daiso_jp', name: 'daiso_jp_find_stores' },
   { service: 'gs25', name: 'gs25_search_products' },
   { service: 'seveneleven', name: 'seveneleven_search_products' },
   { service: 'emart24', name: 'emart24_search_products' },
@@ -111,6 +114,24 @@ function validateDaisoInventoryByName(payload: Record<string, unknown>): string 
   return null;
 }
 
+function validateJapanProduct(payload: Record<string, unknown>): string | null {
+  const valid = payload.country === 'JP' && payload.currency === 'JPY' &&
+    payload.id === '4550746075917' && typeof payload.name === 'string' && payload.name.trim().length > 0 &&
+    (typeof payload.onlineAvailable === 'boolean' || payload.onlineAvailable === null) &&
+    payload.storeInventorySupported === false;
+  return valid ? null : '일본 상품 상세의 필수 필드 또는 판매 가능 여부가 올바르지 않습니다';
+}
+
+function validateJapanCollection(payload: Record<string, unknown>, key: 'products' | 'stores'): string | null {
+  const items = payload[key];
+  const valid = payload.country === 'JP' && Array.isArray(items) && items.length > 0 &&
+    items.every((item) => isRecord(item) &&
+      typeof item.id === 'string' && item.id.trim().length > 0 &&
+      typeof item.name === 'string' && item.name.trim().length > 0 &&
+      (key === 'products' ? item.currency === 'JPY' : typeof item.brand === 'string' && item.brand.trim().length > 0));
+  return valid ? null : `일본 ${key}의 국가 또는 필수 필드가 올바르지 않습니다`;
+}
+
 export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
   {
     service: 'daiso',
@@ -118,6 +139,27 @@ export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
     toolName: 'daiso_find_inventory_by_name',
     args: { query: '수납박스', storeQuery: '강남역', pageSize: 1, productLimit: 1 },
     validate: validateDaisoInventoryByName,
+  },
+  {
+    service: 'daiso_jp',
+    label: '일본 다이소 상품 검색',
+    toolName: 'daiso_jp_search_products',
+    args: { query: 'ボウル', page: 1 },
+    validate: (payload) => validateJapanCollection(payload, 'products'),
+  },
+  {
+    service: 'daiso_jp',
+    label: '일본 다이소 상품 상세',
+    toolName: 'daiso_jp_get_product',
+    args: { id: '4550746075917' },
+    validate: validateJapanProduct,
+  },
+  {
+    service: 'daiso_jp',
+    label: '일본 다이소 매장 검색',
+    toolName: 'daiso_jp_find_stores',
+    args: { keyword: '渋谷', page: 1 },
+    validate: (payload) => validateJapanCollection(payload, 'stores'),
   },
   {
     service: 'gs25',

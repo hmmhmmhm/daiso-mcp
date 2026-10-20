@@ -9,6 +9,7 @@ import type { AppBindings } from '../response.js';
 import { registerCgvRoutes } from './cgvRoutes.js';
 import { registerCompareRoutes } from './compareRoutes.js';
 import { registerCuRoutes } from './cuRoutes.js';
+import { registerDaisoJpRoutes } from './daisoJpRoutes.js';
 import { registerDaisoRoutes } from './daisoRoutes.js';
 import { registerDtryxRoutes } from './dtryxRoutes.js';
 import { registerEmart24Routes } from './emart24Routes.js';
@@ -24,6 +25,7 @@ import { registerSevenElevenRoutes } from './sevenelevenRoutes.js';
 
 export function registerServiceRoutes(app: Hono<{ Bindings: AppBindings }>): void {
   registerDaisoRoutes(app);
+  registerDaisoJpRoutes(app);
   registerGs25Routes(app);
   registerSevenElevenRoutes(app);
   registerCompareRoutes(app);

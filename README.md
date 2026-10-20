@@ -73,6 +73,11 @@
       <td>상품, 매장, 재고</td>
     </tr>
     <tr>
+      <td>일본</td>
+      <td>일본 다이소</td>
+      <td>온라인 상품·엔화 가격·매장 (매장 재고 미지원)</td>
+    </tr>
+    <tr>
       <td>편의점</td>
       <td>GS25, 세븐일레븐, CU, 이마트24</td>
       <td>상품, 매장, 재고, 인기검색어, 카탈로그</td>
@@ -150,6 +155,15 @@
 에이전트가 `daiso_search_products`에 `{"query":"수납박스"}`를 전달하고
 상품 목록과 가격을 반환하면 연결이 완료된 것입니다.
 앱별 화면은 [연결 가이드](docs/client-guide.md#원격-mcp-연결)를 참고하세요.
+
+### 일본 다이소
+
+일본 다이소의 온라인 상품·가격(JPY)과 매장을 검색할 수 있습니다. **일본 매장 재고는 아직 지원하지 않습니다.** 온라인 판매 가능 여부를 매장 재고로 해석하지 마세요.
+
+- MCP: `daiso_jp_search_products`, `daiso_jp_get_product`, `daiso_jp_find_stores`
+- CLI: `npx daiso jp-products ボウル`, `npx daiso jp-stores 渋谷`
+- 웹 읽기: [일본 상품 검색](https://mcp.aka.page/api/daiso-jp/products?q=%E3%83%9C%E3%82%A6%E3%83%AB&format=html) · [일본 매장 검색](https://mcp.aka.page/api/daiso-jp/stores?keyword=%E6%B8%8B%E8%B0%B7&format=html)
+- [일본 다이소 사용법과 연동 범위](docs/daiso-jp-network-analysis.md)
 
 ### HTTP POST로 첫 MCP 조회
 

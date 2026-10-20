@@ -20,6 +20,9 @@ describe('runMcpSmoke', () => {
   it('대표 호출 시나리오는 다이소/편의점 도구를 모두 포함한다', () => {
     expect(MCP_SMOKE_SCENARIOS.map((scenario) => scenario.toolName)).toEqual([
       'daiso_find_inventory_by_name',
+      'daiso_jp_search_products',
+      'daiso_jp_get_product',
+      'daiso_jp_find_stores',
       'gs25_search_products',
       'seveneleven_search_products',
       'emart24_search_products',
@@ -30,6 +33,9 @@ describe('runMcpSmoke', () => {
   it('서비스별 matrix 실행을 위해 각 대표 호출에 service를 지정한다', () => {
     expect(MCP_SMOKE_SCENARIOS.map((scenario) => scenario.service)).toEqual([
       'daiso',
+      'daiso_jp',
+      'daiso_jp',
+      'daiso_jp',
       'gs25',
       'seveneleven',
       'emart24',
@@ -49,6 +55,9 @@ describe('runMcpSmoke', () => {
           summary: { headline: '수납박스 재고 조회 결과' },
           selectedProduct: { id: '1049516' },
         },
+        daiso_jp_search_products: { country: 'JP', products: [{ id: '4550746075917', name: 'ボウル', currency: 'JPY' }] },
+        daiso_jp_get_product: { country: 'JP', id: '4550746075917', name: 'ボウル', currency: 'JPY', onlineAvailable: true, storeInventorySupported: false },
+        daiso_jp_find_stores: { country: 'JP', stores: [{ id: '0001', name: '渋谷店', brand: 'DAISO' }] },
         gs25_search_products: { keyword: '콜라', products: [{}] },
         seveneleven_search_products: { query: '커피', products: [{}] },
         emart24_search_products: { keyword: '커피', products: [{}] },

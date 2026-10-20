@@ -7,6 +7,7 @@
  */
 
 import path from 'node:path';
+import { handleJapanSearch, handleJapanProduct } from './cli/commands/daisoJp.js';
 import { fileURLToPath } from 'node:url';
 import { printHelp, printCommandHelp } from './cliHelp.js';
 import { createDefaultDeps } from './cli/deps.js';
@@ -168,6 +169,8 @@ export async function runCli(argv: string[], deps?: Partial<CliDeps>): Promise<n
     return 1;
   }
 
+  if (command === 'jp-products' || command === 'jp-stores') return await handleJapanSearch(command, options, resolvedDeps);
+  if (command === 'jp-product') return await handleJapanProduct(options, resolvedDeps);
   if (command === 'get') return await handleGet(options, resolvedDeps);
   if (command === 'products') return await handleProducts(options, resolvedDeps);
   if (command === 'product') return await handleProduct(options, resolvedDeps);

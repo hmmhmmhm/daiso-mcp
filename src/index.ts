@@ -13,16 +13,14 @@ import { geocodeBindings } from './utils/geocode.js';
  * Cloudflare Workers에서 실행되는 플러그인 기반 MCP 서버입니다.
  * 다이소, 편의점, 백화점 등 다양한 서비스를 확장할 수 있습니다.
  */
-
 import { diagnosticsMiddleware } from './middleware/diagnostics.js';
 import { dtryxTransportFromBindings } from './services/dtryx/transport.js';
-
 import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-
 import { ServiceRegistry } from './core/registry.js';
+import { createDaisoJpService } from './services/daisoJp/index.js';
 import { createDaisoService } from './services/daiso/index.js';
 import { createOliveyoungService } from './services/oliveyoung/index.js';
 import { createDtryxService } from './services/dtryx/index.js';
@@ -56,7 +54,6 @@ import { registerRateLimitStatsRoutes } from './api/routes/rateLimitStatsRoutes.
 import { buildConfigStatus } from './api/configStatus.js';
 import { createDailyRateLimitMiddleware } from './middleware/dailyRateLimit.js';
 export { DailyRateLimiter } from './durableObjects/dailyRateLimiter.js';
-
 // 서버 메타데이터
 const SERVER_NAME = 'multi-service-mcp';
 const SERVER_VERSION = '1.0.0';
@@ -79,6 +76,7 @@ const createRegistry = (bindings?: AppBindings) => {
 
   registry.registerAll([
     createDaisoService,
+    createDaisoJpService,
     () =>
       createGs25Service({ ...convenienceTransportFromBindings(bindings),
         ...geocodeBindings(bindings),
@@ -166,6 +164,8 @@ export function buildRootInfo() {
       compareProducts: '/api/compare/products (GET) - 키 없는 통합 상품 가격 후보 비교',
       opinetAverage: '/api/opinet/average (GET) - 오피넷 전국 평균 유가',
       opinetLowest: '/api/opinet/lowest (GET) - 오피넷 최저가 주유소',
+      japanProducts: '/api/daiso-jp/products?q=...&format=html (GET) - 일본 다이소 상품',
+      japanStores: '/api/daiso-jp/stores?keyword=...&format=html (GET) - 일본 다이소 매장 (재고 미지원)',
       developerRequests: '/api/feedback/requests (POST/GET) - 개발자 요청 제출',
     },
     services,

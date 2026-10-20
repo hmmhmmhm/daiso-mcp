@@ -9,13 +9,13 @@ describe('공개 발견 자산', () => {
     expect(await res.text()).toContain('설치 없이');
     const metadata = await app.request('/root.json');
     expect(metadata.headers.get('Content-Type')).toContain('application/json');
-    expect((await metadata.json()).totalTools).toBe(41);
+    expect((await metadata.json()).totalTools).toBe(44);
   });
   it('현재 레지스트리의 목록을 그대로 제공하며 설치 없는 첫 조회를 연결한다', async () => {
     const info = await (await app.request('/', { headers: { Accept: 'application/json' } })).json();
     const assets = buildDiscoveryAssets(info);
     expect(JSON.parse(assets['root.json'])).toEqual(info);
-    expect(info.totalTools).toBe(41);
+    expect(info.totalTools).toBe(44);
     expect(info.services.some((s: { id: string }) => s.id === 'lottemart')).toBe(false);
     expect(assets['discovery.html']).toContain('<html lang="ko">');
     expect(assets['discovery.html']).toContain('설치 없이');

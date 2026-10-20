@@ -71,6 +71,9 @@ function toOperation(parts: string[]): string | undefined {
 function inferServiceAndOperation(
   code: string,
 ): Pick<StandardErrorDiagnostics, 'service' | 'operation'> {
+  if (code.startsWith('DAISO_JP_')) {
+    return { service: 'daiso_jp', operation: toOperation(code.split('_').slice(2)) };
+  }
   const parts = code.split('_').filter((part) => part.length > 0);
   const normalizedFirst = normalizeService(parts[0] || '');
   const service = SERVICE_PREFIXES.find((item) => normalizeService(item) === normalizedFirst);

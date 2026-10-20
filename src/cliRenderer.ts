@@ -109,10 +109,12 @@ function formatCollection(title: string, items: unknown): string[] {
       detail += ` [${toText(id)}]`;
     }
     if (price !== undefined) {
-      detail += ` / ${toText(price)}원`;
+      detail += ` / ${toText(price)}${entry.currency === 'JPY' ? ' JPY' : '원'}`;
     }
 
     const detailParts = [
+      entry.brand,
+      entry.hours,
       entry.address ?? entry.storeAddress,
       entry.distance !== undefined ? `${toText(entry.distance)}km` : undefined,
       entry.distanceKm !== undefined ? `${toText(entry.distanceKm)}km` : undefined,
@@ -270,7 +272,9 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
 
   const data = envelope.data;
 
-  if (command === 'product') {
+  if (command === 'jp-product') {
+    lines.push(`제품 상세: ${toText(data.name)}`, `가격: ${toText(data.price)} JPY`, `온라인 판매 가능: ${toText(data.onlineAvailable)}`, '매장 재고 미지원');
+  } else if (command === 'product') {
     lines.push(...formatProductDetail(data));
   } else if (command === 'inventory') {
     lines.push(...formatInventory(data));
@@ -312,6 +316,10 @@ export function renderApiEnvelope(command: string, url: URL, payload: unknown): 
         lines.push(`${key}: ${toText(value)}`);
       }
     }
+  }
+
+  if (command.startsWith('jp-')) {
+    lines.push('일본 매장 재고 미지원', `page: ${toText(data.page)} / hasNext: ${toText(data.hasNext)}`, toText(data.note));
   }
 
   lines.push('', '원본 JSON은 --json 옵션으로 확인하세요.');

@@ -36,8 +36,8 @@ jobs:
 
       - name: Run external smoke sequentially
         env:
-          CLI_SMOKE_SERVICES: daiso gs25 seveneleven emart24 oliveyoung megabox lottecinema cgv opinet dtryx
-          MCP_SMOKE_SERVICES: daiso gs25 seveneleven emart24 opinet
+          CLI_SMOKE_SERVICES: daiso daiso_jp gs25 seveneleven emart24 oliveyoung megabox lottecinema cgv opinet dtryx
+          MCP_SMOKE_SERVICES: daiso daiso_jp gs25 seveneleven emart24 opinet
           SMOKE_ATTEMPT_TIMEOUT_SECONDS: 90
         run: |
           set +e

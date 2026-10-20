@@ -20,6 +20,7 @@ type RunCommand = (command: string, args: string[]) => Promise<CommandResult>;
 type WriteFn = (message: string) => void;
 type Validator = (stdout: string, stderr: string) => string | null;
 type SmokeService =
+  | 'daiso_jp'
   | 'daiso'
   | 'cu'
   | 'gs25'
@@ -99,6 +100,24 @@ function validateStderrContains(expected: string): Validator {
     stderr.includes(expected) ? null : `stderr에 "${expected}"가 없습니다`;
 }
 
+function validateJapanProduct(payload: Record<string, unknown>): string | null {
+  const valid = payload.country === 'JP' && payload.currency === 'JPY' &&
+    payload.id === '4550746075917' && typeof payload.name === 'string' && payload.name.trim().length > 0 &&
+    (typeof payload.onlineAvailable === 'boolean' || payload.onlineAvailable === null) &&
+    payload.storeInventorySupported === false;
+  return valid ? null : '일본 상품 상세의 필수 필드 또는 판매 가능 여부가 올바르지 않습니다';
+}
+
+function validateJapanCollection(payload: Record<string, unknown>, key: 'products' | 'stores'): string | null {
+  const items = payload[key];
+  const valid = payload.country === 'JP' && Array.isArray(items) && items.length > 0 &&
+    items.every((item) => isRecord(item) &&
+      typeof item.id === 'string' && item.id.trim().length > 0 &&
+      typeof item.name === 'string' && item.name.trim().length > 0 &&
+      (key === 'products' ? item.currency === 'JPY' : typeof item.brand === 'string' && item.brand.trim().length > 0));
+  return valid ? null : `일본 ${key}의 국가 또는 필수 필드가 올바르지 않습니다`;
+}
+
 export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
   { service: 'daiso', scenario: 'health', args: ['health'], validate: validateHealth },
   {
@@ -125,6 +144,24 @@ export const CLI_SMOKE_COMMANDS: CliSmokeCommand[] = [
     args: ['inventory', '1034604', '--store', '강남역점'],
     expectedExitCode: 1,
     validate: validateStderrContains('알 수 없는 옵션: --store'),
+  },
+  {
+    service: 'daiso_jp',
+    scenario: '일본 다이소 상품 검색',
+    args: ['jp-products', 'ボウル', '--json'],
+    validate: (stdout) => validateApiEnvelope(stdout, (data) => validateJapanCollection(data, 'products')),
+  },
+  {
+    service: 'daiso_jp',
+    scenario: '일본 다이소 상품 상세',
+    args: ['jp-product', '4550746075917', '--json'],
+    validate: (stdout) => validateApiEnvelope(stdout, validateJapanProduct),
+  },
+  {
+    service: 'daiso_jp',
+    scenario: '일본 다이소 매장 검색',
+    args: ['jp-stores', '渋谷', '--json'],
+    validate: (stdout) => validateApiEnvelope(stdout, (data) => validateJapanCollection(data, 'stores')),
   },
   {
     service: 'cu',
