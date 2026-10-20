@@ -24,6 +24,10 @@ const product = {
       description: '온라인 판매 가능 여부. 매장 재고가 아니며 검색 목록에서는 null.',
     },
     storeInventorySupported: { type: 'boolean', const: false },
+    note: {
+      type: 'string',
+      description: '상세 원본 차단으로 공식 코드 검색 결과를 사용한 경우 안내',
+    },
   },
 };
 const store = {
@@ -110,7 +114,8 @@ export const OPENAPI_PATHS_DAISO_JP = {
     get: {
       operationId: 'daisoJpGetProduct',
       summary: '일본 다이소 온라인 상품 상세',
-      description: 'onlineAvailable은 온라인 판매 가능 여부입니다. 매장 재고·수량 미지원.',
+      description:
+        'onlineAvailable은 온라인 판매 가능 여부입니다. 상세 원본403 시 공식 코드 검색에서 ID가 일치하는 상품으로 대체하며 onlineAvailable은 null입니다. 매장 재고·수량 미지원.',
       parameters: [
         {
           name: 'id',

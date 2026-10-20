@@ -97,3 +97,60 @@ describe('일본 공식 클라이언트', () => {
     });
   });
 });
+
+describe('상세 페이지 차단 시 공식 상품 코드 검색', () => {
+  const deniedThen = (body: string, status = 200) => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('secret denied', { status: 403 }))
+      .mockResolvedValueOnce(new Response(body, { status }));
+    vi.stubGlobal('fetch', mock);
+    return mock;
+  };
+  it('403일 때만 코드 검색으로 정확한 ID를 골라 제한 안내를 반환한다', async () => {
+    const mock = deniedThen(fixture('products'));
+    expect(await getProduct('4550746075917')).toMatchObject({
+      id: '4550746075917',
+      name: 'ステンレスボウル',
+      onlineAvailable: null,
+      note: '상세 페이지 접근 제한으로 공식 상품 코드 검색 결과를 반환합니다. 온라인 판매 가능 여부는 확인하지 못했습니다.',
+    });
+    expect(mock).toHaveBeenCalledTimes(2);
+    const url = new URL(mock.mock.calls[1][0] as string);
+    expect(url.pathname).toBe('/search');
+    expect(url.searchParams.get('q')).toBe('4550746075917');
+    expect(url.searchParams.get('page')).toBe('1');
+  });
+  it('정확한 ID가 없으면 원래 상세 페이지 403 오류를 보존한다', async () => {
+    deniedThen(fixture('products'));
+    await expect(getProduct('4550746075918')).rejects.toMatchObject({
+      name: 'ServiceError',
+      code: 'DAISO_JP_UPSTREAM_FAILED',
+      status: 503,
+      upstreamStatus: 403,
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+  it('검색도 실패하면 검색의 안전한 오류를 반환한다', async () => {
+    deniedThen('secret search failed', 503);
+    await expect(getProduct('4550746075917')).rejects.toMatchObject({
+      code: 'DAISO_JP_UPSTREAM_FAILED',
+      upstreamStatus: 503,
+    });
+    deniedThen('<html>secret search changed</html>');
+    await expect(getProduct('4550746075917')).rejects.toMatchObject({
+      code: 'DAISO_JP_PARSE_FAILED',
+      status: 502,
+    });
+  });
+  it.each([404, 429, 500])('상세 페이지 %i는 후속 검색을 하지 않는다', async (status) => {
+    respond('secret upstream error', status);
+    await expect(getProduct('4550746075917')).rejects.toMatchObject({ upstreamStatus: status });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it('직접 상세 조회 성공 시 확인된 온라인 판매 여부를 유지한다', async () => {
+    respond(fixture('product-detail').replace('"available":false', '"available":true'));
+    expect(await getProduct('4550746075917')).toMatchObject({ onlineAvailable: true, price: 220 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});

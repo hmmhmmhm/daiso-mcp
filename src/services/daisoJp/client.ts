@@ -48,9 +48,24 @@ export async function getProduct(id: string): Promise<JapanProduct> {
   if (typeof id !== 'string' || !/^\d{13}$/.test(id)) {
     throw new Error('상품 ID는 13자리 숫자여야 합니다.');
   }
-  return upstream(async () =>
-    parseProductPage(await fetchText(`https://jp.daisonet.com/products/${id}`, OPTIONS), id),
-  );
+  return upstream(async () => {
+    try {
+      return parseProductPage(
+        await fetchText(`https://jp.daisonet.com/products/${id}`, OPTIONS),
+        id,
+      );
+    } catch (error) {
+      if (!(error instanceof HttpError) || error.status !== 403) throw error;
+      const result = await searchProducts(id, 1);
+      const match = result.products.find((item) => item.id === id);
+      if (!match) throw error;
+      return {
+        ...match,
+        onlineAvailable: null,
+        note: '상세 페이지 접근 제한으로 공식 상품 코드 검색 결과를 반환합니다. 온라인 판매 가능 여부는 확인하지 못했습니다.',
+      };
+    }
+  });
 }
 
 export async function findStores(keyword: string, page = 1): Promise<JapanStoreSearchResult> {

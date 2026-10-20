@@ -8,6 +8,7 @@ export interface JapanProduct {
   onlineAvailable: boolean | null;
   storeInventorySupported: false;
   imageUrl?: string;
+  note?: string;
 }
 
 export interface JapanStore {

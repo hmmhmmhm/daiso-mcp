@@ -25,14 +25,15 @@ describe('일본 다이소 표시와 발견', () => {
           name: 'ボウル',
           price: 220,
           currency: 'JPY',
-          onlineAvailable: false,
+          onlineAvailable: null,
+          note: '공식 상품 코드 검색 결과입니다.',
           storeInventorySupported: false,
         },
       },
     );
     expect(result).toContain('220 JPY');
     expect(result).toContain('매장 재고 미지원');
-    expect(result).toContain('false');
+    expect(result).toContain('공식 상품 코드 검색 결과입니다.');
   });
   it('명세와 에이전트 안내에 세 가지 경로를 노출한다', () => {
     const spec = generateFullOpenApiSpec('https://local') as { paths: Record<string, unknown> };

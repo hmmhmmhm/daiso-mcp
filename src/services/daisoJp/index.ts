@@ -23,6 +23,7 @@ const productOutput = z.object({
   imageUrl: z.string().optional(),
   onlineAvailable: z.boolean().nullable().describe('온라인 판매 가능 여부. 매장 재고가 아닙니다.'),
   storeInventorySupported: z.literal(false),
+  note: z.string().optional().describe('대체 조회와 확인하지 못한 항목 안내'),
 });
 const pageOutput = {
   country: z.literal('JP'),
@@ -71,7 +72,7 @@ export function createDaisoJpService(): ServiceProvider {
       metadata: {
         title: '일본 다이소 상품 상세',
         description:
-          '일본 다이소 검색 결과의 13자리 상품 ID로 엔화 가격과 온라인 판매 가능 여부를 조회합니다. 오프라인 매장 재고나 수량은 제공하지 않습니다.',
+          '일본 다이소 검색 결과의 13자리 상품 ID로 엔화 가격과 온라인 판매 가능 여부를 조회합니다. 상세 원본 차단 시 공식 상품 코드 검색 결과로 대체하며 온라인 판매 가능 여부는 null입니다. 오프라인 매장 재고나 수량은 제공하지 않습니다.',
         inputSchema: schemas.product.shape,
         outputSchema: productOutput.shape,
       },
