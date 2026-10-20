@@ -14,3 +14,12 @@ export const CGV_API = {
   TIMETABLE_SITE_SCOPE_CODE: '08',
   TIMETABLE_SCOPE_CODE: '01',
 } as const;
+
+/** 확인된 공식 웹 시간표 경로만 사용하고 임의 URL을 받지 않습니다. */
+export function cgvRequestUrl(path: string): URL {
+  return new URL(
+    path === CGV_API.TIMETABLE_BY_SITE_PATH
+      ? 'https://cgv.co.kr/api/v1/booking/searchMovScnInfo'
+      : CGV_API.BASE_URL + path,
+  );
+}

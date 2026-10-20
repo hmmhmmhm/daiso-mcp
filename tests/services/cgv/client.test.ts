@@ -471,7 +471,7 @@ describe('fetchCgvTimetable', () => {
     expect(result[0].movieCode).toBe('30000986');
     expect(result[0].remainingSeats).toBe(99);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(String(mockFetch.mock.calls[0][0])).toContain('/cnm/atkt/searchMovScnInfo');
+    expect(String(mockFetch.mock.calls[0][0])).toContain('https://cgv.co.kr/api/v1/booking/searchMovScnInfo');
   });
 
   it('사이트 시간표에서 prodNm/frtmpSeatCnt 분기를 정규화한다', async () => {

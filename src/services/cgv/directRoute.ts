@@ -1,6 +1,6 @@
 /** CGV 직접 경로와 주기 검사의 고정 요청 규격입니다. */
 import * as z from 'zod';
-import { CGV_API } from './api.js';
+import { CGV_API, cgvRequestUrl } from './api.js';
 import { createCgvHeaders } from './transport.js';
 import { isCgvResponse } from './relayTransport.js';
 import { toYyyymmdd } from '../../utils/format.js';
@@ -49,7 +49,7 @@ export const cgvDirectRouteSpecs: Record<string, DirectRouteSpec> = Object.fromE
           string,
           string
         >;
-        const url = new URL(path, CGV_API.BASE_URL);
+        const url = cgvRequestUrl(path);
         url.searchParams.set('coCd', CGV_API.COMPANY_CODE);
         if (operation !== 'theaters') {
           url.searchParams.set('siteNo', body.theaterCode);

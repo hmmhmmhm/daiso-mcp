@@ -28,7 +28,11 @@ it('실제 검사 함수는 직접 원본 요청과 중계 건강 GET만 호출�
     relayCalls.every(([url, init]) => url.pathname.endsWith('/health') && init.method === 'GET'),
   ).toBe(true);
   const cgvCalls = calls.filter(([url]) => url.hostname === 'api.cgv.co.kr');
-  expect(cgvCalls).toHaveLength(4);
+  expect(cgvCalls).toHaveLength(3);
+  const bookingCalls = calls.filter(([url]) => url.origin === 'https://cgv.co.kr');
+  expect(bookingCalls).toHaveLength(1);
+  expect(bookingCalls[0][0].pathname).toBe('/api/v1/booking/searchMovScnInfo');
+  expect(bookingCalls[0][1].method).toBe('GET');
   expect(cgvCalls.every(([, init]) => init.method === 'GET')).toBe(true);
   expect(storageFetch).toHaveBeenCalledTimes(1);
 });

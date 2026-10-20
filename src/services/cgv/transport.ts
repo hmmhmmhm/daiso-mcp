@@ -15,7 +15,7 @@ import {
   validateCgvRelay,
   type CgvTransportOptions,
 } from './relayTransport.js';
-import { CGV_API } from './api.js';
+import { CGV_API, cgvRequestUrl } from './api.js';
 import { CgvUpstreamUnavailableError } from './errors.js';
 
 function toBase64(bytes: Uint8Array): string {
@@ -58,6 +58,13 @@ async function createSignature(
 export async function createCgvHeaders(path: string): Promise<Record<string, string>> {
   const timestamp = Math.floor(Date.now() / 1000).toString();
   return {
+    ...(path === CGV_API.TIMETABLE_BY_SITE_PATH ? {
+      Origin: 'https://cgv.co.kr',
+      Referer: 'https://cgv.co.kr/cnm/movieBook/cinema',
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Dest': 'empty',
+    } : {}),
     Accept: 'application/json',
     'Accept-Language': 'ko-KR',
     // 실제 직접 요청에서 허용된 브라우저 헤더를 유지합니다.
@@ -95,7 +102,8 @@ export async function requestCgv<TResponse>(
       (ms) => requestCgvRelay<TResponse>(path, searchParams, options, ms),
     );
   }
-  const url = `${CGV_API.BASE_URL}${path}?${searchParams.toString()}`;
+  const url = cgvRequestUrl(path);
+  url.search = searchParams.toString();
   const headers = await createCgvHeaders(path);
   const { controller, timeoutId } = createTimeoutController(timeout);
 

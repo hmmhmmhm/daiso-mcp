@@ -8,6 +8,14 @@ CGV는 `/v1/cgv/{theaters,movies,timetable,timetable-movie}` 경로로 기존 Dt
 
 5분 주기 경로 점검은 CGV 직접 요청과 중계를 확인해 사용 가능한 경로를 선택합니다. 직접 경로가 차단되면 중계를 사용하고, 직접 경로가 회복되면 점검 결과에 따라 복귀합니다. 일반 요청 중 직접 실패도 경로 선택에 반영됩니다. `/health`의 `config.cgvRelay`는 유효 설정 여부만 나타내며 연결 성공을 뜻하지 않습니다.
 
+## 2026-10-20 시간표 경로 복구
+
+기존 `api.cgv.co.kr/cnm/atkt/searchMovScnInfo`는 Mac에서도 HTTP 403을 반환했습니다. 공식 웹의 비로그인 예매 화면에서 사용하는 `https://cgv.co.kr/api/v1/booking/searchMovScnInfo`는 동일한 극장·날짜 조건과 정상 Origin·Referer·Fetch Metadata 헤더로 서버에서도 HTTP 200과 시간표 데이터를 반환하는 것을 확인했습니다. 브라우저 세션이나 쿠키를 복사하지 않습니다.
+
+극장별 시간표 작업만 이 고정 경로를 사용합니다. Worker 직접 요청·5분 주기 경로 검사·Mac 중계가 같은 URL 생성과 헤더를 공유하며, 기존 입력·응답 검증, 기한, 예산과 캐시 정책을 유지합니다. 극장·영화 목록과 개별 영화 시간표의 기존 경로는 유지합니다. 개별 영화 조건도 우선 극장별 시간표의 실제 결과를 필터링하므로, 결과가 없을 때만 기존 개별 영화 조회가 사용됩니다. 임의의 경로를 새 호스트로 전달하지 않습니다.
+
+Mac 반영 시 최소 변경 파일은 `src/services/cgv/api.ts`, `transport.ts`, `directRoute.ts`, `scripts/relay/cgv.ts`입니다. 현재 설치 소스와 의존 모듈을 함께 대조하고 시작 모듈 import를 먼저 검증한 뒤, 기존 운영 절차로 원장을 보존하며 재기동합니다.
+
 ## 설정
 
 CGV 전용 설정이 하나도 없으면 `DTRYX_RELAY_URL`, `DTRYX_RELAY_TOKEN`, `DTRYX_ACCESS_CLIENT_ID`, `DTRYX_ACCESS_CLIENT_SECRET` 그룹 전체를 사용합니다. `CGV_*` 중 하나라도 정의하면 Dtryx와 값을 섞지 않고 CGV 그룹 전체를 사용합니다. 이때 `CGV_RELAY_URL`과 `CGV_RELAY_TOKEN`을 함께 설정하고, Access를 사용하면 `CGV_ACCESS_CLIENT_ID`와 `CGV_ACCESS_CLIENT_SECRET`도 함께 설정합니다. 빈 값도 정의된 설정으로 취급하므로 미사용 CGV 예시는 주석으로 두거나 삭제합니다. 공유 Dtryx 프로세스의 CGV 토큰은 실제 Dtryx 토큰과 같아야 합니다.

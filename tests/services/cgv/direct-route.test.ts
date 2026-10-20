@@ -28,7 +28,7 @@ it.each([
       data: [],
     });
     const [url, init] = fetcher.mock.calls[0];
-    expect(url.pathname).toBe(`/cnm/atkt/${endpoint}`);
+    expect(url.pathname).toBe(key === 'cgv-timetable' ? `/api/v1/booking/${endpoint}` : `/cnm/atkt/${endpoint}`);
     expect(url.searchParams.get('coCd')).toBe('A420');
     expect(url.searchParams.get('rtctlScopCd')).toBe(scope ?? null);
     if (key !== 'cgv-theaters') expect(url.searchParams.get('siteNo')).toBe('0056');

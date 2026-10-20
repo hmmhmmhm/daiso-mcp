@@ -1,5 +1,5 @@
 /** 고정 CGV 공개 조회만 허용하는 무료 HTTP 중계입니다. */
-import { CGV_API } from '../../src/services/cgv/api.js';
+import { CGV_API, cgvRequestUrl } from '../../src/services/cgv/api.js';
 import { createCgvHeaders } from '../../src/services/cgv/transport.js';
 import { isCgvResponse } from '../../src/services/cgv/relayTransport.js';
 import {
@@ -61,7 +61,7 @@ export function createCgvRelay(
     async upstream(operation, value, signal, fetcher) {
       const params = value as Record<string, string>;
       const path = paths[operation as Operation];
-      const url = new URL(path, CGV_API.BASE_URL);
+      const url = cgvRequestUrl(path);
       url.searchParams.set('coCd', CGV_API.COMPANY_CODE);
       if (operation !== 'theaters') {
         url.searchParams.set('siteNo', params.theaterCode);
