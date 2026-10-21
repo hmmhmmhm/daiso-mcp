@@ -14,6 +14,8 @@
 > 2. 웹 읽기(open/WebFetch)가 가능하면 [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3)를 바로 엽니다. **셸이 있어도 연결된 MCP 도구가 없으면 HTML GET이 우선입니다.** 검색어 `q`를 사용자 요청으로 바꾸세요. 웹 검색은 URL 열기를 대신하지 않습니다.
 > 3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 터미널·셸 호출로 우회하지 마세요. 셸 DNS 실패를 웹 GET 실패로 확대하거나 실행하지 않은 요청의 실패를 만들지 마세요.
 >
+> **검색 링크:** [핫식스 상품 검색](https://mcp.aka.page/api/daiso/products?format=html&guide=2026-10-21.3&pageSize=10&q=%ED%95%AB%EC%8B%9D%EC%8A%A4) · [강남 매장 검색](https://mcp.aka.page/api/daiso/stores?format=html&guide=2026-10-21.3&keyword=%EA%B0%95%EB%82%A8). 웹 읽기는 링크를 직접 열고, 접근 오류만으로 상품 없음이나 재고 0을 판단하지 마세요.
+>
 > **실행 근거:** 실제 데이터·도구·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 마세요. REST GET 성공은 MCP 연결 성공과 구분합니다.
 >
 > **상품 이미지:** 해당 응답의 `imageUrl`과 카드에 제공된 원본 이미지 Markdown만 사용하세요. `image_query`·이미지 검색·검색 캐러셀은 사용하지 마세요. 원본 표시가 불가능하면 링크나 텍스트만 제공합니다. 없거나 표시되지 않으면 생략하고 웹 검색 이미지·다른 상품·다른 국가의 이미지로 대체하지 마세요.

@@ -25,6 +25,7 @@ export function buildDiscoveryAssets(info: { services: { name: string }[]; tools
 <p>${escapeHtml(WEB_SEARCH_DESCRIPTION)}</p>
 <p><strong>${escapeHtml(WEB_READ_RULE)}</strong></p>
 <section><h2>바로 조회하기</h2><p><a href="${escapeHtml(firstQuery)}">다이소 수납박스 상품 3개 조회</a></p>
+<p><a href="/api/daiso/products?format=html&amp;guide=${AGENT_GUIDE_VERSION}&amp;pageSize=10&amp;q=%ED%95%AB%EC%8B%9D%EC%8A%A4">핫식스 상품 검색</a> · <a href="/api/daiso/stores?format=html&amp;guide=${AGENT_GUIDE_VERSION}&amp;keyword=%EA%B0%95%EB%82%A8">강남 매장 검색</a></p>
 <p>위 링크는 셸·설치 없이 웹 읽기로 호출하는 공개 REST GET의 HTML 결과입니다. 다른 공개 GET 조회도 기존 파라미터에 <code>format=html</code>을 추가하세요. 검색한 상품의 실제 ID로 재고를 조회하세요. 상품 검색만으로 매장 재고를 단정하지 마세요.</p></section>
 <section><h2>에이전트에서 설치 없이 사용하기</h2><p>원격 MCP 주소: <code>${BASE}</code><br>전송: Streamable HTTP · 인증: 없음</p>
 <p>${escapeHtml(ROUTE_SELECTION_TEXT).replaceAll('\n', '<br>')}</p>

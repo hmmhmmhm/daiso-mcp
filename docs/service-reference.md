@@ -8,6 +8,10 @@ README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리�
 
 [WebFetch로 다이소 수납박스 3개 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3)
 
+[핫식스 상품 검색](https://mcp.aka.page/api/daiso/products?format=html&guide=2026-10-21.3&pageSize=10&q=%ED%95%AB%EC%8B%9D%EC%8A%A4) · [강남 매장 검색](https://mcp.aka.page/api/daiso/stores?format=html&guide=2026-10-21.3&keyword=%EA%B0%95%EB%82%A8)
+
+웹 읽기 도구에서는 위 링크를 직접 열어 조회하세요. URL 접근 오류가 나오면 실제 오류를 보고하고 상품 없음이나 재고 0으로 해석하지 마세요.
+
 모든 후속 웹 GET에도 `format=html&guide=2026-10-21.3`을 유지하세요. 상품 검색 결과의 실제 ID로 재고를 조회하고 검색 성공만으로 매장 재고를 단정하지 않습니다. 이미지는 응답 imageUrl과 카드의 원본 Markdown만 사용하고 이미지 검색으로 대체하지 않습니다.
 
 현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-21.3), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
