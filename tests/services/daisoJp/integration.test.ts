@@ -47,6 +47,16 @@ describe('일본 다이소 연결', () => {
     expect((await response.json()).data.cached).toBe(true);
     expect(match).toHaveBeenCalledTimes(1);
   });
+  it('REST와 MCP 상세가 명시적 일본 중계 설정을 전달한다', async () => {
+    vi.mocked(getProduct).mockResolvedValue(product as never);
+    const options = { productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' } };
+    await createDaisoJpService(options).getTools()[1].handler({ id: product.id });
+    expect(getProduct).toHaveBeenLastCalledWith(product.id, options);
+    await app().request('/api/daiso-jp/products/' + product.id, {}, {
+      DAISO_JP_PRODUCT_RELAY_ENABLED: 'true', DTRYX_RELAY_URL: 'https://relay.example', DTRYX_RELAY_TOKEN: 'test-token',
+    });
+    expect(getProduct).toHaveBeenLastCalledWith(product.id, { productRelay: expect.objectContaining({ relayUrl: 'https://relay.example', relayToken: 'test-token', bypassCache: false }) });
+  });
   it('MCP 도구 세 가지와 입력 제약을 노출한다', async () => {
     const service = createDaisoJpService();
     expect(service.metadata.id).toBe('daiso_jp');

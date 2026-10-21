@@ -11,6 +11,13 @@ const respond = (body: string, status = 200) =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe('일본 공식 클라이언트', () => {
+  it('명시적 상세 중계는 원본 차단 요청 없이 동일 상품을 반환한다', async () => {
+    const fetcher = vi.fn(async () => Response.json({ handle: '4550746075917', title: 'ボウル', price: 22000, available: true }));
+    vi.stubGlobal('fetch', fetcher);
+    expect(await getProduct('4550746075917', { productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' } })).toMatchObject({ id: '4550746075917', onlineAvailable: true });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0][0]).toBe('https://relay.example/v1/daiso-jp/product');
+  });
   it('검색어를 인코딩하고 페이지와 출처 제한을 돌려준다', async () => {
     respond(fixture('products'));
     expect(await searchProducts(' ボウル ', 2)).toMatchObject({
@@ -99,30 +106,15 @@ describe('일본 공식 클라이언트', () => {
 });
 
 describe('상세 페이지 차단 시 공식 상품 코드 검색', () => {
-  it('상세 차단 이후 검색도 거절되는 경우 먼저 확보한 동일 상품을 반환한다', async () => {
-    let denied = false;
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-      if (new URL(String(input)).pathname.startsWith('/products/')) denied = true;
-      return denied ? new Response('denied', { status: 403 }) : new Response(fixture('products'));
-    }));
-    expect(await getProduct('4550746075917')).toMatchObject({ id: '4550746075917', onlineAvailable: null });
-    expect(fetch).toHaveBeenCalledTimes(2);
-  });
-  it('코드 검색과 상세가 모두 성공하면 상세의 온라인 판매 여부를 유지한다', async () => {
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce(new Response(fixture('products')))
-      .mockResolvedValueOnce(new Response(fixture('product-detail'))));
-    expect(await getProduct('4550746075917')).toMatchObject({ onlineAvailable: false, price: 220 });
-  });
   const deniedThen = (body: string, status = 200) => {
     const mock = vi
       .fn()
-      .mockResolvedValueOnce(new Response(body, { status }))
-      .mockResolvedValueOnce(new Response('secret denied', { status: 403 }));
+      .mockResolvedValueOnce(new Response('secret denied', { status: 403 }))
+      .mockResolvedValueOnce(new Response(body, { status }));
     vi.stubGlobal('fetch', mock);
     return mock;
   };
-  it('상세403일 때 먼저 확보한 코드 검색의 정확한 ID와 제한 안내를 반환한다', async () => {
+  it('403일 때만 코드 검색으로 정확한 ID를 골라 제한 안내를 반환한다', async () => {
     const mock = deniedThen(fixture('products'));
     expect(await getProduct('4550746075917')).toMatchObject({
       id: '4550746075917',
@@ -131,7 +123,7 @@ describe('상세 페이지 차단 시 공식 상품 코드 검색', () => {
       note: '상세 페이지 접근 제한으로 공식 상품 코드 검색 결과를 반환합니다. 온라인 판매 가능 여부는 확인하지 못했습니다.',
     });
     expect(mock).toHaveBeenCalledTimes(2);
-    const url = new URL(mock.mock.calls[0][0] as string);
+    const url = new URL(mock.mock.calls[1][0] as string);
     expect(url.pathname).toBe('/search');
     expect(url.searchParams.get('q')).toBe('4550746075917');
     expect(url.searchParams.get('page')).toBe('1');
@@ -158,16 +150,14 @@ describe('상세 페이지 차단 시 공식 상품 코드 검색', () => {
       status: 502,
     });
   });
-  it.each([404, 429, 500])('상세 페이지 %i는 검색 결과로 감추거나 재시도하지 않는다', async (status) => {
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce(new Response(fixture('products')))
-      .mockResolvedValueOnce(new Response('secret upstream error', { status })));
+  it.each([404, 429, 500])('상세 페이지 %i는 후속 검색을 하지 않는다', async (status) => {
+    respond('secret upstream error', status);
     await expect(getProduct('4550746075917')).rejects.toMatchObject({ upstreamStatus: status });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
   it('직접 상세 조회 성공 시 확인된 온라인 판매 여부를 유지한다', async () => {
     respond(fixture('product-detail').replace('"available":false', '"available":true'));
     expect(await getProduct('4550746075917')).toMatchObject({ onlineAvailable: true, price: 220 });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

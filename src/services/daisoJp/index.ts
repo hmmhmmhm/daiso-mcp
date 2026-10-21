@@ -2,6 +2,7 @@
 import * as z from 'zod';
 import type { ServiceProvider } from '../../core/interfaces.js';
 import type { ToolRegistration } from '../../core/types.js';
+import type { JapanTransportOptions } from './productRelay.js';
 import { searchProducts, getProduct, findStores } from './client.js';
 
 export const jpQuery = z.string().trim().min(1).max(100);
@@ -42,7 +43,7 @@ const storeOutput = z.object({
   brand: z.string(),
 });
 
-export function createDaisoJpService(): ServiceProvider {
+export function createDaisoJpService(options: JapanTransportOptions = {}): ServiceProvider {
   const tools: ToolRegistration[] = [
     {
       name: 'daiso_jp_search_products',
@@ -78,7 +79,7 @@ export function createDaisoJpService(): ServiceProvider {
       },
       handler: async (args) => {
         const { id } = schemas.product.parse(args);
-        const product = await getProduct(id);
+        const product = await getProduct(id, options);
         const result = { ...product };
         return {
           content: [{ type: 'text', text: JSON.stringify(result) }],

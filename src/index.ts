@@ -25,6 +25,7 @@ import { createDaisoService } from './services/daiso/index.js';
 import { createOliveyoungService } from './services/oliveyoung/index.js';
 import { createDtryxService } from './services/dtryx/index.js';
 import { createMegaboxService } from './services/megabox/index.js';
+import { japanProductTransportFromBindings } from './services/daisoJp/productRelay.js';
 import { cgvTransportFromBindings } from './services/cgv/relayTransport.js';
 import { createCgvService } from './services/cgv/index.js';
 import { createLotteCinemaService } from './services/lottecinema/index.js';
@@ -58,7 +59,6 @@ export { DailyRateLimiter } from './durableObjects/dailyRateLimiter.js';
 const SERVER_NAME = 'multi-service-mcp';
 const SERVER_VERSION = '1.0.0';
 const SESSION_HEADER = 'mcp-session-id';
-
 // 세션별 MCP 전송 계층/서버를 유지해 GET/POST/DELETE를 일관 처리합니다.
 const mcpSessions = new Map<
   string,
@@ -76,7 +76,7 @@ const createRegistry = (bindings?: AppBindings) => {
 
   registry.registerAll([
     createDaisoService,
-    createDaisoJpService,
+    () => createDaisoJpService(japanProductTransportFromBindings(bindings)),
     () =>
       createGs25Service({ ...convenienceTransportFromBindings(bindings),
         ...geocodeBindings(bindings),

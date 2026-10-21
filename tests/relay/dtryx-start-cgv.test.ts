@@ -34,7 +34,7 @@ it('CGV와 디트릭스 조회가 같은 쿼터를 소비하고 CGV 건강 상�
   vi.stubEnv('CONVENIENCE_RELAY_TOKEN', undefined);
   vi.stubEnv('CONVENIENCE_RELAY_STATE_DIR', undefined);
   vi.stubGlobal('fetch', vi.fn().mockImplementation((url: URL | string) => Promise.resolve(
-    String(url).includes('cgv.co.kr') ? Response.json({ statusCode: 0, data: [] }) : Response.json({ RetCode: 'success', Recordset: [] }),
+    String(url).includes('jp.daisonet.com') ? Response.json({ handle: '4550746075917', title: 'ボウル', price: 22000, available: true }) : String(url).includes('cgv.co.kr') ? Response.json({ statusCode: 0, data: [] }) : Response.json({ RetCode: 'success', Recordset: [] }),
   )));
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
   vi.spyOn(process, 'once').mockImplementation(((signal: string, listener: () => void) => {
@@ -52,6 +52,10 @@ it('CGV와 디트릭스 조회가 같은 쿼터를 소비하고 CGV 건강 상�
   expect((await invoke('/v1/cgv/theaters', {}, 'wrong')).status).toBe(401);
   expect((await invoke('/v1/cgv/theaters', {})).status).toBe(200);
   expect((await invoke('/v1/dtryx/movies', { brandCode: 'dtryx', cinemaCode: '000067' })).status).toBe(200);
+  expect((await invoke('/v1/daiso-jp/product', { id: '4550746075917' }, 'wrong')).status).toBe(401);
+  const japan = await invoke('/v1/daiso-jp/product', { id: '4550746075917' });
+  expect(japan.status).toBe(200);
+  expect(japan.body.handle).toBe('4550746075917');
   const after = await invoke('/v1/cgv/health');
-  expect(after.body.quota.dailyRemaining).toBe(before.body.quota.dailyRemaining - 2);
+  expect(after.body.quota.dailyRemaining).toBe(before.body.quota.dailyRemaining - 3);
 });

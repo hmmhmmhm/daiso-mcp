@@ -12,6 +12,7 @@ not_found_handling = "none"
 html_handling = "none"
 
 [vars]
+DAISO_JP_PRODUCT_RELAY_ENABLED = "true"
 HEALTH_CHECK_BASE_URL = "https://daiso-mcp.hmmhmmhm.workers.dev"
 
 [observability]

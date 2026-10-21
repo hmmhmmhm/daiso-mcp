@@ -6,6 +6,7 @@ import type { Context } from 'hono';
 import { ServiceError, toServiceErrorDiagnostics, toStandardErrorDiagnostics } from '../core/errors.js';
 
 export interface AppBindings {
+  DAISO_JP_PRODUCT_RELAY_ENABLED?: string;
   DAILY_RATE_LIMITER?: DurableObjectNamespace;
   UPSTREAM_ROUTE_HEALTH?: DurableObjectNamespace;
   GEOCODE_GATEWAY?: DurableObjectNamespace;

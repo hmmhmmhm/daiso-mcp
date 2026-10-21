@@ -5,6 +5,7 @@ import { successResponse, errorResponse, serviceErrorResponse } from '../respons
 import { withEdgeCache } from '../../utils/cache.js';
 import { ServiceError } from '../../core/errors.js';
 import { searchProducts, getProduct, findStores } from '../../services/daisoJp/client.js';
+import { japanProductTransportFromBindings } from '../../services/daisoJp/productRelay.js';
 import { jpQuery, jpPage, jpProductId } from '../../services/daisoJp/index.js';
 import { isFreshOperationalRequest } from '../operationalFreshness.js';
 
@@ -34,8 +35,9 @@ export function registerDaisoJpRoutes(app: Hono<{ Bindings: AppBindings }>): voi
         'INVALID_INPUT',
         '상품 ID는 일본 다이소 검색 결과의 13자리 코드를 사용하세요.',
       );
-    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-product-v1', bypassCache: await isFreshOperationalRequest(c) }, () =>
-      execute(c, () => getProduct(id.data)),
+    const bypassCache = await isFreshOperationalRequest(c);
+    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-product-v1', bypassCache }, () =>
+      execute(c, () => getProduct(id.data, japanProductTransportFromBindings(c.env, bypassCache))),
     );
   });
   app.get('/api/daiso-jp/products', async (c) => {

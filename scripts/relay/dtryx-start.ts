@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { createFileQuota, assertSeparateQuotaDirectories, CONVENIENCE_QUOTA_LIMITS } from './quota.js';
 import { createConvenienceRelay } from './convenience.js';
 import { createGs25SessionTransport } from './gs25-session.js';
+import { createJapanProductRelay } from './daiso-jp.js';
 import { createCgvRelay } from './cgv.js';
 import { createDtryxRelay } from './dtryx.js';
 
@@ -72,8 +73,11 @@ async function main() {
     }
     return response;
   }, log.append);
+  const japanRelay = createJapanProductRelay(token, { takeQuota, onEvent: log.append });
+  const japanHandler = observeRelay(japanRelay, log.append);
   const handler = (request: Request) => new URL(request.url).pathname.startsWith('/v1/convenience/')
     ? convenience ? convenience(request) : Promise.resolve(Response.json({ error: 'Not found' }, { status: 404 }))
+    : new URL(request.url).pathname.startsWith('/v1/daiso-jp/') ? japanHandler(request)
     : new URL(request.url).pathname.startsWith('/v1/cgv/') ? cgvHandler(request) : dtryxHandler(request);
   const server = createServer(async (req, res) => {
     const controller = new AbortController();

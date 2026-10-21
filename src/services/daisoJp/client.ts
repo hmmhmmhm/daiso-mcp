@@ -1,6 +1,7 @@
 import { ServiceError } from '../../core/errors.js';
 import { fetchText, HttpError } from '../../utils/http.js';
 import { parseProductPage, parseProductSearch, parseStoreSearch } from './parser.js';
+import { requestJapanProductRelay, type JapanTransportOptions } from './productRelay.js';
 import type { JapanProduct, JapanProductSearchResult, JapanStoreSearchResult } from './types.js';
 
 const OPTIONS = { timeout: 20000, retries: 0 };
@@ -44,19 +45,12 @@ export async function searchProducts(query: string, page = 1): Promise<JapanProd
   }));
 }
 
-export async function getProduct(id: string): Promise<JapanProduct> {
+export async function getProduct(id: string, options: JapanTransportOptions = {}): Promise<JapanProduct> {
   if (typeof id !== 'string' || !/^\d{13}$/.test(id)) {
     throw new Error('상품 ID는 13자리 숫자여야 합니다.');
   }
+  if (options.productRelay) return requestJapanProductRelay(id, options.productRelay);
   return upstream(async () => {
-    // 차단 응답 뒤 검색까지 거절될 수 있으므로 공식 코드 검색을 먼저 확보합니다.
-    let result: JapanProductSearchResult | undefined;
-    let searchError: unknown;
-    try {
-      result = await searchProducts(id, 1);
-    } catch (error) {
-      searchError = error;
-    }
     try {
       return parseProductPage(
         await fetchText(`https://jp.daisonet.com/products/${id}`, OPTIONS),
@@ -64,8 +58,9 @@ export async function getProduct(id: string): Promise<JapanProduct> {
       );
     } catch (error) {
       if (!(error instanceof HttpError) || error.status !== 403) throw error;
-      const match = result?.products.find((item) => item.id === id);
-      if (!match) throw searchError ?? error;
+      const result = await searchProducts(id, 1);
+      const match = result.products.find((item) => item.id === id);
+      if (!match) throw error;
       return {
         ...match,
         onlineAvailable: null,
