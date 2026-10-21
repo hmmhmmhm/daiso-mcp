@@ -1,9 +1,11 @@
 /**
  * OpenAI Actions용 축약 OpenAPI 스펙
  */
+import { ACTION_FUEL_PARAMETERS } from './openapiSpecFuelParameters.js';
 import { ACTION_QUERY_ACTIONS } from '../api/actionsProxy.js';
 
 export const ACTION_QUERY_PARAMETERS = [
+  ...ACTION_FUEL_PARAMETERS,
   {
     name: 'cinemaCode',
     in: 'query',
@@ -53,7 +55,7 @@ export const ACTION_QUERY_PARAMETERS = [
     name: 'q',
     in: 'query',
     required: false,
-    description: '다이소 제품 검색어',
+    description: '한국·일본 다이소 제품 검색어',
     schema: { type: 'string' },
   },
   {

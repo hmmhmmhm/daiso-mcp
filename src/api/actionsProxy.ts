@@ -21,6 +21,13 @@ export const ACTION_QUERY_DEFINITIONS: ActionQueryDefinition[] = [
     pathParam: 'productId',
   },
   { action: 'daisoFindStores', summary: '다이소 매장 검색', targetPath: '/api/daiso/stores' },
+  { action: 'daisoJpSearchProducts', summary: '일본 다이소 상품 검색', targetPath: '/api/daiso-jp/products' },
+  { action: 'daisoJpGetProduct', summary: '일본 다이소 상품 상세', targetPath: '/api/daiso-jp/products/:productId', pathParam: 'productId' },
+  { action: 'daisoJpFindStores', summary: '일본 다이소 매장 검색 (매장 재고 미지원)', targetPath: '/api/daiso-jp/stores' },
+  { action: 'opinetGetAveragePrices', summary: '오피넷 전국 평균 유가', targetPath: '/api/opinet/average' },
+  { action: 'opinetGetLowestPriceStations', summary: '오피넷 최저가 주유소', targetPath: '/api/opinet/lowest' },
+  { action: 'opinetSearchStationsAround', summary: '오피넷 주변 주유소', targetPath: '/api/opinet/stations/around' },
+  { action: 'opinetGetStationDetail', summary: '오피넷 주유소 상세', targetPath: '/api/opinet/station' },
   {
     action: 'daisoCheckInventory',
     summary: '다이소 재고 조회',

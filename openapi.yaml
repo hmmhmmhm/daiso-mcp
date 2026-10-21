@@ -1,7 +1,7 @@
 
 openapi: 3.1.0
 info:
-  title: 다이소 MCP API (OpenAI Actions용)
+  title: DAISO MCP API (OpenAI Actions용)
   description: |
       OpenAI 챗봇의 OpenAPI import 개수 제한을 피하기 위해 모든 GET API를 단일 facade 엔드포인트로 집약한 스펙입니다.
       
@@ -9,8 +9,9 @@ info:
       
       브랜드명이 요청 앞부분에 나오면 뒤의 상품/재고 요청까지 같은 브랜드로 해석해야 합니다. 예: "안산 중앙역 주변 다이소 찾아주시고 핫식스 재고 찾아주세요"는 다이소 기준 조회를 먼저 수행하고, 결과가 없을 때만 다른 브랜드를 제안합니다.
       
+      일본 다이소는 상품·매장 검색과 온라인 구매 가능 여부만 제공하며 매장별 재고는 지원하지 않습니다. 오피넷 유가·주유소 조회도 action 선택값으로 제공합니다. 실패와 미확인 수량을 재고 0으로 해석하지 마세요.
       전체 개별 엔드포인트 스펙이 필요하면 /openapi-full.json 또는 /openapi-full.yaml 을 사용하세요.
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: GitHub Repository
     url: "https://github.com/hmmhmmhm/daiso-mcp"
@@ -24,6 +25,42 @@ paths:
       summary: 공통 GET 액션 실행
       description: action 값에 따라 기존 GET API 엔드포인트로 프록시합니다. OpenAI Actions 등록 시 이 단일 엔드포인트를 사용하세요.
       parameters:
+        - name: fuelCode
+          in: query
+          required: false
+          description: 유종 코드. B027=휘발유, D047=경유, B034=고급휘발유, C004=실내등유, K015=자동차부탄
+          schema:
+            type: string
+        - name: stationId
+          in: query
+          required: false
+          description: opinetGetStationDetail에 필요한 실제 주유소 ID. 검색 결과에서 얻습니다.
+          schema:
+            type: string
+        - name: count
+          in: query
+          required: false
+          description: 최저가 주유소 반환 개수
+          schema:
+            type: integer
+        - name: radiusMeters
+          in: query
+          required: false
+          description: 주변 주유소 검색 반경(m)
+          schema:
+            type: integer
+        - name: x
+          in: query
+          required: false
+          description: 오피넷 KATEC X좌표. 보통은 location 또는 lat/lng를 사용하세요.
+          schema:
+            type: number
+        - name: y
+          in: query
+          required: false
+          description: 오피넷 KATEC Y좌표. 보통은 location 또는 lat/lng를 사용하세요.
+          schema:
+            type: number
         - name: cinemaCode
           in: query
           required: false
@@ -67,6 +104,13 @@ paths:
               - daisoSearchProducts
               - daisoGetProduct
               - daisoFindStores
+              - daisoJpSearchProducts
+              - daisoJpGetProduct
+              - daisoJpFindStores
+              - opinetGetAveragePrices
+              - opinetGetLowestPriceStations
+              - opinetSearchStationsAround
+              - opinetGetStationDetail
               - daisoCheckInventory
               - daisoGetDisplayLocation
               - oliveyoungSearchProducts
@@ -100,7 +144,7 @@ paths:
         - name: q
           in: query
           required: false
-          description: 다이소 제품 검색어
+          description: 한국·일본 다이소 제품 검색어
           schema:
             type: string
         - name: query
