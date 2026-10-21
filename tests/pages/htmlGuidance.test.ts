@@ -27,5 +27,8 @@ describe('웹 읽기 전용 에이전트 안내', () => {
     expect(text).toContain(rule);
     expect(text).toContain('개발자용 JSON 원본');
     expect(text).toContain('웹 읽기용 아님');
+    expect(text).toContain('해당 조회 응답의 imageUrl만');
+    expect(text).toContain('웹 검색 이미지');
+    expect(text).toContain('실행하지 않은');
   });
 });

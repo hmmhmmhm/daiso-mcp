@@ -319,8 +319,9 @@ describe('repository maintenance configuration', () => {
     const directCall = readText('docs/service-reference.md').split('### MCP 표준 응답 모델')[0];
     expect(directCall).toContain('Accept: application/json, text/event-stream');
     expect(directCall).toContain('"method":"tools/call"');
-    expect(directCall).toContain('"name":"daiso_search_products"');
+    expect(directCall).toContain('"name":"search_products"');
     expect(directCall).toContain('"query":"수납박스"');
+    expect(directCall).toContain('"service":"daiso"');
     expect(readme).toContain('WORKERS_INVOCATIONS_CHART:START');
     expect(readme).toContain('scripts/ops/README.md');
   });
@@ -424,7 +425,7 @@ describe('repository maintenance configuration', () => {
 
     expect(skill).toContain('name: daiso-cli');
     expect(skill).toContain('description:');
-    expect(skill).toContain('version: 1.0.6');
+    expect(skill).toContain('version: 1.0.7');
     expect(skill).toContain('metadata:');
     expect(skill).toContain('openclaw:');
     expect(skill).toContain('requires:');

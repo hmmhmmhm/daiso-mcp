@@ -1,4 +1,4 @@
-import { buildAgentStartText, WEB_READ_RULE } from './agentStart.js';
+import { buildAgentStartText, WEB_READ_RULE, ROUTE_SELECTION_TEXT, IMAGE_SOURCE_RULE, EXECUTION_EVIDENCE_RULE } from './agentStart.js';
 
 const BASE = 'https://mcp.aka.page';
 
@@ -26,13 +26,15 @@ export function buildDiscoveryAssets(info: { services: { name: string }[]; tools
 <section><h2>바로 조회하기</h2><p><a href="${escapeHtml(firstQuery)}">다이소 수납박스 상품 3개 조회</a></p>
 <p>위 링크는 셸·설치 없이 웹 읽기로 호출하는 공개 REST GET의 HTML 결과입니다. 다른 공개 GET 조회도 기존 파라미터에 <code>format=html</code>을 추가하세요. 검색한 상품의 실제 ID로 재고를 조회하세요. 상품 검색만으로 매장 재고를 단정하지 마세요.</p></section>
 <section><h2>에이전트에서 설치 없이 사용하기</h2><p>원격 MCP 주소: <code>${BASE}</code><br>전송: Streamable HTTP · 인증: 없음</p>
-<p>원격 MCP 클라이언트가 있으면 이 주소에 연결하고 <code>search_products</code>를 <code>{"service":"daiso","query":"수납박스","pageSize":3}</code>으로 호출하세요.</p>
-<p>HTTP POST나 셸이 있으면 아래 한 요청으로 첫 조회를 실행할 수 있습니다.</p>
+<p>${escapeHtml(ROUTE_SELECTION_TEXT).replaceAll('\n', '<br>')}</p>
+<p><strong>${escapeHtml(IMAGE_SOURCE_RULE)}</strong></p>
+<p>${escapeHtml(EXECUTION_EVIDENCE_RULE)}</p>
+<details><summary>셸 전용 POST 대안</summary>
 <pre><code>curl --max-time 20 -sS -N ${BASE}/ \\
   -H 'Content-Type: application/json' \\
   -H 'Accept: application/json, text/event-stream' \\
-  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_products","arguments":{"service":"daiso","query":"수납박스","pageSize":3}}}'</code></pre>
-<p>웹 읽기 기능으로 이 페이지를 읽는 것만으로 MCP 연결이 생기지는 않습니다. 샌드박스나 셸 없이 웹 읽기만 가능한 채팅 에이전트는 위 HTML REST 링크를 바로 여세요. 오류를 상품 없음으로 해석하지 마세요.</p>
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_products","arguments":{"service":"daiso","query":"수납박스","pageSize":3}}}'</code></pre></details>
+<p>웹 읽기 기능으로 이 페이지를 읽는 것만으로 MCP 연결이 생기지는 않습니다. 연결된 MCP 도구가 없고 웹 읽기가 가능하면 셸 유무와 무관하게 위 HTML REST 링크를 바로 여세요. 오류를 상품 없음으로 해석하지 마세요.</p>
 <p><a href="/llms.txt">짧은 시작 안내</a> · <a href="/prompt">전체 API 사용 안내</a> · <a href="/root.json">개발자용 서비스·도구 목록 JSON</a></p></section>
 <section><h2>지원 서비스</h2><p>${services}</p></section>
 <footer><a href="https://github.com/hmmhmmhm/daiso-mcp">GitHub 문서와 소스</a> · <a href="/privacy">개인정보 처리방침</a></footer>

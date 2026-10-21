@@ -15,7 +15,7 @@ describe('에이전트 시작 안내', () => {
     expect(text).toContain('https://example.com/');
     expect(text).toContain('application/json, text/event-stream');
     expect(text).toContain('structuredContent');
-    expect(text).toContain('isError');
+    expect(text).toContain('result.isError=true');
   });
 
   it('원격 MCP 연결과 HTTP POST, REST GET을 구분하고 전체 문서 읽기를 요구하지 않는다', () => {

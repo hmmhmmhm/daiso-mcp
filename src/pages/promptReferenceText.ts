@@ -111,7 +111,7 @@ export function buildPromptReferenceText(baseUrl: string): string {
 10. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
 11. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
 12. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
-13. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
+13. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 search_products(service=oliveyoung) 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
 14. **통합 가격 후보 비교**: 사용자가 브랜드를 특정하지 않고 "어디가 싸?", "비교해줘"처럼 물으면 \`compare_products\` 또는 /api/compare/products를 먼저 사용합니다. 새 외부 키 없이 기존 상품 검색을 묶은 1차 가격 후보이므로 실제 재고/행사가는 각 서비스 상세 조회로 확인해야 합니다.
 15. **주변 음식점/카페 검색**: 음식점이나 카페만 물으면 \`find_places\` (service=places) 또는 /api/places/search를 먼저 사용합니다. 이 기능은 네이버 지역 검색 기반 키워드 검색이므로 좌표 반경 검색처럼 단정하지 말고, \`searchMode: "keyword"\`임을 필요할 때 짧게 밝혀주세요.
 

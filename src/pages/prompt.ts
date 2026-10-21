@@ -27,7 +27,7 @@ export function generatePromptText(baseUrl: string): string {
 - 매장: ${baseUrl}/api/daiso-jp/stores?keyword=%E6%B8%8B%E8%B0%B7&format=html
 매장명·주소를 검색하므로 지역을 확인하세요. 다음 페이지는 page를 증가시키되 hasNext=true일 때만 요청하세요.
 온라인 판매 가능 여부는 매장 재고가 아닙니다. 일본 매장 재고 조회는 아직 지원하지 않습니다.
-MCP: daiso_jp_search_products(query,page), daiso_jp_get_product(id), daiso_jp_find_stores(keyword,page).
+MCP: search_products {"service":"daiso_jp","query":"ボウル"}, get_product_details {"service":"daiso_jp","operation":"product","id":"검색한 실제 코드"}, find_stores {"service":"daiso_jp","keyword":"渋谷"}.
 CLI: jp-products ボウル / jp-product 4550746075917 / jp-stores 渋谷.
 `,
   ].join('');

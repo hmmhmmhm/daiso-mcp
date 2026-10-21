@@ -96,7 +96,7 @@ claude mcp add daiso-mcp https://mcp.aka.page --transport http
 ```
 
 새 대화에서 `다이소 MCP로 수납박스 검색해줘`를 요청하세요.
-에이전트가 `daiso_search_products`에 `{"query":"수납박스"}`를 전달하고 상품 목록과 가격을 반환하면 연결이 완료된 것입니다.
+에이전트가 `search_products`에 `{"service":"daiso","query":"수납박스"}`를 전달하고 상품 목록과 가격을 반환하면 연결이 완료된 것입니다.
 
 <br>
 
@@ -233,7 +233,7 @@ npx daiso products 수납박스 --json
 - 공개 페이지: `https://clawhub.ai/hmmhmmhm/daiso-cli`
 - 스킬 파일: [skills/daiso-cli/SKILL.md](../skills/daiso-cli/SKILL.md)
 - 명령 맵: [CLI 명령 맵](../skills/daiso-cli/references/cli-command-map.md)
-- 사용자가 무설치 조회를 요청하면 공개 원격 MCP 또는 HTTP POST를 우선 사용합니다. `npx`나 Skill 설치, 전체 스키마 탐색은 필요하지 않습니다.
+- 사용자가 무설치 조회를 요청하면 연결된 MCP 도구를 사용하고, 없으면 웹 읽기의 HTML GET을 우선 사용합니다. 셸이 있어도 이 순서를 유지하며, 두 수단이 없을 때만 외부 통신 가능한 셸의 POST를 사용합니다. `npx`나 Skill 설치, 전체 스키마 탐색은 필요하지 않습니다.
 - CLI를 사용하기로 선택했고 쉘 실행이 가능한 환경에서만 `npx daiso`를 사용합니다. AI 앱 연결에는 MCP 서버 URL `https://mcp.aka.page`를 사용합니다.
 - 구조화 결과가 필요하면 스킬은 `npx daiso ... --json` 형태를 선택합니다.
 - 상황별 레시피는 `콜라 어디가 싸?`, `강남역 근처 카페`, `다이소 핫식스 재고`, `오늘 강남 CGV 시간표`처럼 실제 사용자 문장 기준으로 정리되어 있습니다.

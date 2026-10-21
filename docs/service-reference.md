@@ -7,17 +7,23 @@ README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리�
 공개 원격 MCP는 `https://mcp.aka.page`이며 Streamable HTTP 방식이고 인증·API 키가 필요 없습니다.
 에이전트용 짧은 안내는 [빠른 시작](https://mcp.aka.page/llms.txt)에 있습니다. 첫 조회에는 이 상세 레퍼런스나 전체 도구 목록을 먼저 읽을 필요가 없습니다.
 
-HTTP POST를 실행할 수 있다면 아래 한 요청으로 실제 MCP 상품 조회를 완료합니다. 루트 POST가 지원하는 서버 전용 단축 경로여서 initialize나 로컬 패키지 설치가 필요 없습니다.
+연결된 MCP 도구가 있으면 `search_products`에 `service=daiso`를 전달합니다. 없으면 셸이 있어도 웹 읽기의 [첫 HTML GET](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)을 먼저 엽니다. 모든 후속 웹 GET에도 `format=html`을 붙입니다. 셸 DNS 실패는 웹 GET 실패가 아니며 실제 실행하지 않은 요청을 실패했다고 보고하지 않습니다.
+
+위 두 수단이 없고 외부 통신 가능한 셸만 있다면 아래 한 요청으로 실제 MCP 상품 조회를 완료합니다. 루트 POST가 지원하는 서버 전용 단축 경로여서 initialize나 로컬 패키지 설치가 필요 없습니다.
 
 ```bash
 curl -sS -N --max-time 20 'https://mcp.aka.page/' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
-  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"daiso_search_products","arguments":{"query":"수납박스","pageSize":3}}}'
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_products","arguments":{"service":"daiso","query":"수납박스","pageSize":3}}}'
 ```
 
 SSE `data:`의 JSON에 `error`가 없고 `result.isError`가 true가 아닌지 확인한 뒤 `result.structuredContent.products`에서 실제 상품을 읽습니다. 검색에 성공하면 결과부터 보여주고 추가 진단은 생략합니다.
-범용 MCP 클라이언트는 표준 initialize 흐름을 사용하며 `/mcp`는 초기화가 필요합니다. GET만 가능한 환경의 REST 대안은 위 빠른 시작 안내를 확인하세요.
+범용 MCP 클라이언트는 표준 initialize 흐름을 사용하며 `/mcp`는 초기화가 필요합니다. 웹 읽기가 가능하면 위 HTML GET을 우선 사용하세요.
+
+### 구형 도구 레퍼런스의 범위
+
+아래 서비스별 MCP 이름은 하위호환용 **deprecated 별칭** 레퍼런스입니다. 새 연동의 호출 예제로 사용하지 마세요. 현재 공개 MCP 도구는 정확히 10개이며 [통합 도구와 구형 매핑](mcp-tools.md)을 사용합니다. REST와 CLI 계약은 유지합니다.
 
 ### MCP 표준 응답 모델
 

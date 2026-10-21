@@ -2,7 +2,15 @@
 <summary>AI 에이전트 사용 안내</summary>
 
 > [!IMPORTANT]
-> **AI 에이전트의 무설치 MCP 사용:** 공개 원격 서버 `https://mcp.aka.page`에 Streamable HTTP로 연결하면 **로컬 설치·빌드·API 키 준비 없이 바로 사용할 수 있습니다.** 무설치 요청에는 npm 설치나 전체 스키마 탐색을 하지 말고, [짧은 시작 안내](https://mcp.aka.page/llms.txt)를 읽은 뒤 필요한 도구를 호출하세요.
+> **로컬 설치·빌드·API 키 준비 없이 실제 조회부터 실행하세요.** 패키지 설치나 전체 스키마 탐색은 필요 없습니다.
+>
+> 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
+> 2. 웹 읽기(open/WebFetch)가 가능하면 [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)를 바로 엽니다. **셸이 있어도 연결된 MCP 도구가 없으면 HTML GET이 우선입니다.** 검색어 `q`를 사용자 요청으로 바꾸세요. 웹 검색은 URL 열기를 대신하지 않습니다.
+> 3. 위 두 수단이 없을 때만 외부 통신 가능한 셸의 POST를 사용합니다. 셸 DNS 실패를 웹 GET 실패나 서비스 장애로 단정하지 말고, 웹 읽기가 가능하면 HTML GET으로 전환하세요.
+>
+> **실행 근거:** 실제 데이터·도구·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 마세요. REST GET 성공은 MCP 연결 성공과 구분합니다.
+>
+> **상품 이미지:** 해당 응답의 `imageUrl`만 사용하세요. 없거나 표시되지 않으면 생략하고 웹 검색 이미지·다른 상품·다른 국가의 이미지로 대체하지 마세요.
 >
 > **MCP 도구는 10개 고정:** `service`와 `operation`으로 지원 서비스를 선택합니다. 새 연동은 [통합 도구 10개](docs/mcp-tools.md)만 사용하세요. 기존 서비스별 도구는 deprecated 호출 별칭으로 유지하지만 목록에는 표시하지 않습니다.
 >
