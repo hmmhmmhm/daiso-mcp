@@ -9,7 +9,7 @@ it('명시한 중계에서 같은 상품만 인증된 고정 경로로 읽는다
   const fetcher = vi.fn(async () => Response.json(raw)); vi.stubGlobal('fetch', fetcher);
   expect(await requestJapanProductRelay(raw.handle, { ...options, bypassCache: true, accessClientId: 'test-id', accessClientSecret: 'test-secret' })).toMatchObject({ id: raw.handle, onlineAvailable: true, price: 220 });
   const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
-  expect(url).toBe('https://relay.example/v1/daiso-jp/product');
+  expect(url).toBe('https://relay.example/v1/dtryx/daiso-jp-product');
   expect(init.redirect).toBe('manual');
   expect(init.headers).toMatchObject({ Authorization: 'Bearer test-token', 'x-relay-cache-bypass': 'true', 'CF-Access-Client-Id': 'test-id' });
 });

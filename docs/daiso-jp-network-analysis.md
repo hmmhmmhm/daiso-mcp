@@ -64,8 +64,10 @@ npx daiso jp-stores 東京都渋谷区 --json
 
 앞의 검색 선조회 순서 변경은 실제 운영403을 해소하지 못해 철회했습니다. 로컬과 자체 배포에서 별도 설정이 없으면 기존 상세→403시 정확한코드검색 흐름을 유지합니다. 운영 Worker는 `DAISO_JP_PRODUCT_RELAY_ENABLED="true"`를 명시하고 기존 DTRYX_RELAY_URL/TOKEN/ACCESS_CLIENT_ID/ACCESS_CLIENT_SECRET 설정으로 일본 상세만 HTTP 중계에 연결합니다. 이 플래그가 없으면 DTRYX 설정만으로 일본 전송이 바뀌지 않습니다.
 
-`POST /v1/daiso-jp/product`는 `{ "id": "4550746075917" }`만 받으며 임의 URL을 허용하지 않습니다. Mac에서 공식 `https://jp.daisonet.com/products/{id}.js`만 읽고 요청ID와 대조합니다. 리다이렉트는 거절하고 본문2MiB·전체15초 제한을 적용합니다. Worker도 같은 파서로 응답ID를 다시 검증합니다. 재시작할 때 공유 파서의 `src/services/daisoJp/parser.ts`와 types.ts도 runtime에 배치해야 합니다.
+`POST /v1/dtryx/daiso-jp-product`는 `{ "id": "4550746075917" }`만 받으며 임의 URL을 허용하지 않습니다. Mac에서 공식 `https://jp.daisonet.com/products/{id}.js`만 읽고 요청ID와 대조합니다. 리다이렉트는 거절하고 본문2MiB·전체15초 제한을 적용합니다. Worker도 같은 파서로 응답ID를 다시 검증합니다. 재시작할 때 공유 파서의 `src/services/daisoJp/parser.ts`와 types.ts도 runtime에 배치해야 합니다.
 
 상품 검색·매장 검색은 기존 직접 경로를 유지하며 상세에는 브라우저·가상기기·새 로그인·유료 프록시가 필요하지 않습니다. 상세는 연결시험 후 재요청하는 대신 명시적 중계 경로를 사용합니다. 공통 DTRYX 중계의 건강 상태는 기존5분 Cron으로 확인되며 일본 상세는 deep/full CLI 계약에서 실제 조회합니다. 별도 직접상세 probe를 늘리지 않습니다.
 
 일본 상세는 DTRYX/CGV와 동일한 호출 예산 원장을 공유하지만 서비스별 접수·동시성 큐는 별도입니다. 상품정보 캐시는 기존 REST와 동일하게30분이며 인증된 force-fresh는 Worker와 중계 양쪽을 우회합니다. 자체 할당량429·중계인증·원본차단·미확인판매 여부를 성공이나 재고0으로 바꾸지 않습니다. 원본 HTTP상태는 비공개 중계로그에서 확인하고 Worker 공개진단의 upstreamStatus는 중계응답 상태입니다. 일본 오프라인 매장 재고 미지원 범위는 그대로입니다.
+
+기존 운영 Tunnel ingress는 `^/v1/dtryx/.*$`만4320에 전달합니다. 새 작업도 이 경로 안의 `/v1/dtryx/daiso-jp-product`에 배치하여 기존 인증·터널 범위를 유지합니다. 별도 `/v1/daiso-jp/` 경로는 올리브영 서비스로 전달돼401을 반환하는 것을 확인해 사용하지 않습니다.

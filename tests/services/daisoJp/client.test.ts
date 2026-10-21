@@ -16,7 +16,7 @@ describe('일본 공식 클라이언트', () => {
     vi.stubGlobal('fetch', fetcher);
     expect(await getProduct('4550746075917', { productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' } })).toMatchObject({ id: '4550746075917', onlineAvailable: true });
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(fetcher.mock.calls[0][0]).toBe('https://relay.example/v1/daiso-jp/product');
+    expect(fetcher.mock.calls[0][0]).toBe('https://relay.example/v1/dtryx/daiso-jp-product');
   });
   it('검색어를 인코딩하고 페이지와 출처 제한을 돌려준다', async () => {
     respond(fixture('products'));

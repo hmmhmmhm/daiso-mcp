@@ -52,8 +52,8 @@ it('CGV와 디트릭스 조회가 같은 쿼터를 소비하고 CGV 건강 상�
   expect((await invoke('/v1/cgv/theaters', {}, 'wrong')).status).toBe(401);
   expect((await invoke('/v1/cgv/theaters', {})).status).toBe(200);
   expect((await invoke('/v1/dtryx/movies', { brandCode: 'dtryx', cinemaCode: '000067' })).status).toBe(200);
-  expect((await invoke('/v1/daiso-jp/product', { id: '4550746075917' }, 'wrong')).status).toBe(401);
-  const japan = await invoke('/v1/daiso-jp/product', { id: '4550746075917' });
+  expect((await invoke('/v1/dtryx/daiso-jp-product', { id: '4550746075917' }, 'wrong')).status).toBe(401);
+  const japan = await invoke('/v1/dtryx/daiso-jp-product', { id: '4550746075917' });
   expect(japan.status).toBe(200);
   expect(japan.body.handle).toBe('4550746075917');
   const after = await invoke('/v1/cgv/health');

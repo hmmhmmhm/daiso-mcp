@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { createJapanProductRelay } from '../../scripts/relay/daiso-jp.js';
 const raw = { handle: '4550746075917', title: 'ボウル', price: 22000, available: true };
-const req = (body: unknown, token = 'test-token') => new Request('http://localhost/v1/daiso-jp/product', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+const req = (body: unknown, token = 'test-token') => new Request('http://localhost/v1/dtryx/daiso-jp-product', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
 it('인증된 고정 상품 JSON만 읽고 실제 상품 코드와 대조한다', async () => {
  const fetcher = vi.fn(async () => Response.json(raw));
  const takeQuota = vi.fn(async () => true);

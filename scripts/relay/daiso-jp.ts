@@ -3,7 +3,7 @@ import { parseProductDetail } from '../../src/services/daisoJp/parser.js';
 import { createHttpRelay, RelayError, abortable, readJson, type HttpRelayOptions } from './http-relay.js';
 export function createJapanProductRelay(token: string, options: Pick<HttpRelayOptions, 'takeQuota' | 'fetcher' | 'onEvent'>) {
  return createHttpRelay(token, {
-  ...options, prefix: '/v1/daiso-jp/', operations: ['product'], cacheTtl: () => 1800000,
+  ...options, prefix: '/v1/dtryx/', operations: ['daiso-jp-product'], cacheTtl: () => 1800000,
   validate(value) {
    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new RelayError(400);
    const p = value as Record<string, unknown>;

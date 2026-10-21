@@ -34,7 +34,7 @@ export async function requestJapanProductRelay(id: string, options: JapanProduct
  });
  try {
   const work = (async () => {
-   const response = await fetch(`${relayUrl!.replace(/\/$/, '')}/v1/daiso-jp/product`, {
+   const response = await fetch(`${relayUrl!.replace(/\/$/, '')}/v1/dtryx/daiso-jp-product`, {
     method: 'POST', redirect: 'manual', headers, body: JSON.stringify({ id }), signal: controller.signal,
    });
    if (response.status !== 200) {
