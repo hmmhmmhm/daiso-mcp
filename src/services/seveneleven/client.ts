@@ -1,3 +1,4 @@
+import { parseSevenElevenPopwords } from './popwords.js';
 import { SevenElevenSearchPagination } from './searchPagination.js';
 import { hasConvenienceRelay, requestConvenienceRelay, type ConvenienceTransportOptions } from '../../utils/convenienceTransport.js';
 /**
@@ -285,44 +286,7 @@ export async function fetchSevenElevenSearchPopwords(
     options,
   );
 
-  const { data } = response;
-  if (Array.isArray(data)) {
-    return data.map((item) => toStringValue(item)).filter((item) => item.length > 0);
-  }
-
-  if (!data || typeof data !== 'object') {
-    return [];
-  }
-
-  const record = data as Record<string, unknown>;
-  const candidates = [record.keywords, record.popwords, record.wordList, record.list];
-
-  for (const candidate of candidates) {
-    if (!Array.isArray(candidate)) {
-      continue;
-    }
-
-    const values = candidate
-      .map((item) => {
-        if (typeof item === 'string') {
-          return item;
-        }
-
-        if (item && typeof item === 'object') {
-          const value = item as Record<string, unknown>;
-          return toStringValue(value.keyword || value.word || value.text || value.name);
-        }
-
-        return '';
-      })
-      .filter((item) => item.length > 0);
-
-    if (values.length > 0) {
-      return values;
-    }
-  }
-
-  return [];
+  return parseSevenElevenPopwords(response.data);
 }
 
 export async function fetchSevenElevenStockProductMeta(

@@ -47,7 +47,7 @@ describe('createGetSearchPopwordsTool', () => {
   });
 
   it('검색어가 없으면 안내 메시지를 반환한다', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: {} })));
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: [] })));
 
     const tool = createGetSearchPopwordsTool();
     const result = await tool.handler({});
@@ -56,6 +56,14 @@ describe('createGetSearchPopwordsTool', () => {
     expect(parsed.count).toBe(0);
     expect(parsed.note).toContain('찾지 못했습니다');
   });
+
+  it.each([{}, { unexpected: true }, null, { keywords: [null] }])(
+    '해석할 수 없는 원본은 빈 성공으로 바꾸지 않는다: %j',
+    async (data) => {
+      mockFetch.mockResolvedValue(Response.json({ success: true, data }));
+      await expect(createGetSearchPopwordsTool().handler({})).rejects.toThrow('인기 검색어 응답');
+    },
+  );
 
   it('키가 있어도 차단된 인기 검색어 요청에 유료 호출을 보내지 않는다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));

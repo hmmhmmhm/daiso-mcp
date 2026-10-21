@@ -76,8 +76,15 @@ describe('GET /api/seveneleven/popwords', () => {
     expect(data.data.keywords).toEqual(['삼각김밥', '도시락']);
   });
 
+  it('형식이 잘못된 인기 검색어 원본은 빈 성공 대신 502를 반환한다', async () => {
+    mockFetch.mockResolvedValue(Response.json({ success: true, data: {} }));
+    const res = await app.request('/api/seveneleven/popwords?label=home');
+    expect(res.status).toBe(502);
+    expect((await res.json()).error.code).toBe('SEVENELEVEN_INVALID_RESPONSE');
+  });
+
   it('인기 검색어가 비어 있으면 unavailable 안내를 포함한다', async () => {
-    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: {} })));
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ success: true, data: [] })));
 
     const res = await app.request('/api/seveneleven/popwords?label=home');
     expect(res.status).toBe(200);
