@@ -35,9 +35,10 @@ async function getSearchPopwords(
             available: keywords.length > 0,
             count: keywords.length,
             keywords,
+            ...(keywords.length === 0 ? { reason: 'upstream_empty' } : {}),
             note:
               keywords.length === 0
-                ? '현재 응답에서 인기 검색어 목록을 찾지 못했습니다.'
+                ? '공식 API가 빈 목록을 반환했습니다. 현재 제공되는 인기 검색어를 찾지 못했습니다.'
                 : '홈 인기 검색어를 조회했습니다.',
           },
           null,
@@ -48,7 +49,10 @@ async function getSearchPopwords(
   };
 }
 
-export function createGetSearchPopwordsTool(zyteApiKey?: string, transport: ConvenienceTransportOptions = {}): ToolRegistration {
+export function createGetSearchPopwordsTool(
+  zyteApiKey?: string,
+  transport: ConvenienceTransportOptions = {},
+): ToolRegistration {
   return {
     name: 'seveneleven_get_search_popwords',
     metadata: {
@@ -56,9 +60,14 @@ export function createGetSearchPopwordsTool(zyteApiKey?: string, transport: Conv
       description: '세븐일레븐 인기 검색어 목록을 조회합니다.',
       inputSchema: {
         label: z.string().optional().default('home').describe('조회 라벨 (기본값: home)'),
-        timeoutMs: z.number().optional().default(15000).describe('요청 제한 시간(ms, 기본값: 15000)'),
+        timeoutMs: z
+          .number()
+          .optional()
+          .default(15000)
+          .describe('요청 제한 시간(ms, 기본값: 15000)'),
       },
     },
-    handler: (args: unknown) => getSearchPopwords(args as GetSearchPopwordsArgs, zyteApiKey, transport),
+    handler: (args: unknown) =>
+      getSearchPopwords(args as GetSearchPopwordsArgs, zyteApiKey, transport),
   };
 }

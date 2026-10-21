@@ -77,7 +77,7 @@ describe('GET /api/seveneleven/popwords', () => {
   });
 
   it('형식이 잘못된 인기 검색어 원본은 빈 성공 대신 502를 반환한다', async () => {
-    mockFetch.mockResolvedValue(Response.json({ success: true, data: {} }));
+    mockFetch.mockResolvedValue(Response.json({ success: true, data: { unexpected: true } }));
     const res = await app.request('/api/seveneleven/popwords?label=home');
     expect(res.status).toBe(502);
     expect((await res.json()).error.code).toBe('SEVENELEVEN_INVALID_RESPONSE');

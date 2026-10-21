@@ -10,8 +10,12 @@ const entry = z.union([
   z.object({ name: text }).transform((v) => v.name),
 ]);
 const words = z.array(entry);
-const response = z.union([
+const dataSchema = z.union([
   words,
+  z
+    .object({})
+    .strict()
+    .transform(() => []),
   z
     .object({
       keywords: words.optional(),
@@ -23,8 +27,13 @@ const response = z.union([
     .refine((lists) => lists.length > 0)
     .transform((lists) => lists.find((list) => list.length > 0) ?? []),
 ]);
-export function parseSevenElevenPopwords(data: unknown): string[] {
-  const parsed = response.safeParse(data);
+const response = z.object({
+  success: z.literal(true).optional(),
+  code: z.number().int().min(200).max(299).optional(),
+  data: dataSchema,
+});
+export function parseSevenElevenPopwords(envelope: unknown): string[] {
+  const parsed = response.safeParse(envelope);
   if (!parsed.success)
     throw new ServiceError(
       'SEVENELEVEN_INVALID_RESPONSE',
@@ -32,5 +41,5 @@ export function parseSevenElevenPopwords(data: unknown): string[] {
       502,
       true,
     );
-  return parsed.data;
+  return parsed.data.data;
 }

@@ -57,13 +57,33 @@ describe('createGetSearchPopwordsTool', () => {
     expect(parsed.note).toContain('찾지 못했습니다');
   });
 
-  it.each([{}, { unexpected: true }, null, { keywords: [null] }])(
+  it.each([{ unexpected: true }, null, { keywords: [null] }])(
     '해석할 수 없는 원본은 빈 성공으로 바꾸지 않는다: %j',
     async (data) => {
       mockFetch.mockResolvedValue(Response.json({ success: true, data }));
       await expect(createGetSearchPopwordsTool().handler({})).rejects.toThrow('인기 검색어 응답');
     },
   );
+
+  it('실제 원본의 성공 code200/data{}는 제공 목록 없음으로 구분한다', async () => {
+    mockFetch.mockResolvedValue(
+      Response.json({ success: true, data: {}, message: '성공', code: 200 }),
+    );
+    const result = await createGetSearchPopwordsTool().handler({});
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
+      available: false,
+      count: 0,
+      keywords: [],
+      reason: 'upstream_empty',
+    });
+  });
+  it.each([
+    { success: false, data: {} },
+    { success: true, code: 501, data: {} },
+  ])('원본 실패를 빈 성공으로 바꾸지 않는다: %j', async (response) => {
+    mockFetch.mockResolvedValue(Response.json(response));
+    await expect(createGetSearchPopwordsTool().handler({})).rejects.toThrow('인기 검색어 응답');
+  });
 
   it('키가 있어도 차단된 인기 검색어 요청에 유료 호출을 보내지 않는다', async () => {
     mockFetch.mockResolvedValueOnce(new Response('blocked', { status: 403 }));

@@ -286,7 +286,7 @@ export async function fetchSevenElevenSearchPopwords(
     options,
   );
 
-  return parseSevenElevenPopwords(response.data);
+  return parseSevenElevenPopwords(response);
 }
 
 export async function fetchSevenElevenStockProductMeta(
