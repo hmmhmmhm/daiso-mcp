@@ -27,7 +27,17 @@
 
 요청 제출: `submit_request {"requestType":"developer","request":{"title":"문서 개선","description":"개선할 내용을 적습니다","type":"docs"}}`. 현재 개발자 요청 저장만 지원합니다. 다른 요청 유형은 거절하며 요청자의 의도 없이 제출하지 않습니다. 이 도구의 이름과 요청 구분은 미래 유형 확장을 위해 범용으로 유지합니다.
 
-매개변수는 기존 작업의 이름과 형식을 사용합니다. operation은 같은 서비스에 작업이 여러 개인 경우 필수입니다. 예를 들어 CGV 시간표는 service=cgv, operation=timetable, playDate=YYYYMMDD이며 seats 작업은 지원하지 않습니다. 미지원 조합, 다른 서비스 전용 인수와 오타는 조회 전에 거절합니다. 기본값은 선택한 작업의 기본값만 적용합니다. tools/list의 입력/출력 스키마를 참고하세요.
+매개변수는 기존 작업의 이름과 형식을 사용합니다. operation은 같은 서비스에 작업이 여러 개인 경우 필수입니다. 예를 들어 CGV 시간표는 service=cgv, operation=timetable, playDate=YYYYMMDD이며 seats 작업은 지원하지 않습니다. 미지원 조합과 알 수 없는 인수·오타는 조회 전에 거절합니다. 공개 스키마에 있지만 선택한 서비스/작업에서 쓰지 않는 옵션은 실행을 막지 않고 응답의 추가 안내와 `_meta.ignoredArguments`로 미적용 사실을 알립니다. 미적용 조건을 충족했다고 안내하면 안 됩니다. 기본값은 선택한 작업의 기본값만 적용합니다. tools/list의 입력/출력 스키마를 참고하세요.
+
+### 카탈로그와 매장 재고 검증
+
+`get_catalog`는 세븐일레븐의 공개 콘텐츠 조회입니다. `operation`은 필수이며 `popwords`(인기 검색어) 또는 `snapshot`(상품·이슈·기획전)을 지정합니다. `includeIssues`와 `includeExhibition`은 `snapshot` 전용입니다. 인기 검색어 원본 목록이 비어 있으면 `available=false`이며 외부 오류와 구분합니다. 원본 차단·중계 실패는 오류로 반환하며 빈 성공으로 바꾸지 않습니다.
+
+다이소 `check_inventory`에서 `storeLimit`은 `pageSize`와 같은 매장 수 조건입니다. 함께 전달하면 두 값이 같아야 합니다. `productLimit`은 상품 후보 수이며 여러 상품의 재고를 모두 조회하는 옵션이 아닙니다. 결과의 `selectedProduct`가 재고 조회 기준 상품입니다.
+
+다이소 `search_products`의 `includeSoldOut=false`는 현재 페이지의 품절 상품을 제외합니다. `count`는 반환된 상품 수이며 `totalCount`는 필터 전 전체 검색 건수입니다.
+
+정기 MCP smoke는 실제 상품 ID·이름·매장 코드·매장명·수량과 집계 일치를 검사합니다. 정상 수량 0은 통과하지만 수량 미확인만 있는 응답이나 요약 문장만 있는 응답은 정상 조회로 통과시키지 않습니다. 세븐일레븐 matrix는 상품 검색 외에 카탈로그 두 작업도 실제 호출합니다. 단위 테스트와 캐시된 성공만으로 PlayMCP 정상 동작을 판단하지 않고, 등록 스키마 갱신 후 플랫폼 채팅에서 실제 인수·결과를 확인합니다.
 
 ## Deprecated 하위호환
 

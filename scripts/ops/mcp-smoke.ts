@@ -1,3 +1,8 @@
+import {
+  validateDaisoInventoryByName,
+  validateCatalogPopwords,
+  validateCatalogSnapshot,
+} from './mcp-smoke-validation.js';
 import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from '../../src/core/compact/catalog.js';
 /**
  * MCP 클라이언트 관점 smoke 테스트
@@ -42,6 +47,8 @@ export const MCP_SMOKE_TOOLS: Array<{ service: SmokeService; name: string }> = [
   { service: 'daiso_jp', name: 'daiso_jp_find_stores' },
   { service: 'gs25', name: 'gs25_search_products' },
   { service: 'seveneleven', name: 'seveneleven_search_products' },
+  { service: 'seveneleven', name: 'seveneleven_get_search_popwords' },
+  { service: 'seveneleven', name: 'seveneleven_get_catalog_snapshot' },
   { service: 'emart24', name: 'emart24_search_products' },
   { service: 'opinet', name: 'opinet_get_average_prices' },
 ];
@@ -107,29 +114,38 @@ function expectField(
     payload[fieldName] === expected ? null : `${fieldName} 값이 ${String(expected)}가 아닙니다`;
 }
 
-function validateDaisoInventoryByName(payload: Record<string, unknown>): string | null {
-  if (!isRecord(payload.summary) || typeof payload.summary.headline !== 'string') {
-    return '통합 조회 결과 summary.headline이 없습니다';
-  }
-
-  return null;
-}
-
 function validateJapanProduct(payload: Record<string, unknown>): string | null {
-  const valid = payload.country === 'JP' && payload.currency === 'JPY' &&
-    payload.id === '4550746075917' && typeof payload.name === 'string' && payload.name.trim().length > 0 &&
+  const valid =
+    payload.country === 'JP' &&
+    payload.currency === 'JPY' &&
+    payload.id === '4550746075917' &&
+    typeof payload.name === 'string' &&
+    payload.name.trim().length > 0 &&
     (typeof payload.onlineAvailable === 'boolean' || payload.onlineAvailable === null) &&
     payload.storeInventorySupported === false;
   return valid ? null : '일본 상품 상세의 필수 필드 또는 판매 가능 여부가 올바르지 않습니다';
 }
 
-function validateJapanCollection(payload: Record<string, unknown>, key: 'products' | 'stores'): string | null {
+function validateJapanCollection(
+  payload: Record<string, unknown>,
+  key: 'products' | 'stores',
+): string | null {
   const items = payload[key];
-  const valid = payload.country === 'JP' && Array.isArray(items) && items.length > 0 &&
-    items.every((item) => isRecord(item) &&
-      typeof item.id === 'string' && item.id.trim().length > 0 &&
-      typeof item.name === 'string' && item.name.trim().length > 0 &&
-      (key === 'products' ? item.currency === 'JPY' : typeof item.brand === 'string' && item.brand.trim().length > 0));
+  const valid =
+    payload.country === 'JP' &&
+    Array.isArray(items) &&
+    items.length > 0 &&
+    items.every(
+      (item) =>
+        isRecord(item) &&
+        typeof item.id === 'string' &&
+        item.id.trim().length > 0 &&
+        typeof item.name === 'string' &&
+        item.name.trim().length > 0 &&
+        (key === 'products'
+          ? item.currency === 'JPY'
+          : typeof item.brand === 'string' && item.brand.trim().length > 0),
+    );
   return valid ? null : `일본 ${key}의 국가 또는 필수 필드가 올바르지 않습니다`;
 }
 
@@ -175,6 +191,20 @@ export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
     toolName: 'seveneleven_search_products',
     args: { query: '커피', size: 1 },
     validate: expectField('query', '커피'),
+  },
+  {
+    service: 'seveneleven',
+    label: '세븐일레븐 인기 검색어',
+    toolName: 'seveneleven_get_search_popwords',
+    args: { label: 'home' },
+    validate: validateCatalogPopwords,
+  },
+  {
+    service: 'seveneleven',
+    label: '세븐일레븐 카탈로그',
+    toolName: 'seveneleven_get_catalog_snapshot',
+    args: { limit: 2 },
+    validate: validateCatalogSnapshot,
   },
   {
     service: 'emart24',
@@ -237,7 +267,7 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
 
     const tools = await client.listTools();
     const toolNames = new Set(tools.tools.map((tool) => tool.name));
-    const missingTools = PUBLIC_TOOL_NAMES.filter(name => !toolNames.has(name));
+    const missingTools = PUBLIC_TOOL_NAMES.filter((name) => !toolNames.has(name));
     if (tools.tools.length !== 10 || toolNames.size !== 10) {
       writeErr('MCP smoke 실패: 공개 도구는 정확히 10개여야 합니다.');
       return 1;
@@ -251,11 +281,17 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
       writeOut(`MCP smoke 호출: ${scenario.label}`);
       let result: ToolCallResult | undefined;
       try {
-        const group = COMPACT_CATALOG.find(group => group.routes.some(route => route.legacy === scenario.toolName))!;
-        const route = group.routes.find(route => route.legacy === scenario.toolName)!;
+        const group = COMPACT_CATALOG.find((group) =>
+          group.routes.some((route) => route.legacy === scenario.toolName),
+        )!;
+        const route = group.routes.find((route) => route.legacy === scenario.toolName)!;
         result = await client.callTool({
           name: group.name,
-          arguments: { ...scenario.args, ...(route.service ? { service: route.service } : {}), ...(route.operation ? { operation: route.operation } : {}) },
+          arguments: {
+            ...scenario.args,
+            ...(route.service ? { service: route.service } : {}),
+            ...(route.operation ? { operation: route.operation } : {}),
+          },
         });
         const payload = parseToolPayload(result);
         const validationError = scenario.validate(payload);

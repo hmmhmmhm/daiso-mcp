@@ -26,6 +26,8 @@ describe('runMcpSmoke', () => {
       'daiso_jp_find_stores',
       'gs25_search_products',
       'seveneleven_search_products',
+      'seveneleven_get_search_popwords',
+      'seveneleven_get_catalog_snapshot',
       'emart24_search_products',
       'opinet_get_average_prices',
     ]);
@@ -39,6 +41,8 @@ describe('runMcpSmoke', () => {
       'daiso_jp',
       'gs25',
       'seveneleven',
+      'seveneleven',
+      'seveneleven',
       'emart24',
       'opinet',
     ]);
@@ -49,27 +53,64 @@ describe('runMcpSmoke', () => {
     const listTools = vi.fn().mockResolvedValue({
       tools: PUBLIC_TOOL_NAMES.map((name) => ({ name })),
     });
-    const callTool = vi.fn().mockImplementation(({ name, arguments: args }: { name: string; arguments: {service?:string;operation?:string} }) => {
-      const key = COMPACT_CATALOG.find(g=>g.name===name)!.routes.find(r=>r.service===args.service && r.operation===args.operation)!.legacy;
-      const payloads: Record<string, unknown> = {
-        daiso_find_inventory_by_name: {
-          query: '수납박스',
-          summary: { headline: '수납박스 재고 조회 결과' },
-          selectedProduct: { id: '1049516' },
-        },
-        daiso_jp_search_products: { country: 'JP', products: [{ id: '4550746075917', name: 'ボウル', currency: 'JPY' }] },
-        daiso_jp_get_product: { country: 'JP', id: '4550746075917', name: 'ボウル', currency: 'JPY', onlineAvailable: true, storeInventorySupported: false },
-        daiso_jp_find_stores: { country: 'JP', stores: [{ id: '0001', name: '渋谷店', brand: 'DAISO' }] },
-        gs25_search_products: { keyword: '콜라', products: [{}] },
-        seveneleven_search_products: { query: '커피', products: [{}] },
-        emart24_search_products: { keyword: '커피', products: [{}] },
-        opinet_get_average_prices: { provider: 'opinet', prices: [] },
-      };
+    const callTool = vi
+      .fn()
+      .mockImplementation(
+        ({
+          name,
+          arguments: args,
+        }: {
+          name: string;
+          arguments: { service?: string; operation?: string };
+        }) => {
+          const key = COMPACT_CATALOG.find((g) => g.name === name)!.routes.find(
+            (r) => r.service === args.service && r.operation === args.operation,
+          )!.legacy;
+          const payloads: Record<string, unknown> = {
+            daiso_find_inventory_by_name: {
+              query: '수납박스',
+              summary: { headline: '수납박스 재고 조회 결과' },
+              selectedProduct: { id: '1049516', name: '수납박스' },
+              storeInventory: {
+                inStockCount: 0,
+                outOfStockCount: 1,
+                unknownStockCount: 0,
+                stores: [{ storeCode: '1', storeName: '강남역점', quantity: 0 }],
+              },
+            },
+            daiso_jp_search_products: {
+              country: 'JP',
+              products: [{ id: '4550746075917', name: 'ボウル', currency: 'JPY' }],
+            },
+            daiso_jp_get_product: {
+              country: 'JP',
+              id: '4550746075917',
+              name: 'ボウル',
+              currency: 'JPY',
+              onlineAvailable: true,
+              storeInventorySupported: false,
+            },
+            daiso_jp_find_stores: {
+              country: 'JP',
+              stores: [{ id: '0001', name: '渋谷店', brand: 'DAISO' }],
+            },
+            gs25_search_products: { keyword: '콜라', products: [{}] },
+            seveneleven_get_search_popwords: { available: false, count: 0, keywords: [] },
+            seveneleven_get_catalog_snapshot: {
+              pages: { totalCount: 1, items: [{ itemCode: '1', itemName: '상품' }] },
+              issues: { totalCount: 0, items: [] },
+              exhibitions: { totalCount: 0, items: [] },
+            },
+            seveneleven_search_products: { query: '커피', products: [{}] },
+            emart24_search_products: { keyword: '커피', products: [{}] },
+            opinet_get_average_prices: { provider: 'opinet', prices: [] },
+          };
 
-      return Promise.resolve({
-        content: [{ type: 'text', text: JSON.stringify(payloads[key]) }],
-      });
-    });
+          return Promise.resolve({
+            content: [{ type: 'text', text: JSON.stringify(payloads[key]) }],
+          });
+        },
+      );
 
     const exitCode = await runMcpSmoke({
       createClient: async () => ({ listTools, callTool, close }),
@@ -82,7 +123,7 @@ describe('runMcpSmoke', () => {
     expect(callTool).toHaveBeenCalledTimes(MCP_SMOKE_SCENARIOS.length);
     expect(callTool).toHaveBeenCalledWith({
       name: 'search_products',
-      arguments: expect.objectContaining({ service:'gs25', keyword: '콜라' }),
+      arguments: expect.objectContaining({ service: 'gs25', keyword: '콜라' }),
     });
     expect(close).toHaveBeenCalledOnce();
   });
@@ -107,7 +148,7 @@ describe('runMcpSmoke', () => {
     expect(callTool).toHaveBeenCalledOnce();
     expect(callTool).toHaveBeenCalledWith({
       name: 'search_products',
-      arguments: expect.objectContaining({ service:'gs25', keyword: '콜라' }),
+      arguments: expect.objectContaining({ service: 'gs25', keyword: '콜라' }),
     });
     expect(close).toHaveBeenCalledOnce();
   });
@@ -150,7 +191,7 @@ describe('MCP 도구 오류 응답', () => {
     const exitCode = await runMcpSmoke({
       service: 'gs25',
       createClient: async () => ({
-        listTools: async () => ({ tools: PUBLIC_TOOL_NAMES.map(name=>({name})) }),
+        listTools: async () => ({ tools: PUBLIC_TOOL_NAMES.map((name) => ({ name })) }),
         callTool: async () => ({
           isError: true,
           content: text === undefined ? [] : [{ type: 'text', text }],
@@ -171,7 +212,7 @@ describe('MCP 도구 오류 응답', () => {
     const exitCode = await runMcpSmoke({
       service: 'gs25',
       createClient: async () => ({
-        listTools: async () => ({ tools: PUBLIC_TOOL_NAMES.map(name=>({name})) }),
+        listTools: async () => ({ tools: PUBLIC_TOOL_NAMES.map((name) => ({ name })) }),
         callTool: async () => ({ isError: false, content: [{ type: 'text', text }] }),
         close: async () => undefined,
       }),
@@ -182,14 +223,28 @@ describe('MCP 도구 오류 응답', () => {
   });
 });
 
-describe('공개 도구 개수 회귀 방지',()=>{
- it.each([
-  [...PUBLIC_TOOL_NAMES,'eleventh_tool'],
-  [...PUBLIC_TOOL_NAMES.slice(1),'legacy_name'],
-  [...PUBLIC_TOOL_NAMES.slice(1),PUBLIC_TOOL_NAMES[1]],
- ].map(names=>[names]))('11번째/미등록/중복 도구 목록을 호출 전에 거절한다',async names=>{
-  const callTool=vi.fn();const close=vi.fn();
-  const code=await runMcpSmoke({service:'gs25',createClient:async()=>({listTools:async()=>({tools:names.map(name=>({name}))}),callTool,close}),writeOut:()=>undefined,writeErr:()=>undefined});
-  expect(code).toBe(1);expect(callTool).not.toHaveBeenCalled();expect(close).toHaveBeenCalledOnce();
- });
+describe('공개 도구 개수 회귀 방지', () => {
+  it.each(
+    [
+      [...PUBLIC_TOOL_NAMES, 'eleventh_tool'],
+      [...PUBLIC_TOOL_NAMES.slice(1), 'legacy_name'],
+      [...PUBLIC_TOOL_NAMES.slice(1), PUBLIC_TOOL_NAMES[1]],
+    ].map((names) => [names]),
+  )('11번째/미등록/중복 도구 목록을 호출 전에 거절한다', async (names) => {
+    const callTool = vi.fn();
+    const close = vi.fn();
+    const code = await runMcpSmoke({
+      service: 'gs25',
+      createClient: async () => ({
+        listTools: async () => ({ tools: names.map((name) => ({ name })) }),
+        callTool,
+        close,
+      }),
+      writeOut: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(1);
+    expect(callTool).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledOnce();
+  });
 });
