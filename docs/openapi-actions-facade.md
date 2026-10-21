@@ -30,3 +30,13 @@ ChatGPT Actions 등록이 더 이상 안정적으로 되지 않는 상태가 됐
 
 이 구조는 "서비스 추가 시 OpenAPI path 수가 계속 증가하는 문제"를 해결하기 위한 설계입니다.
 완전히 새로운 capability가 추가되더라도 기본 facade path는 그대로 유지하고 `action` 목록만 확장하면 됩니다.
+
+## 2026-10-21 스키마 갱신
+
+기본 스키마1.1.0은 operationId `queryAction` 하나를 유지하고 일본 다이소 3개, 오피넷 4개의 기존 GET 작업을 action enum에 연결합니다. 공개 MCP 도구10개 계약이나 기존 REST/CLI 이름은 바꾸지 않습니다.
+
+- 일본: daisoJpSearchProducts(q), daisoJpGetProduct(productId), daisoJpFindStores(keyword). 상품 코드는 검색 결과의 실제13자리 값을 사용합니다. 온라인 구매 가능과 매장 재고를 구분합니다.
+- 오피넷: opinetGetAveragePrices, opinetGetLowestPriceStations, opinetSearchStationsAround, opinetGetStationDetail. fuelCode/count/radiusMeters/x/y/stationId와 기존 location/lat/lng/areaCode를 사용합니다.
+- GPT 편집기는 URL을 다시 불러와야 등록 스키마가 갱신됩니다. 서버 배포만으로 기존 GPT 저장 설정이 변경됐다고 보고하지 않습니다.
+
+[GPT 설정·검증 지침](gpts-maintenance.md), [OpenAI 공식 Actions 시작 가이드](https://developers.openai.com/api/docs/actions/getting-started)를 참고하세요.

@@ -40,15 +40,18 @@ GS25 mcp로 강남 근처 매장과 오감자 재고 알려줘
 CGV mcp로 강남 상영 영화와 시간표 알려줘
 ```
 
+GPT Actions는 `queryAction` 하나로 REST를 호출합니다. 원격 MCP의 통합 도구10개와 인수 형식이 다릅니다. [GPT 갱신 지침](gpts-maintenance.md)에서 최신 스키마와 유지보수 방법을 확인하세요.
+
 에이전트가 고르면 좋은 대표 흐름:
 
-- 가격 비교: `콜라 어디가 싸?` → `compare_products`
-- 주변 장소: `강남역 근처 카페 찾아줘` → `places_search_nearby`
-- 주유소/유가: `강남역 근처 제일 싼 주유소 찾아줘` → `opinet_search_stations_around`
+- 가격 비교: `콜라 어디가 싸?` → `queryAction(action=compareProducts)`
+- 주변 장소: `강남역 근처 카페 찾아줘` → `queryAction(action=placesSearchNearby)`
+- 주유소/유가: `강남역 근처 제일 싼 주유소 찾아줘` → `queryAction(action=opinetSearchStationsAround)`
 - 브랜드 명시 재고: `다이소 핫식스 재고 찾아줘` → 먼저 다이소에서 검색 후 결과 없을 때만 대안 제안
 - 편의점 재고: `GS25 강남 오감자 재고` → 상품 후보 확인 후 재고 조회
+- 일본 다이소: `일본 다이소 ボウル 검색해줘` → `queryAction(action=daisoJpSearchProducts,q=ボウル)`. 매장별 재고는 지원하지 않습니다.
 - 영화 시간표: `오늘 강남 CGV 시간표` → KST 오늘 날짜로 극장 검색 후 시간표 조회
-- 개발자 요청: `올리브영 재고 도구가 계속 실패한다고 개발자에게 알려줘` → `submit_developer_request`
+- 개발자 요청: `올리브영 재고 도구가 계속 실패한다고 개발자에게 알려줘` → `queryAction(action=submitDeveloperRequest)`
 
 <br>
 
