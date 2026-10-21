@@ -109,3 +109,17 @@ describe('GS25 지정 지역 위치 보호', () => {
   });
 
 });
+
+it('MCP는 매장 카탈로그로 좌표를 못 찾으면 지역 검색으로 무료 좌표를 보완한다',async()=>{
+ mocks.stores.mockResolvedValueOnce({stores:[],totalCount:0,cacheHit:false});
+ mocks.geocode.mockResolvedValueOnce({latitude:37.4979,longitude:127.0276});
+ const result=await createCheckInventoryTool().handler({keyword:'콜라',itemCode:'ITEM',storeKeyword:'강남'});
+ expect(mocks.geocode).toHaveBeenCalledWith('강남',expect.any(Object));
+ expect(mocks.stores.mock.calls[1][0]).toMatchObject({itemCode:'ITEM',latitude:37.4979,longitude:127.0276});
+ expect(JSON.parse(result.content[0].text)).toMatchObject({geocodeUsed:true});
+});
+it('MCP는 후보 주소 변환이 실패해도 지역 검색이 실패하면 기존 미확인 오류를 유지한다',async()=>{
+ await expect(createCheckInventoryTool().handler({keyword:'콜라',itemCode:'ITEM',storeKeyword:'부산'})).rejects.toMatchObject({code:'GS25_LOCATION_UNRESOLVED'});
+ expect(mocks.geocode.mock.calls.map(call=>call[0])).toEqual(['부산 중구 중앙대로 1','부산']);
+ expect(mocks.stores).toHaveBeenCalledTimes(1);
+});

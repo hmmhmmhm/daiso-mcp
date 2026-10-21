@@ -102,6 +102,17 @@ async function checkInventory(args: CheckInventoryArgs): Promise<McpToolResponse
     }
   }
 
+  // 카탈로그에 지역 매장이 없거나 주소 변환이 실패하면 지역 자체를 검색합니다.
+  if (storeKeyword.trim() && !validKoreanCoordinates(resolvedLatitude ?? NaN, resolvedLongitude ?? NaN) &&
+      typeof latitude !== 'number' && typeof longitude !== 'number') {
+    const geocoded = await geocodeGs25Address(storeKeyword, { ...args, timeout: timeoutMs, googleMapsApiKey });
+    if (geocoded) {
+      resolvedLatitude = geocoded.latitude;
+      resolvedLongitude = geocoded.longitude;
+      geocodeUsed = true;
+    }
+  }
+
   if (storeKeyword.trim() && !validKoreanCoordinates(resolvedLatitude ?? NaN, resolvedLongitude ?? NaN))
     throw new ServiceError('GS25_LOCATION_UNRESOLVED',
       '요청한 지역의 위치를 확인하지 못했습니다. 좌표를 지정하거나 잠시 후 다시 조회해주세요.', 503, true);

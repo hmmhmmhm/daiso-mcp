@@ -1,6 +1,6 @@
 # 공개 MCP 도구 10개 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 기본 MCP 도구를 10개로 고정하고 구형 호출을 보존한다.
 **Architecture:** 명시적 작업 매핑과 기존 Zod 입력/핸들러를 재사용하는 어댑터. SDK 등록은 모두 유지하고 목록 응답만 고정 공개 계약으로 제공한다.
@@ -23,5 +23,5 @@
 
 ### 4. 검증과 반영
 - [x] `npm run check`, `npm run test:coverage`, `npm run build`를 실행해 전체 성공/네 지표100%를 확인한다. SDK 실제통신과 invalid 조합 회귀는 단순 모킹과 별도로 유지한다.
-- [ ] 독립 리뷰 후 검증된 변경을 논리적으로 커밋/푸시하고 PR을 생성·첨부한다. GitHub CI/Coverage/CodeQL 통과 후 병합한다.
-- [ ] 운영 / 및 /mcp tools/list10개, 새/구형 상품·매장·재고 호출과 CLI 유지 검증 후 PROJECT.md에 근거와 남은 문제를 쓴다. PlayMCP 콘솔 등록목록은 별도 갱신이 필요함을 구분한다.
+- [x] 독립 리뷰 후 검증된 변경을 논리적으로 커밋/푸시하고 PR을 생성·첨부한다. GitHub CI/Coverage/CodeQL 통과 후 병합한다.
+- [x] 운영 / 및 /mcp tools/list10개, 새/구형 상품·매장·재고 호출과 CLI 유지 검증 후 PROJECT.md에 근거와 남은 문제를 쓴다. PlayMCP 콘솔 등록목록은 별도 갱신이 필요함을 구분한다.
