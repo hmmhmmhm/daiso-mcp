@@ -1,3 +1,4 @@
+import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from '../../src/core/compact/catalog.js';
 /**
  * MCP smoke 스크립트 테스트
  */
@@ -46,9 +47,10 @@ describe('runMcpSmoke', () => {
   it('MCP 클라이언트로 도구 목록과 대표 도구 호출을 검증한다', async () => {
     const close = vi.fn();
     const listTools = vi.fn().mockResolvedValue({
-      tools: MCP_SMOKE_TOOL_NAMES.map((name) => ({ name })),
+      tools: PUBLIC_TOOL_NAMES.map((name) => ({ name })),
     });
-    const callTool = vi.fn().mockImplementation(({ name }: { name: string }) => {
+    const callTool = vi.fn().mockImplementation(({ name, arguments: args }: { name: string; arguments: {service?:string;operation?:string} }) => {
+      const key = COMPACT_CATALOG.find(g=>g.name===name)!.routes.find(r=>r.service===args.service && r.operation===args.operation)!.legacy;
       const payloads: Record<string, unknown> = {
         daiso_find_inventory_by_name: {
           query: '수납박스',
@@ -65,7 +67,7 @@ describe('runMcpSmoke', () => {
       };
 
       return Promise.resolve({
-        content: [{ type: 'text', text: JSON.stringify(payloads[name]) }],
+        content: [{ type: 'text', text: JSON.stringify(payloads[key]) }],
       });
     });
 
@@ -79,8 +81,8 @@ describe('runMcpSmoke', () => {
     expect(listTools).toHaveBeenCalledOnce();
     expect(callTool).toHaveBeenCalledTimes(MCP_SMOKE_SCENARIOS.length);
     expect(callTool).toHaveBeenCalledWith({
-      name: 'gs25_search_products',
-      arguments: expect.objectContaining({ keyword: '콜라' }),
+      name: 'search_products',
+      arguments: expect.objectContaining({ service:'gs25', keyword: '콜라' }),
     });
     expect(close).toHaveBeenCalledOnce();
   });
@@ -88,7 +90,7 @@ describe('runMcpSmoke', () => {
   it('service가 지정되면 해당 서비스 도구만 호출한다', async () => {
     const close = vi.fn();
     const listTools = vi.fn().mockResolvedValue({
-      tools: MCP_SMOKE_TOOL_NAMES.map((name) => ({ name })),
+      tools: PUBLIC_TOOL_NAMES.map((name) => ({ name })),
     });
     const callTool = vi.fn().mockResolvedValue({
       content: [{ type: 'text', text: JSON.stringify({ keyword: '콜라', products: [{}] }) }],
@@ -104,8 +106,8 @@ describe('runMcpSmoke', () => {
     expect(exitCode).toBe(0);
     expect(callTool).toHaveBeenCalledOnce();
     expect(callTool).toHaveBeenCalledWith({
-      name: 'gs25_search_products',
-      arguments: expect.objectContaining({ keyword: '콜라' }),
+      name: 'search_products',
+      arguments: expect.objectContaining({ service:'gs25', keyword: '콜라' }),
     });
     expect(close).toHaveBeenCalledOnce();
   });
@@ -114,7 +116,7 @@ describe('runMcpSmoke', () => {
     const errors: string[] = [];
     const close = vi.fn();
     const listTools = vi.fn().mockResolvedValue({
-      tools: MCP_SMOKE_TOOL_NAMES.map((name) => ({ name })),
+      tools: PUBLIC_TOOL_NAMES.map((name) => ({ name })),
     });
     const callTool = vi.fn().mockResolvedValue({
       content: [{ type: 'text', text: JSON.stringify({ summary: {} }) }],
@@ -148,7 +150,7 @@ describe('MCP 도구 오류 응답', () => {
     const exitCode = await runMcpSmoke({
       service: 'gs25',
       createClient: async () => ({
-        listTools: async () => ({ tools: [{ name: 'gs25_search_products' }] }),
+        listTools: async () => ({ tools: PUBLIC_TOOL_NAMES.map(name=>({name})) }),
         callTool: async () => ({
           isError: true,
           content: text === undefined ? [] : [{ type: 'text', text }],
@@ -169,7 +171,7 @@ describe('MCP 도구 오류 응답', () => {
     const exitCode = await runMcpSmoke({
       service: 'gs25',
       createClient: async () => ({
-        listTools: async () => ({ tools: [{ name: 'gs25_search_products' }] }),
+        listTools: async () => ({ tools: PUBLIC_TOOL_NAMES.map(name=>({name})) }),
         callTool: async () => ({ isError: false, content: [{ type: 'text', text }] }),
         close: async () => undefined,
       }),
@@ -178,4 +180,16 @@ describe('MCP 도구 오류 응답', () => {
     });
     expect(exitCode).toBe(1);
   });
+});
+
+describe('공개 도구 개수 회귀 방지',()=>{
+ it.each([
+  [...PUBLIC_TOOL_NAMES,'eleventh_tool'],
+  [...PUBLIC_TOOL_NAMES.slice(1),'legacy_name'],
+  [...PUBLIC_TOOL_NAMES.slice(1),PUBLIC_TOOL_NAMES[1]],
+ ].map(names=>[names]))('11번째/미등록/중복 도구 목록을 호출 전에 거절한다',async names=>{
+  const callTool=vi.fn();const close=vi.fn();
+  const code=await runMcpSmoke({service:'gs25',createClient:async()=>({listTools:async()=>({tools:names.map(name=>({name}))}),callTool,close}),writeOut:()=>undefined,writeErr:()=>undefined});
+  expect(code).toBe(1);expect(callTool).not.toHaveBeenCalled();expect(close).toHaveBeenCalledOnce();
+ });
 });

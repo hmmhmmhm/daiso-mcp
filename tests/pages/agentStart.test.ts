@@ -10,7 +10,7 @@ describe('에이전트 시작 안내', () => {
     expect(body).toBeDefined();
     expect(JSON.parse(body!)).toEqual({
       jsonrpc: '2.0', id: 1, method: 'tools/call',
-      params: { name: 'daiso_search_products', arguments: { query: '수납박스', pageSize: 3 } },
+      params: { name: 'search_products', arguments: { service: 'daiso', query: '수납박스', pageSize: 3 } },
     });
     expect(text).toContain('https://example.com/');
     expect(text).toContain('application/json, text/event-stream');

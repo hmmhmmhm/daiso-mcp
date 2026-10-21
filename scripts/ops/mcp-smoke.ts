@@ -1,3 +1,4 @@
+import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from '../../src/core/compact/catalog.js';
 /**
  * MCP 클라이언트 관점 smoke 테스트
  */
@@ -236,7 +237,11 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
 
     const tools = await client.listTools();
     const toolNames = new Set(tools.tools.map((tool) => tool.name));
-    const missingTools = smokeTools.map((tool) => tool.name).filter((name) => !toolNames.has(name));
+    const missingTools = PUBLIC_TOOL_NAMES.filter(name => !toolNames.has(name));
+    if (tools.tools.length !== 10 || toolNames.size !== 10) {
+      writeErr('MCP smoke 실패: 공개 도구는 정확히 10개여야 합니다.');
+      return 1;
+    }
     if (missingTools.length > 0) {
       writeErr(`MCP smoke 실패: 필수 도구 누락 - ${missingTools.join(', ')}`);
       return 1;
@@ -246,9 +251,11 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
       writeOut(`MCP smoke 호출: ${scenario.label}`);
       let result: ToolCallResult | undefined;
       try {
+        const group = COMPACT_CATALOG.find(group => group.routes.some(route => route.legacy === scenario.toolName))!;
+        const route = group.routes.find(route => route.legacy === scenario.toolName)!;
         result = await client.callTool({
-          name: scenario.toolName,
-          arguments: scenario.args,
+          name: group.name,
+          arguments: { ...scenario.args, ...(route.service ? { service: route.service } : {}), ...(route.operation ? { operation: route.operation } : {}) },
         });
         const payload = parseToolPayload(result);
         const validationError = scenario.validate(payload);

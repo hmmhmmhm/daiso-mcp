@@ -1,5 +1,9 @@
 # 에이전트 개발 규칙
 
+## 최우선: 공개 MCP 도구는 10개 고정
+
+공개 `tools/list`의 도구는 정확히 **10개**이며 **절대 늘리지 않습니다**. 새 서비스와 기능은 기존 도구의 `service`/`operation`/`requestType`에 통합합니다. 기존 이름은 deprecated 호출 별칭으로만 보존하며 공개 목록에는 추가하지 않습니다. 일반 MCP와 PlayMCP에 동일하게 적용합니다. [공개 도구 계약](docs/mcp-tools.md)과 `tests/core/compact`, `tests/app/compact-contract.test.ts` 검사를 반드시 유지합니다.
+
 이 문서는 AI 에이전트가 이 프로젝트에서 코드를 작성하고 기여할 때 따라야 하는 규칙과 가이드라인을 정의합니다.
 
 ## 목차

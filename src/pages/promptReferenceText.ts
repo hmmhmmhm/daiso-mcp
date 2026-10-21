@@ -66,11 +66,11 @@ export function buildPromptReferenceText(baseUrl: string): string {
 ## 에이전트 실행 레시피
 
 - "콜라 어디가 싸?", "컵라면 가격 비교해줘": 먼저 \`compare_products\` 또는 /api/compare/products를 호출합니다. 실제 재고와 매장 행사가가 필요하면 최저가 후보의 서비스별 재고/상품 도구로 한 번 더 확인합니다.
-- "강남역 근처 카페", "성수동 브런치 음식점": 브랜드를 되묻지 말고 \`places_search_nearby\` 또는 /api/places/search를 호출합니다. 이 검색은 키워드 기반이므로 좌표 반경 결과처럼 단정하지 않습니다.
+- "강남역 근처 카페", "성수동 브런치 음식점": 브랜드를 되묻지 말고 \`find_places\` (service=places) 또는 /api/places/search를 호출합니다. 이 검색은 키워드 기반이므로 좌표 반경 결과처럼 단정하지 않습니다.
 - "다이소 핫식스 재고", "올리브영 두바이초콜릿 있어?": 상품이 브랜드와 어색해 보여도 브랜드를 바꾸지 말고 먼저 다이소로 검색하거나 명시된 서비스로 검색합니다. 결과가 없을 때만 다른 서비스 대안을 제안합니다.
 - "GS25 강남 오감자 재고": 상품명과 위치를 분리해 상품 후보를 먼저 찾고, 선택한 itemCode나 keyword와 storeKeyword로 재고를 확인합니다.
 - "오늘 강남 CGV 시간표": 오늘 날짜는 KST 기준 YYYYMMDD로 계산하고, theaterCode가 없으면 극장 검색 후 시간표를 조회합니다.
-- MCP 기능이 제대로 동작하지 않거나 개선/신규 기능 요청이 있으면 \`submit_developer_request\` 또는 /api/feedback/requests를 사용해 개발자에게 전달합니다. 제목과 설명은 필수입니다.
+- MCP 기능이 제대로 동작하지 않거나 개선/신규 기능 요청이 있으면 \`submit_request\` (requestType=developer, request에 제목과 설명) 또는 /api/feedback/requests를 사용해 개발자에게 전달합니다. 제목과 설명은 필수입니다.
 - 도구 호출이 실패하면 같은 도구를 한 번 더 좁은 조건으로 재시도합니다. 두 번 실패하면 실패한 서비스와 요청 조건을 밝히고 추측으로 결과를 만들지 않습니다.
 - 결과에 imageUrl이 있으면 각 항목 이미지 표시를 우선합니다. 쿼리 문자열이 있는 이미지 URL도 그대로 사용합니다.
 
@@ -113,7 +113,7 @@ export function buildPromptReferenceText(baseUrl: string): string {
 12. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
 13. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 oliveyoung_search_products 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
 14. **통합 가격 후보 비교**: 사용자가 브랜드를 특정하지 않고 "어디가 싸?", "비교해줘"처럼 물으면 \`compare_products\` 또는 /api/compare/products를 먼저 사용합니다. 새 외부 키 없이 기존 상품 검색을 묶은 1차 가격 후보이므로 실제 재고/행사가는 각 서비스 상세 조회로 확인해야 합니다.
-15. **주변 음식점/카페 검색**: 음식점이나 카페만 물으면 \`places_search_nearby\` 또는 /api/places/search를 먼저 사용합니다. 이 기능은 네이버 지역 검색 기반 키워드 검색이므로 좌표 반경 검색처럼 단정하지 말고, \`searchMode: "keyword"\`임을 필요할 때 짧게 밝혀주세요.
+15. **주변 음식점/카페 검색**: 음식점이나 카페만 물으면 \`find_places\` (service=places) 또는 /api/places/search를 먼저 사용합니다. 이 기능은 네이버 지역 검색 기반 키워드 검색이므로 좌표 반경 검색처럼 단정하지 말고, \`searchMode: "keyword"\`임을 필요할 때 짧게 밝혀주세요.
 
 ---
 
@@ -122,34 +122,20 @@ export function buildPromptReferenceText(baseUrl: string): string {
 MCP를 지원하는 AI 에이전트(Claude 등)는 더 풍부한 기능을 사용할 수 있습니다.
 MCP 연결 정보: ${baseUrl}/mcp
 
-지원 도구:
-- daiso_search_products: 제품 검색
-- daiso_find_stores: 매장 검색
-- daiso_check_inventory: 재고 확인
-- daiso_get_price_info: 가격 정보 조회
-- daiso_get_display_location: 진열 위치 조회
-- gs25_find_nearby_stores: GS25 주변 매장 탐색
-- gs25_search_products: GS25 상품 검색
-- gs25_check_inventory: GS25 재고 조회
-- seveneleven_search_products: 세븐일레븐 상품 검색
-- seveneleven_search_stores: 세븐일레븐 매장 검색
-- seveneleven_check_inventory: 세븐일레븐 재고 조회
-- seveneleven_get_search_popwords: 세븐일레븐 인기 검색어 조회
-- seveneleven_get_catalog_snapshot: 세븐일레븐 카탈로그 조회
-- compare_products: 키 없는 통합 상품 가격 후보 비교
-- submit_developer_request: MCP 오류, 개선 요청, 신규 기능 요청을 개발자에게 전달
-- places_search_nearby: 음식점/카페 등 주변 장소 검색
-- oliveyoung_search_products: 올리브영 상품 검색
-- oliveyoung_find_nearby_stores: 올리브영 주변 매장 탐색
-- oliveyoung_check_inventory: 올리브영 재고 파악
-- megabox_find_nearby_theaters: 메가박스 주변 지점 탐색
-- megabox_list_now_showing: 메가박스 영화 목록 조회
-- megabox_get_remaining_seats: 메가박스 잔여 좌석 조회
-- lottecinema_find_nearby_theaters: 롯데시네마 주변 지점 탐색
-- lottecinema_list_now_showing: 롯데시네마 영화 목록 조회
-- lottecinema_get_remaining_seats: 롯데시네마 잔여 좌석 조회
-- cgv_find_theaters: CGV 극장 검색
-- cgv_search_movies: CGV 영화 검색
-- cgv_get_timetable: CGV 시간표 조회
+공개 도구는 정확히 10개이며 앞으로도 늘리지 않습니다. 서비스는 service, 작업은 operation으로 선택합니다.
+- search_products: 상품 검색
+- find_stores: 매장 검색
+- check_inventory: 재고 조회
+- get_product_details: 상품 상세·가격·진열 위치
+- find_places: 주변 장소·영화관 검색
+- get_showtimes: 영화·시간표·잔여석
+- get_fuel_info: 유가·주유소 조회
+- get_catalog: 인기 검색어·기획전
+- compare_products: 상품 비교
+- submit_request: 요청 제출 (현재 requestType=developer)
+
+예: search_products {"service":"daiso","query":"수납박스","pageSize":3}
+예: check_inventory {"service":"gs25","keyword":"오감자","storeKeyword":"강남"}
+기존 서비스별 도구 이름은 deprecated 호출 별칭으로만 유지하며 tools/list에 표시하지 않습니다. 새 에이전트는 위 10개만 사용하세요. 구형 매핑: https://github.com/hmmhmmhm/daiso-mcp/blob/main/docs/mcp-tools.md
 `;
 }

@@ -164,44 +164,44 @@ describe('GET /', () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('daiso_search_products');
-    expect(data.tools).toContain('daiso_find_stores');
-    expect(data.tools).toContain('daiso_check_inventory');
-    expect(data.tools).toContain('daiso_get_price_info');
+    expect(data.tools).toContain('search_products');
+    expect(data.tools).toContain('find_stores');
+    expect(data.tools).toContain('check_inventory');
+    expect(data.tools).toContain('get_product_details');
   });
 
   it('올리브영 도구들이 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('oliveyoung_find_nearby_stores');
-    expect(data.tools).toContain('oliveyoung_check_inventory');
+    expect(data.tools).toContain('find_stores');
+    expect(data.tools).toContain('check_inventory');
   });
 
   it('CU 도구들이 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('cu_find_nearby_stores');
-    expect(data.tools).toContain('cu_check_inventory');
+    expect(data.tools).toContain('find_stores');
+    expect(data.tools).toContain('check_inventory');
   });
 
   it('GS25 도구들이 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('gs25_find_nearby_stores');
-    expect(data.tools).toContain('gs25_search_products');
-    expect(data.tools).toContain('gs25_check_inventory');
+    expect(data.tools).toContain('find_stores');
+    expect(data.tools).toContain('search_products');
+    expect(data.tools).toContain('check_inventory');
   });
 
   it('이마트24 도구들이 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('emart24_find_nearby_stores');
-    expect(data.tools).toContain('emart24_search_products');
-    expect(data.tools).toContain('emart24_check_inventory');
+    expect(data.tools).toContain('find_stores');
+    expect(data.tools).toContain('search_products');
+    expect(data.tools).toContain('check_inventory');
   });
 
   it('종료된 롯데마트 도구들은 포함하지 않는다', async () => {
@@ -216,51 +216,51 @@ describe('GET /', () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('megabox_find_nearby_theaters');
-    expect(data.tools).toContain('megabox_list_now_showing');
-    expect(data.tools).toContain('megabox_get_remaining_seats');
+    expect(data.tools).toContain('find_places');
+    expect(data.tools).toContain('get_showtimes');
+    expect(data.tools).toContain('get_showtimes');
   });
 
   it('CGV 도구들이 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('cgv_find_theaters');
-    expect(data.tools).toContain('cgv_search_movies');
-    expect(data.tools).toContain('cgv_get_timetable');
+    expect(data.tools).toContain('find_places');
+    expect(data.tools).toContain('get_showtimes');
+    expect(data.tools).toContain('get_showtimes');
   });
 
   it('롯데시네마 도구들이 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('lottecinema_find_nearby_theaters');
-    expect(data.tools).toContain('lottecinema_list_now_showing');
-    expect(data.tools).toContain('lottecinema_get_remaining_seats');
+    expect(data.tools).toContain('find_places');
+    expect(data.tools).toContain('get_showtimes');
+    expect(data.tools).toContain('get_showtimes');
   });
 
   it('세븐일레븐 도구들이 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('seveneleven_search_products');
-    expect(data.tools).toContain('seveneleven_search_stores');
-    expect(data.tools).toContain('seveneleven_get_search_popwords');
-    expect(data.tools).toContain('seveneleven_get_catalog_snapshot');
+    expect(data.tools).toContain('search_products');
+    expect(data.tools).toContain('find_stores');
+    expect(data.tools).toContain('get_catalog');
+    expect(data.tools).toContain('get_catalog');
   });
 
   it('장소 검색 도구가 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('places_search_nearby');
+    expect(data.tools).toContain('find_places');
   });
 
   it('개발자 요청 제출 도구가 포함되어 있다', async () => {
     const res = await app.request('/', { headers: { Accept: 'application/json' } });
     const data = await res.json();
 
-    expect(data.tools).toContain('submit_developer_request');
+    expect(data.tools).toContain('submit_request');
   });
 
   it('통합 비교 도구가 포함되어 있다', async () => {
@@ -380,7 +380,7 @@ describe('문서 페이지', () => {
     expect(res.headers.get('Cache-Control')).toBe('public, max-age=3600');
     const text = await res.text();
     expect(text).toContain('https://guide.example/prompt');
-    expect(text).toContain('daiso_search_products');
+    expect(text).toContain('search_products');
     expect(mockFetch.mock.calls.length).toBe(callsBefore);
   });
 

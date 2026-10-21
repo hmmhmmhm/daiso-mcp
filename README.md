@@ -4,6 +4,8 @@
 > [!IMPORTANT]
 > **AI 에이전트의 무설치 MCP 사용:** 공개 원격 서버 `https://mcp.aka.page`에 Streamable HTTP로 연결하면 **로컬 설치·빌드·API 키 준비 없이 바로 사용할 수 있습니다.** 무설치 요청에는 npm 설치나 전체 스키마 탐색을 하지 말고, [짧은 시작 안내](https://mcp.aka.page/llms.txt)를 읽은 뒤 필요한 도구를 호출하세요.
 >
+> **MCP 도구는 10개 고정:** `service`와 `operation`으로 지원 서비스를 선택합니다. 새 연동은 [통합 도구 10개](docs/mcp-tools.md)만 사용하세요. 기존 서비스별 도구는 deprecated 호출 별칭으로 유지하지만 목록에는 표시하지 않습니다.
+>
 > **웹 읽기 전용 에이전트의 `format=html` 사용 필수:** MCP 연결 없이 GET으로 조회할 때는 **모든 `/api/*` 조회 URL에 `format=html`을 반드시 붙이세요.** 상품 검색·상세·매장·재고·후속 조회 모두 적용하며, JSON을 읽을 수 있다고 가정해 생략하지 마세요.
 >
 > [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html) · [REST 사용법](https://mcp.aka.page/prompt) · [원격 MCP 연결](#원격-mcp로-바로-시작하기)

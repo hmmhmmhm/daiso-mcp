@@ -111,32 +111,11 @@ describe('generatePromptText', () => {
     const text = generatePromptText('https://example.com');
 
     expect(text).toContain('https://example.com/mcp');
-    expect(text).toContain('daiso_search_products');
-    expect(text).toContain('daiso_find_stores');
-    expect(text).toContain('daiso_check_inventory');
-    expect(text).toContain('daiso_get_price_info');
-    expect(text).toContain('daiso_get_display_location');
+    for (const name of ['search_products','find_stores','check_inventory','get_product_details','find_places','get_showtimes','get_fuel_info','get_catalog','compare_products','submit_request']) expect(text).toContain(name);
     expect(text).not.toContain('lottemart_find_nearby_stores');
     expect(text).not.toContain('lottemart_search_products');
-    expect(text).toContain('gs25_find_nearby_stores');
-    expect(text).toContain('gs25_search_products');
-    expect(text).toContain('gs25_check_inventory');
-    expect(text).toContain('seveneleven_check_inventory');
-    expect(text).toContain('oliveyoung_search_products');
-    expect(text).toContain('oliveyoung_find_nearby_stores');
-    expect(text).toContain('oliveyoung_check_inventory');
-    expect(text).toContain('megabox_find_nearby_theaters');
-    expect(text).toContain('megabox_list_now_showing');
-    expect(text).toContain('megabox_get_remaining_seats');
-    expect(text).toContain('lottecinema_find_nearby_theaters');
-    expect(text).toContain('lottecinema_list_now_showing');
-    expect(text).toContain('lottecinema_get_remaining_seats');
-    expect(text).toContain('cgv_find_theaters');
-    expect(text).toContain('cgv_search_movies');
-    expect(text).toContain('cgv_get_timetable');
-    expect(text).toContain('places_search_nearby');
-    expect(text).toContain('submit_developer_request');
-    expect(text).toContain('/api/feedback/requests');
+    expect(text).toContain('service');
+    expect(text).toContain('operation');
   });
 
   it('사용 팁을 포함한다', () => {
@@ -203,7 +182,7 @@ describe('generatePromptText', () => {
     expect(text).toContain('콜라 어디가 싸?');
     expect(text).toContain('compare_products');
     expect(text).toContain('강남역 근처 카페');
-    expect(text).toContain('places_search_nearby');
+    expect(text).toContain('find_places');
     expect(text).toContain('다이소 핫식스 재고');
     expect(text).toContain('브랜드를 바꾸지 말고 먼저 다이소로 검색');
     expect(text).toContain('실패하면 같은 도구를 한 번 더 좁은 조건으로 재시도');

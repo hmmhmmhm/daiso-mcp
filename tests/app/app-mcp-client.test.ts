@@ -77,6 +77,14 @@ describe('MCP client smoke', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  it('통합 상품 상세에서 한국 가격 응답을 일본 통화로 제한하지 않는다', async () => {
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify(createMockProductResponse([{ PD_NO:'1049516', PDNM:'수납박스', PD_PRC:'5000' }],1))));
+    const client=await createLocalMcpClient();
+    try {const result=await client.callTool({name:'get_product_details',arguments:{service:'daiso',operation:'price',productId:'1049516'}});
+      expect(result.isError).not.toBe(true);expect(result.structuredContent).toMatchObject({currency:'KRW',currentPrice:5000});
+    } finally {await client.close();}
+  });
+
   it('SDK 도구 목록의 모든 도구가 outputSchema를 노출한다', async () => {
     const client = await createLocalMcpClient();
     try {
@@ -95,12 +103,12 @@ describe('MCP client smoke', () => {
       const tools = await client.listTools();
       const byName = new Map(tools.tools.map((tool) => [tool.name, tool]));
 
-      expect(byName.get('daiso_search_products')?.outputSchema?.properties).toHaveProperty('products');
-      expect(byName.get('daiso_find_stores')?.outputSchema?.properties).toHaveProperty('stores');
-      expect(byName.get('gs25_check_inventory')?.outputSchema?.properties).toHaveProperty('inventory');
-      expect(byName.get('cgv_find_theaters')?.outputSchema?.properties).toHaveProperty('theaters');
-      expect(byName.get('megabox_list_now_showing')?.outputSchema?.properties).toHaveProperty('movies');
-      expect(byName.get('seveneleven_get_search_popwords')?.outputSchema?.properties).toHaveProperty('keywords');
+      expect(byName.get('search_products')?.outputSchema?.properties).toHaveProperty('products');
+      expect(byName.get('find_stores')?.outputSchema?.properties).toHaveProperty('stores');
+      expect(byName.get('check_inventory')?.outputSchema?.properties).toHaveProperty('inventory');
+      expect(byName.get('find_places')?.outputSchema?.properties).toHaveProperty('theaters');
+      expect(byName.get('get_showtimes')?.outputSchema?.properties).toHaveProperty('movies');
+      expect(byName.get('get_catalog')?.outputSchema?.properties).toHaveProperty('keywords');
     } finally {
       await client.close();
     }
@@ -140,13 +148,13 @@ describe('MCP client smoke', () => {
     const client = await createLocalMcpClient();
     try {
       const tools = await client.listTools();
-      const daisoTool = tools.tools.find((tool) => tool.name === 'daiso_find_inventory_by_name');
+      const daisoTool = tools.tools.find((tool) => tool.name === 'check_inventory');
       expect(daisoTool).toBeTruthy();
       expect(daisoTool?.outputSchema?.properties).toHaveProperty('summary');
 
       const result = await client.callTool({
-        name: 'daiso_find_inventory_by_name',
-        arguments: { query: '수납박스', storeQuery: '강남역', pageSize: 1, productLimit: 1 },
+        name: 'check_inventory',
+        arguments: { service: 'daiso', operation: 'by_name', query: '수납박스', storeQuery: '강남역', pageSize: 1, productLimit: 1 },
       });
       const content = 'content' in result ? result.content : [];
       const firstText = content[0]?.type === 'text' ? content[0].text : '';

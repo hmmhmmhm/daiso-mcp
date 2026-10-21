@@ -1,3 +1,5 @@
+import { applyCompactTools } from './core/compact/server.js';
+import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from './core/compact/catalog.js';
 import { apiResultHtml } from './pages/apiResult.js';
 import { withExternalRouting } from './utils/externalRouting.js';
 import { refreshRouteChecks } from './utils/routeProbes.js';
@@ -139,15 +141,15 @@ const createMcpServer = (bindings?: AppBindings) => {
     version: SERVER_VERSION,
   });
 
-  registry.applyToServer(server);
+  applyCompactTools(server, registry);
 
   return server;
 };
 
 export function buildRootInfo() {
   const registry = createRegistry();
-  const services = registry.getServicesInfo();
-  const allTools = registry.getAllToolNames();
+  const services = registry.getServicesInfo().map(service => ({ ...service, tools: COMPACT_CATALOG.filter(group => group.routes.some(route => service.tools.includes(route.legacy))).map(group => group.name) }));
+  const allTools = [...PUBLIC_TOOL_NAMES];
 
   return {
     name: SERVER_NAME,
@@ -201,7 +203,6 @@ function createRootInfoResponse(request: Request): Response {
       'Content-Length': String(body.byteLength), Vary: 'Accept' },
   });
 }
-
 /**
  * initialize 요청 여부를 확인합니다.
  */
@@ -221,7 +222,6 @@ const isInitializeRequest = (body: unknown): boolean => {
     (body as { method?: unknown }).method === 'initialize'
   );
 };
-
 /**
  * 새 세션 transport/server를 생성합니다.
  */
