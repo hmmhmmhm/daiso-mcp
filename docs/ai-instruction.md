@@ -2,11 +2,13 @@
 
 ## 설치 없이 첫 조회
 
+최신 지침은 https://mcp.aka.page/guide/latest 를 열어 현재 버전 주소로 이동합니다. 오래된 버전 경로도 최신 지침으로 연결됩니다. 첫 조회에는 지침의 guide 버전을 유지하세요.
+
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
 2. 웹 읽기(open/WebFetch)가 가능하면 아래 HTML GET을 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 HTML GET이 우선입니다. 웹 검색(search)은 URL 열기(open)를 대신하지 않습니다.
 3. 위 두 수단이 없을 때만 외부 통신 가능한 셸을 사용합니다. [셸 전용 POST 예제](service-reference.md#설치-없이-첫-조회)를 참고하세요. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 단정하지 말고 웹 읽기가 가능하면 HTML GET으로 즉시 전환합니다.
 
-https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html
+https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3
 
 검색어 q를 사용자 요청으로 바꾸세요. 첫 조회 전에 npm·CLI·스킬 설치, health/help, 전체 도구 목록이나 OpenAPI 탐색을 하지 않습니다. 연결 설정을 요구하기 전에 현재 웹 도구로 실제 조회부터 실행합니다.
 
@@ -14,7 +16,7 @@ https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&p
 
 **실행 근거:** 실제로 실행한 도구·전체 URL·반환 데이터·오류만 보고합니다. 실행하지 않은 웹 GET을 실패했다고 설명하지 않습니다. 웹 도구가 HTTP 상태를 제공하지 않으면 HTTP 200이라고 추정하지 않습니다.
 
-**상품 이미지:** 해당 조회 응답의 `imageUrl`만 사용하고 전체 URL과 query string을 유지합니다. 없거나 표시되지 않으면 생략하며 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다.
+**상품 이미지:** 해당 조회 응답의 `imageUrl`만 사용하고 전체 URL과 query string을 유지합니다. 없거나 표시되지 않으면 생략하며 image_query·이미지 검색·검색 캐러셀을 사용하거나 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다.
 
 공개 원격 MCP 주소는 https://mcp.aka.page 이며 Streamable HTTP, 인증 없음입니다. MCP 클라이언트 연결은 표준 initialize 절차를 따릅니다. 공개 도구는 정확히 10개로 고정하며 늘리지 않습니다. 기존 서비스별 이름은 deprecated 호출 별칭이며 새 호출에 사용하지 않습니다. 전체 계약은 [통합 도구 안내](mcp-tools.md)를 참고하세요.
 

@@ -2,25 +2,27 @@
 <summary>AI 에이전트 사용 안내</summary>
 
 > [!IMPORTANT]
-> **안내 버전: 2026-10-21.2 · 갱신일: 2026-10-21**
+> **최신 안내:** [현재 버전](https://mcp.aka.page/guide/2026-10-21.3) · [항상 최신 버전으로 이동](https://mcp.aka.page/guide/latest)
 >
-> **ChatGPT 웹 읽기:** 연결된 MCP 도구가 없으면 [HTML GET으로 바로 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)하세요. 설치·API 키·MCP 연결 설정은 필요 없습니다.
+> **안내 버전: 2026-10-21.3 · 갱신일: 2026-10-21**
+>
+> **ChatGPT 웹 읽기:** 연결된 MCP 도구가 없으면 [HTML GET으로 바로 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3)하세요. 설치·API 키·MCP 연결 설정은 필요 없습니다.
 >
 > **로컬 설치·빌드·API 키 준비 없이 실제 조회부터 실행하세요.** 패키지 설치나 전체 스키마 탐색은 필요 없습니다.
 >
 > 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
-> 2. 웹 읽기(open/WebFetch)가 가능하면 [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)를 바로 엽니다. **셸이 있어도 연결된 MCP 도구가 없으면 HTML GET이 우선입니다.** 검색어 `q`를 사용자 요청으로 바꾸세요. 웹 검색은 URL 열기를 대신하지 않습니다.
+> 2. 웹 읽기(open/WebFetch)가 가능하면 [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3)를 바로 엽니다. **셸이 있어도 연결된 MCP 도구가 없으면 HTML GET이 우선입니다.** 검색어 `q`를 사용자 요청으로 바꾸세요. 웹 검색은 URL 열기를 대신하지 않습니다.
 > 3. 위 두 수단이 없을 때만 외부 통신 가능한 셸의 POST를 사용합니다. 셸 DNS 실패를 웹 GET 실패나 서비스 장애로 단정하지 말고, 웹 읽기가 가능하면 HTML GET으로 전환하세요.
 >
 > **실행 근거:** 실제 데이터·도구·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 마세요. REST GET 성공은 MCP 연결 성공과 구분합니다.
 >
-> **상품 이미지:** 해당 응답의 `imageUrl`만 사용하세요. 없거나 표시되지 않으면 생략하고 웹 검색 이미지·다른 상품·다른 국가의 이미지로 대체하지 마세요.
+> **상품 이미지:** 해당 응답의 `imageUrl`과 카드에 제공된 원본 이미지 Markdown만 사용하세요. `image_query`·이미지 검색·검색 캐러셀은 사용하지 마세요. 원본 표시가 불가능하면 링크나 텍스트만 제공합니다. 없거나 표시되지 않으면 생략하고 웹 검색 이미지·다른 상품·다른 국가의 이미지로 대체하지 마세요.
 >
 > **MCP 도구는 10개 고정:** `service`와 `operation`으로 지원 서비스를 선택합니다. 새 연동은 [통합 도구 10개](docs/mcp-tools.md)만 사용하세요. 기존 서비스별 도구는 deprecated 호출 별칭으로 유지하지만 목록에는 표시하지 않습니다.
 >
 > **웹 읽기 전용 에이전트의 `format=html` 사용 필수:** MCP 연결 없이 GET으로 조회할 때는 **모든 `/api/*` 조회 URL에 `format=html`을 반드시 붙이세요.** 상품 검색·상세·매장·재고·후속 조회 모두 적용하며, JSON을 읽을 수 있다고 가정해 생략하지 마세요.
 >
-> [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html) · [REST 사용법](https://mcp.aka.page/prompt) · [원격 MCP 연결](#원격-mcp로-바로-시작하기)
+> [첫 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3) · [REST 사용법](https://mcp.aka.page/prompt?guide=2026-10-21.3) · [원격 MCP 연결](#원격-mcp로-바로-시작하기)
 
 </details>
 

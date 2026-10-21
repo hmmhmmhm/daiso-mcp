@@ -377,7 +377,7 @@ describe('문서 페이지', () => {
     const res = await app.fetch(new Request('https://guide.example/llms.txt'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
-    expect(res.headers.get('Cache-Control')).toBe('public, max-age=3600');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
     const text = await res.text();
     expect(text).toContain('https://guide.example/prompt');
     expect(text).toContain('search_products');

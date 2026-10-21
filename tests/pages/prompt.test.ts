@@ -206,7 +206,7 @@ describe('createPromptResponse', () => {
   it('캐시 헤더를 설정한다', () => {
     const response = createPromptResponse('https://test.com');
 
-    expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
   });
 
   it('본문에 프롬프트 텍스트가 포함되어 있다', async () => {

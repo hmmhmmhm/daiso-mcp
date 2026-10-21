@@ -5,7 +5,7 @@
  * 에이전트가 이 페이지를 읽고 GET API를 사용할 수 있습니다.
  */
 
-import { buildAgentStartText } from './agentStart.js';
+import { buildAgentStartText, HTML_GUIDE_QUERY } from './agentStart.js';
 import { buildPromptCoreText } from './promptCoreText.js';
 import { buildPromptReferenceText } from './promptReferenceText.js';
 import { buildPromptRetailCinemaText } from './promptRetailCinemaText.js';
@@ -30,7 +30,7 @@ export function generatePromptText(baseUrl: string): string {
 MCP: search_products {"service":"daiso_jp","query":"ボウル"}, get_product_details {"service":"daiso_jp","operation":"product","id":"검색한 실제 코드"}, find_stores {"service":"daiso_jp","keyword":"渋谷"}.
 CLI: jp-products ボウル / jp-product 4550746075917 / jp-stores 渋谷.
 `,
-  ].join('');
+  ].join('').replace(/(https?:\/\/[^\s]+[?&]format=html)(?!&guide=)/g, '$1' + HTML_GUIDE_QUERY);
 }
 
 /**
@@ -42,7 +42,7 @@ export function createPromptResponse(baseUrl: string): Response {
   return new Response(text, {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'no-store',
     },
   });
 }

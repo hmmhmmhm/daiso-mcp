@@ -33,7 +33,7 @@ describe('GET HTML 결과', () => {
     const res = await fixture().request('/api/daiso/products?q=%22%3C&pageSize=3&format=html');
     const body = await res.text();
     expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
-    expect(res.headers.get('Cache-Control')).toBe('public, max-age=30');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
     expect(res.headers.get('Retry-After')).toBe('5');
     expect(res.headers.get('ETag')).toBeNull();
     expect(res.headers.get('Content-Length')).toBeNull();

@@ -425,7 +425,7 @@ describe('repository maintenance configuration', () => {
 
     expect(skill).toContain('name: daiso-cli');
     expect(skill).toContain('description:');
-    expect(skill).toContain('version: 1.0.7');
+    expect(skill).toContain('version: 1.0.8');
     expect(skill).toContain('metadata:');
     expect(skill).toContain('openclaw:');
     expect(skill).toContain('requires:');

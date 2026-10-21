@@ -39,7 +39,7 @@ import { createPlacesService } from './services/places/index.js';
 import { createOpinetService } from './services/opinet/index.js';
 import { createCompareService } from './services/compare/index.js';
 import { createFeedbackService } from './services/feedback/index.js';
-import { createAgentStartResponse } from './pages/agentStart.js';
+import { createAgentStartResponse, createVersionedGuideResponse } from './pages/agentStart.js';
 import { createPromptResponse } from './pages/prompt.js';
 import { buildDiscoveryAssets } from './pages/discovery.js';
 import {
@@ -200,7 +200,7 @@ function createRootInfoResponse(request: Request): Response {
     status: 200,
     headers: { ...ROOT_INFO_HEADERS,
       'Content-Type': json ? 'application/json; charset=utf-8' : 'text/html; charset=utf-8',
-      'Content-Length': String(body.byteLength), Vary: 'Accept' },
+      'Content-Length': String(body.byteLength), 'Cache-Control': json ? ROOT_INFO_HEADERS['Cache-Control'] : 'no-store', Vary: 'Accept' },
   });
 }
 /**
@@ -364,13 +364,11 @@ registerRateLimitStatsRoutes(app);
 registerServiceRoutes(app);
 
 // 설치 없는 첫 조회 안내
+app.get('/guide/:version', (c) => createVersionedGuideResponse(new URL(c.req.url).origin, c.req.param('version')));
 app.get('/llms.txt', (c) => createAgentStartResponse(new URL(c.req.url).origin));
 
 // 프롬프트 페이지 (MCP 미지원 에이전트용)
-app.get('/prompt', (c) => {
-  const baseUrl = new URL(c.req.url).origin;
-  return createPromptResponse(baseUrl);
-});
+app.get('/prompt', (c) => createPromptResponse(new URL(c.req.url).origin));
 
 // OpenAPI 스펙 엔드포인트 (ChatGPT GPTs 등록용)
 app.get('/openapi.json', (c) => {

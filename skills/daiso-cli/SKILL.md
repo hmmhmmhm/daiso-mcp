@@ -1,7 +1,7 @@
 ---
 name: daiso-cli
 description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Honor explicit no-install requests with connected MCP tools first, then HTML GET via web reading even when a shell is available; otherwise prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
-version: 1.0.7
+version: 1.0.8
 metadata:
   openclaw:
     requires:
@@ -21,15 +21,17 @@ Use this skill to operate the Daiso MCP project through `npx daiso` and the publ
 
 ## 설치 없이 첫 조회
 
+최신 지침은 https://mcp.aka.page/guide/latest 를 열어 현재 버전 주소로 이동합니다. 오래된 버전 경로도 최신 지침으로 연결됩니다. 첫 조회에는 지침의 guide 버전을 유지하세요.
+
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
 2. 웹 읽기(open/WebFetch)가 가능하면 아래 HTML GET을 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 검색(search)은 URL 열기(open)를 대신하지 않습니다.
 3. 위 두 수단이 없을 때만 외부 통신 가능한 셸에서 루트 POST를 사용합니다. 셸 DNS 실패를 웹 GET 실패나 서버 장애로 확대하지 말고 웹 읽기가 가능하면 HTML GET으로 전환합니다.
 
-https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html
+https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3
 
 검색어 q를 사용자 요청으로 바꾸고 상세·매장·재고를 포함한 모든 후속 웹 GET에도 `format=html`을 반드시 붙이세요. 첫 조회 전에 npx·패키지·스킬 설치, health/help, 전체 도구 목록이나 OpenAPI 탐색을 요구하지 않습니다. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.
 
-상품 이미지는 해당 조회 응답의 imageUrl만 사용합니다. 전체 URL과 query string을 유지하고, 없거나 표시되지 않으면 생략하며 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다. 실제 도구·URL·반환 데이터·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
+상품 이미지는 해당 조회 응답의 imageUrl만 사용합니다. 전체 URL과 query string을 유지하고, 없거나 표시되지 않으면 생략하며 image_query·이미지 검색·검색 캐러셀을 사용하거나 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다. 실제 도구·URL·반환 데이터·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
 공개 MCP는 https://mcp.aka.page, Streamable HTTP, 인증 없음입니다. 연결은 표준 initialize 절차를 사용합니다. 공개 도구 10개는 늘리지 않습니다. 기존 서비스별 이름은 deprecated 별칭이며 새 호출에 쓰지 않습니다.
 

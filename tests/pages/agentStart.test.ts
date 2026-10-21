@@ -42,11 +42,11 @@ describe('에이전트 시작 안내', () => {
     expect(text).toContain('MCP 지원 서비스');
   });
 
-  it('캐시 가능한 평문 응답을 반환한다', async () => {
+  it('새 캐시 저장을 막는 평문 응답을 반환한다', async () => {
     const response = createAgentStartResponse('https://example.com');
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
-    expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(await response.text()).toBe(buildAgentStartText('https://example.com'));
   });
 });
