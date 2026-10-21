@@ -1,3 +1,9 @@
+/** 검색·읽기 사본의 안내 세대를 구분하는 고정 버전 */
+export const AGENT_GUIDE_VERSION = '2026-10-21.2';
+export const AGENT_GUIDE_UPDATED = '2026-10-21';
+export const AGENT_GUIDE_STAMP = `안내 버전: ${AGENT_GUIDE_VERSION} · 갱신일: ${AGENT_GUIDE_UPDATED}`;
+export const WEB_SEARCH_DESCRIPTION = 'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 바로 상품을 조회하세요. URL 열기로 /api/daiso/products?q=검색어&format=html을 사용합니다. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
+
 /** 웹 읽기 환경에서 조회 형식을 선택하는 공통 규칙 */
 export const WEB_READ_RULE = '웹 읽기 전용 에이전트: 모든 /api/* GET 조회 URL에 format=html을 반드시 포함하세요. 상품 검색뿐 아니라 상세·매장·재고·후속 조회에도 적용합니다. 아래 문서의 JSON 응답 예시는 필드 설명이며 웹 읽기로 JSON 주소를 열라는 뜻이 아닙니다. JSON URL이 읽히지 않으면 format=html로 다시 조회하고, 그 실패만으로 서비스 장애·로그인 필요·이 환경에서 실행할 수 없다고 단정하지 마세요.';
 
@@ -15,6 +21,7 @@ export const EXECUTION_EVIDENCE_RULE = '실제로 실행한 도구·요청 URL·
 /** 설치 없이 첫 실제 조회를 실행하는 에이전트 안내 */
 export function buildAgentStartText(baseUrl: string): string {
   return `# DAISO MCP: 설치 없이 시작하기
+${AGENT_GUIDE_STAMP}
 
 **${WEB_READ_RULE}**
 

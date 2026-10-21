@@ -2,6 +2,10 @@
 <summary>AI 에이전트 사용 안내</summary>
 
 > [!IMPORTANT]
+> **안내 버전: 2026-10-21.2 · 갱신일: 2026-10-21**
+>
+> **ChatGPT 웹 읽기:** 연결된 MCP 도구가 없으면 [HTML GET으로 바로 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)하세요. 설치·API 키·MCP 연결 설정은 필요 없습니다.
+>
 > **로컬 설치·빌드·API 키 준비 없이 실제 조회부터 실행하세요.** 패키지 설치나 전체 스키마 탐색은 필요 없습니다.
 >
 > 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
