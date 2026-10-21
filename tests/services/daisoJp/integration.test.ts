@@ -27,8 +27,26 @@ function app() {
   registerDaisoJpRoutes(a);
   return a;
 }
-afterEach(() => vi.resetAllMocks());
+afterEach(() => { vi.resetAllMocks(); vi.unstubAllGlobals(); });
 describe('일본 다이소 연결', () => {
+  it('인증된 운영 점검만 일본 API의 성공 캐시를 우회한다', async () => {
+    const match = vi.fn(async () => new Response(JSON.stringify({ success: true, data: { cached: true } })));
+    vi.stubGlobal('caches', { default: { match } });
+    vi.mocked(getProduct).mockResolvedValue(product as never);
+    vi.mocked(searchProducts).mockResolvedValue({ products: [product] } as never);
+    vi.mocked(findStores).mockResolvedValue({ stores: [] } as never);
+    for (const path of ['/products/' + product.id, '/products?q=ボウル', '/stores?keyword=渋谷']) {
+      const headers = { Authorization: 'Bearer test-operational-key', 'x-health-check-force-fresh': 'true' };
+      const response = await app().request('/api/daiso-jp' + path, { headers }, { HEALTH_CHECK_SECRET: 'test-operational-key' });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+    }
+    expect(match).not.toHaveBeenCalled();
+    const response = await app().request('/api/daiso-jp/products/' + product.id,
+      { headers: { 'x-health-check-force-fresh': 'true' } }, { HEALTH_CHECK_SECRET: 'test-operational-key' });
+    expect((await response.json()).data.cached).toBe(true);
+    expect(match).toHaveBeenCalledTimes(1);
+  });
   it('MCP 도구 세 가지와 입력 제약을 노출한다', async () => {
     const service = createDaisoJpService();
     expect(service.metadata.id).toBe('daiso_jp');

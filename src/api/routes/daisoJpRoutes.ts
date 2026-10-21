@@ -6,6 +6,7 @@ import { withEdgeCache } from '../../utils/cache.js';
 import { ServiceError } from '../../core/errors.js';
 import { searchProducts, getProduct, findStores } from '../../services/daisoJp/client.js';
 import { jpQuery, jpPage, jpProductId } from '../../services/daisoJp/index.js';
+import { isFreshOperationalRequest } from '../operationalFreshness.js';
 
 async function execute(c: ApiContext, operation: () => Promise<unknown>): Promise<Response> {
   try {
@@ -25,7 +26,7 @@ async function execute(c: ApiContext, operation: () => Promise<unknown>): Promis
 }
 
 export function registerDaisoJpRoutes(app: Hono<{ Bindings: AppBindings }>): void {
-  app.get('/api/daiso-jp/products/:id', (c) => {
+  app.get('/api/daiso-jp/products/:id', async (c) => {
     const id = jpProductId.safeParse(c.req.param('id'));
     if (!id.success)
       return errorResponse(
@@ -33,20 +34,20 @@ export function registerDaisoJpRoutes(app: Hono<{ Bindings: AppBindings }>): voi
         'INVALID_INPUT',
         '상품 ID는 일본 다이소 검색 결과의 13자리 코드를 사용하세요.',
       );
-    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-product-v1' }, () =>
+    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-product-v1', bypassCache: await isFreshOperationalRequest(c) }, () =>
       execute(c, () => getProduct(id.data)),
     );
   });
-  app.get('/api/daiso-jp/products', (c) => {
+  app.get('/api/daiso-jp/products', async (c) => {
     const query = jpQuery.safeParse(c.req.query('q'));
     const page = jpPage.safeParse(Number(c.req.query('page') ?? '1'));
     if (!query.success || !page.success)
       return errorResponse(c, 'INVALID_INPUT', 'q는 1~100자, page는 1~100 사이 정수여야 합니다.');
-    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-search-v1' }, () =>
+    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-search-v1', bypassCache: await isFreshOperationalRequest(c) }, () =>
       execute(c, () => searchProducts(query.data, page.data)),
     );
   });
-  app.get('/api/daiso-jp/stores', (c) => {
+  app.get('/api/daiso-jp/stores', async (c) => {
     const keyword = jpQuery.safeParse(c.req.query('keyword'));
     const page = jpPage.safeParse(Number(c.req.query('page') ?? '1'));
     if (!keyword.success || !page.success)
@@ -55,7 +56,7 @@ export function registerDaisoJpRoutes(app: Hono<{ Bindings: AppBindings }>): voi
         'INVALID_INPUT',
         'keyword는 1~100자, page는 1~100 사이 정수여야 합니다.',
       );
-    return withEdgeCache(c.req.url, { ttlSeconds: 86400, keyPrefix: 'daiso-jp-stores-v1' }, () =>
+    return withEdgeCache(c.req.url, { ttlSeconds: 86400, keyPrefix: 'daiso-jp-stores-v1', bypassCache: await isFreshOperationalRequest(c) }, () =>
       execute(c, () => findStores(keyword.data, page.data)),
     );
   });

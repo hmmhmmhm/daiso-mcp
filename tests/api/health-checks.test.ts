@@ -22,6 +22,23 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('runHealthChecks', () => {
+  it('일본 상품 상세의 원본 차단을 CLI 운영 계약 실패로 감지한다', async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname;
+      if (path === '/health') return jsonResponse({ status: 'ok' });
+      if (path === '/api/daiso-jp/products/4550746075917') {
+        return jsonResponse({ success: false,
+          error: { code: 'DAISO_JP_UPSTREAM_FAILED', message: '일본 다이소 공식 사이트에 연결할 수 없습니다.' },
+          diagnostics: { upstreamStatus: 403 } }, 503);
+      }
+      return jsonResponse({ success: true, data: { ok: true } });
+    });
+    const result = await runHealthChecks({ baseUrl: 'https://example.com',
+      check: 'cli.contract', mode: 'deep', fetchImpl, fresh: true });
+    expect(result.status).toBe('fail');
+    expect(result.checks[0]).toMatchObject({ httpStatus: 503,
+      errorCode: 'DAISO_JP_UPSTREAM_FAILED', upstreamStatus: 403 });
+  });
   it.each([
     ['CU 재고 API가 JSON 대신 HTML을 반환하여 재고를 확인할 수 없습니다.', 'CU 재고 API가 JSON 대신 HTML을 반환하여 재고를 확인할 수 없습니다.'],
     [null, 'inventory unavailable'],

@@ -173,6 +173,7 @@ const CLI_CONTRACT_PATHS = [
   '/health',
   '/api/daiso/products?q=%ED%85%8C%EC%9D%B4%ED%94%84&pageSize=1',
   '/api/daiso/stores?keyword=%EA%B0%95%EB%82%A8&pageSize=1',
+  '/api/daiso-jp/products/4550746075917',
   '/api/gs25/products?keyword=%EC%BD%9C%EB%9D%BC&limit=1',
   '/api/gs25/stores?keyword=%EA%B0%95%EB%82%A8&limit=1',
   '/api/seveneleven/products?query=%EC%BB%A4%ED%94%BC&size=1',
