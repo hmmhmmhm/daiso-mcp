@@ -1,3 +1,4 @@
+import * as z from 'zod';
 /**
  * 서비스 레지스트리
  *
@@ -204,7 +205,11 @@ export class ServiceRegistry {
    * 모든 도구를 MCP 서버에 등록
    * @param server MCP 서버 인스턴스
    */
-  applyToServer(server: McpServer): void {
+  applyToServer(server: McpServer, registrations?: ToolRegistration[]): void {
+    if (registrations) {
+      for (const tool of registrations) this.registerTool(server, tool);
+      return;
+    }
     for (const service of this.services.values()) {
       const tools = service.getTools();
 
@@ -220,6 +225,7 @@ export class ServiceRegistry {
   private registerTool(server: McpServer, tool: ToolRegistration): void {
     const metadata = {
       ...tool.metadata,
+      inputSchema: tool.strictInput ? z.object(tool.metadata.inputSchema).strict() : tool.metadata.inputSchema,
       outputSchema: createToolOutputSchema(tool.name, tool.metadata.outputSchema),
     };
 
@@ -251,12 +257,14 @@ export class ServiceRegistry {
       if (result.isError) {
         return {
           isError: true,
+          ...(result._meta ? { _meta: result._meta } : {}),
           content,
         };
       }
 
       return {
         content,
+        ...(result._meta ? { _meta: result._meta } : {}),
         structuredContent: buildStructuredContent(result),
       };
     });
@@ -279,6 +287,10 @@ export class ServiceRegistry {
   /**
    * 등록된 모든 도구 이름 반환
    */
+  getAllTools(): ToolRegistration[] {
+    return Array.from(this.services.values()).flatMap(service => service.getTools());
+  }
+
   getAllToolNames(): string[] {
     const toolNames: string[] = [];
     for (const service of this.services.values()) {

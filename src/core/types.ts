@@ -11,6 +11,7 @@ import type * as z from 'zod';
  * 모든 도구 핸들러가 반환하는 표준 형식
  */
 export interface McpToolResponse {
+  _meta?: Record<string, unknown>;
   content: Array<{
     type: 'text';
     text: string;
@@ -72,10 +73,13 @@ export interface ServiceMetadata {
  * 서비스에서 반환하는 도구 정보 (간소화 버전)
  */
 export interface ToolRegistration {
+  /** 통합 공개 도구는 SDK 단계부터 알 수 없는 인수를 거절합니다. */
+  strictInput?: boolean;
   /** 도구 이름 (서비스 접두사 포함) */
   name: string;
   /** 도구 메타데이터 */
   metadata: {
+    _meta?: Record<string, unknown>;
     title: string;
     description: string;
     inputSchema: ToolInputSchema;
