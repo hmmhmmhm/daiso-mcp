@@ -46,7 +46,7 @@ export const COMPACT_CATALOG: CompactGroup[] = [
     name: 'check_inventory',
     title: '상품 재고 조회',
     description:
-      '실제 매장 재고 확인. 다이소는 operation=by_name이면 query, by_id이면 productId를 입력합니다. 그 외 서비스는 keyword 또는 해당 상품 코드를 입력합니다. 실패나 미확인 수량은 품절이 아닙니다.',
+      '실제 매장 재고 확인. 다이소는 operation=by_name이면 query, by_id이면 productId를 입력합니다. 그 외 서비스는 keyword 또는 해당 상품 코드를 입력합니다. storeQuery는 다이소 위치, storeLimit은 매장 수(pageSize와 같은 값), productLimit은 후보 수이며 실제 조회 상품은 selectedProduct 하나입니다. 실패나 미확인 수량은 품절이 아닙니다.',
     routes: [
       { service: 'daiso', operation: 'by_id', legacy: 'daiso_check_inventory' },
       { service: 'daiso', operation: 'by_name', legacy: 'daiso_find_inventory_by_name' },
@@ -115,7 +115,7 @@ export const COMPACT_CATALOG: CompactGroup[] = [
     name: 'get_catalog',
     title: '인기 검색어와 기획전',
     description:
-      '세븐일레븐 공개 카탈로그. operation=popwords 인기 검색어, snapshot 기획전/이슈 목록입니다. 실시간 재고를 의미하지 않습니다.',
+      '세븐일레븐 공개 카탈로그. operation=popwords 인기 검색어, snapshot 기획전/이슈 목록입니다. operation은 필수입니다. includeIssues/includeExhibition/limit은 snapshot 전용이며 popwords에는 label만 지정합니다. 실시간 재고를 의미하지 않습니다.',
     routes: [
       { operation: 'popwords', legacy: 'seveneleven_get_search_popwords' },
       { operation: 'snapshot', legacy: 'seveneleven_get_catalog_snapshot' },

@@ -20,23 +20,36 @@ export function assertCompactCoverage(legacy: ToolRegistration[]): void {
   }
 }
 function withoutDefault(schema: z.ZodType): z.ZodType {
-  if (schema instanceof z.ZodDefault) return withoutDefault(schema.removeDefault() as z.ZodType);
+  if (schema instanceof z.ZodDefault) {
+    const inner = withoutDefault(schema.removeDefault() as z.ZodType);
+    return schema.description ? inner.describe(schema.description) : inner;
+  }
   if (schema instanceof z.ZodOptional)
     return withoutDefault(schema.unwrap() as z.ZodType).optional();
   return schema;
 }
 function mergedInputs(group: CompactGroup, legacy: Map<string, ToolRegistration>): ToolInputSchema {
   const fields = new Map<string, z.ZodType[]>();
+  const descriptions = new Map<string, Set<string>>();
   for (const route of group.routes) {
     for (const [key, schema] of Object.entries(legacy.get(route.legacy)!.metadata.inputSchema)) {
       const variants = fields.get(key) ?? [];
       variants.push(withoutDefault(schema));
       fields.set(key, variants);
+      const notes = descriptions.get(key) ?? new Set<string>();
+      notes.add(
+        `${[route.service, route.operation].filter(Boolean).join('/') || group.name}: ${schema.description || key}`,
+      );
+      descriptions.set(key, notes);
     }
   }
   const shape: ToolInputSchema = {};
   for (const [key, variants] of fields)
-    shape[key] = z.union(variants as [z.ZodType, ...z.ZodType[]]).optional();
+    shape[key] = (
+      variants.length === 1 ? variants[0] : z.union(variants as [z.ZodType, ...z.ZodType[]])
+    )
+      .optional()
+      .describe([...descriptions.get(key)!].join(' · '));
   const services = [
     ...new Set(group.routes.flatMap((route) => (route.service ? [route.service] : []))),
   ];
@@ -45,11 +58,12 @@ function mergedInputs(group: CompactGroup, legacy: Map<string, ToolRegistration>
   ];
   if (services.length)
     shape.service = z.enum(services as [string, ...string[]]).describe('조회할 서비스');
-  if (operations.length)
-    shape.operation = z
-      .enum(operations as [string, ...string[]])
-      .optional()
-      .describe('조회 작업. 같은 서비스에 작업이 여러 개면 필수입니다.');
+  if (operations.length) {
+    const operation = z.enum(operations as [string, ...string[]]);
+    shape.operation = (services.length ? operation.optional() : operation).describe(
+      '조회 작업. 같은 서비스에 작업이 여러 개면 필수입니다.',
+    );
+  }
   return shape;
 }
 export function createCompactTools(legacyTools: ToolRegistration[]): ToolRegistration[] {
@@ -97,7 +111,33 @@ export function createCompactTools(legacyTools: ToolRegistration[]): ToolRegistr
                 .join(', '),
           );
         const target = legacy.get(matches[0].legacy)!;
-        return target.handler(z.object(target.metadata.inputSchema).strict().parse(input));
+        // 다이소의 매장 수 조건은 다른 편의점과 같은 storeLimit 이름도 받습니다.
+        if (
+          group.name === 'check_inventory' &&
+          service === 'daiso' &&
+          input.storeLimit !== undefined
+        ) {
+          if (input.pageSize !== undefined && input.pageSize !== input.storeLimit)
+            throw new Error('storeLimit과 pageSize는 같은 매장 수를 지정해야 합니다.');
+          input.pageSize = input.storeLimit;
+          delete input.storeLimit;
+        }
+        const ignored = Object.keys(input).filter(
+          (key) => !Object.hasOwn(target.metadata.inputSchema, key),
+        );
+        const result = await target.handler(z.object(target.metadata.inputSchema).parse(input));
+        if (ignored.length === 0 || result.isError) return result;
+        return {
+          ...result,
+          _meta: { ...result._meta, ignoredArguments: ignored },
+          content: [
+            ...result.content,
+            {
+              type: 'text',
+              text: `선택한 서비스/작업에서 지원하지 않는 옵션은 적용하지 않았습니다: ${ignored.join(', ')}. 이 옵션의 조건을 충족했다고 안내하지 마세요.`,
+            },
+          ],
+        };
       },
     };
   });

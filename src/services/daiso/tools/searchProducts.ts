@@ -16,6 +16,7 @@ interface SearchProductsArgs {
   query: string;
   page?: number;
   pageSize?: number;
+  includeSoldOut?: boolean;
 }
 
 /**
@@ -60,13 +61,14 @@ export async function fetchProducts(
  * 제품 검색 핸들러
  */
 async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse> {
-  const { query, page = 1, pageSize = 30 } = args;
+  const { query, page = 1, pageSize = 30, includeSoldOut = true } = args;
 
   if (!query || query.trim().length === 0) {
     throw new Error('검색어를 입력해주세요.');
   }
 
-  const { products, totalCount } = await fetchProducts(query, page, pageSize);
+  const { products: candidates, totalCount } = await fetchProducts(query, page, pageSize);
+  const products = includeSoldOut ? candidates : candidates.filter((product) => !product.soldOut);
 
   const result = {
     query,
@@ -75,6 +77,11 @@ async function searchProducts(args: SearchProductsArgs): Promise<McpToolResponse
     totalCount,
     count: products.length,
     products,
+    ...(!includeSoldOut
+      ? {
+          note: '현재 페이지에서 품절 상품을 제외했습니다. totalCount는 필터 전 전체 검색 건수입니다.',
+        }
+      : {}),
   };
 
   return {
@@ -93,6 +100,12 @@ export function createSearchProductsTool(): ToolRegistration {
       description: '다이소 제품을 검색합니다. 키워드로 제품을 검색할 수 있습니다.',
       inputSchema: {
         query: z.string().describe('검색할 제품명 또는 키워드'),
+        includeSoldOut: z
+          .boolean()
+          .optional()
+          .describe(
+            '품절 상품 포함 여부 (기본값: true). false이면 현재 페이지에서 품절 상품을 제외합니다.',
+          ),
         page: positiveIntegerSchema.optional().default(1).describe('페이지 번호 (기본값: 1)'),
         pageSize: positiveIntegerSchema
           .optional()
