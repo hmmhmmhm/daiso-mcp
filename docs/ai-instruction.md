@@ -6,7 +6,7 @@
 
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
 2. 웹 읽기(open/WebFetch)가 가능하면 아래 HTML GET을 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 HTML GET이 우선입니다. 웹 검색(search)은 URL 열기(open)를 대신하지 않습니다.
-3. 위 두 수단이 없을 때만 외부 통신 가능한 셸을 사용합니다. [셸 전용 POST 예제](service-reference.md#설치-없이-첫-조회)를 참고하세요. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 단정하지 말고 웹 읽기가 가능하면 HTML GET으로 즉시 전환합니다.
+3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 셸 호출로 우회하지 말고 실제 실행하지 않은 요청을 실패라고 설명하지 않습니다. 셸 DNS 오류는 웹 GET 실패가 아닙니다.
 
 https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3
 

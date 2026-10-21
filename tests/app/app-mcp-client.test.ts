@@ -49,13 +49,14 @@ async function createLocalMcpClient(bindings?: AppBindings): Promise<Client> {
 }
 
 describe('MCP client smoke', () => {
-  it('시작 안내의 단일 POST가 initialize 없이 실제 상품을 반환한다', async () => {
+  it('루트 POST 호환 경로는 문서 예제 없이도 실제 상품을 반환한다', async () => {
     mockFetch.mockResolvedValueOnce(new Response(JSON.stringify(
       createMockProductResponse([{ PD_NO: '1049516', PDNM: '수납박스', PD_PRC: '5000' }], 1),
     )));
     const guide = buildAgentStartText('https://local.test');
-    const body = guide.match(/--data '([^']+)'/)?.[1];
-    expect(body).toBeDefined();
+    const args = guide.match(/search_products (\{[^}]+\})/)?.[1];
+    expect(args).toBeDefined();
+    const body = JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'search_products',arguments:JSON.parse(args!)}});
     const response = await app.fetch(new Request('https://local.test/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },

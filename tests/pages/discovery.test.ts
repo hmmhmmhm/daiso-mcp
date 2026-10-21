@@ -25,7 +25,8 @@ describe('공개 발견 자산', () => {
     expect(assets['discovery.html']).not.toContain('lottemart');
     expect(assets['discovery.html']).not.toContain('Zyte');
     expect(assets['discovery.html']).not.toContain('<script');
-    expect(assets['llms.txt']).toContain('루트 POST');
+    expect(assets['llms.txt']).toContain('WebFetch');
+    expect(assets['llms.txt']).not.toContain('curl');
   });
 
   it('hmart.app처럼 검색 및 주요 AI 봇을 명시적으로 허용하고 sitemap을 연결한다', () => {

@@ -12,7 +12,7 @@ export const WEB_READ_RULE = '웹 읽기 전용 에이전트: 모든 /api/* GET 
 /** 셸 존재를 네트워크 접근 가능 여부로 오해하지 않는 실행 순서 */
 export const ROUTE_SELECTION_TEXT = `1. 연결된 MCP 도구가 있으면 search_products {"service":"daiso","query":"수납박스","pageSize":3}를 호출합니다.
 2. 웹 읽기(open/WebFetch)가 가능하면 HTML GET 주소를 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 웹 검색(search)은 URL 열기(open)를 대신하지 않습니다.
-3. 위 두 수단이 없을 때만 외부 통신 가능한 셸에서 아래 POST를 사용합니다. 셸 DNS 오류는 그 실행 환경의 실패이며 웹 GET 실패나 서버 장애의 근거가 아닙니다. 웹 읽기가 가능하면 HTML GET으로 즉시 전환합니다.`;
+3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 터미널·셸 호출로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 확대하지 말고 실제로 실행하지 않은 요청의 실패를 만들지 마세요.`;
 
 /** 유사 상품의 웹 검색 이미지를 실제 상품 사진으로 오인하지 않도록 제한합니다. */
 export const IMAGE_SOURCE_RULE = '상품 이미지는 해당 조회 응답의 imageUrl만 사용하세요. image_query·이미지 검색·검색 이미지 캐러셀은 사용하지 마세요. 카드의 원본 이미지 Markdown을 그대로 쓰고, 표시할 수 없으면 원본 링크와 텍스트만 제공하세요. 전체 URL과 query string을 유지합니다. imageUrl이 없거나 표시되지 않으면 이미지를 생략하고 웹 검색 이미지·다른 상품·다른 국가의 이미지로 대체하지 마세요.';
@@ -41,14 +41,7 @@ ${baseUrl}/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&
 ${IMAGE_SOURCE_RULE}
 ${EXECUTION_EVIDENCE_RULE}
 
-셸 전용 대안: 루트 POST의 stateless 호출은 이 서버가 지원하는 단축 경로입니다. /mcp 및 범용 클라이언트 연결은 initialize → notifications/initialized 후 mcp-session-id를 전달합니다.
-\`\`\`bash
-curl --max-time 20 -sS -N ${baseUrl}/ \\
-  -H 'Content-Type: application/json' \\
-  -H 'Accept: application/json, text/event-stream' \\
-  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_products","arguments":{"service":"daiso","query":"수납박스","pageSize":3}}}'
-\`\`\`
-응답은 SSE의 data: JSON-RPC 메시지입니다. result.isError=true이거나 error 응답이면 실패입니다. 상품은 result.structuredContent.products 또는 content[].text의 JSON에서 읽으세요. 오류·미확인을 재고 0으로 해석하지 마세요.
+연결된 MCP 클라이언트는 initialize 절차를 처리합니다. MCP 결과의 isError=true/error를 확인하고 structuredContent 또는 content[].text에서 실제 상품을 읽습니다. 웹 읽기는 WebFetch·open 도구에서 위 HTML GET 링크를 그대로 여세요.
 기존 서비스별 MCP 이름은 deprecated 호출 별칭입니다. 새 연동은 공개 도구 10개만 사용하며 도구를 늘리지 않습니다.
 상세 API와 서비스 안내: ${baseUrl}/prompt?guide=${AGENT_GUIDE_VERSION}
 

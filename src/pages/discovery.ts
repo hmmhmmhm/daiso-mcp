@@ -30,11 +30,6 @@ export function buildDiscoveryAssets(info: { services: { name: string }[]; tools
 <p>${escapeHtml(ROUTE_SELECTION_TEXT).replaceAll('\n', '<br>')}</p>
 <p><strong>${escapeHtml(IMAGE_SOURCE_RULE)}</strong></p>
 <p>${escapeHtml(EXECUTION_EVIDENCE_RULE)}</p>
-<details><summary>셸 전용 POST 대안</summary>
-<pre><code>curl --max-time 20 -sS -N ${BASE}/ \\
-  -H 'Content-Type: application/json' \\
-  -H 'Accept: application/json, text/event-stream' \\
-  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_products","arguments":{"service":"daiso","query":"수납박스","pageSize":3}}}'</code></pre></details>
 <p>웹 읽기 기능으로 이 페이지를 읽는 것만으로 MCP 연결이 생기지는 않습니다. 연결된 MCP 도구가 없고 웹 읽기가 가능하면 셸 유무와 무관하게 위 HTML REST 링크를 바로 여세요. 오류를 상품 없음으로 해석하지 마세요.</p>
 <p><a href="${AGENT_GUIDE_PATH}">짧은 시작 안내 (현재 버전)</a> · <a href="/prompt?guide=${AGENT_GUIDE_VERSION}">전체 API 사용 안내</a> · <a href="/root.json">개발자용 서비스·도구 목록 JSON</a></p></section>
 <section><h2>지원 서비스</h2><p>${services}</p></section>

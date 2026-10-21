@@ -233,7 +233,7 @@ npx daiso products 수납박스 --json
 - 공개 페이지: `https://clawhub.ai/hmmhmmhm/daiso-cli`
 - 스킬 파일: [skills/daiso-cli/SKILL.md](../skills/daiso-cli/SKILL.md)
 - 명령 맵: [CLI 명령 맵](../skills/daiso-cli/references/cli-command-map.md)
-- 사용자가 무설치 조회를 요청하면 연결된 MCP 도구를 사용하고, 없으면 웹 읽기의 HTML GET을 우선 사용합니다. 셸이 있어도 이 순서를 유지하며, 두 수단이 없을 때만 외부 통신 가능한 셸의 POST를 사용합니다. `npx`나 Skill 설치, 전체 스키마 탐색은 필요하지 않습니다.
+- 사용자가 무설치 조회를 요청하면 연결된 MCP 도구를 사용하고, 없으면 웹 읽기의 HTML GET을 우선 사용합니다. 셸이 있어도 이 순서를 유지하며, 두 수단이 없으면 실제 도구 제약을 알리고 셸 호출로 우회하지 않습니다. WebFetch 또는 open으로 HTML 링크를 직접 여세요. `npx`나 Skill 설치, 전체 스키마 탐색은 필요하지 않습니다.
 - CLI를 사용하기로 선택했고 쉘 실행이 가능한 환경에서만 `npx daiso`를 사용합니다. AI 앱 연결에는 MCP 서버 URL `https://mcp.aka.page`를 사용합니다.
 - 구조화 결과가 필요하면 스킬은 `npx daiso ... --json` 형태를 선택합니다.
 - 상황별 레시피는 `콜라 어디가 싸?`, `강남역 근처 카페`, `다이소 핫식스 재고`, `오늘 강남 CGV 시간표`처럼 실제 사용자 문장 기준으로 정리되어 있습니다.

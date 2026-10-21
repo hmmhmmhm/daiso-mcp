@@ -25,7 +25,7 @@ Use this skill to operate the Daiso MCP project through `npx daiso` and the publ
 
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
 2. 웹 읽기(open/WebFetch)가 가능하면 아래 HTML GET을 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 검색(search)은 URL 열기(open)를 대신하지 않습니다.
-3. 위 두 수단이 없을 때만 외부 통신 가능한 셸에서 루트 POST를 사용합니다. 셸 DNS 실패를 웹 GET 실패나 서버 장애로 확대하지 말고 웹 읽기가 가능하면 HTML GET으로 전환합니다.
+3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 셸 호출로 우회하지 않으며, 셸 DNS 오류를 웹 GET 실패로 확대하지 않습니다. 실제로 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
 https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3
 
@@ -34,15 +34,6 @@ https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&p
 상품 이미지는 해당 조회 응답의 imageUrl만 사용합니다. 전체 URL과 query string을 유지하고, 없거나 표시되지 않으면 생략하며 image_query·이미지 검색·검색 캐러셀을 사용하거나 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다. 실제 도구·URL·반환 데이터·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
 공개 MCP는 https://mcp.aka.page, Streamable HTTP, 인증 없음입니다. 연결은 표준 initialize 절차를 사용합니다. 공개 도구 10개는 늘리지 않습니다. 기존 서비스별 이름은 deprecated 별칭이며 새 호출에 쓰지 않습니다.
-
-셸 전용 대안은 다음과 같습니다. SSE의 error/result.isError를 확인하고 result.structuredContent.products 또는 content[].text에서 실제 결과를 읽으세요.
-
-```bash
-curl -fsS -N --max-time 20 'https://mcp.aka.page/' \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_products","arguments":{"service":"daiso","query":"수납박스","pageSize":3}}}'
-```
 
 ## Core Rule
 

@@ -4,22 +4,15 @@ README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리�
 
 ## 설치 없이 첫 조회
 
-공개 원격 MCP는 `https://mcp.aka.page`이며 Streamable HTTP 방식이고 인증·API 키가 필요 없습니다.
-에이전트용 짧은 안내는 [빠른 시작](https://mcp.aka.page/llms.txt)에 있습니다. 첫 조회에는 이 상세 레퍼런스나 전체 도구 목록을 먼저 읽을 필요가 없습니다.
+**ChatGPT 및 웹 읽기 에이전트는 터미널을 실행하지 말고 WebFetch 또는 URL 열기(open) 도구로 아래 링크를 직접 여세요.** 설치·API 키·MCP 연결 설정 없이 상품 검색 결과를 읽을 수 있습니다. 검색 도구(search)는 URL 열기를 대신하지 않습니다.
 
-연결된 MCP 도구가 있으면 `search_products`에 `service=daiso`를 전달합니다. 없으면 셸이 있어도 웹 읽기의 [첫 HTML GET](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)을 먼저 엽니다. 모든 후속 웹 GET에도 `format=html`을 붙입니다. 셸 DNS 실패는 웹 GET 실패가 아니며 실제 실행하지 않은 요청을 실패했다고 보고하지 않습니다.
+[WebFetch로 다이소 수납박스 3개 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3)
 
-위 두 수단이 없고 외부 통신 가능한 셸만 있다면 아래 한 요청으로 실제 MCP 상품 조회를 완료합니다. 루트 POST가 지원하는 서버 전용 단축 경로여서 initialize나 로컬 패키지 설치가 필요 없습니다.
+모든 후속 웹 GET에도 `format=html&guide=2026-10-21.3`을 유지하세요. 상품 검색 결과의 실제 ID로 재고를 조회하고 검색 성공만으로 매장 재고를 단정하지 않습니다. 이미지는 응답 imageUrl과 카드의 원본 Markdown만 사용하고 이미지 검색으로 대체하지 않습니다.
 
-```bash
-curl -sS -N --max-time 20 'https://mcp.aka.page/' \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json, text/event-stream' \
-  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_products","arguments":{"service":"daiso","query":"수납박스","pageSize":3}}}'
-```
+현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-21.3), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
 
-SSE `data:`의 JSON에 `error`가 없고 `result.isError`가 true가 아닌지 확인한 뒤 `result.structuredContent.products`에서 실제 상품을 읽습니다. 검색에 성공하면 결과부터 보여주고 추가 진단은 생략합니다.
-범용 MCP 클라이언트는 표준 initialize 흐름을 사용하며 `/mcp`는 초기화가 필요합니다. 웹 읽기가 가능하면 위 HTML GET을 우선 사용하세요.
+이미 연결된 MCP 도구가 있는 환경만 `search_products`에 `service=daiso`, `query=수납박스`를 전달합니다. 서버는 https://mcp.aka.page 이며 Streamable HTTP, 인증 없음입니다. 실제로 실행한 도구·URL·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
 ### 구형 도구 레퍼런스의 범위
 
