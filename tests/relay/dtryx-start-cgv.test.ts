@@ -34,7 +34,7 @@ it('CGV와 디트릭스 조회가 같은 쿼터를 소비하고 CGV 건강 상�
   vi.stubEnv('CONVENIENCE_RELAY_TOKEN', undefined);
   vi.stubEnv('CONVENIENCE_RELAY_STATE_DIR', undefined);
   vi.stubGlobal('fetch', vi.fn().mockImplementation((url: URL | string) => Promise.resolve(
-    String(url).includes('jp.daisonet.com') ? Response.json({ handle: '4550746075917', title: 'ボウル', price: 22000, available: true }) : String(url).includes('cgv.co.kr') ? Response.json({ statusCode: 0, data: [] }) : Response.json({ RetCode: 'success', Recordset: [] }),
+    new URL(String(url)).hostname === 'jp.daisonet.com' ? Response.json({ handle: '4550746075917', title: 'ボウル', price: 22000, available: true }) : ['api.cgv.co.kr', 'cgv.co.kr'].includes(new URL(String(url)).hostname) ? Response.json({ statusCode: 0, data: [] }) : Response.json({ RetCode: 'success', Recordset: [] }),
   )));
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
   vi.spyOn(process, 'once').mockImplementation(((signal: string, listener: () => void) => {
