@@ -244,3 +244,22 @@ it('누락·차단·오염된 상품 HTML은 빈 결과 대신 안전한 형식 
     expect(() => parser.parseProductPage(html, '4550746075917')).not.toThrow('secret');
   }
 });
+
+it('공식 사이트 일시중단 공지를 파서 변경이나 매장 없음으로 오인하지 않는다', () => {
+  const notice =
+    '<title>当サイト一時停止のお知らせ | DAISO（ダイソー）公式企業サイト</title><h1 class="page-title">当サイト一時停止のお知らせ</h1><p>システムの安全性を確保するため、当サイトを一時的に停止しております。</p>';
+  expect(() => parseStoreSearch(notice)).toThrow(
+    expect.objectContaining({ code: 'DAISO_JP_MAINTENANCE', status: 503, retryable: true }),
+  );
+});
+
+it('일시중단 문구 하나만 있는 다른 HTML은 공식 점검으로 단정하지 않는다', () => {
+  for (const html of [
+    '<title>当サイト一時停止のお知らせ | DAISO（ダイソー）公式企業サイト</title>',
+    '<h1>当サイト一時停止のお知らせ</h1>',
+  ]) {
+    expect(() => parseStoreSearch(html)).toThrow(
+      expect.objectContaining({ code: 'DAISO_JP_PARSE_FAILED', status: 502 }),
+    );
+  }
+});

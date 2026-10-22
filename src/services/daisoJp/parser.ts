@@ -143,6 +143,17 @@ function coordinate(value: string | null, limit: number): number | null {
 }
 
 export function parseStoreSearch(html: string): { stores: JapanStore[]; hasNext: boolean } {
+  if (
+    /<title>当サイト一時停止のお知らせ \| DAISO（ダイソー）公式企業サイト<\/title>/.test(html) &&
+    /<h1\b[^>]*>当サイト一時停止のお知らせ<\/h1>/.test(html)
+  ) {
+    throw new ServiceError(
+      'DAISO_JP_MAINTENANCE',
+      '일본 다이소 공식 매장 사이트가 일시 중단되었습니다. 잠시 후 다시 조회해주세요.',
+      503,
+      true,
+    );
+  }
   const blocks = html.split(/<li\b[^>]*class=["']resultList-item["'][^>]*>/i).slice(1);
   if (blocks.length === 0) {
     if (/class=["']resultList["']/.test(html) && /該当する店舗がありません/.test(html)) {
