@@ -809,49 +809,20 @@ GET /api/cgv/timetable?playDate={YYYYMMDD}&theaterCode={극장코드}&movieCode=
 
 ## 사용 예시
 
-```
-사용자: 수납박스 검색해줘
-AI: daiso_search_products 도구로 제품 목록 조회
+웹 읽기(open/WebFetch)는 아래 경로로 실행합니다. `{...}`는 앞선 실제 응답 또는 사용자가 알려 준 조건으로 바꾸고 각 값을 한 번 URL 인코딩합니다. 모든 결과는 자동 HTML입니다.
 
-사용자: 이 제품 안산 중앙역 근처 매장에 재고 있어?
-AI: daiso_check_inventory 도구로 특정 매장 재고 확인
+| 사용자 요청 | 웹 조회 경로 |
+| --- | --- |
+| 수납박스 검색 | `/browse/daiso/products/수납박스/pageSize/3` |
+| 선택한 상품의 안산 중앙역 재고 | `/browse/daiso/inventory/{실제상품ID}/안산중앙역` |
+| 강남역 다이소 매장 | `/browse/daiso/stores/강남역` |
+| 선택한 매장의 진열 위치 | `/browse/daiso/display-location/{실제상품ID}/{재고응답의storeCode}` |
+| 명동 올리브영 매장 | `/browse/oliveyoung/stores/명동` |
+| 강남 CU 과자 재고 | `/browse/cu/inventory/과자/강남` |
+| 잠실 롯데시네마 극장 | `/browse/lottecinema/theaters/잠실` |
+| 선택한 CGV 극장 시간표 | `/browse/cgv/timetable/playDate/{YYYYMMDD}/theaterCode/{실제극장코드}` |
 
-사용자: 강남역 근처 다이소 매장 찾아줘
-AI: daiso_find_stores 도구로 매장 검색
-
-사용자: 이 상품 이 매장 어디에 있어?
-AI: daiso_get_display_location 도구로 매장 내 진열 위치 조회
-
-사용자: 명동 근처 올리브영 매장 찾아줘
-AI: oliveyoung_find_nearby_stores 도구로 주변 매장 검색
-
-사용자: 올리브영 선크림 재고 확인해줘
-AI: oliveyoung_check_inventory 도구로 재고/매장 정보 조회
-
-사용자: 강남 근처 CU 매장 찾아줘
-AI: cu_find_nearby_stores 도구로 CU 매장 검색
-
-사용자: CU 과자 재고 확인해줘
-AI: cu_check_inventory 도구로 CU 재고/매장 정보 조회
-
-사용자: 강남역 근처 메가박스 지점 찾아줘
-AI: megabox_find_nearby_theaters 도구로 주변 지점 조회
-
-사용자: 메가박스 강남점 영화 목록과 잔여 좌석 알려줘
-AI: megabox_list_now_showing / megabox_get_remaining_seats 도구로 회차/좌석 조회
-
-사용자: 잠실 근처 롯데시네마 지점 찾아줘
-AI: lottecinema_find_nearby_theaters 도구로 주변 지점 조회
-
-사용자: 롯데시네마 월드타워 영화 목록과 잔여 좌석 알려줘
-AI: lottecinema_list_now_showing / lottecinema_get_remaining_seats 도구로 회차/좌석 조회
-
-사용자: 서울 지역 CGV 극장 목록 알려줘
-AI: cgv_find_theaters 도구로 CGV 극장 목록 조회
-
-사용자: CGV 강남 상영 영화랑 시간표 알려줘
-AI: cgv_search_movies / cgv_get_timetable 도구로 영화/시간표 조회
-```
+이미 연결된 MCP 도구가 있으면 웹 GET 대신 [공개 통합 도구](mcp-tools.md)를 사용합니다. 예를 들어 상품 검색은 `search_products(service=daiso, query=수납박스)`, 실제 상품 ID로 재고 조회는 `check_inventory(service=daiso, operation=by_id, productId=실제ID, keyword=사용자지역)`입니다. 위 상세 레퍼런스의 deprecated 별칭을 새 호출 예제로 사용하지 않습니다.
 
 <br>
 

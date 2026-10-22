@@ -12,21 +12,23 @@
 
 ## 호출 예시
 
-원격 MCP `https://mcp.aka.page`에서 다음 도구를 호출합니다.
+이미 연결된 원격 MCP 도구가 있으면 다음 통합 도구를 호출합니다. 상세 ID는 검색 결과의 실제 코드를 사용합니다.
 
 ```json
-{"name":"daiso_jp_search_products","arguments":{"query":"ボウル","page":1}}
-{"name":"daiso_jp_get_product","arguments":{"id":"4550746075917"}}
-{"name":"daiso_jp_find_stores","arguments":{"keyword":"東京都渋谷区","page":1}}
+{"name":"search_products","arguments":{"service":"daiso_jp","query":"ボウル","page":1}}
+{"name":"get_product_details","arguments":{"service":"daiso_jp","operation":"product","id":"검색한 실제 코드"}}
+{"name":"find_stores","arguments":{"service":"daiso_jp","keyword":"東京都渋谷区","page":1}}
 ```
 
-웹 읽기 에이전트는 후속 요청을 포함해 반드시 `format=html`을 지정합니다.
+연결된 MCP 도구가 없는 웹 읽기 에이전트는 open/WebFetch로 아래 `/browse/` 링크를 엽니다. 모든 후속 조회도 `/browse/`를 사용하며 자동 HTML이므로 쿼리 문자열이나 format 지정은 필요 없습니다.
 
 - [상품 검색](https://mcp.aka.page/browse/daiso-jp/products/%E3%83%9C%E3%82%A6%E3%83%AB)
 - [상품 상세](https://mcp.aka.page/browse/daiso-jp/product/4550746075917)
 - [매장 검색](https://mcp.aka.page/browse/daiso-jp/stores/%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%8B%E8%B0%B7%E5%8C%BA)
 
-개발자용 JSON 응답은 기존처럼 format을 생략하면 됩니다. 페이지는 원본 페이지 단위이며 `hasNext`가 true인 경우에만 page를 증가시킵니다. 전체 검색을 한 번에 수집하지 않습니다.
+개발자용 JSON 클라이언트는 기존 `/api/daiso-jp/` 계약을 사용합니다. 구형 HTML 쿼리 주소는 하위호환용입니다. 웹 조회에서 다음 페이지는 응답의 링크를 우선하고 `hasNext`가 true인 경우에만 `/page/2`처럼 경로의 page 값을 증가시킵니다. 전체 검색을 한 번에 수집하지 않습니다.
+
+아래 명령은 CLI를 선택한 환경의 예시입니다. 웹 읽기 요청에 CLI 설치나 실행을 요구하지 않습니다.
 
 ```sh
 npx daiso jp-products ボウル --json

@@ -1,6 +1,6 @@
 # 앱 연결·CLI·Skill 가이드
 
-[무설치 원격 MCP 첫 조회](../README.md#원격-mcp로-바로-시작하기)부터 시작하세요.
+연결된 MCP 도구가 있으면 [원격 MCP 안내](../README.md#원격-mcp로-바로-시작하기)를 따릅니다. 웹 읽기만 가능하면 설치·연결 설정 없이 [첫 상품 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)를 open/WebFetch로 바로 여세요. 모든 후속 조회도 쿼리 없는 `/browse/` 경로를 사용하며 자동 HTML입니다.
 원격 서버는 `https://mcp.aka.page`, 전송 방식은 Streamable HTTP, 사용자 인증은 없습니다.
 
 ## 원격 MCP 연결

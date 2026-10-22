@@ -167,8 +167,8 @@ GPT Actions가 이미 연결된 환경은 `queryAction(action=...)`을 사용하
 - CU 재고 조회 시 `keyword`는 필수이며 필요 시 `storeKeyword`를 함께 사용
 - 이마트24 재고 조회는 `pluCd` + `storeKeyword` 또는 `pluCd` + `bizNoArr` 조합을 사용
 - 이마트24 매장 조회 후 `storeCode`를 모아 `bizNoArr`로 전달할 수 있고, 대화형 흐름에서는 기존 매장 키워드를 다시 넣어도 됨
-- 올리브영에서 "어떤 거 있나요", "종류 보여줘", "상품 목록" 요청은 먼저 `search_products(service=oliveyoung)` 또는 `/api/oliveyoung/products` 사용
-- `search_products(service=oliveyoung)` 또는 `/api/oliveyoung/products` 응답의 `products[].imageUrl`이 있으면 각 상품 이미지를 반드시 마크다운으로 전부 렌더링
+- 올리브영에서 "어떤 거 있나요", "종류 보여줘", "상품 목록" 요청은 먼저 `search_products(service=oliveyoung)` 또는 `/browse/oliveyoung/products/{검색어}` 사용
+- `search_products(service=oliveyoung)` 또는 `/browse/oliveyoung/products/{검색어}` 응답의 `products[].imageUrl`이 있으면 각 상품 이미지를 반드시 마크다운으로 전부 렌더링
 - 올리브영 이미지 URL의 query string(`?l=ko` 등)은 마크다운 렌더링 시 절대 삭제하지 않으며, 전체 URL을 그대로 사용
 - 올리브영 매장/재고 조회는 위치값(`lat`,`lng`)이 있으면 함께 사용
 - 올리브영 재고 조회 결과에 `storeInventory`가 있으면 매장별 `stockLabel`, `remainQuantity`를 우선 사용
@@ -183,6 +183,6 @@ GPT Actions가 이미 연결된 환경은 `queryAction(action=...)`을 사용하
 - 롯데시네마 좌석 조회는 `playDate(YYYYMMDD)` 사용, 가능하면 `theaterId`/`movieId`를 함께 사용
 - CGV 극장/영화/시간표 조회는 `keyword`(예: 안산 중앙역) 또는 위치값(`lat`,`lng`)이 있으면 함께 사용
 - CGV 좌석 조회는 `playDate(YYYYMMDD)` 사용, 가능하면 `theaterCode`/`movieCode`를 함께 사용
-- CGV 잔여 좌석은 별도 좌석 API가 아니라 `get_showtimes(service=cgv, operation=timetable)` 또는 `/api/cgv/timetable` 응답의 `timetable[].remainingSeats`로 확인
+- CGV 잔여 좌석은 별도 좌석 API가 아니라 `get_showtimes(service=cgv, operation=timetable)` 또는 `/browse/cgv/timetable/playDate/{YYYYMMDD}/theaterCode/{실제극장코드}` 응답의 `timetable[].remainingSeats`로 확인
 - 지역명도 좌표도 없으면 사용자의 지역을 확인하고 기본 좌표 결과를 사용자 주변 결과로 단정하지 않음
 - 정상 빈 결과·재고 0·미확인 수량·원본 차단·자체 한도·인증 오류를 구분하며 실패를 품절로 바꾸지 않음
