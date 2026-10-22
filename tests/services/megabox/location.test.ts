@@ -211,4 +211,12 @@ describe('무료 위치 해석 계약', () => {
   mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ documents: [{ place_name: '부산역', address_name: '부산 동구', x: '129.041', y: '35.115' }] })));
   expect(await resolveMegaboxLocation({ keyword: '부산역' }, { kakaoRestApiKey: 'free' })).toMatchObject({ areaCode: '26', latitude: 35.115 });
  });
+ it('경기 광주시 주소는 광주광역시가 아닌 경기 지역으로 결정한다', async () => {
+  mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ documents: [{ place_name: '경안동', address_name: '경기 광주시 경안동', x: '127.255', y: '37.41' }] })));
+  expect(await resolveMegaboxLocation({ keyword: '경안동' }, { kakaoRestApiKey: 'free' })).toMatchObject({ areaCode: '41' });
+ });
+ it('광주광역시 주소는 광주 지역으로 결정한다', async () => {
+  mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ documents: [{ place_name: '광주송정역', address_name: '광주 광산구 송정동', x: '126.793', y: '35.137' }] })));
+  expect(await resolveMegaboxLocation({ keyword: '광주송정역' }, { kakaoRestApiKey: 'free' })).toMatchObject({ areaCode: '29' });
+ });
 });

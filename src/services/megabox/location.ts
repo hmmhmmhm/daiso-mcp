@@ -107,12 +107,17 @@ function isValidCoordinate(value: number | undefined): value is number {
 
 function resolveAreaCodeFromText(text: string): string | null {
   const normalized = text.replace(/\s+/g, '');
+  // 목록 순서가 아니라 텍스트에서 가장 앞에 나온 지역을 사용합니다. (예: "경기 광주시"는 광주광역시가 아닌 경기도)
+  let matchedAreaCode: string | null = null;
+  let matchedIndex = Number.POSITIVE_INFINITY;
   for (const [region, areaCode] of MEGABOX_AREA_CODE_BY_REGION) {
-    if (normalized.includes(region.replace(/\s+/g, ''))) {
-      return areaCode;
+    const index = normalized.indexOf(region);
+    if (index !== -1 && index < matchedIndex) {
+      matchedAreaCode = areaCode;
+      matchedIndex = index;
     }
   }
-  return null;
+  return matchedAreaCode;
 }
 
 export async function resolveMegaboxLocation(
