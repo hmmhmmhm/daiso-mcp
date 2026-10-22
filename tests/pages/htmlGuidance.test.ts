@@ -4,7 +4,7 @@ import { buildAgentStartText } from '../../src/pages/agentStart.js';
 import { generatePromptText } from '../../src/pages/prompt.js';
 import app from '../../src/index.js';
 
-const rule = '모든 /api/* GET 조회 URL에 format=html을 반드시 포함하세요';
+const rule = '웹 읽기 전용 에이전트는 /browse/ 경로를 사용하세요';
 describe('웹 읽기 전용 에이전트 안내', () => {
   it('첫 화면과 llms 및 prompt 앞부분에서 HTML 필수 규칙을 발견한다', () => {
     const assets = buildDiscoveryAssets({ services: [], tools: [] });
@@ -15,9 +15,9 @@ describe('웹 읽기 전용 에이전트 안내', () => {
   });
   it('전체 상세 GET 예시가 HTML 형식이고 JSON 스키마 설명과 혼동하지 않는다', () => {
     const prompt = generatePromptText('https://guide.example');
-    const urls = prompt.match(/https:\/\/guide\.example\/api\/[^\s]+/g)!;
+    const urls = prompt.match(/https:\/\/guide\.example\/browse\/[^\s]+/g)!;
     expect(urls.length).toBeGreaterThan(30);
-    for (const url of urls) expect(url).toMatch(/[?&]format=html/);
+    for (const url of urls) expect(url).not.toContain('?');
     expect(prompt).not.toContain('아래 상세 REST API 요청은 GET 방식이며, 결과는 JSON으로 반환됩니다.');
     expect(prompt).toContain('기본 JSON 응답의 구조');
   });

@@ -1,7 +1,19 @@
 /** API가 명시한 페이지 정보만 사용해 검색 조건을 보존합니다. */
 import { toBrowsePath } from './browsePaths.js';
+const PAGE_ROUTES = new Set([
+  '/api/daiso/products',
+  '/api/daiso/inventory',
+  '/api/daiso-jp/products',
+  '/api/daiso-jp/stores',
+  '/api/seveneleven/products',
+  '/api/emart24/products',
+  '/api/emart24/stores',
+  '/api/oliveyoung/products',
+  '/api/oliveyoung/inventory',
+]);
+
 export function browsePageLinks(source: URL, body: unknown): { label: string; path: string }[] {
-  if (!body || typeof body !== 'object' || !toBrowsePath(source)) return [];
+  if (!body || typeof body !== 'object' || !PAGE_ROUTES.has(source.pathname)) return [];
   const result = body as {
     success?: boolean;
     meta?: { page?: number; pageSize?: number; total?: number };
@@ -15,7 +27,8 @@ export function browsePageLinks(source: URL, body: unknown): { label: string; pa
       result.meta?.pageSize ??
       0,
   );
-  if (!Number.isSafeInteger(page) || page < 1) return [];
+  const maxPage = source.pathname.startsWith('/api/daiso-jp/') ? 100 : Number.MAX_SAFE_INTEGER - 1;
+  if (!Number.isSafeInteger(page) || page < 1 || page > maxPage) return [];
   const links: { label: string; path: string }[] = [];
   const add = (label: string, next: number) => {
     const target = new URL(source);
@@ -24,14 +37,21 @@ export function browsePageLinks(source: URL, body: unknown): { label: string; pa
   };
   if (page > 1) add('이전 페이지', page - 1);
   const nextPage = result.data?.nextPage;
-  if (typeof nextPage === 'number' && Number.isSafeInteger(nextPage) && nextPage > page) {
+  if (
+    typeof nextPage === 'number' &&
+    Number.isSafeInteger(nextPage) &&
+    nextPage > page &&
+    nextPage <= maxPage
+  ) {
     add('다음 페이지', nextPage);
   } else if (
-    result.data?.hasNext === true ||
-    (Number.isSafeInteger(size) &&
-      size > 0 &&
-      typeof result.meta?.total === 'number' &&
-      page * size < result.meta.total)
+    page < maxPage &&
+    (result.data?.hasNext === true ||
+      (Number.isSafeInteger(size) &&
+        size > 0 &&
+        typeof result.meta?.total === 'number' &&
+        result.data?.hasNext !== false &&
+        page * size < result.meta.total))
   ) {
     add('다음 페이지', page + 1);
   }

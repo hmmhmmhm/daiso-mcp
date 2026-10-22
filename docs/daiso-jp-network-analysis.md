@@ -22,9 +22,9 @@
 
 웹 읽기 에이전트는 후속 요청을 포함해 반드시 `format=html`을 지정합니다.
 
-- [상품 검색](https://mcp.aka.page/api/daiso-jp/products?q=%E3%83%9C%E3%82%A6%E3%83%AB&format=html)
-- [상품 상세](https://mcp.aka.page/api/daiso-jp/products/4550746075917?format=html)
-- [매장 검색](https://mcp.aka.page/api/daiso-jp/stores?keyword=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%8B%E8%B0%B7%E5%8C%BA&format=html)
+- [상품 검색](https://mcp.aka.page/browse/daiso-jp/products/%E3%83%9C%E3%82%A6%E3%83%AB)
+- [상품 상세](https://mcp.aka.page/browse/daiso-jp/product/4550746075917)
+- [매장 검색](https://mcp.aka.page/browse/daiso-jp/stores/%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%8B%E8%B0%B7%E5%8C%BA)
 
 개발자용 JSON 응답은 기존처럼 format을 생략하면 됩니다. 페이지는 원본 페이지 단위이며 `hasNext`가 true인 경우에만 page를 증가시킵니다. 전체 검색을 한 번에 수집하지 않습니다.
 

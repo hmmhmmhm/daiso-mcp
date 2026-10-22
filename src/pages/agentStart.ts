@@ -1,24 +1,27 @@
 /** 검색·읽기 사본의 안내 세대를 구분하는 고정 버전 */
-export const AGENT_GUIDE_VERSION = '2026-10-21.3';
-export const AGENT_GUIDE_UPDATED = '2026-10-21';
+export const AGENT_GUIDE_VERSION = '2026-10-22.1';
+export const AGENT_GUIDE_UPDATED = '2026-10-22';
 export const AGENT_GUIDE_STAMP = `안내 버전: ${AGENT_GUIDE_VERSION} · 갱신일: ${AGENT_GUIDE_UPDATED}`;
 export const AGENT_GUIDE_PATH = `/guide/${AGENT_GUIDE_VERSION}`;
-export const HTML_GUIDE_QUERY = `&guide=${AGENT_GUIDE_VERSION}`;
-export const WEB_SEARCH_DESCRIPTION = 'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 바로 상품을 조회하세요. URL 열기로 /api/daiso/products?q=검색어&format=html을 사용합니다. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
+export const WEB_SEARCH_DESCRIPTION =
+  'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 바로 상품을 조회하세요. open/WebFetch로 /browse/daiso/products/검색어를 엽니다. 쿼리 문자열과 format 지정은 필요 없습니다. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
 
-/** 웹 읽기 환경에서 조회 형식을 선택하는 공통 규칙 */
-export const WEB_READ_RULE = '웹 읽기 전용 에이전트: 모든 /api/* GET 조회 URL에 format=html을 반드시 포함하세요. 상품 검색뿐 아니라 상세·매장·재고·후속 조회에도 적용합니다. 아래 문서의 JSON 응답 예시는 필드 설명이며 웹 읽기로 JSON 주소를 열라는 뜻이 아닙니다. JSON URL이 읽히지 않으면 format=html로 다시 조회하고, 그 실패만으로 서비스 장애·로그인 필요·이 환경에서 실행할 수 없다고 단정하지 마세요.';
+/** 웹 읽기 환경에서 쿼리 없는 HTML 경로를 우선합니다. */
+export const WEB_READ_RULE =
+  '웹 읽기 전용 에이전트는 /browse/ 경로를 사용하세요. 상품 검색·상세·매장·재고·후속 조회가 모두 자동 HTML입니다. format이나 쿼리 문자열은 필요 없습니다. JSON API 주소를 웹 읽기로 열거나 셸로 우회하지 마세요. 접근 오류만으로 서비스 장애·로그인 필요·이 환경에서 실행할 수 없다고 단정하지 마세요.';
 
 /** 셸 존재를 네트워크 접근 가능 여부로 오해하지 않는 실행 순서 */
 export const ROUTE_SELECTION_TEXT = `1. 연결된 MCP 도구가 있으면 search_products {"service":"daiso","query":"수납박스","pageSize":3}를 호출합니다.
-2. 웹 읽기(open/WebFetch)가 가능하면 HTML GET 주소를 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 웹 검색(search)은 URL 열기(open)를 대신하지 않습니다.
+2. 웹 읽기(open/WebFetch)가 가능하면 /browse/ HTML GET 주소를 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 웹 검색(search)은 URL 열기(open)를 대신하지 않습니다.
 3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 터미널·셸 호출로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 확대하지 말고 실제로 실행하지 않은 요청의 실패를 만들지 마세요.`;
 
 /** 유사 상품의 웹 검색 이미지를 실제 상품 사진으로 오인하지 않도록 제한합니다. */
-export const IMAGE_SOURCE_RULE = '상품 이미지는 해당 조회 응답의 imageUrl만 사용하세요. image_query·이미지 검색·검색 이미지 캐러셀은 사용하지 마세요. 카드의 원본 이미지 Markdown을 그대로 쓰고, 표시할 수 없으면 원본 링크와 텍스트만 제공하세요. 전체 URL과 query string을 유지합니다. imageUrl이 없거나 표시되지 않으면 이미지를 생략하고 웹 검색 이미지·다른 상품·다른 국가의 이미지로 대체하지 마세요.';
+export const IMAGE_SOURCE_RULE =
+  '상품 이미지는 해당 조회 응답의 imageUrl만 사용하세요. image_query·이미지 검색·검색 이미지 캐러셀은 사용하지 마세요. 카드의 원본 이미지 Markdown을 그대로 쓰고, 표시할 수 없으면 원본 링크와 텍스트만 제공하세요. 전체 URL과 query string을 유지합니다. imageUrl이 없거나 표시되지 않으면 이미지를 생략하고 웹 검색 이미지·다른 상품·다른 국가의 이미지로 대체하지 마세요.';
 
 /** 실행 기록 없이 성공·실패나 HTTP 상태를 단정하지 않도록 안내합니다. */
-export const EXECUTION_EVIDENCE_RULE = '실제로 실행한 도구·요청 URL·반환 데이터와 확인된 오류만 보고하세요. 실행하지 않은 웹 GET을 실패했다고 말하거나 검색 결과·문서 예제를 실제 조회 결과로 제시하지 마세요. 도구가 HTTP 상태를 제공하지 않으면 HTTP 200이라고 추정하지 마세요. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.';
+export const EXECUTION_EVIDENCE_RULE =
+  '실제로 실행한 도구·요청 URL·반환 데이터와 확인된 오류만 보고하세요. 실행하지 않은 웹 GET을 실패했다고 말하거나 검색 결과·문서 예제를 실제 조회 결과로 제시하지 마세요. 도구가 HTTP 상태를 제공하지 않으면 HTTP 200이라고 추정하지 마세요. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.';
 
 /** 설치 없이 첫 실제 조회를 실행하는 에이전트 안내 */
 export function buildAgentStartText(baseUrl: string): string {
@@ -34,16 +37,18 @@ ${AGENT_GUIDE_STAMP}
 
 ${ROUTE_SELECTION_TEXT}
 
-웹 읽기용 첫 조회 (사용자 검색어로 q를 바꾸세요):
-${baseUrl}/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html${HTML_GUIDE_QUERY}
-이것은 공개 REST GET이며 MCP 프로토콜 호출이 아닙니다. 상품 결과의 실제 id로 상세·재고를 조회하고 모든 후속 URL에도 format=html과 guide=${AGENT_GUIDE_VERSION}을 유지하세요. 상품 검색만으로 매장 재고를 단정하지 마세요.
+웹 읽기용 첫 조회 (경로의 수납박스를 사용자 검색어로 바꾸세요):
+${baseUrl}/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3
+핫식스: ${baseUrl}/browse/daiso/products/%ED%95%AB%EC%8B%9D%EC%8A%A4
+강남역 매장: ${baseUrl}/browse/daiso/stores/%EA%B0%95%EB%82%A8%EC%97%AD
+이것은 공개 REST GET의 웹 조회이며 MCP 프로토콜 호출이 아닙니다. 상품 결과의 실제 id로 /browse/daiso/product/{id} 또는 /browse/daiso/inventory/{id}/{사용자 지역}을 여세요. 모든 후속 조회도 /browse/를 사용하세요. 검색어의 각 경로 값은 한 번 URL 인코딩합니다. 부가 조건은 /page/2/pageSize/10처럼 이름/값 쌍으로 붙입니다. 주요 검색어 없이 필터만 쓰면 /browse/query/서비스/기능/이름/값을 사용합니다. 상품 검색만으로 매장 재고를 단정하지 마세요.
 
 ${IMAGE_SOURCE_RULE}
 ${EXECUTION_EVIDENCE_RULE}
 
 연결된 MCP 클라이언트는 initialize 절차를 처리합니다. MCP 결과의 isError=true/error를 확인하고 structuredContent 또는 content[].text에서 실제 상품을 읽습니다. 웹 읽기는 WebFetch·open 도구에서 위 HTML GET 링크를 그대로 여세요.
 기존 서비스별 MCP 이름은 deprecated 호출 별칭입니다. 새 연동은 공개 도구 10개만 사용하며 도구를 늘리지 않습니다.
-상세 API와 서비스 안내: ${baseUrl}/prompt?guide=${AGENT_GUIDE_VERSION}
+상세 API와 서비스 안내: ${baseUrl}/prompt · 전체 웹 조회: ${baseUrl}/browse
 
 ---
 
@@ -63,5 +68,8 @@ export function createAgentStartResponse(baseUrl: string): Response {
 /** 오래된 버전 주소도 현재 안내로 연결하며 영구 리다이렉트 캐시를 만들지 않습니다. */
 export function createVersionedGuideResponse(baseUrl: string, version: string): Response {
   if (version === AGENT_GUIDE_VERSION) return createAgentStartResponse(baseUrl);
-  return new Response(null, { status: 307, headers: { Location: AGENT_GUIDE_PATH, 'Cache-Control': 'no-store' } });
+  return new Response(null, {
+    status: 307,
+    headers: { Location: AGENT_GUIDE_PATH, 'Cache-Control': 'no-store' },
+  });
 }

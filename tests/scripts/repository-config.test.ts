@@ -315,10 +315,11 @@ describe('repository maintenance configuration', () => {
     expect(fastStart).toContain('설치·API 키 없이');
     expect(fastStart).toMatch(/\| 인증\s*\| 없음\s*\|/);
     expect(readme).toContain('로컬 설치·빌드·API 키 준비 없이');
-    expect(fastStart).toContain('docs/service-reference.md?guide=2026-10-21.3#설치-없이-첫-조회');
+    expect(fastStart).toContain('docs/service-reference.md?guide=2026-10-22.1#설치-없이-첫-조회');
     const directCall = readText('docs/service-reference.md').split('### MCP 표준 응답 모델')[0];
     expect(directCall).toContain('WebFetch');
-    expect(directCall).toContain('format=html&guide=2026-10-21.3');
+    expect(directCall).toContain('/browse/daiso/products/');
+    expect(directCall).toContain('쿼리 문자열');
     expect(directCall).not.toMatch(/\bcurl\b|--data/);
     expect(directCall).toContain('`search_products`');
     expect(directCall).toContain('`service=daiso`');

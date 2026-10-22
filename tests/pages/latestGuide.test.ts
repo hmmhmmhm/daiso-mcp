@@ -4,7 +4,7 @@ import app from '../../src/index.js';
 import { buildDiscoveryAssets } from '../../src/pages/discovery.js';
 import { apiResultHtml } from '../../src/pages/apiResult.js';
 
-const version = '2026-10-21.3';
+const version = '2026-10-22.1';
 describe('최신 안내 경로와 원본 이미지', () => {
   it.each(['/guide/latest', '/guide/2026-10-21.2', '/guide/unknown'])('%s는 캐시 없이 현재 버전으로 연결한다', async path => {
     const r = await app.request(path);
@@ -17,30 +17,30 @@ describe('최신 안내 경로와 원본 이미지', () => {
     expect(r.status).toBe(200);
     expect(r.headers.get('Cache-Control')).toBe('no-store');
     expect(text).toContain('안내 버전: '+version);
-    expect(text).toContain('format=html&guide='+version);
+    expect(text).toContain('/browse/daiso/products/');
     expect(text).toContain('image_query');
     expect(text).toContain('이미지 검색');
   });
-  it('프롬프트의 전체 HTML API 예제는 현재 guide 버전을 한 번씩 전달한다', async () => {
+  it('프롬프트의 전체 웹 조회 예제는 쿼리 없는 browse 경로다', async () => {
     const text=await (await app.request('/prompt')).text();
-    const urls=text.match(/https?:\/\/[^\s]+\/api\/[^\s]+/g)!;
+    const urls=text.match(/https?:\/\/[^\s]+\/browse\/[^\s]+/g)!;
     expect(urls.length).toBeGreaterThan(30);
     for(const url of urls) {
-      expect(url).toContain('format=html&guide='+version);
-      expect(url.match(/guide=/g)).toHaveLength(1);
+      expect(url).not.toContain('?');
+      expect(url).not.toContain('guide=');
     }
   });
   it('발견 HTML/robots/sitemap에서 현재 버전 안내를 발견한다', () => {
     const a = buildDiscoveryAssets({ services: [], tools: [] });
     for (const key of ['discovery.html','robots.txt','sitemap.xml']) expect(a[key]).toContain('/guide/'+version);
-    expect(a['discovery.html']).toContain('guide='+version);
+    expect(a['discovery.html']).toContain('/browse/daiso/products/');
     expect(a['_headers']).toContain('Cache-Control: no-store');
   });
   it('HTML 후속 링크와 원본 Markdown은 현재 버전을 사용하고 JSON 캐시는 유지한다', async () => {
     const a = new Hono(); a.use('/api/*', apiResultHtml);
     a.get('/api/daiso/products', c => c.json({ data: { products: [{ id:'p1',name:'상품[1]\\표기\n이름',imageUrl:'https://cdn.example/p.png?l=ko&x=2' }] } },200,{'Cache-Control':'public, max-age=30'}));
     const r = await a.request('/api/daiso/products?format=html&guide=old');const text = await r.text();
-    expect(text).toContain('href="/api/daiso/products/p1?format=html&amp;guide='+version+'"');
+    expect(text).toContain('href="/browse/daiso/product/p1"');
     expect(text).toContain('복사할 원본 이미지 Markdown');
     expect(text).toContain('![');
     expect(text).toContain('https://cdn.example/p.png?l=ko&amp;x=2');

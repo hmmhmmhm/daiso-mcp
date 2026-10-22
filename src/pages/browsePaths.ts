@@ -62,10 +62,14 @@ export function toBrowsePath(source: URL): string | null {
     if (key === 'format' || key === 'guide' || key.startsWith('utm_')) params.delete(key);
   }
   if (route.detail) {
-    params.set(
-      'productId',
-      decodeURIComponent(source.pathname.slice(source.pathname.lastIndexOf('/') + 1)),
-    );
+    try {
+      params.set(
+        'productId',
+        decodeURIComponent(source.pathname.slice(source.pathname.lastIndexOf('/') + 1)),
+      );
+    } catch {
+      return null;
+    }
   }
   const parts: string[] = [];
   const primary = route.positional[0];
@@ -79,7 +83,9 @@ export function toBrowsePath(source: URL): string | null {
   }
   for (const [key, value] of params) parts.push(encodeSegment(key), encodeSegment(value));
   const base =
-    friendly || params.size === 0 ? route.path : route.path.replace('/browse/', '/browse/query/');
+    friendly || params.size === 0 || route.positional.length === 0
+      ? route.path
+      : route.path.replace('/browse/', '/browse/query/');
   return base + (parts.length ? '/' + parts.join('/') : '');
 }
 

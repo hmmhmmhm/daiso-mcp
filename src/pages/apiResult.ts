@@ -42,8 +42,8 @@ function productImage(value: unknown, name: string): string {
 function renderValue(
   value: unknown,
   productLinks: string | null,
-  product = false,
-  source?: URL,
+  product: boolean,
+  source: URL,
 ): string {
   if (value === null || typeof value !== 'object') return escapeHtml(value);
   if (Array.isArray(value)) {
@@ -69,7 +69,7 @@ function renderValue(
           detail += ` <a href="${escapeHtml(toBrowsePath(new URL('/api/daiso/inventory?productId=' + encodeURIComponent(String(item)), 'https://browse.local')))}">매장 재고 (사용자 지역을 경로에 추가하세요)</a>`;
       }
       if (
-        source?.pathname === '/api/daiso/inventory' &&
+        source.pathname === '/api/daiso/inventory' &&
         key === 'storeCode' &&
         (typeof item === 'string' || typeof item === 'number') &&
         source.searchParams.has('productId')

@@ -27,9 +27,9 @@ Use this skill to operate the Daiso MCP project through `npx daiso` and the publ
 2. 웹 읽기(open/WebFetch)가 가능하면 아래 HTML GET을 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 검색(search)은 URL 열기(open)를 대신하지 않습니다.
 3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 셸 호출로 우회하지 않으며, 셸 DNS 오류를 웹 GET 실패로 확대하지 않습니다. 실제로 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
-https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3
+https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3
 
-검색어 q를 사용자 요청으로 바꾸고 상세·매장·재고를 포함한 모든 후속 웹 GET에도 `format=html`을 반드시 붙이세요. 첫 조회 전에 npx·패키지·스킬 설치, health/help, 전체 도구 목록이나 OpenAPI 탐색을 요구하지 않습니다. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.
+경로의 검색어를 사용자 요청으로 바꾸고 상세·매장·재고를 포함한 모든 후속 웹 GET에도 `/browse/`를 사용하세요. 자동 HTML이며 쿼리 문자열은 필요 없습니다. 첫 조회 전에 npx·패키지·스킬 설치, health/help, 전체 도구 목록이나 OpenAPI 탐색을 요구하지 않습니다. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.
 
 상품 이미지는 해당 조회 응답의 imageUrl만 사용합니다. 전체 URL과 query string을 유지하고, 없거나 표시되지 않으면 생략하며 image_query·이미지 검색·검색 캐러셀을 사용하거나 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다. 실제 도구·URL·반환 데이터·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
@@ -113,7 +113,7 @@ Lotte Mart is discontinued; MINISO is unsupported. Japan DAISO supports products
 
 ## Fallbacks
 
-- npx 또는 Node.js를 사용할 수 없으면 use connected MCP tools or open the equivalent HTML GET through web reading. Append format=html to every web GET. If neither is available, report the actual limitation without inventing results.
+- npx 또는 Node.js를 사용할 수 없으면 use connected MCP tools or open the equivalent HTML GET through web reading. Use query-free /browse/ paths for every web GET. HTML is automatic. If neither is available, report the actual limitation without inventing results.
 - For network failures, retry once with a narrower query, then report the failing service and command.
 - For no results, preserve the command used and suggest a broader keyword or nearby area.
 - Switch from CLI to MCP only when the user is configuring an AI app, the shell cannot run `npx`, or the host environment already exposes the MCP server.

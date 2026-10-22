@@ -6,21 +6,27 @@ README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리�
 
 **ChatGPT 및 웹 읽기 에이전트는 터미널을 실행하지 말고 WebFetch 또는 URL 열기(open) 도구로 아래 링크를 직접 여세요.** 설치·API 키·MCP 연결 설정 없이 상품 검색 결과를 읽을 수 있습니다. 검색 도구(search)는 URL 열기를 대신하지 않습니다.
 
-[WebFetch로 다이소 수납박스 3개 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html&guide=2026-10-21.3)
+[WebFetch로 다이소 수납박스 3개 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)
 
-[핫식스 상품 검색](https://mcp.aka.page/api/daiso/products?format=html&guide=2026-10-21.3&pageSize=10&q=%ED%95%AB%EC%8B%9D%EC%8A%A4) · [강남 매장 검색](https://mcp.aka.page/api/daiso/stores?format=html&guide=2026-10-21.3&keyword=%EA%B0%95%EB%82%A8)
+[핫식스 상품 검색](https://mcp.aka.page/browse/daiso/products/%ED%95%AB%EC%8B%9D%EC%8A%A4/pageSize/10) · [강남 매장 검색](https://mcp.aka.page/browse/daiso/stores/%EA%B0%95%EB%82%A8)
 
 웹 읽기 도구에서는 위 링크를 직접 열어 조회하세요. URL 접근 오류가 나오면 실제 오류를 보고하고 상품 없음이나 재고 0으로 해석하지 마세요.
 
-모든 후속 웹 GET에도 `format=html&guide=2026-10-21.3`을 유지하세요. 상품 검색 결과의 실제 ID로 재고를 조회하고 검색 성공만으로 매장 재고를 단정하지 않습니다. 이미지는 응답 imageUrl과 카드의 원본 Markdown만 사용하고 이미지 검색으로 대체하지 않습니다.
+모든 후속 웹 GET도 `/browse/`를 사용하세요. 자동 HTML이며 쿼리 문자열이나 format 지정은 필요 없습니다. 상품 검색 결과의 실제 ID로 재고를 조회하고 검색 성공만으로 매장 재고를 단정하지 않습니다. 이미지는 응답 imageUrl과 카드의 원본 Markdown만 사용하고 이미지 검색으로 대체하지 않습니다.
 
-현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-21.3), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
+현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-22.1), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
 
 이미 연결된 MCP 도구가 있는 환경만 `search_products`에 `service=daiso`, `query=수납박스`를 전달합니다. 서버는 https://mcp.aka.page 이며 Streamable HTTP, 인증 없음입니다. 실제로 실행한 도구·URL·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
 ### 구형 도구 레퍼런스의 범위
 
 아래 서비스별 MCP 이름은 하위호환용 **deprecated 별칭** 레퍼런스입니다. 새 연동의 호출 예제로 사용하지 마세요. 현재 공개 MCP 도구는 정확히 10개이며 [통합 도구와 구형 매핑](mcp-tools.md)을 사용합니다. REST와 CLI 계약은 유지합니다.
+
+### 웹 조회 경로 구성
+
+`/browse/daiso/products/핫식스/pageSize/3`처럼 주요 검색어 뒤에 부가 조건을 이름/값 쌍으로 붙입니다. 상품 상세는 `/browse/daiso/product/{실제ID}`, 지역 재고는 `/browse/daiso/inventory/{실제ID}/{사용자지역}`입니다. 주요 검색어 없이 필터만 쓰면 `/browse/query/daiso/stores/sido/서울/gugun/마포구`처럼 구성합니다. 각 값은 한 번 URL 인코딩하며 응답의 후속 링크를 우선합니다. [전체 지원 웹 조회](https://mcp.aka.page/browse)에서 다른 서비스 경로를 확인합니다.
+
+아래 `/api/`와 JSON 모델은 기존 개발자 연동 계약입니다. 웹 읽기 전용 에이전트는 이 JSON 주소를 실행하지 않습니다. 기존 HTML 쿼리 주소도 하위호환으로 유지합니다.
 
 ### MCP 표준 응답 모델
 

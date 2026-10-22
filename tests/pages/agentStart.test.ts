@@ -22,7 +22,7 @@ describe('에이전트 시작 안내', () => {
     expect(text).toContain('initialize');
     expect(text).toContain('REST GET');
     expect(text).toContain('MCP 프로토콜 호출이 아닙니다');
-    expect(text).toContain('/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3');
+    expect(text).toContain('/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3');
     expect(text).toContain('https://example.com/prompt');
     expect(text).toContain('전체 도구 목록이나 OpenAPI를 먼저 읽을 필요는 없습니다');
     expect(text.split('\n').length).toBeLessThan(45);
@@ -33,7 +33,7 @@ describe('에이전트 시작 안내', () => {
     const text = generatePromptText(baseUrl);
     expect(text.startsWith(buildAgentStartText(baseUrl))).toBe(true);
     expect(text.indexOf('# 다이소 MCP API')).toBeGreaterThan(text.indexOf('REST GET'));
-    expect(text).toContain('/api/daiso/inventory?productId={제품ID}');
+    expect(text).toContain('/browse/daiso/inventory/{제품ID}');
     expect(text).toContain('MCP 지원 서비스');
   });
 

@@ -44,7 +44,7 @@ describe('일본 다이소 표시와 발견', () => {
     ])
       expect(spec.paths[p]).toBeDefined();
     const prompt = generatePromptText('https://local');
-    expect(prompt).toContain('/api/daiso-jp/products?q=');
+    expect(prompt).toContain('/browse/daiso-jp/products/');
     expect(prompt).toContain('일본 매장 재고 조회는 아직 지원하지 않습니다.');
   });
 });

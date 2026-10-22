@@ -5,7 +5,7 @@
 export function buildPromptReferenceText(baseUrl: string): string {
   return `## 응답 형식
 
-아래 JSON은 기본 JSON 응답의 구조입니다. 웹 읽기 전용 에이전트는 같은 API에 format=html을 반드시 포함해 HTML 결과를 읽으세요.
+아래 JSON은 기본 JSON 응답의 구조입니다. 웹 읽기 전용 에이전트는 /browse/ 경로로 HTML 결과를 읽으세요. 쿼리 문자열이나 format은 필요 없습니다.
 
 ### 성공 응답
 \`\`\`json
@@ -65,12 +65,12 @@ export function buildPromptReferenceText(baseUrl: string): string {
 
 ## 에이전트 실행 레시피
 
-- "콜라 어디가 싸?", "컵라면 가격 비교해줘": 먼저 \`compare_products\` 또는 /api/compare/products를 호출합니다. 실제 재고와 매장 행사가가 필요하면 최저가 후보의 서비스별 재고/상품 도구로 한 번 더 확인합니다.
-- "강남역 근처 카페", "성수동 브런치 음식점": 브랜드를 되묻지 말고 \`find_places\` (service=places) 또는 /api/places/search를 호출합니다. 이 검색은 키워드 기반이므로 좌표 반경 결과처럼 단정하지 않습니다.
+- "콜라 어디가 싸?", "컵라면 가격 비교해줘": 먼저 \`compare_products\` 또는 /browse/compare/products를 호출합니다. 실제 재고와 매장 행사가가 필요하면 최저가 후보의 서비스별 재고/상품 도구로 한 번 더 확인합니다.
+- "강남역 근처 카페", "성수동 브런치 음식점": 브랜드를 되묻지 말고 \`find_places\` (service=places) 또는 /browse/places/search를 호출합니다. 이 검색은 키워드 기반이므로 좌표 반경 결과처럼 단정하지 않습니다.
 - "다이소 핫식스 재고", "올리브영 두바이초콜릿 있어?": 상품이 브랜드와 어색해 보여도 브랜드를 바꾸지 말고 먼저 다이소로 검색하거나 명시된 서비스로 검색합니다. 결과가 없을 때만 다른 서비스 대안을 제안합니다.
 - "GS25 강남 오감자 재고": 상품명과 위치를 분리해 상품 후보를 먼저 찾고, 선택한 itemCode나 keyword와 storeKeyword로 재고를 확인합니다.
 - "오늘 강남 CGV 시간표": 오늘 날짜는 KST 기준 YYYYMMDD로 계산하고, theaterCode가 없으면 극장 검색 후 시간표를 조회합니다.
-- MCP 기능이 제대로 동작하지 않거나 개선/신규 기능 요청이 있으면 \`submit_request\` (requestType=developer, request에 제목과 설명) 또는 /api/feedback/requests를 사용해 개발자에게 전달합니다. 제목과 설명은 필수입니다.
+- MCP 기능이 제대로 동작하지 않거나 개선/신규 기능 요청이 있으면 \`submit_request\` (requestType=developer, request에 제목과 설명) 또는 연결된 MCP를 통해 개발자에게 전달합니다. 웹 GET으로 요청을 제출하지 않습니다. 제목과 설명은 필수입니다.
 - 도구 호출이 실패하면 같은 도구를 한 번 더 좁은 조건으로 재시도합니다. 두 번 실패하면 실패한 서비스와 요청 조건을 밝히고 추측으로 결과를 만들지 않습니다.
 - 결과에 imageUrl이 있으면 각 항목 이미지 표시를 우선합니다. 쿼리 문자열이 있는 이미지 URL도 그대로 사용합니다.
 
@@ -93,10 +93,10 @@ export function buildPromptReferenceText(baseUrl: string): string {
    - **규칙 6**: \`imageUrl\`에 query string이 있으면 \`?l=ko\` 같은 쿼리를 절대 삭제하거나 정규화하지 말고, 마크다운 이미지 src에 전체 URL을 그대로 사용하세요.
    - **규칙 7**: 이미지 src를 비교하거나 캐시 키를 판단할 때도 hostname + pathname만 쓰지 말고 query string까지 포함한 전체 URL을 기준으로 취급하세요.
 5. **재고 확인 워크플로우**:
-   - 먼저 /api/daiso/products로 제품 검색
+   - 먼저 /browse/daiso/products로 제품 검색
    - 결과에서 원하는 제품의 id 확인
-   - /api/daiso/inventory에 해당 id와 확인한 매장 조건, format=html로 재고 조회
-   - 진열 위치가 필요하면 재고 응답의 storeCode를 확인한 뒤 /api/daiso/display-location에 productId + storeCode로 조회
+   - /browse/daiso/inventory/{실제id}/{확인한매장명}으로 재고 조회
+   - 진열 위치가 필요하면 재고 응답의 storeCode를 확인한 뒤 /browse/daiso/display-location/{실제productId}/{실제storeCode}로 조회
    - 다이소 재고 조회는 storeCode가 필요하지 않습니다.
 6. **최소 정보 요청 처리**:
    - 사용자가 상품명만 주면 먼저 상품 검색 도구로 후보를 찾고, 응답의 productId/itemCode/pluCd를 다음 단계에 전달합니다.
@@ -108,12 +108,12 @@ export function buildPromptReferenceText(baseUrl: string): string {
    - 너무 넓은 축약어로만 매칭된 경우에는 확정 상품처럼 단정하지 말고, 추정 매칭임을 짧게 밝힌 뒤 재고를 안내합니다.
    - 위치/브랜드/상품명은 한 인자에 섞지 말고 가능한 한 분리해서 도구에 전달합니다.
 8. **위치 기반 재고**: lat, lng 파라미터로 가까운 매장 우선 조회
-10. **세븐일레븐 재고 조회**: /api/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
-11. **이마트24 재고 조회**: /api/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
+10. **세븐일레븐 재고 조회**: /browse/seveneleven/inventory에 keyword + storeKeyword를 함께 주면 매장별 수량을 바로 확인할 수 있습니다.
+11. **이마트24 재고 조회**: /browse/emart24/inventory는 pluCd + storeKeyword 조합도 지원하므로, 상품 선택 뒤 매장 코드를 다시 모으지 않아도 됩니다.
 12. **올리브영 재고 해석**: inventory.products[].storeInventory.stores[]가 있으면 그 매장별 stockLabel과 remainQuantity를 우선 사용하고, inStock는 그 주변 매장 기준 결과로 해석합니다.
-13. **올리브영 상품 이미지 표시**: /api/oliveyoung/products 또는 search_products(service=oliveyoung) 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
-14. **통합 가격 후보 비교**: 사용자가 브랜드를 특정하지 않고 "어디가 싸?", "비교해줘"처럼 물으면 \`compare_products\` 또는 /api/compare/products를 먼저 사용합니다. 새 외부 키 없이 기존 상품 검색을 묶은 1차 가격 후보이므로 실제 재고/행사가는 각 서비스 상세 조회로 확인해야 합니다.
-15. **주변 음식점/카페 검색**: 음식점이나 카페만 물으면 \`find_places\` (service=places) 또는 /api/places/search를 먼저 사용합니다. 이 기능은 네이버 지역 검색 기반 키워드 검색이므로 좌표 반경 검색처럼 단정하지 말고, \`searchMode: "keyword"\`임을 필요할 때 짧게 밝혀주세요.
+13. **올리브영 상품 이미지 표시**: /browse/oliveyoung/products 또는 search_products(service=oliveyoung) 결과에 imageUrl이 있으면 목록형 답변에서도 각 상품 이미지를 생략하지 말고 모두 렌더링합니다. 특히 \`?l=ko\` 같은 query string을 삭제하지 말고 전체 URL 그대로 마크다운 이미지 src에 넣습니다.
+14. **통합 가격 후보 비교**: 사용자가 브랜드를 특정하지 않고 "어디가 싸?", "비교해줘"처럼 물으면 \`compare_products\` 또는 /browse/compare/products를 먼저 사용합니다. 새 외부 키 없이 기존 상품 검색을 묶은 1차 가격 후보이므로 실제 재고/행사가는 각 서비스 상세 조회로 확인해야 합니다.
+15. **주변 음식점/카페 검색**: 음식점이나 카페만 물으면 \`find_places\` (service=places) 또는 /browse/places/search를 먼저 사용합니다. 이 기능은 네이버 지역 검색 기반 키워드 검색이므로 좌표 반경 검색처럼 단정하지 말고, \`searchMode: "keyword"\`임을 필요할 때 짧게 밝혀주세요.
 
 ---
 

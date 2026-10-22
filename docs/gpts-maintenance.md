@@ -6,7 +6,7 @@
 
 이 GPT는 원격 MCP 연결이 아니라 GPT Actions의 REST 연동입니다. 등록 스키마는 https://mcp.aka.page/openapi.json, 인증은 없음, 개인정보처리방침은 https://mcp.aka.page/privacy 입니다. 스키마를 다시 불러온 뒤 operationId `queryAction` 하나를 유지하고 action enum으로 기능을 선택합니다. MCP의 service/operation 인수나 deprecated 도구 이름을 Actions 호출에 그대로 넣지 않습니다. 공개 MCP의 도구10개 고정 규칙은 별도로 유지합니다.
 
-Actions는 JSON 응답을 직접 소비합니다. 웹 검색/웹 읽기로 REST URL을 열 때에만 모든 후속 요청까지 `format=html`을 반드시 넣습니다. 웹으로 페이지를 읽은 것만으로 MCP나 Actions 연결이 생기지는 않습니다.
+Actions는 JSON 응답을 직접 소비합니다. 웹 읽기를 보조 수단으로 사용할 때에는 모든 후속 조회까지 `/browse/` HTML 경로를 사용합니다. 쿼리 문자열은 필요 없습니다. 웹으로 페이지를 읽은 것만으로 MCP나 Actions 연결이 생기지는 않습니다.
 
 ## 갱신용 설명
 
@@ -33,7 +33,7 @@ Actions는 JSON 응답을 직접 소비합니다. 웹 검색/웹 읽기로 REST 
 
 사용자가 개발자 전달을 명시적으로 요청한 경우에만 submitDeveloperRequest를 사용합니다. 제목과 설명을 확인하고 비밀번호·인증 코드·토큰·쿠키·개인정보를 포함하지 않습니다. 테스트나 일반 조회 과정에서 요청을 임의로 제출하지 않습니다.
 
-Actions 응답은 JSON으로 처리합니다. 웹 읽기를 보조 수단으로 사용할 때 모든 /api/* GET 링크에 format=html을 반드시 포함합니다. 웹 읽기 오류만으로 서버 장애나 로그인 필요를 단정하지 않습니다.
+Actions 응답은 JSON으로 처리합니다. 웹 읽기를 보조 수단으로 사용할 때 모든 조회 링크에 쿼리 없는 /browse/ 경로를 사용합니다. HTML 형식은 자동입니다. 웹 읽기 오류만으로 서버 장애나 로그인 필요를 단정하지 않습니다.
 ```
 
 ## 편집·검증

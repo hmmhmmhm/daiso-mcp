@@ -49,10 +49,10 @@ describe('실제 상품 이미지 카드', () => {
 
   it('검색 설명과 공통 안내에 HTML GET 우선과 버전을 표시한다', () => {
     const assets = buildDiscoveryAssets({ services: [], tools: [] });
-    expect(assets['discovery.html']).toMatch(/name="description" content="ChatGPT.*format=html/);
+    expect(assets['discovery.html']).toMatch(/name="description" content="ChatGPT.*browse\//);
     for (const text of [assets['discovery.html'], buildAgentStartText('https://example.com')]) {
-      expect(text).toContain('안내 버전: 2026-10-21.3');
-      expect(text).toContain('갱신일: 2026-10-21');
+      expect(text).toContain('안내 버전: 2026-10-22.1');
+      expect(text).toContain('갱신일: 2026-10-22');
     }
   });
 });

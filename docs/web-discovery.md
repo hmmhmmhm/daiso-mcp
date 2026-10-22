@@ -37,15 +37,15 @@ OpenAI 검색·사용자 요청·학습 봇의 역할과 공개 IP는 [공식 �
 
 ## 웹 읽기만 가능한 채팅 에이전트
 
-샌드박스나 셸 없이 URL만 읽을 수 있다면 [수납박스 HTML 조회](https://mcp.aka.page/api/daiso/products?q=%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4&pageSize=3&format=html)를 먼저 엽니다. 첫 화면과 llms.txt에도 이 링크를 안내합니다. 결과는 서버에서 생성하므로 JavaScript 실행이 필요 없습니다.
+샌드박스나 셸 없이 URL만 읽을 수 있다면 [수납박스 HTML 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)를 먼저 엽니다. 첫 화면과 llms.txt에도 이 링크를 안내합니다. 결과는 서버에서 생성하므로 JavaScript 실행이 필요 없습니다.
 
-공개 `/api/*` GET 경로의 기존 파라미터에 `format=html`을 추가하면 같은 실제 조회 결과를 HTML로 제공합니다. `format`을 생략하면 기존 JSON 응답입니다. 예: `/api/daiso/stores?keyword=강남&format=html`, `/api/daiso/inventory?productId=실제상품ID&keyword=확인한매장명&lat=확인한위도&lng=확인한경도&format=html`. 상품 목록의 상세 링크도 HTML로 연결합니다. 다른 서비스의 필수 파라미터는 `/prompt`에서 확인합니다.
+공개 `/browse/` GET 경로는 같은 실제 조회 결과를 항상 HTML로 제공합니다. 쿼리 문자열은 필요 없습니다. 기존 `/api/`의 JSON과 구형 HTML 주소는 하위호환으로 유지합니다. 예: `/browse/daiso/stores/%EA%B0%95%EB%82%A8`, `/browse/daiso/inventory/%EC%8B%A4%EC%A0%9C%EC%83%81%ED%92%88ID/%ED%99%95%EC%9D%B8%ED%95%9C%EB%A7%A4%EC%9E%A5%EB%AA%85/lat/%ED%99%95%EC%9D%B8%ED%95%9C%EC%9C%84%EB%8F%84/lng/%ED%99%95%EC%9D%B8%ED%95%9C%EA%B2%BD%EB%8F%84`. 상품 목록의 상세 링크도 HTML로 연결합니다. 다른 서비스의 필수 파라미터는 `/prompt`에서 확인합니다.
 
 HTML은 원래 응답의 성공·오류와 HTTP 상태를 보존합니다. 상품 검색 결과를 매장 재고로 단정하거나 오류를 재고 0으로 해석하면 안 됩니다. POST와 MCP 응답 형식은 변경하지 않습니다. 웹 읽기 도구가 HTML 접근도 거부하는 경우에는 이 옵션만으로 도구 내부 문제를 해결하지 못합니다.
 
 `llms.txt`와 `robots.txt`는 정적 Assets에서도 `text/plain; charset=utf-8`을 명시합니다. UTF-8 본문을 다른 인코딩으로 추측하는 클라이언트에서 한글이 깨지는 것을 방지합니다.
 
-**웹 읽기 전용 에이전트는 모든 `/api/*` GET 조회 URL에 `format=html`을 반드시 붙이세요.** 검색·상세·매장·재고·후속 조회 모두 적용합니다. `/prompt`의 GET URL 예시도 모두 이 형식으로 제공합니다. JSON 스키마 예시는 필드 설명이고 웹 읽기용 URL 안내가 아닙니다. 일반 JSON API와 MCP 클라이언트의 계약은 유지합니다.
+**웹 읽기 전용 에이전트는 검색·상세·매장·재고·후속 조회 모두 `/browse/` 경로를 사용하세요.** `/prompt`의 웹 GET 예시도 이 형식입니다. 쿼리 문자열이나 format 지정은 필요 없습니다. JSON 스키마 예시는 필드 설명이며 일반 JSON API와 MCP 클라이언트 계약은 유지합니다.
 
 ## 실행과 이미지 출처
 
@@ -53,13 +53,13 @@ HTML은 원래 응답의 성공·오류와 HTTP 상태를 보존합니다. 상�
 
 ## 안내 버전과 상품 이미지 카드
 
-현재 안내 버전은 `2026-10-21.3`, 갱신일은 `2026-10-21`입니다. README의 AI 안내, 첫 화면, llms.txt, prompt와 HTML 조회 결과에 표시합니다. 버전이 없거나 다르면 예전 검색 사본일 수 있으므로 실제 읽은 URL과 문구를 확인하고 최신 버전을 읽었다고 추정하지 않습니다. 검색 엔진의 재수집·캐시 반영 시각은 이 배포로 보장하지 않습니다.
+현재 안내 버전은 `2026-10-22.1`, 갱신일은 `2026-10-22`입니다. README의 AI 안내, 첫 화면, llms.txt, prompt와 HTML 조회 결과에 표시합니다. 버전이 없거나 다르면 예전 검색 사본일 수 있으므로 실제 읽은 URL과 문구를 확인하고 최신 버전을 읽었다고 추정하지 않습니다. 검색 엔진의 재수집·캐시 반영 시각은 이 배포로 보장하지 않습니다.
 
 상품 HTML은 이름·ID·원본 필드와 응답 imageUrl의 이미지를 같은 카드에 표시합니다. 이미지 링크는 원본 URL의 쿼리까지 유지하며 HTTPS이고 인증정보가 없는 주소만 사용합니다. imageUrl이 없거나 안전한 이미지 주소가 아니면 이미지 없음으로 표시합니다. 검색 이미지로 채우지 않습니다. JSON API 필드와 오류 상태는 유지합니다.
 
 
 ## 최신 안내의 연결 계약
 
-`/guide/latest` 및 이전 `/guide/버전`은 307과 Cache-Control: no-store로 현재 `/guide/2026-10-21.3`에 연결합니다. 새 버전 배포 시 공통 상수와 README·스킬 안내를 함께 갱신합니다. 첫 화면·robots·sitemap도 같은 상수의 현재 경로를 안내합니다. 외부 캐시가 과거 응답이나 리다이렉트를 재사용하는 것까지 강제할 수는 없습니다.
+`/guide/latest` 및 이전 `/guide/버전`은 307과 Cache-Control: no-store로 현재 `/guide/2026-10-22.1`에 연결합니다. 새 버전 배포 시 공통 상수와 README·스킬 안내를 함께 갱신합니다. 첫 화면·robots·sitemap도 같은 상수의 현재 경로를 안내합니다. 외부 캐시가 과거 응답이나 리다이렉트를 재사용하는 것까지 강제할 수는 없습니다.
 
-첫 HTML 조회와 상품 상세 링크는 format=html 및 guide 버전을 포함합니다. 프롬프트의 REST 예제도 같은 버전을 사용합니다. 안내와 HTML 결과는 no-store를 보내며 기존 JSON/API 원본 캐시 정책은 유지합니다. 이미지 카드에는 원본 imageUrl로 생성한 Markdown을 제공하고 이미지 검색/image_query/캐러셀 대체를 금지합니다. 표시가 불가능하면 원본 링크와 텍스트만 제공합니다.
+첫 HTML 조회와 상세·재고·페이지 이동 링크는 쿼리 없는 `/browse/` 경로입니다. 프롬프트의 웹 GET 예제도 같은 경로를 사용하며 안내 버전은 `/guide/latest`에서 확인합니다. 안내와 HTML 결과는 no-store를 보내며 기존 JSON/API 원본 캐시 정책은 유지합니다. 이미지 카드에는 원본 imageUrl로 생성한 Markdown을 제공하고 이미지 검색/image_query/캐러셀 대체를 금지합니다. 표시가 불가능하면 원본 링크와 텍스트만 제공합니다.

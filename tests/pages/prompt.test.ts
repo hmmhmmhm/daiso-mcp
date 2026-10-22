@@ -17,44 +17,44 @@ describe('generatePromptText', () => {
     const text = generatePromptText('https://api.test.com');
 
     // 제품 검색 API
-    expect(text).toContain('/api/daiso/products');
+    expect(text).toContain('/browse/daiso/products');
     expect(text).toContain('검색 키워드');
 
     // 제품 상세 정보 API
-    expect(text).toContain('/api/daiso/products/{제품ID}');
+    expect(text).toContain('/browse/daiso/product/{제품ID}');
 
     // 매장 찾기 API
-    expect(text).toContain('/api/daiso/stores');
+    expect(text).toContain('/browse/daiso/stores');
 
     // 재고 확인 API
-    expect(text).toContain('/api/daiso/inventory');
-    expect(text).toContain('/api/daiso/display-location');
+    expect(text).toContain('/browse/daiso/inventory');
+    expect(text).toContain('/browse/daiso/display-location');
 
     // 올리브영 API
-    expect(text).toContain('/api/oliveyoung/stores');
-    expect(text).toContain('/api/oliveyoung/products');
+    expect(text).toContain('/browse/oliveyoung/stores');
+    expect(text).toContain('/browse/oliveyoung/products');
     expect(text).toContain('products[].imageUrl');
-    expect(text).toContain('/api/oliveyoung/inventory');
-    expect(text).not.toContain('/api/lottemart/stores');
-    expect(text).not.toContain('/api/lottemart/products');
-    expect(text).toContain('/api/gs25/stores');
-    expect(text).toContain('/api/gs25/products');
-    expect(text).toContain('/api/gs25/inventory');
-    expect(text).toContain('/api/seveneleven/inventory');
-    expect(text).toContain('/api/places/search');
+    expect(text).toContain('/browse/oliveyoung/inventory');
+    expect(text).not.toContain('/browse/lottemart/stores');
+    expect(text).not.toContain('/browse/lottemart/products');
+    expect(text).toContain('/browse/gs25/stores');
+    expect(text).toContain('/browse/gs25/products');
+    expect(text).toContain('/browse/gs25/inventory');
+    expect(text).toContain('/browse/seveneleven/inventory');
+    expect(text).toContain('/browse/places/search');
 
     // 메가박스 API
-    expect(text).toContain('/api/megabox/theaters');
-    expect(text).toContain('/api/megabox/movies');
-    expect(text).toContain('/api/megabox/seats');
-    expect(text).toContain('/api/lottecinema/theaters');
-    expect(text).toContain('/api/lottecinema/movies');
-    expect(text).toContain('/api/lottecinema/seats');
+    expect(text).toContain('/browse/megabox/theaters');
+    expect(text).toContain('/browse/megabox/movies');
+    expect(text).toContain('/browse/megabox/seats');
+    expect(text).toContain('/browse/lottecinema/theaters');
+    expect(text).toContain('/browse/lottecinema/movies');
+    expect(text).toContain('/browse/lottecinema/seats');
 
     // CGV API
-    expect(text).toContain('/api/cgv/theaters');
-    expect(text).toContain('/api/cgv/movies');
-    expect(text).toContain('/api/cgv/timetable');
+    expect(text).toContain('/browse/cgv/theaters');
+    expect(text).toContain('/browse/cgv/movies');
+    expect(text).toContain('/browse/cgv/timetable');
   });
 
   it('파라미터 설명을 포함한다', () => {
@@ -164,11 +164,11 @@ describe('generatePromptText', () => {
     expect(text).toContain('pluCd + storeKeyword 조합도 지원');
     expect(text).toContain('storeInventory.stores[]');
     expect(text).toContain('stockLabel');
-    expect(text).toContain('/api/megabox/theaters?keyword=');
+    expect(text).toContain('/browse/megabox/theaters/');
     expect(text).toContain('가장 가까운 지점을 먼저 선택');
-    expect(text).toContain('/api/lottecinema/theaters?keyword=');
+    expect(text).toContain('/browse/lottecinema/theaters/');
     expect(text).toContain('theaterId가 없으면 위치 키워드 기준 최근접 지점을 선택');
-    expect(text).toContain('/api/cgv/theaters?playDate=20260315&keyword=안산%20중앙역');
+    expect(text).toContain('/browse/cgv/theaters/안산%20중앙역/playDate/20260315');
     expect(text).toContain('CGV 상영 시간표를 조회합니다. theaterCode가 없으면');
     expect(text).toContain('올리브영 상품 이미지 표시');
     expect(text).toContain('각 상품 이미지를 생략하지 말고 모두 렌더링');

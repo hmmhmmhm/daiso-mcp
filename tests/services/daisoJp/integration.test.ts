@@ -110,7 +110,7 @@ describe('일본 다이소 연결', () => {
     expect(r.headers.get('content-type')).toContain('text/html');
     const html = await r.text();
     expect(html).toContain('ステンレスボウル');
-    expect(html).toContain('/api/daiso-jp/products/4550746075917?format=html');
+    expect(html).toContain('/browse/daiso-jp/product/4550746075917');
     expect(html).toContain('일본 매장 재고 미지원');
     expect(html).not.toContain('별도로 조회하세요');
   });

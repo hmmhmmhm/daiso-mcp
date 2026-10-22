@@ -135,21 +135,21 @@ https://mcp.aka.page/prompt
 AI: (페이지를 읽고 API 사용법 이해)
 
 사용자: 수납박스 검색해줘
-AI: (https://mcp.aka.page/api/daiso/products?q=수납박스&format=html 호출 후 결과 제공)
+AI: (https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4 호출 후 결과 제공)
 
 사용자: 안산 중앙역 근처 메가박스 지점 찾아줘
-AI: (https://mcp.aka.page/api/megabox/theaters?keyword=안산%20중앙역&format=html 호출 후 결과 제공)
+AI: (https://mcp.aka.page/browse/megabox/theaters/%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD 호출 후 결과 제공)
 
 사용자: 잠실 근처 롯데시네마 지점 찾아줘
-AI: (https://mcp.aka.page/api/lottecinema/theaters?keyword=%EC%9E%A0%EC%8B%A4&format=html 호출 후 결과 제공)
+AI: (https://mcp.aka.page/browse/lottecinema/theaters/%EC%9E%A0%EC%8B%A4 호출 후 결과 제공)
 
 사용자: 오늘 강남 CGV 시간표 알려줘
-AI: (https://mcp.aka.page/api/cgv/timetable?playDate=YYYYMMDD&theaterCode=0056&format=html 호출 후 결과 제공)
+AI: (https://mcp.aka.page/browse/cgv/timetable/playDate/YYYYMMDD/theaterCode/0056 호출 후 결과 제공)
 
 사용자: 안산 중앙역 근처 CGV 찾아서 오늘 영화랑 시간표 알려줘
-AI: (https://mcp.aka.page/api/cgv/theaters?playDate=YYYYMMDD&keyword=안산%20중앙역&format=html 호출 후 결과 제공)
-AI: (https://mcp.aka.page/api/cgv/movies?playDate=YYYYMMDD&keyword=안산%20중앙역&format=html 호출 후 결과 제공)
-AI: (https://mcp.aka.page/api/cgv/timetable?playDate=YYYYMMDD&keyword=안산%20중앙역&format=html 호출 후 결과 제공)
+AI: (https://mcp.aka.page/browse/cgv/theaters/%EC%95%88%EC%82%B0%20%EC%A4%91%EC%95%99%EC%97%AD/playDate/YYYYMMDD 호출 후 결과 제공)
+AI: (https://mcp.aka.page/browse/cgv/movies/playDate/YYYYMMDD/keyword/안산%20중앙역 호출 후 결과 제공)
+AI: (https://mcp.aka.page/browse/cgv/timetable/playDate/YYYYMMDD/keyword/안산%20중앙역 호출 후 결과 제공)
 ```
 
 <br>
