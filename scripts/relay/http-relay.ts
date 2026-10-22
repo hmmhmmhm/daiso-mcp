@@ -291,12 +291,20 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
           error: 'Relay request failed',
           upstreamError: error instanceof RelayError ? error.upstreamError : undefined,
         },
-        status === 429 && work?.stage === 'quota' && error instanceof RelayError && error.quota
-          ? {
-              'x-relay-quota-reason': error.quota.quotaReason,
-              'Retry-After': String(error.quota.retryAfter),
-            }
-          : {},
+        {
+          ...(error instanceof RelayError && error.upstreamStatus !== undefined
+            ? { 'x-relay-upstream-status': String(error.upstreamStatus) }
+            : {}),
+          ...(status === 429 &&
+          work?.stage === 'quota' &&
+          error instanceof RelayError &&
+          error.quota
+            ? {
+                'x-relay-quota-reason': error.quota.quotaReason,
+                'Retry-After': String(error.quota.retryAfter),
+              }
+            : {}),
+        },
       );
     } finally {
       try {

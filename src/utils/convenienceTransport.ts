@@ -171,7 +171,9 @@ async function requestConvenienceRelayRaw<T>(
           '편의점 릴레이 요청에 실패했습니다.',
           status === 429 || status === 503 || status === 504 ? status : 502,
           status === 429 || status >= 500,
-          status,
+          /^[1-5]\d{2}$/.test(response.headers.get('x-relay-upstream-status') ?? '')
+            ? Number(response.headers.get('x-relay-upstream-status'))
+            : status,
           parseRelayQuota(status, response.headers),
         );
       }

@@ -214,3 +214,32 @@ it('캐시 우회 옵션은 인증된 고정 릴레이 요청 헤더로만 전�
     vi.unstubAllGlobals();
   }
 });
+it.each([
+  ['403', 403],
+  ['200', 200],
+  ['599', 599],
+  ['', 502],
+  ['099', 502],
+  ['600', 502],
+  ['403.5', 502],
+  ['secret', 502],
+])('원본 상태 진단을 안전하게 전달한다: %s', async (header, expected) => {
+  vi.stubGlobal(
+    'fetch',
+    async () =>
+      new Response('private upstream body', {
+        status: 502,
+        headers: { 'x-relay-upstream-status': header },
+      }),
+  );
+  try {
+    await expect(requestConvenienceRelay('seven-goods', {}, options)).rejects.toMatchObject({
+      code: 'CONVENIENCE_RELAY_FAILED',
+      status: 502,
+      upstreamStatus: expected,
+      message: '편의점 릴레이 요청에 실패했습니다.',
+    });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
