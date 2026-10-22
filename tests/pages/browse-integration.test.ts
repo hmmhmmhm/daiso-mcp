@@ -33,3 +33,16 @@ it.each([true, false])('기존 일일 한도와 CF 신원을 한 번 적용하�
     expect(await res.text()).toContain('DAILY_RATE_LIMIT_EXCEEDED');
   }
 });
+
+it('재고 0과 미확인 값을 그대로 보존하고 실제 매장의 진열 위치를 연결한다', async () => {
+  const { Hono } = await import('hono');
+  const { apiResultHtml } = await import('../../src/pages/apiResult.js');
+  const { registerBrowseRoutes } = await import('../../src/pages/browse.js');
+  const a = new Hono(); a.use('/api/*', apiResultHtml);
+  a.get('/api/daiso/inventory', c => c.json({ success: true, data: { stores: [{ storeCode: 'S1', quantity: 0 }, { storeCode: 'S2', quantity: null }] } }));
+  registerBrowseRoutes(a);
+  const res = await a.request('/browse/daiso/inventory/105603886/강남역'); const body = await res.text();
+  expect(body).toContain('href="/browse/daiso/display-location/105603886/S1"');
+  expect(body).toContain('<dd>0</dd>'); expect(body).toContain('<dd>null</dd>');
+  expect(body).not.toMatch(/href="\/api\//);
+});
