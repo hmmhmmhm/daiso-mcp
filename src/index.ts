@@ -1,3 +1,4 @@
+import { registerBrowseRoutes } from './pages/browse.js';
 import { applyCompactTools } from './core/compact/server.js';
 import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from './core/compact/catalog.js';
 import { apiResultHtml } from './pages/apiResult.js';
@@ -362,6 +363,7 @@ registerHealthRoutes(app);
 registerRouteHealthRoutes(app);
 registerRateLimitStatsRoutes(app);
 registerServiceRoutes(app);
+registerBrowseRoutes(app);
 
 // 설치 없는 첫 조회 안내
 app.get('/guide/:version', (c) => createVersionedGuideResponse(new URL(c.req.url).origin, c.req.param('version')));
