@@ -237,7 +237,9 @@ describe('fetchLotteCinemaNowShowing', () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ IsOK: true, ResultMessage: 'SUCCESS', PlaySeqs: { Items: [] } })),
+        new Response(
+          JSON.stringify({ IsOK: true, ResultMessage: 'SUCCESS', PlaySeqs: { Items: [] } }),
+        ),
       );
 
     const result = await fetchLotteCinemaNowShowing({ playDate: '20260310', theaterId: '1016' });
@@ -344,7 +346,9 @@ describe('fetchLotteCinemaNowShowing', () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ IsOK: true, ResultMessage: 'SUCCESS', PlaySeqs: { Items: [] } })),
+        new Response(
+          JSON.stringify({ IsOK: true, ResultMessage: 'SUCCESS', PlaySeqs: { Items: [] } }),
+        ),
       );
 
     const result = await fetchLotteCinemaNowShowing({ playDate: '2026-03-10', theaterId: '1016' });
@@ -366,4 +370,28 @@ describe('toYyyymmdd', () => {
   it('Date를 YYYYMMDD로 변환한다', () => {
     expect(toYyyymmdd(new Date('2026-03-10T00:00:00.000Z'))).toBe('20260310');
   });
+});
+
+it.each(['<!DOCTYPE html><html>private upstream content</html>', '{invalid'])(
+  '비 JSON 원본 응답을 안전한 외부 오류로 분류한다: %s',
+  async (body) => {
+    mockFetch.mockResolvedValue(new Response(body, { status: 200 }));
+    await expect(fetchLotteCinemaTicketingPage()).rejects.toMatchObject({
+      code: 'LOTTECINEMA_INVALID_RESPONSE',
+      status: 502,
+      upstreamStatus: 200,
+      retryable: true,
+      message: '롯데시네마 원본 응답을 읽을 수 없습니다. 잠시 후 다시 조회해주세요.',
+    });
+  },
+);
+
+it('JSON 본문 읽기 중 취소는 원본 형식 오류 대신 기존 시간 초과로 유지한다', async () => {
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: async () => {
+      throw new DOMException('aborted', 'AbortError');
+    },
+  });
+  await expect(fetchLotteCinemaTicketingPage()).rejects.toThrow('롯데시네마 API 호출 시간 초과');
 });

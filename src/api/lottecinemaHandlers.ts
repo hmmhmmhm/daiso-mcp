@@ -1,3 +1,4 @@
+import { ServiceError } from '../core/errors.js';
 import { hasInvalidCinemaQuery, CINEMA_INVALID_INPUT } from '../services/cgv/validation.js';
 import { geocodeBindings } from '../utils/geocode.js';
 /**
@@ -9,7 +10,12 @@ import {
   fetchLotteCinemaNearbyTheaters,
   resolveLotteCinemaNearestTheater,
 } from '../services/lottecinema/location.js';
-import { type ApiContext, errorResponse, successResponse } from './response.js';
+import {
+  type ApiContext,
+  errorResponse,
+  serviceErrorResponse,
+  successResponse,
+} from './response.js';
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
   return value === undefined ? undefined : Number(value);
@@ -44,6 +50,7 @@ export async function handleLotteCinemaFindNearbyTheaters(c: ApiContext) {
 
     return successResponse(c, result, { total: result.count, pageSize: limit });
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'lottecinema_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'LOTTECINEMA_THEATER_SEARCH_FAILED', message, 500);
   }
@@ -111,6 +118,7 @@ export async function handleLotteCinemaListNowShowing(c: ApiContext) {
       { total: showtimes.length },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'lottecinema_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'LOTTECINEMA_MOVIE_LIST_FAILED', message, 500);
   }
@@ -188,6 +196,7 @@ export async function handleLotteCinemaGetRemainingSeats(c: ApiContext) {
       { total: seats.length, pageSize: limit },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'lottecinema_request');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'LOTTECINEMA_SEAT_LIST_FAILED', message, 500);
   }

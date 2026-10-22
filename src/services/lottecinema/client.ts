@@ -1,3 +1,4 @@
+import { ServiceError } from '../../core/errors.js';
 /**
  * 롯데시네마 API 클라이언트
  */
@@ -81,7 +82,18 @@ async function requestLotteCinema<T>(
       throw new Error(`롯데시네마 API 호출 실패: ${response.status}`);
     }
 
-    const parsed = (await response.json()) as { IsOK?: boolean; ResultMessage?: string } & T;
+    const parsed = (await response.json().catch((error: unknown) => {
+      if (error instanceof SyntaxError) {
+        throw new ServiceError(
+          'LOTTECINEMA_INVALID_RESPONSE',
+          '롯데시네마 원본 응답을 읽을 수 없습니다. 잠시 후 다시 조회해주세요.',
+          502,
+          true,
+          response.status,
+        );
+      }
+      throw error;
+    })) as { IsOK?: boolean; ResultMessage?: string } & T;
     if (parsed.IsOK === false) {
       throw new Error(`롯데시네마 API 응답 실패: ${parsed.ResultMessage || 'UNKNOWN'}`);
     }
@@ -207,9 +219,7 @@ async function fetchPlaySequenceByPair(
     });
 }
 
-export async function fetchLotteCinemaNowShowing(
-  params: CommonFetchParams,
-): Promise<{
+export async function fetchLotteCinemaNowShowing(params: CommonFetchParams): Promise<{
   theaters: LotteCinemaTheater[];
   movies: LotteCinemaMovie[];
   showtimes: LotteCinemaShowtime[];

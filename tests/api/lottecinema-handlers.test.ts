@@ -460,3 +460,26 @@ describe('handleLotteCinemaGetRemainingSeats', () => {
     expect(ctx.json).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: expect.objectContaining({ message: expect.stringContaining('위치를 좌표로 변환하지 못했습니다') }) }), 500);
   });
 });
+
+it.each([
+  ['theaters', handleLotteCinemaFindNearbyTheaters],
+  ['movies', handleLotteCinemaListNowShowing],
+  ['seats', handleLotteCinemaGetRemainingSeats],
+])('비 JSON 원본을 %s API의 내부 오류나 빈 결과로 바꾸지 않는다', async (_name, handler) => {
+  mockFetch.mockResolvedValue(
+    new Response('<!DOCTYPE html>private upstream content', { status: 200 }),
+  );
+  const ctx = createMockContext({ lat: '37.5132941', lng: '127.104215' });
+  await handler(ctx);
+  expect(ctx.json).toHaveBeenCalledWith(
+    expect.objectContaining({
+      success: false,
+      error: {
+        code: 'LOTTECINEMA_INVALID_RESPONSE',
+        message: '롯데시네마 원본 응답을 읽을 수 없습니다. 잠시 후 다시 조회해주세요.',
+      },
+      diagnostics: expect.objectContaining({ upstreamStatus: 200, retryable: true }),
+    }),
+    502,
+  );
+});
