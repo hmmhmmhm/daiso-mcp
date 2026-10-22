@@ -104,3 +104,14 @@ it('재고 0과 미확인 값을 그대로 보존하고 실제 매장의 진열 
   expect(body).toContain('<dd>null</dd>');
   expect(body).not.toMatch(/href="\/api\//);
 });
+
+it.each([true, false])('운영 인증과 새 조회 헤더는 그대로 전달하며 비인증 우회는 거절한다: %s', async (authorized) => {
+  const fetcher = vi.fn(async () => Response.json({ SearchQueryResult: { Collection: [{ Documentset: { Document: [{ field: { itemCode: '123', itemName: '콜라', stockCheckYn: 'Y' } }] } }] } }));
+  vi.stubGlobal('fetch', fetcher);
+  const env = { HEALTH_CHECK_SECRET: 'fixture-ops-secret', CONVENIENCE_RELAY_URL: 'https://relay.example', CONVENIENCE_RELAY_TOKEN: 'fixture-relay-token' };
+  const res = await app.request('/browse/gs25/products/콜라', { headers: { Authorization: authorized ? 'Bearer fixture-ops-secret' : 'Bearer wrong-fixture-token', 'x-health-check-force-fresh': 'true' } }, env);
+  expect(res.status).toBe(200); expect(await res.text()).toContain('콜라');
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  const [, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+  expect(new Headers(init.headers).get('x-relay-cache-bypass')).toBe(authorized ? 'true' : null);
+});
