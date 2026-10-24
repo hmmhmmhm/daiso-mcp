@@ -1,11 +1,19 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ fork: vi.fn(), connect: vi.fn(), snapshot: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  fork: vi.fn(),
+  connect: vi.fn(),
+  snapshot: vi.fn(),
+  recover: vi.fn(),
+}));
 vi.mock('node:child_process', () => ({ fork: mocks.fork }));
 vi.mock('playwright', () => ({ chromium: { connect: mocks.connect } }));
 vi.mock('../../scripts/relay/ownership.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../scripts/relay/ownership.js')>()),
   processSnapshot: mocks.snapshot,
+}));
+vi.mock('../../scripts/relay/recover-exited-guard.js', () => ({
+  recoverExitedGuard: mocks.recover,
 }));
 import { launchGuardedBrowser } from '../../scripts/relay/supervisor.js';
 afterEach(() => {
@@ -14,7 +22,7 @@ afterEach(() => {
 });
 const root = { pid: 123, ppid: 1, pgid: 123, rss: 10, birth: 'start' };
 function fixture() {
-  const child = Object.assign(new EventEmitter(), { connected: true, send: vi.fn() });
+  const child = Object.assign(new EventEmitter(), { pid: 122, connected: true, send: vi.fn() });
   mocks.fork.mockReturnValue(child);
   mocks.connect.mockResolvedValue({ newContext: vi.fn() });
   mocks.snapshot.mockResolvedValue([root, { ...root, pid: 124, rss: 20 }]);
@@ -63,6 +71,8 @@ it('감시 프로세스 종료가 멈추면 확인 실패로 종료한다', asyn
   await vi.advanceTimersByTimeAsync(9000);
   await rejected;
   expect(child.send).not.toHaveBeenCalled();
+  child.emit('exit', 1);
+  expect(mocks.recover).not.toHaveBeenCalled();
 });
 it('수명 계층의 종료 기한을 IPC에 그대로 전달한다', async () => {
   const child = fixture();
@@ -72,4 +82,72 @@ it('수명 계층의 종료 기한을 IPC에 그대로 전달한다', async () =
   const deadline = Date.now() + 6000;
   await owner.close(deadline);
   expect(child.send).toHaveBeenCalledWith({ type: 'close', deadline });
+});
+
+it('준비된 감시자의 비정상 종료는 소멸 검증 후 다음 실행을 허용한다', async () => {
+  const child = fixture();
+  mocks.recover.mockResolvedValue(true);
+  const pending = launchGuardedBrowser('/tmp/test-owner');
+  child.emit('message', { type: 'ready', endpoint: 'ws://localhost', root });
+  const owner = await pending;
+  child.send.mockImplementation(() => queueMicrotask(() => child.emit('exit', 1)));
+  await Promise.all([owner.close(), owner.close()]);
+  await owner.close();
+  expect(mocks.recover).toHaveBeenCalledTimes(1);
+  expect(mocks.recover).toHaveBeenCalledWith('/tmp/test-owner', 122, root, expect.any(Number));
+});
+it.each([null, 1])('불확실한 종료(%s)는 검증되지 않으면 계속 실패한다', async (code) => {
+  const child = fixture();
+  mocks.recover.mockResolvedValue(false);
+  const pending = launchGuardedBrowser('/tmp/test-owner');
+  child.emit('message', { type: 'ready', endpoint: 'ws://localhost', root });
+  const owner = await pending;
+  child.send.mockImplementation(() => queueMicrotask(() => child.emit('exit', code)));
+  await expect(owner.close()).rejects.toThrow('cleanup unconfirmed');
+  expect(mocks.recover).toHaveBeenCalledTimes(code === null ? 0 : 1);
+});
+
+it('감시자 PID가 없으면 종료 소멸을 추측하지 않는다', async () => {
+  const child = fixture();
+  Object.assign(child, { pid: undefined });
+  const task = launchGuardedBrowser('/tmp/test-owner');
+  child.emit('message', { type: 'ready', endpoint: 'ws://localhost', root });
+  const owner = await task;
+  child.send.mockImplementation(() => queueMicrotask(() => child.emit('exit', 1)));
+  await expect(owner.close()).rejects.toThrow('cleanup unconfirmed');
+  expect(mocks.recover).not.toHaveBeenCalled();
+});
+it('실패한 원본 요청은 유지하고 소멸 확인 뒤 다음 요청에서 세션을 재생성한다', async () => {
+  const { createBrowserLifecycle } = await import('../../scripts/relay/lifecycle.js');
+  mocks.recover.mockResolvedValue(true);
+  const launch = vi.fn(async () => {
+    const child = fixture();
+    const page = Object.assign(new EventEmitter(), {
+      goto: vi.fn().mockResolvedValue(undefined),
+      waitForURL: vi.fn().mockResolvedValue(undefined),
+      evaluate: vi.fn().mockImplementation(async () => {
+        if (launch.mock.calls.length === 1) throw new Error('upstream failed');
+        return { status: 200, body: { status: 'SUCCESS' } };
+      }),
+    });
+    const context = Object.assign(new EventEmitter(), {
+      newPage: vi.fn().mockResolvedValue(page),
+      pages: () => [page],
+    });
+    mocks.connect.mockResolvedValue({ newContext: vi.fn().mockResolvedValue(context) });
+    const pending = launchGuardedBrowser('/tmp/test-owner');
+    child.emit('message', { type: 'ready', endpoint: 'ws://localhost', root });
+    child.send.mockImplementation(() => queueMicrotask(() => child.emit('exit', 1)));
+    return pending;
+  });
+  const life = createBrowserLifecycle(launch);
+  try {
+    await life.start();
+    await expect(life.run('/test', {})).rejects.toThrow('upstream failed');
+    expect(life.status().state).toBe('idle');
+    await expect(life.run('/test', {})).resolves.toMatchObject({ status: 'SUCCESS' });
+    expect(launch).toHaveBeenCalledTimes(2);
+  } finally {
+    await life.close();
+  }
 });

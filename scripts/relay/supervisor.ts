@@ -1,4 +1,5 @@
 /** 독립 감시 프로세스와 연결하고 소유 브라우저의 종료 확인을 기다립니다. */
+import { recoverExitedGuard } from './recover-exited-guard.js';
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -16,10 +17,23 @@ export async function launchGuardedBrowser(markerPath: string): Promise<BrowserO
       resolve(code);
     }),
   );
-  const closed = async (deadline = Date.now() + 9000) => {
-    if (!exited && guard.connected) guard.send({ type: 'close', deadline });
-    const code = await bounded(exit, Math.max(0, deadline - Date.now()));
-    if (code !== 0) throw new Error('Browser guard cleanup unconfirmed');
+  let readyRoot: ProcessIdentity | undefined;
+  let closing: Promise<void> | undefined;
+  const closed = (deadline = Date.now() + 9000): Promise<void> => {
+    closing ??= (async () => {
+      if (!exited && guard.connected) guard.send({ type: 'close', deadline });
+      const code = await bounded(exit, Math.max(0, deadline - Date.now()));
+      if (code === 0) return;
+      if (
+        typeof code === 'number' &&
+        readyRoot &&
+        guard.pid &&
+        (await recoverExitedGuard(markerPath, guard.pid, readyRoot, deadline))
+      )
+        return;
+      throw new Error('Browser guard cleanup unconfirmed');
+    })();
+    return closing;
   };
   try {
     const ready = await bounded(
@@ -33,6 +47,7 @@ export async function launchGuardedBrowser(markerPath: string): Promise<BrowserO
       }),
       40000,
     );
+    readyRoot = ready.root;
     const browser = await bounded(chromium.connect(ready.endpoint), 10000);
     return {
       browser,

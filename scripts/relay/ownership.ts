@@ -47,6 +47,9 @@ const crashHelper = (root: ProcessIdentity, row: ProcessIdentity) => {
 };
 const members = (root: ProcessIdentity, rows: ProcessIdentity[]) =>
   rows.filter((row) => row.pgid === root.pgid || crashHelper(root, row));
+export function hasOwnedProcesses(root: ProcessIdentity, rows: ProcessIdentity[]): boolean {
+  return members(root, rows).length > 0;
+}
 export function ownedGroup(root: ProcessIdentity, rows: ProcessIdentity[]): ProcessIdentity[] {
   if (root.pid !== root.pgid || !rows.some((row) => same(root, row)))
     throw new Error('Browser process identity uncertain');
