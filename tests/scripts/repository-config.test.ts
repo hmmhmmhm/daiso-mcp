@@ -62,7 +62,7 @@ describe('repository maintenance configuration', () => {
       overrides?: Record<string, string | Record<string, string>>;
     };
 
-    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.5', undici: '7.29.1' });
+    expect(pkg.overrides?.miniflare).toEqual({ sharp: '0.35.5', undici: '7.30.1' });
   });
 
   it('brace-expansion은 취약점이 수정된 5.0.8 이상을 사용한다', () => {
