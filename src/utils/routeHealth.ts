@@ -72,7 +72,7 @@ export function validReason(value: unknown): boolean {
   return (
     value === undefined ||
     (typeof value === 'string' &&
-      [
+      ([
         'ok',
         'http',
         'network',
@@ -89,7 +89,10 @@ export function validReason(value: unknown): boolean {
         'response-too-large',
         'cancelled',
         'invalid-input',
-      ].includes(value))
+        'recovered-network-error',
+        'recovered-timeout',
+      ].includes(value) ||
+        /^(?:http-[1-5][0-9]{2}|recovered-http-5[0-9]{2})$/.test(value)))
   );
 }
 export function validTime(value: unknown): value is number {

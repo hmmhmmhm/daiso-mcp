@@ -1,7 +1,8 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 import { refreshRouteChecks } from '../../src/utils/routeProbes.js';
 import { ROUTE_KEYS } from '../../src/utils/routeHealth.js';
-vi.mock('../../src/utils/directRoutes.js', () => ({
+vi.mock('../../src/utils/directRoutes.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/utils/directRoutes.js')>()),
   checkDirectRoute: vi.fn(async (key) => ({ key, direct: key !== 'gs25-stock', checkedAt: 100 })),
   boundedRouteJson: vi.fn(async () => ({ status: 'ok' })),
 }));
@@ -11,7 +12,17 @@ const namespace = {
   idFromName: vi.fn(() => ({})),
   get: vi.fn(() => ({ fetch: fetcher })),
 } as unknown as DurableObjectNamespace;
-afterEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.mocked(checkDirectRoute)
+    .mockReset()
+    .mockImplementation(async (key) => ({
+      key,
+      direct: key !== 'gs25-stock',
+      checkedAt: 100,
+    }));
+  vi.mocked(boundedRouteJson).mockReset().mockResolvedValue({ status: 'ok' });
+  fetcher.mockClear();
+});
 it('skips scheduling work when namespace is absent', async () => {
   await refreshRouteChecks({});
   expect(checkDirectRoute).not.toHaveBeenCalled();
@@ -99,7 +110,7 @@ it('rejects incomplete Access credentials, unsafe URL and invalid health bodies'
       OY_RELAY_TOKEN: 'token',
     });
   }
-  vi.mocked(boundedRouteJson).mockRejectedValueOnce(new Error('private'));
+  vi.mocked(boundedRouteJson).mockRejectedValue(new Error('private'));
   await refreshRouteChecks({
     UPSTREAM_ROUTE_HEALTH: namespace,
     DTRYX_RELAY_URL: 'https://relay.example',

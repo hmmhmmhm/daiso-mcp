@@ -125,7 +125,10 @@ describe('durable state edge cases', () => {
   it('accepts an equal-time probe when no request failure exists', async () => {
     const s = store();
     const checkedAt = Date.now();
-    await s.call('/checks', { checks: [{ key: 'cu-stock', direct: false, checkedAt }], relays: [] });
+    await s.call('/checks', {
+      checks: [{ key: 'cu-stock', direct: false, checkedAt }],
+      relays: [],
+    });
     await s.call('/checks', { checks: [{ key: 'cu-stock', direct: true, checkedAt }], relays: [] });
     expect(await (await s.call('/snapshot')).json()).toMatchObject({
       routes: { 'cu-stock': { direct: true, checkedAt } },
@@ -151,8 +154,14 @@ describe('durable state edge cases', () => {
     { checks: [], relays: [{ group: 'dtryx', healthy: 'yes', checkedAt: 1 }] },
     { checks: [{ key: 'cu-stock', direct: true, checkedAt: -1 }], relays: [] },
     { checks: [{ key: 'cu-stock', direct: true, checkedAt: Date.now() + 90000 }], relays: [] },
-    { checks: Array(ROUTE_KEYS.length + 1).fill({ key: 'cu-stock', direct: true, checkedAt: 1 }), relays: [] },
-    { checks: [], relays: Array(ROUTE_GROUPS.length + 1).fill({ group: 'dtryx', healthy: true, checkedAt: 1 }) },
+    {
+      checks: Array(ROUTE_KEYS.length + 1).fill({ key: 'cu-stock', direct: true, checkedAt: 1 }),
+      relays: [],
+    },
+    {
+      checks: [],
+      relays: Array(ROUTE_GROUPS.length + 1).fill({ group: 'dtryx', healthy: true, checkedAt: 1 }),
+    },
   ])('rejects invalid values %j', async (data) => {
     expect((await store().call('/checks', data)).status).toBe(400);
   });
@@ -197,4 +206,47 @@ it('ignores a delayed failure superseded by a success after its full cooldown', 
   expect(await (await s.call('/snapshot')).json()).toMatchObject({
     routes: { 'cu-stock': { direct: true } },
   });
+});
+
+it.each([
+  'http-401',
+  'http-503',
+  'recovered-network-error',
+  'recovered-timeout',
+  'recovered-http-503',
+])('정해진 중계 진단 %s를 스냅샷에 보존한다', async (reason) => {
+  const s = store();
+  const response = await s.call('/checks', {
+    checks: [],
+    relays: [
+      {
+        group: 'convenience',
+        healthy: reason.startsWith('recovered-'),
+        checkedAt: Date.now(),
+        reason,
+      },
+    ],
+  });
+  expect(response.status).toBe(204);
+  const saved = (await (await s.call('/snapshot')).json()) as {
+    relays: { convenience: { reason: string } };
+  };
+  expect(saved.relays.convenience.reason).toBe(reason);
+});
+it.each([
+  'http-099',
+  'http-600',
+  'http-503-token',
+  'recovered-http-401',
+  'recovered-private-value',
+])('범위를 벗어나거나 원문이 섞인 진단 %s는 거절한다', async (reason) => {
+  const s = store();
+  expect(
+    (
+      await s.call('/checks', {
+        checks: [],
+        relays: [{ group: 'convenience', healthy: false, checkedAt: Date.now(), reason }],
+      })
+    ).status,
+  ).toBe(400);
 });

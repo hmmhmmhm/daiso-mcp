@@ -36,3 +36,47 @@ it('실제 검사 함수는 직접 원본 요청과 중계 건강 GET만 호출�
   expect(cgvCalls.every(([, init]) => init.method === 'GET')).toBe(true);
   expect(storageFetch).toHaveBeenCalledTimes(1);
 });
+
+it('bounds both scheduled health attempts when transport ignores cancellation', async () => {
+  vi.useFakeTimers();
+  const fetcher = vi.fn(async (url: URL) => {
+    if (url.hostname === 'relay.example') return new Promise<Response>(() => {});
+    return Response.json({ status: 'ok', state: 'ready' });
+  });
+  vi.stubGlobal('fetch', fetcher);
+  const storageFetch = vi.fn(async () => Response.json({}));
+  const namespace = {
+    idFromName: () => ({}),
+    get: () => ({ fetch: storageFetch }),
+  } as unknown as DurableObjectNamespace;
+  try {
+    const refreshed = refreshRouteChecks({
+      UPSTREAM_ROUTE_HEALTH: namespace,
+      OY_RELAY_URL: 'https://relay.example',
+      OY_RELAY_TOKEN: 'test',
+    });
+    await vi.waitFor(() => {
+      expect(fetcher.mock.calls.some(([url]) => url.hostname === 'relay.example')).toBe(true);
+    });
+    await vi.advanceTimersByTimeAsync(6000);
+    await refreshed;
+    const relayCalls = (fetcher.mock.calls as unknown as [URL, RequestInit][]).filter(
+      ([url]) => url.hostname === 'relay.example',
+    );
+    expect(relayCalls).toHaveLength(2);
+    expect(
+      relayCalls.every(([url, init]) => url.pathname === '/health' && init.method === 'GET'),
+    ).toBe(true);
+    expect(relayCalls.every(([, init]) => init.signal?.aborted)).toBe(true);
+    const init = (storageFetch.mock.calls[0] as unknown as [string, RequestInit])[1];
+    const payload = JSON.parse(init.body as string);
+    expect(
+      payload.relays.find((row: { group: string }) => row.group === 'oliveyoung'),
+    ).toMatchObject({
+      healthy: false,
+      reason: 'timeout',
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+});

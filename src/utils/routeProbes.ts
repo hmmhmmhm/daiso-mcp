@@ -1,7 +1,8 @@
 /** 주기 검사는 재고 중계를 소비하지 않고 직접 경로와 인증 상태만 기록합니다. */
 import { cgvTransportFromBindings } from '../services/cgv/relayTransport.js';
 import { ROUTE_KEYS, writeRouteChecks, type RouteCheck, type RelayCheck } from './routeHealth.js';
-import { boundedRouteJson, checkDirectRoute } from './directRoutes.js';
+import { boundedRouteJson, checkDirectRoute, DirectRouteError } from './directRoutes.js';
+import { HttpError } from './http.js';
 
 export interface RouteProbeBindings {
   UPSTREAM_ROUTE_HEALTH?: DurableObjectNamespace;
@@ -21,6 +22,27 @@ export interface RouteProbeBindings {
   DTRYX_RELAY_TOKEN?: string;
   DTRYX_ACCESS_CLIENT_ID?: string;
   DTRYX_ACCESS_CLIENT_SECRET?: string;
+}
+
+/** 예외 원문 대신 허용된 진단 코드만 저장합니다. */
+function probeFailureReason(error: unknown): string {
+  if (error instanceof HttpError)
+    return Number.isInteger(error.status) && error.status >= 100 && error.status <= 599
+      ? `http-${error.status}`
+      : 'http-error';
+  if (error instanceof DirectRouteError)
+    return [
+      'timeout',
+      'network-error',
+      'invalid-response',
+      'response-too-large',
+      'cancelled',
+      'pinned-relay',
+    ].includes(error.reason)
+      ? error.reason
+      : 'invalid-response';
+  if (error instanceof Error && error.name === 'AbortError') return 'cancelled';
+  return 'network-error';
 }
 
 async function checkRelay(
@@ -62,16 +84,28 @@ async function checkRelay(
     headers['CF-Access-Client-Id'] = id;
     headers['CF-Access-Client-Secret'] = secret;
   }
-  try {
-    const result = await boundedRouteJson(url, { method: 'GET', headers }, 3000);
-    if (!result || typeof result !== 'object' || Array.isArray(result))
-      return failure('invalid-response');
-    const data = result as Record<string, unknown>;
-    const healthy = group === 'oliveyoung' ? data.state === 'ready' : data.status === 'ok';
-    return healthy ? { group, healthy, checkedAt } : failure('unavailable');
-  } catch {
-    return failure('network-error');
-  }
+  const attempt = async (): Promise<RelayCheck> => {
+    try {
+      const result = await boundedRouteJson(url, { method: 'GET', headers }, 3000);
+      if (!result || typeof result !== 'object' || Array.isArray(result))
+        return failure('invalid-response');
+      const data = result as Record<string, unknown>;
+      const healthy = group === 'oliveyoung' ? data.state === 'ready' : data.status === 'ok';
+      return healthy ? { group, healthy, checkedAt } : failure('unavailable');
+    } catch (error) {
+      return failure(probeFailureReason(error));
+    }
+  };
+  const first = await attempt();
+  // 일시적인 전송 장애만 건강 GET으로 한 번 확인합니다. 재고 요청은 재시도하지 않습니다.
+  if (
+    first.reason !== 'network-error' &&
+    first.reason !== 'timeout' &&
+    !/^http-5\d{2}$/.test(first.reason || '')
+  )
+    return first;
+  const confirmed = await attempt();
+  return confirmed.healthy ? { ...confirmed, reason: `recovered-${first.reason}` } : confirmed;
 }
 
 export async function refreshRouteChecks(env: RouteProbeBindings): Promise<void> {
@@ -82,8 +116,8 @@ export async function refreshRouteChecks(env: RouteProbeBindings): Promise<void>
     const checkedAt = Date.now();
     try {
       checks.push(await checkDirectRoute(key));
-    } catch {
-      checks.push({ key, direct: false, checkedAt, reason: 'network-error' });
+    } catch (error) {
+      checks.push({ key, direct: false, checkedAt, reason: probeFailureReason(error) });
     }
   });
   const cgv = cgvTransportFromBindings(env);
