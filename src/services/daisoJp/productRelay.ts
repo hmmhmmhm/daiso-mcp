@@ -2,6 +2,7 @@
 import { ServiceError } from '../../core/errors.js';
 import { diagnosticHeaders } from '../../utils/diagnostics.js';
 import { parseRelayQuota } from '../../utils/relayQuota.js';
+import { parseRetryAfterDelayMs } from '../../utils/http.js';
 import {
   dtryxTransportFromBindings,
   isValidDtryxRelayUrl,
@@ -84,6 +85,7 @@ export async function requestJapanProductRelay(
       if (response.status !== 200) {
         void response.body?.cancel().catch(() => undefined);
         const status = response.status;
+        const delay = status === 429 ? parseRetryAfterDelayMs(response) : null;
         const upstreamStatus = /^[1-5]\d{2}$/.test(
           response.headers.get('x-relay-upstream-status') ?? '',
         )
@@ -96,6 +98,8 @@ export async function requestJapanProductRelay(
           status === 429 || status >= 500,
           upstreamStatus,
           parseRelayQuota(status, response.headers),
+          undefined,
+          delay === null ? undefined : Math.max(1, Math.min(86400, Math.ceil(delay / 1000))),
         );
       }
       return parseProductDetail(await response.json(), id);

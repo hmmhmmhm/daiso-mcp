@@ -13,7 +13,7 @@ export function createJapanProductRelay(
   options: Pick<HttpRelayOptions, 'takeQuota' | 'fetcher' | 'onEvent'>,
 ) {
   let blockedUntil = 0;
-  return createHttpRelay(token, {
+  const relay = createHttpRelay(token, {
     ...options,
     prefix: '/v1/dtryx/',
     operations: ['daiso-jp-product'],
@@ -27,7 +27,7 @@ export function createJapanProductRelay(
     },
     async upstream(_operation, value, signal, fetcher) {
       // 원본 제한은 품절이나 자체 할당량으로 바꾸지 않고 모든 상품에 대기를 공유합니다.
-      if (Date.now() < blockedUntil) throw new RelayError(502, undefined, undefined, 429);
+      if (Date.now() < blockedUntil) throw new RelayError(429, undefined, undefined, 429);
       const { id } = value as { id: string };
       const response = await abortable(
         fetcher(new URL(`https://jp.daisonet.com/products/${id}.js`), {
@@ -42,11 +42,25 @@ export function createJapanProductRelay(
           Math.max(1000, Math.min(parseRetryAfterDelayMs(response) ?? 60000, 86400000));
       if (response.status !== 200) {
         void response.body?.cancel().catch(() => undefined);
-        throw new RelayError(502, undefined, undefined, response.status);
+        throw new RelayError(
+          response.status === 429 ? 429 : 502,
+          undefined,
+          undefined,
+          response.status,
+        );
       }
       const data = await readJson(response.body, 2 * 1024 * 1024, signal, 502);
       parseProductDetail(data, id);
       return data;
     },
   });
+  return async (request: Request) => {
+    const response = await relay(request);
+    if (response.status === 429 && response.headers.get('x-relay-upstream-status') === '429')
+      response.headers.set(
+        'Retry-After',
+        String(Math.max(1, Math.ceil((blockedUntil - Date.now()) / 1000))),
+      );
+    return response;
+  };
 }

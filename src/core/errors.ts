@@ -34,11 +34,12 @@ export class ServiceError extends Error {
     readonly upstreamStatus?: number,
     quota?: RelayQuota,
     readonly upstreamError?: SevenStockFailure,
+    retryAfter?: number,
   ) {
     super(message);
     this.name = 'ServiceError';
     this.quotaReason = quota?.quotaReason;
-    this.retryAfter = quota?.retryAfter;
+    this.retryAfter = quota?.retryAfter ?? retryAfter;
   }
 }
 
@@ -176,6 +177,8 @@ export function toServiceErrorDiagnostics(
       : {}),
     hint: error.quotaReason
       ? `중계 사용량 제한입니다. ${error.retryAfter}초 후 재시도해주세요.`
-      : error.upstreamError ? EXTERNAL_SERVICE_RETRY_HINT : buildHint(error.retryable),
+      : error.upstreamError
+        ? EXTERNAL_SERVICE_RETRY_HINT
+        : buildHint(error.retryable),
   };
 }

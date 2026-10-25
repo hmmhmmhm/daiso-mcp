@@ -143,3 +143,39 @@ it.each(['429', '403', 'bad'])('원본 상태 %s를 자체 할당량과 구분�
     quotaReason: undefined,
   });
 });
+
+it('원본429의 대기 시간을 자체 할당량으로 분류하지 않고 보존한다', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(null, { status: 429, headers: { 'Retry-After': '120' } })),
+  );
+  await expect(requestJapanProductRelay(raw.handle, options)).rejects.toMatchObject({
+    status: 429,
+    upstreamStatus: 429,
+    retryAfter: 120,
+    quotaReason: undefined,
+  });
+});
+
+it('실제 중계 응답의 원본 상태 커스텀 헤더가 없어도429와 대기는 보존된다', async () => {
+  const { createJapanProductRelay } = await import('../../../scripts/relay/daiso-jp.js');
+  const { toServiceErrorDiagnostics, ServiceError } = await import('../../../src/core/errors.js');
+  const relay = createJapanProductRelay('test-token', {
+    takeQuota: async () => true,
+    fetcher: async () => new Response(null, { status: 429, headers: { 'Retry-After': '120' } }),
+  });
+  vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+    const r = await relay(new Request(url, init));
+    r.headers.delete('x-relay-upstream-status');
+    return r;
+  });
+  try {
+    await requestJapanProductRelay(raw.handle, options);
+    throw Error('unexpected success');
+  } catch (e) {
+    expect(e).toBeInstanceOf(ServiceError);
+    expect(
+      toServiceErrorDiagnostics(e as InstanceType<typeof ServiceError>, 'product_details'),
+    ).toMatchObject({ status: 429, upstreamStatus: 429, retryAfter: 120, quotaReason: undefined });
+  }
+});

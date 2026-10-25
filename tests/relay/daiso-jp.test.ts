@@ -72,7 +72,7 @@ it('원본429 뒤 Retry-After 동안 다른 상품과 캐시 우회도 원본을
     );
     const bypass = req({ id: '4550746075918' });
     bypass.headers.set('x-relay-cache-bypass', 'true');
-    expect((await handler(bypass)).status).toBe(502);
+    expect((await handler(bypass)).status).toBe(429);
     expect(fetcher).toHaveBeenCalledTimes(1);
     vi.setSystemTime(Date.now() + 120001);
     expect((await handler(req({ id: raw.handle }))).status).toBe(200);
@@ -92,6 +92,33 @@ it('원본429에 대기 안내가 없으면1분 후 원본을 재검증한다', 
     vi.setSystemTime(Date.now() + 60001);
     await handler(req({ id: raw.handle }));
     expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('원본429 대기는 표준 헤더로 제공하고 자체 분당 제한은 구분한다', async () => {
+  vi.useFakeTimers();
+  try {
+    const handler = createJapanProductRelay('test-token', {
+      takeQuota: async () => true,
+      fetcher: async () => new Response(null, { status: 429, headers: { 'Retry-After': '120' } }),
+    });
+    for (let i = 0; i < 2; i++) {
+      const r = await handler(req({ id: raw.handle }));
+      expect(r.status).toBe(429);
+      expect(r.headers.get('Retry-After')).toBe('120');
+      expect(r.headers.get('x-relay-quota-reason')).toBeNull();
+    }
+    const own = createJapanProductRelay('test-token', {
+      takeQuota: Object.assign(async () => false, {
+        status: () => ({ blockedBy: 'minute' as const, retryAfter: 7 }),
+      }),
+    });
+    const r = await own(req({ id: raw.handle }));
+    expect(r.status).toBe(429);
+    expect(r.headers.get('Retry-After')).toBe('7');
+    expect(r.headers.get('x-relay-quota-reason')).toBe('minute');
   } finally {
     vi.useRealTimers();
   }
