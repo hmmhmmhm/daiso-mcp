@@ -6,7 +6,11 @@ import { Readable } from 'node:stream';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createFileQuota, assertSeparateQuotaDirectories, CONVENIENCE_QUOTA_LIMITS } from './quota.js';
+import {
+  createFileQuota,
+  assertSeparateQuotaDirectories,
+  CONVENIENCE_QUOTA_LIMITS,
+} from './quota.js';
 import { createConvenienceRelay } from './convenience.js';
 import { createGs25SessionTransport } from './gs25-session.js';
 import { createJapanProductRelay } from './daiso-jp.js';
@@ -27,29 +31,61 @@ async function main() {
   log.append({ stage: 'process', outcome: 'starting' });
   const takeQuota = await createFileQuota(join(stateDir, 'quota.json'));
   log.append({ stage: 'quota', outcome: 'snapshot', ...takeQuota.status() });
-  const heartbeat = setInterval(
-    () => log.append({ stage: 'process', outcome: 'heartbeat', ...takeQuota.status() }),
-    60000,
-  );
+  let maintainAuthentication = async () => {};
+  const heartbeat = setInterval(() => {
+    log.append({ stage: 'process', outcome: 'heartbeat', ...takeQuota.status() });
+    void maintainAuthentication();
+  }, 60000);
   heartbeat.unref();
   let convenience: ((request: Request) => Promise<Response>) | undefined;
   let convenienceLog: ReturnType<typeof createRelayLogger> | undefined;
-  if (process.env.CONVENIENCE_RELAY_TOKEN !== undefined || process.env.CONVENIENCE_RELAY_STATE_DIR !== undefined) {
+  if (
+    process.env.CONVENIENCE_RELAY_TOKEN !== undefined ||
+    process.env.CONVENIENCE_RELAY_STATE_DIR !== undefined
+  ) {
     const convenienceToken = process.env.CONVENIENCE_RELAY_TOKEN;
     const convenienceDir = process.env.CONVENIENCE_RELAY_STATE_DIR;
-    if (!convenienceToken?.trim() || !convenienceDir) throw Error('Invalid convenience configuration');
+    if (!convenienceToken?.trim() || !convenienceDir)
+      throw Error('Invalid convenience configuration');
     await mkdir(convenienceDir, { recursive: true, mode: 0o700 });
     await assertSeparateQuotaDirectories(stateDir, convenienceDir);
     convenienceLog = createRelayLogger(join(convenienceDir, 'logs'), { service: 'convenience' });
-    const quota = await createFileQuota(join(convenienceDir, 'quota.json'), Date.now, CONVENIENCE_QUOTA_LIMITS);
+    const quota = await createFileQuota(
+      join(convenienceDir, 'quota.json'),
+      Date.now,
+      CONVENIENCE_QUOTA_LIMITS,
+    );
     const sessionFile = process.env.GS25_AUTH_SESSION_FILE?.trim();
+    const session = sessionFile ? createGs25SessionTransport(sessionFile) : undefined;
+    if (session) {
+      maintainAuthentication = async () => {
+        try {
+          await session.prepare();
+        } catch {
+          convenienceLog!.append({
+            stage: 'authentication',
+            operation: 'gs25',
+            outcome: session.status().loginRequired ? 'login-required' : 'refresh-failed',
+          });
+        }
+      };
+      void maintainAuthentication();
+    }
     const convenienceHandler = createConvenienceRelay(convenienceToken, {
-      takeQuota: quota, onEvent: convenienceLog.append, gs25ApiKey: process.env.GS25_API_KEY,
-      gs25Session: sessionFile ? createGs25SessionTransport(sessionFile) : undefined,
+      takeQuota: quota,
+      onEvent: convenienceLog.append,
+      gs25ApiKey: process.env.GS25_API_KEY,
+      gs25Session: session,
     });
     convenience = observeRelay(async (request) => {
       const response = await convenienceHandler(request);
-      if (response.ok && new URL(request.url).pathname === '/v1/convenience/health') return Response.json({ ...(await response.json()), quota: quota.status(), logging: convenienceLog!.status() });
+      if (response.ok && new URL(request.url).pathname === '/v1/convenience/health')
+        return Response.json({
+          ...(await response.json()),
+          quota: quota.status(),
+          logging: convenienceLog!.status(),
+          authentication: session?.status(),
+        });
       return response;
     }, convenienceLog.append);
   }
@@ -69,16 +105,26 @@ async function main() {
   const cgvHandler = observeRelay(async (request) => {
     const response = await cgvRelay(request);
     if (response.ok && new URL(request.url).pathname === '/v1/cgv/health') {
-      return Response.json({ ...(await response.json()), quota: takeQuota.status(), logging: log.status() });
+      return Response.json({
+        ...(await response.json()),
+        quota: takeQuota.status(),
+        logging: log.status(),
+      });
     }
     return response;
   }, log.append);
   const japanRelay = createJapanProductRelay(token, { takeQuota, onEvent: log.append });
   const japanHandler = observeRelay(japanRelay, log.append);
-  const handler = (request: Request) => new URL(request.url).pathname.startsWith('/v1/convenience/')
-    ? convenience ? convenience(request) : Promise.resolve(Response.json({ error: 'Not found' }, { status: 404 }))
-    : new URL(request.url).pathname === '/v1/dtryx/daiso-jp-product' ? japanHandler(request)
-    : new URL(request.url).pathname.startsWith('/v1/cgv/') ? cgvHandler(request) : dtryxHandler(request);
+  const handler = (request: Request) =>
+    new URL(request.url).pathname.startsWith('/v1/convenience/')
+      ? convenience
+        ? convenience(request)
+        : Promise.resolve(Response.json({ error: 'Not found' }, { status: 404 }))
+      : new URL(request.url).pathname === '/v1/dtryx/daiso-jp-product'
+        ? japanHandler(request)
+        : new URL(request.url).pathname.startsWith('/v1/cgv/')
+          ? cgvHandler(request)
+          : dtryxHandler(request);
   const server = createServer(async (req, res) => {
     const controller = new AbortController();
     res.once('close', () => controller.abort());

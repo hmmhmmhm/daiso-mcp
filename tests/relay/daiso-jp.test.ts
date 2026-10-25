@@ -123,3 +123,49 @@ it('원본429 대기는 표준 헤더로 제공하고 자체 분당 제한은 �
     vi.useRealTimers();
   }
 });
+
+it('서로 다른 상품이 동시에 들어와도 첫 원본429 뒤 추가 원본 요청을 시작하지 않는다', async () => {
+  let finish!: (response: Response) => void;
+  const fetcher = vi.fn<typeof fetch>(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const handler = createJapanProductRelay('test-token', { takeQuota: async () => true, fetcher });
+  const first = handler(req({ id: raw.handle }));
+  await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+  const second = handler(req({ id: '4550746075918' }));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  finish(new Response(null, { status: 429, headers: { 'Retry-After': '60' } }));
+  expect((await first).status).toBe(429);
+  expect((await second).status).toBe(429);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it('대기 취소가 앞 원본을 취소하거나 뒤 요청을 먼저 시작시키지 않는다', async () => {
+  let finish!: (response: Response) => void;
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    )
+    .mockResolvedValue(Response.json({ ...raw, handle: '4550746075919' }));
+  const handler = createJapanProductRelay('test-token', { takeQuota: async () => true, fetcher });
+  const first = handler(req({ id: raw.handle }));
+  await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+  const controller = new AbortController();
+  const second = handler(new Request(req({ id: '4550746075918' }), { signal: controller.signal }));
+  controller.abort();
+  expect((await second).status).toBe(499);
+  const third = handler(req({ id: '4550746075919' }));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  finish(Response.json(raw));
+  expect((await first).status).toBe(200);
+  expect((await third).status).toBe(200);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});

@@ -13,6 +13,7 @@ export function createJapanProductRelay(
   options: Pick<HttpRelayOptions, 'takeQuota' | 'fetcher' | 'onEvent'>,
 ) {
   let blockedUntil = 0;
+  let upstreamTail = Promise.resolve();
   const relay = createHttpRelay(token, {
     ...options,
     prefix: '/v1/dtryx/',
@@ -26,32 +27,45 @@ export function createJapanProductRelay(
       return { id: p.id };
     },
     async upstream(_operation, value, signal, fetcher) {
-      // 원본 제한은 품절이나 자체 할당량으로 바꾸지 않고 모든 상품에 대기를 공유합니다.
-      if (Date.now() < blockedUntil) throw new RelayError(429, undefined, undefined, 429);
-      const { id } = value as { id: string };
-      const response = await abortable(
-        fetcher(new URL(`https://jp.daisonet.com/products/${id}.js`), {
-          redirect: 'manual',
+      // 서로 다른 상품도 한 원본 진입을 공유하고 대기 중 취소를 보존합니다.
+      const previous = upstreamTail;
+      let release!: () => void;
+      const turn = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      upstreamTail = previous.then(() => turn);
+      try {
+        await abortable(previous, signal);
+        signal.throwIfAborted();
+        // 원본 제한은 품절이나 자체 할당량으로 바꾸지 않고 모든 상품에 대기를 공유합니다.
+        if (Date.now() < blockedUntil) throw new RelayError(429, undefined, undefined, 429);
+        const { id } = value as { id: string };
+        const response = await abortable(
+          fetcher(new URL(`https://jp.daisonet.com/products/${id}.js`), {
+            redirect: 'manual',
+            signal,
+          }),
           signal,
-        }),
-        signal,
-      );
-      if (response.status === 429)
-        blockedUntil =
-          Date.now() +
-          Math.max(1000, Math.min(parseRetryAfterDelayMs(response) ?? 60000, 86400000));
-      if (response.status !== 200) {
-        void response.body?.cancel().catch(() => undefined);
-        throw new RelayError(
-          response.status === 429 ? 429 : 502,
-          undefined,
-          undefined,
-          response.status,
         );
+        if (response.status === 429)
+          blockedUntil =
+            Date.now() +
+            Math.max(1000, Math.min(parseRetryAfterDelayMs(response) ?? 60000, 86400000));
+        if (response.status !== 200) {
+          void response.body?.cancel().catch(() => undefined);
+          throw new RelayError(
+            response.status === 429 ? 429 : 502,
+            undefined,
+            undefined,
+            response.status,
+          );
+        }
+        const data = await readJson(response.body, 2 * 1024 * 1024, signal, 502);
+        parseProductDetail(data, id);
+        return data;
+      } finally {
+        release();
       }
-      const data = await readJson(response.body, 2 * 1024 * 1024, signal, 502);
-      parseProductDetail(data, id);
-      return data;
     },
   });
   return async (request: Request) => {
