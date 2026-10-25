@@ -13,7 +13,7 @@ it('defaults to the existing browser lifecycle and forwards observer/ownership p
   expect(await createTransportLifecycle(undefined, '/state', observer)).toBe('browser');
   const [launch, observed] = mocks.browser.mock.calls[0] as unknown as [() => unknown, unknown];
   launch();
-  expect(mocks.launch).toHaveBeenCalledWith('/state/browser-owner.json');
+  expect(mocks.launch).toHaveBeenCalledWith('/state/browser-owner.json', observer);
   expect(observed).toBe(observer);
 });
 it('selects HTTP without importing or launching browser modules', async () => {

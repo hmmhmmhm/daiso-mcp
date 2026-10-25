@@ -159,3 +159,10 @@ it('FIFO 마커도 파일 열기에서 멈추지 않고 거절한다', async () 
   execFileSync('/usr/bin/mkfifo', [path]);
   expect(await recoverExitedGuard(path, 122, root, Date.now() + 1000, snapshot)).toBe(false);
 });
+
+it('재시작 전 읽은 파일 정체와 달라지면 같은 내용이어도 이동하지 않는다', async () => {
+  expect(
+    await recoverExitedGuard(path, 122, root, Date.now() + 5000, snapshot, { dev: -1, ino: -1 }),
+  ).toBe(false);
+  expect(await readdir(dir)).toEqual(['owner.json']);
+});

@@ -6,6 +6,7 @@ export interface BrowserOwner {
   browser: Pick<Browser, 'newContext'>;
   pid: number;
   close(deadline?: number): Promise<void>;
+  recover?(deadline: number): Promise<boolean>;
   rss(): Promise<number>;
 }
 export async function bounded<T>(work: Promise<T>, ms: number): Promise<T> {
@@ -39,6 +40,7 @@ export function createBrowserLifecycle(
   let closed = false;
   let failed: unknown;
   let cleanup: Promise<void> = Promise.resolve();
+  let retired: BrowserOwner | undefined;
   let born = 0;
   let calls = 0;
   let totalCalls = 0;
@@ -48,6 +50,16 @@ export function createBrowserLifecycle(
   let timer: ReturnType<typeof setInterval> | undefined;
   let initializing: Promise<void> | undefined;
   let replacementPending = false;
+  let failures = 0;
+  let retryAt = 0;
+  let lastFailure: unknown;
+  const backoffError = new Error('Browser recovery backoff');
+  const defer = (error: unknown) => {
+    if (closed || error === backoffError || error === lastFailure) return;
+    lastFailure = error;
+    retryAt = Date.now() + Math.min(900000, 60000 * 2 ** Math.min(failures++, 4));
+    emit('recovery-backoff');
+  };
   const retire = (why: string) => {
     reason = why;
     emit(why);
@@ -64,6 +76,7 @@ export function createBrowserLifecycle(
     const deadline = Date.now() + 10000;
     cleanup = bounded(previous.close(deadline), Math.max(0, deadline - Date.now())).catch(
       (error) => {
+        retired = previous;
         failed = error;
         throw error;
       },
@@ -76,7 +89,22 @@ export function createBrowserLifecycle(
     void retire(why).catch(() => undefined);
   };
   const ensureSession = async () => {
-    await cleanup;
+    if (closed) throw new Error('Browser lifecycle unavailable');
+    if (!owner && Date.now() < retryAt) throw backoffError;
+    // 같은 실패의 ensure→run 전파만 공유하고 새 복구 시도는 별도로 계산합니다.
+    lastFailure = undefined;
+    try {
+      await cleanup;
+    } catch (error) {
+      if (closed || !retired?.recover) throw error;
+      const deadline = Date.now() + 5000;
+      if (!(await bounded(retired.recover(deadline), Math.max(0, deadline - Date.now()))))
+        throw error;
+      retired = undefined;
+      failed = undefined;
+      cleanup = Promise.resolve();
+      emit('cleanup-recovered');
+    }
     if (closed) throw new Error('Browser lifecycle unavailable');
     if (owner && Date.now() - born >= 30 * 60 * 1000) {
       await retire('rotation');
@@ -142,9 +170,14 @@ export function createBrowserLifecycle(
     }
   };
   const ensure = () => {
-    initializing ??= ensureSession().finally(() => {
-      initializing = undefined;
-    });
+    initializing ??= ensureSession()
+      .catch((error) => {
+        defer(error);
+        throw error;
+      })
+      .finally(() => {
+        initializing = undefined;
+      });
     return initializing;
   };
   // 교체당 한 번만 미리 준비하고 실패 시 다음 명시적 요청을 기다립니다.
@@ -163,6 +196,9 @@ export function createBrowserLifecycle(
     try {
       await ensure();
       const result = await bounded(createBrowserRunner(page!)(path, body), 18000);
+      failures = 0;
+      retryAt = 0;
+      lastFailure = undefined;
       calls++;
       totalCalls++;
       if (calls >= 200 || Date.now() - born >= 30 * 60 * 1000) {
@@ -172,6 +208,7 @@ export function createBrowserLifecycle(
       }
       return result;
     } catch (error) {
+      defer(error);
       await retire('request-failed');
       throw error;
     } finally {
@@ -205,6 +242,7 @@ export function createBrowserLifecycle(
       rssBytes,
       pages: context?.pages().length || 0,
       reason,
+      retryAt,
     }),
   };
 }

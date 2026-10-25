@@ -30,7 +30,35 @@ export default defineConfig({
       reporter: ['text', 'text-summary', 'html', 'json'],
 
       // 커버리지 대상 파일
-      include: ['scripts/ops/mcp-smoke-validation.ts', 'scripts/relay/daiso-jp.ts', 'scripts/ops/health-check-retry.ts', 'src/**/*.ts', 'scripts/relay/cache.ts', 'scripts/relay/logging.ts', 'scripts/relay/observed.ts', 'scripts/relay/oliveyoung.ts', 'scripts/relay/dtryx.ts', 'scripts/relay/http-relay.ts', 'scripts/relay/convenience.ts', 'scripts/relay/gs25-session.ts', 'scripts/relay/browser.ts', 'scripts/relay/lifecycle.ts', 'scripts/relay/ownership.ts', 'scripts/relay/guard-controller.ts', 'scripts/relay/guard-runtime.ts', 'scripts/relay/supervisor.ts', 'scripts/relay/quota.ts', 'scripts/relay/consumer.ts', 'scripts/relay/browser-environment.ts', 'scripts/relay/http-lifecycle.ts', 'scripts/relay/transport-lifecycle.ts'],
+      include: [
+        'scripts/relay/watchdog.ts',
+        'scripts/relay/marker-lease.ts',
+        'scripts/relay/recover-abandoned-guard.ts',
+        'scripts/relay/recover-exited-guard.ts',
+        'scripts/ops/mcp-smoke-validation.ts',
+        'scripts/relay/daiso-jp.ts',
+        'scripts/ops/health-check-retry.ts',
+        'src/**/*.ts',
+        'scripts/relay/cache.ts',
+        'scripts/relay/logging.ts',
+        'scripts/relay/observed.ts',
+        'scripts/relay/oliveyoung.ts',
+        'scripts/relay/dtryx.ts',
+        'scripts/relay/http-relay.ts',
+        'scripts/relay/convenience.ts',
+        'scripts/relay/gs25-session.ts',
+        'scripts/relay/browser.ts',
+        'scripts/relay/lifecycle.ts',
+        'scripts/relay/ownership.ts',
+        'scripts/relay/guard-controller.ts',
+        'scripts/relay/guard-runtime.ts',
+        'scripts/relay/supervisor.ts',
+        'scripts/relay/quota.ts',
+        'scripts/relay/consumer.ts',
+        'scripts/relay/browser-environment.ts',
+        'scripts/relay/http-lifecycle.ts',
+        'scripts/relay/transport-lifecycle.ts',
+      ],
 
       // 커버리지 제외 파일
       exclude: [

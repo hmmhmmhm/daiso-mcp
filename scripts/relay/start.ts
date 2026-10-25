@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createTransportLifecycle } from './transport-lifecycle.js';
+import { createRelayWatchdog } from './watchdog.js';
 import { createFileQuota } from './quota.js';
 import { createOliveyoungRelay } from './oliveyoung.js';
 
@@ -25,11 +26,6 @@ async function main() {
   log.append({ stage: 'process', outcome: 'starting' });
   const takeQuota = await createFileQuota(join(stateDir, 'quota.json'));
   log.append({ stage: 'quota', outcome: 'snapshot', ...takeQuota.status() });
-  const heartbeat = setInterval(
-    () => log.append({ stage: 'process', outcome: 'heartbeat', ...takeQuota.status() }),
-    60000,
-  );
-  heartbeat.unref();
   const lifecycle = await createTransportLifecycle(
     process.env.OY_RELAY_TRANSPORT,
     stateDir,
@@ -40,6 +36,14 @@ async function main() {
         outcome,
       }),
   );
+  const recover = createRelayWatchdog(lifecycle, (outcome) =>
+    log.append({ stage: 'lifecycle', outcome }),
+  );
+  const heartbeat = setInterval(() => {
+    log.append({ stage: 'process', outcome: 'heartbeat', ...takeQuota.status() });
+    void recover();
+  }, 60000);
+  heartbeat.unref();
   try {
     await lifecycle.start();
     const handler = observeRelay(

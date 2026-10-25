@@ -134,10 +134,12 @@ it('시작 중 종료는 늦게 도착한 소유 브라우저도 회수한다', 
   expect(f.owner.close).toHaveBeenCalledTimes(1);
 });
 it('초기 페이지 접속 실패와 페이지 닫힘을 회수한다', async () => {
+  vi.useFakeTimers();
   const f = fixture();
   f.page.goto.mockRejectedValueOnce(new Error('navigation'));
   const life = createBrowserLifecycle(f.launch);
   await expect(life.start()).rejects.toThrow('navigation');
+  await vi.advanceTimersByTimeAsync(60001);
   expect(f.owner.close).toHaveBeenCalledTimes(1);
   await life.start();
   f.page.emit('close');
@@ -400,10 +402,98 @@ it('문서가 준비됐으면 느린 부가 리소스의 load 이벤트 없이 �
     });
   });
   const life = createBrowserLifecycle(f.launch);
-  const ready = life.start().then(() => true, () => false);
+  const ready = life.start().then(
+    () => true,
+    () => false,
+  );
   await vi.advanceTimersByTimeAsync(30000);
   expect(await ready).toBe(true);
   expect(life.status()).toMatchObject({ state: 'ready', pages: 1 });
   await expect(life.run('/p', {})).resolves.toEqual({ status: 'SUCCESS' });
   await life.close();
+});
+
+it('종료 실패 뒤 소멸이 확인되면 다음 요청에서만 새 브라우저를 시작한다', async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const recover = vi.fn().mockResolvedValue(false);
+  Object.assign(f.owner, { recover });
+  const life = createBrowserLifecycle(f.launch);
+  await life.start();
+  f.page.evaluate.mockRejectedValueOnce(new Error('upstream failed'));
+  f.owner.close.mockRejectedValueOnce(new Error('cleanup uncertain'));
+  await expect(life.run('/p', {})).rejects.toThrow('cleanup uncertain');
+  await vi.advanceTimersByTimeAsync(60001);
+  await expect(life.run('/p', {})).rejects.toThrow('cleanup uncertain');
+  expect(f.launch).toHaveBeenCalledTimes(1);
+  recover.mockResolvedValue(true);
+  await vi.advanceTimersByTimeAsync(120001);
+  await expect(life.run('/p', {})).resolves.toMatchObject({ status: 'SUCCESS' });
+  expect(f.launch).toHaveBeenCalledTimes(2);
+  expect(life.status().state).toBe('ready');
+  await life.close();
+});
+
+it('watchdog와 실제 요청은 같은 시작 실패 대기를 지킨다', async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const life = createBrowserLifecycle(f.launch);
+  f.launch.mockRejectedValueOnce(new Error('launch failed'));
+  await expect(life.start()).rejects.toThrow('launch failed');
+  for (let i = 0; i < 3; i++) await expect(life.run('/p', {})).rejects.toThrow('backoff');
+  expect(f.launch).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(60001);
+  await life.run('/p', {});
+  expect(f.launch).toHaveBeenCalledTimes(2);
+  await life.close();
+});
+
+it('소멸 재검증 중 종료하면 확인이 끝나도 새 브라우저를 만들지 않는다', async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  let finish!: (value: boolean) => void;
+  const recover = vi.fn(
+    () =>
+      new Promise<boolean>((r) => {
+        finish = r;
+      }),
+  );
+  Object.assign(f.owner, { recover });
+  const life = createBrowserLifecycle(f.launch);
+  await life.start();
+  f.owner.close.mockRejectedValueOnce(new Error('uncertain'));
+  f.page.emit('crash');
+  await vi.advanceTimersByTimeAsync(0);
+  const starting = life.start();
+  const failed = expect(starting).rejects.toThrow('unavailable');
+  await vi.advanceTimersByTimeAsync(0);
+  const closing = life.close();
+  finish(true);
+  await failed;
+  await closing;
+  expect(f.launch).toHaveBeenCalledTimes(1);
+});
+
+it('같은 종료 오류가 반복되어도 새로운 복구 시도마다 대기를 늘린다', async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const recover = vi.fn().mockResolvedValue(false);
+  Object.assign(f.owner, { recover });
+  const life = createBrowserLifecycle(f.launch);
+  await life.start();
+  f.owner.close.mockRejectedValue(new Error('same cleanup error'));
+  f.page.emit('crash');
+  await vi.advanceTimersByTimeAsync(0);
+  await expect(life.start()).rejects.toThrow('same cleanup error');
+  expect(recover).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(60001);
+  await expect(life.start()).rejects.toThrow('same cleanup error');
+  expect(recover).toHaveBeenCalledTimes(2);
+  for (let i = 0; i < 3; i++)
+    await expect(life.run('/p', {})).rejects.toThrow('same cleanup error');
+  expect(recover).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(120001);
+  await expect(life.start()).rejects.toThrow('same cleanup error');
+  expect(recover).toHaveBeenCalledTimes(3);
+  await expect(life.close()).rejects.toThrow('same cleanup error');
 });

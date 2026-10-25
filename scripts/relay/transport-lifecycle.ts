@@ -14,7 +14,7 @@ export async function createTransportLifecycle(
   const { createBrowserLifecycle } = await import('./lifecycle.js');
   const { launchGuardedBrowser } = await import('./supervisor.js');
   return createBrowserLifecycle(
-    () => launchGuardedBrowser(join(stateDir, 'browser-owner.json')),
+    () => launchGuardedBrowser(join(stateDir, 'browser-owner.json'), onEvent),
     onEvent,
   );
 }

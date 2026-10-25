@@ -1,19 +1,68 @@
 /** 독립 감시 프로세스와 연결하고 소유 브라우저의 종료 확인을 기다립니다. */
 import { recoverExitedGuard } from './recover-exited-guard.js';
+import { recoverAbandonedGuard } from './recover-abandoned-guard.js';
+import { existsSync } from 'node:fs';
+import { acquireMarkerLease } from './marker-lease.js';
 import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { bounded, type BrowserOwner } from './lifecycle.js';
 import { ownedGroup, processSnapshot, type ProcessIdentity } from './ownership.js';
 
-export async function launchGuardedBrowser(markerPath: string): Promise<BrowserOwner> {
+export async function launchGuardedBrowser(
+  markerPath: string,
+  onEvent?: (reason: string) => void | Promise<void>,
+): Promise<BrowserOwner> {
+  const release = await acquireMarkerLease(markerPath);
+  markerPath = release.markerPath;
+  let starting = true;
+  const serial = async (action: () => Promise<boolean>) => {
+    if (starting) return action();
+    const unlock = await acquireMarkerLease(markerPath);
+    try {
+      return await action();
+    } finally {
+      await unlock();
+    }
+  };
+  try {
+    return await launchWhileLocked(markerPath, serial, onEvent);
+  } finally {
+    starting = false;
+    await release();
+  }
+}
+async function launchWhileLocked(
+  markerPath: string,
+  serial: (action: () => Promise<boolean>) => Promise<boolean>,
+  onEvent?: (reason: string) => void | Promise<void>,
+): Promise<BrowserOwner> {
+  const emit = (reason: string) => {
+    try {
+      void Promise.resolve(onEvent?.(reason)).catch(() => undefined);
+    } catch {
+      /* 관측 실패를 격리합니다. */
+    }
+  };
+  if (existsSync(markerPath)) {
+    if (!(await recoverAbandonedGuard(markerPath, Date.now() + 5000))) {
+      emit('abandoned-marker-blocked');
+      throw new Error('Existing browser ownership unconfirmed');
+    }
+    emit('abandoned-marker-recovered');
+  }
   const guard = fork(fileURLToPath(new URL('./guard.ts', import.meta.url)), [markerPath], {
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
   });
   let exited = false;
+  let exitCode: number | null | undefined;
   const exit = new Promise<number | null>((resolve) =>
     guard.once('exit', (code) => {
       exited = true;
+      exitCode = code;
+      emit(
+        code === 0 ? 'guard-exit-normal' : code === null ? 'guard-exit-signal' : 'guard-exit-error',
+      );
       resolve(code);
     }),
   );
@@ -28,7 +77,7 @@ export async function launchGuardedBrowser(markerPath: string): Promise<BrowserO
         typeof code === 'number' &&
         readyRoot &&
         guard.pid &&
-        (await recoverExitedGuard(markerPath, guard.pid, readyRoot, deadline))
+        (await serial(() => recoverExitedGuard(markerPath, guard.pid!, readyRoot!, deadline)))
       )
         return;
       throw new Error('Browser guard cleanup unconfirmed');
@@ -53,6 +102,12 @@ export async function launchGuardedBrowser(markerPath: string): Promise<BrowserO
       browser,
       pid: ready.root.pid,
       close: closed,
+      async recover(deadline) {
+        // 원래 종료 기한을 늘리지 않고 후속 작업에서 확인된 종료만 재검증합니다.
+        if (!exited || exitCode === null || !guard.pid) return false;
+        if (exitCode === 0) return true;
+        return serial(() => recoverExitedGuard(markerPath, guard.pid!, ready.root, deadline));
+      },
       rss: async () =>
         ownedGroup(ready.root, await processSnapshot()).reduce((sum, row) => sum + row.rss, 0),
     };

@@ -10,6 +10,7 @@ export async function recoverExitedGuard(
   root: ProcessIdentity,
   deadline: number,
   snapshot = processSnapshot,
+  expected?: { dev: number; ino: number },
 ): Promise<boolean> {
   const remaining = () => Math.max(0, deadline - Date.now());
   try {
@@ -20,6 +21,7 @@ export async function recoverExitedGuard(
     );
     try {
       const stat = await bounded(handle.stat(), remaining());
+      if (expected && (expected.dev !== stat.dev || expected.ino !== stat.ino)) return false;
       if (!stat.isFile() || stat.size > 16384 || stat.uid !== process.getuid!()) return false;
       const marker = JSON.parse(await bounded(handle.readFile('utf8'), remaining()));
       if (marker?.guardPid !== guardPid) return false;
@@ -31,7 +33,8 @@ export async function recoverExitedGuard(
       const current = await bounded(lstat(markerPath), remaining());
       if (current.dev !== stat.dev || current.ino !== stat.ino) return false;
       if (!remaining()) return false;
-      await bounded(rename(markerPath, `${markerPath}.exited-${randomUUID()}`), remaining());
+      // 완료 전 잠금을 해제하지 않도록 커밋 중인 파일 이동 자체는 기다립니다.
+      await rename(markerPath, `${markerPath}.exited-${randomUUID()}`);
       return true;
     } finally {
       await handle.close();
