@@ -2,6 +2,8 @@ import {
   validateDaisoInventoryByName,
   validateCatalogPopwords,
   validateCatalogSnapshot,
+  validateRetailInventory,
+  validateCinemaCollection,
 } from './mcp-smoke-validation.js';
 import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from '../../src/core/compact/catalog.js';
 /**
@@ -13,7 +15,19 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { DEFAULT_MCP_URL } from '../../src/cli/constants.js';
 
 type WriteFn = (message: string) => void;
-type SmokeService = 'daiso_jp' | 'daiso' | 'gs25' | 'seveneleven' | 'emart24' | 'opinet';
+type SmokeService =
+  | 'daiso_jp'
+  | 'daiso'
+  | 'gs25'
+  | 'seveneleven'
+  | 'emart24'
+  | 'opinet'
+  | 'cu'
+  | 'oliveyoung'
+  | 'megabox'
+  | 'lottecinema'
+  | 'cgv'
+  | 'dtryx';
 
 interface ToolListResult {
   tools: Array<{ name: string }>;
@@ -38,28 +52,12 @@ interface McpSmokeDeps {
   service?: string;
 }
 
-export const MCP_SMOKE_TOOLS: Array<{ service: SmokeService; name: string }> = [
-  { service: 'daiso', name: 'daiso_search_products' },
-  { service: 'daiso', name: 'daiso_check_inventory' },
-  { service: 'daiso', name: 'daiso_find_inventory_by_name' },
-  { service: 'daiso_jp', name: 'daiso_jp_search_products' },
-  { service: 'daiso_jp', name: 'daiso_jp_get_product' },
-  { service: 'daiso_jp', name: 'daiso_jp_find_stores' },
-  { service: 'gs25', name: 'gs25_search_products' },
-  { service: 'seveneleven', name: 'seveneleven_search_products' },
-  { service: 'seveneleven', name: 'seveneleven_get_search_popwords' },
-  { service: 'seveneleven', name: 'seveneleven_get_catalog_snapshot' },
-  { service: 'emart24', name: 'emart24_search_products' },
-  { service: 'opinet', name: 'opinet_get_average_prices' },
-];
-
-export const MCP_SMOKE_TOOL_NAMES = MCP_SMOKE_TOOLS.map((tool) => tool.name);
-
 interface McpSmokeScenario {
   service: SmokeService;
   label: string;
   toolName: string;
   args: Record<string, unknown>;
+  productCode?: 'itemCode' | 'pluCd';
   validate: (payload: Record<string, unknown>) => string | null;
 }
 
@@ -97,11 +95,14 @@ function formatScenarioFailure(
   scenario: McpSmokeScenario,
   message: string,
   result?: ToolCallResult,
+  args: Record<string, unknown> = scenario.args,
 ): string {
+  const group = COMPACT_CATALOG.find((g) => g.routes.some((r) => r.legacy === scenario.toolName))!;
   return [
     `MCP smoke 실패: ${scenario.label} - ${message}`,
-    `tool=${scenario.toolName}`,
-    `args=${JSON.stringify(scenario.args)}`,
+    `tool=${group.name}`,
+    `scenario=${scenario.toolName}`,
+    `args=${JSON.stringify(args)}`,
     `responseExcerpt=${createResponseExcerpt(result)}`,
   ].join(' ');
 }
@@ -220,7 +221,51 @@ export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
     args: { timeoutMs: 10000 },
     validate: expectField('provider', 'opinet'),
   },
+  ...(['gs25', 'seveneleven', 'emart24', 'cu', 'oliveyoung'] as const).map((service) => ({
+    service,
+    label: `${service} 실제 매장 재고`,
+    toolName: `${service}_check_inventory`,
+    args: {
+      keyword: service === 'gs25' ? '콜라' : service === 'oliveyoung' ? '선크림' : '커피',
+      storeLimit: 1,
+      timeoutMs: 20000,
+      ...(service === 'seveneleven' || service === 'emart24' ? { storeKeyword: '강남' } : {}),
+      ...(service === 'gs25' || service === 'cu' || service === 'oliveyoung'
+        ? { latitude: 37.4979, longitude: 127.0276 }
+        : {}),
+      ...(service === 'cu' ? { size: 1 } : {}),
+      ...(service === 'oliveyoung' ? { size: 1, stockCheckLimit: 1 } : {}),
+    },
+    ...(service === 'gs25' ? { productCode: 'itemCode' as const } : {}),
+    ...(service === 'emart24' ? { productCode: 'pluCd' as const } : {}),
+    validate: (payload: Record<string, unknown>) => validateRetailInventory(service, payload),
+  })),
+  ...(['megabox', 'lottecinema', 'cgv'] as const).map((service) => ({
+    service,
+    label: `${service} 극장 검색`,
+    toolName: service === 'cgv' ? 'cgv_find_theaters' : `${service}_find_nearby_theaters`,
+    args: { latitude: 37.4979, longitude: 127.0276, limit: 1, timeoutMs: 15000 },
+    validate: (payload: Record<string, unknown>) => validateCinemaCollection(payload, service),
+  })),
+  {
+    service: 'dtryx',
+    label: '디트릭스 상영작 조회',
+    toolName: 'dtryx_list_now_showing',
+    args: { cinemaCode: '000067', includePlayDates: false, timeoutMs: 15000 },
+    validate: (payload) => validateCinemaCollection(payload, 'dtryx'),
+  },
 ];
+
+// 이전 시나리오 ID는 호출 라우팅에만 사용하고 공개 도구 목록은 늘리지 않습니다.
+export const MCP_SMOKE_TOOLS = [
+  { service: 'daiso', name: 'daiso_search_products' },
+  { service: 'daiso', name: 'daiso_check_inventory' },
+  ...MCP_SMOKE_SCENARIOS.map((scenario) => ({
+    service: scenario.service,
+    name: scenario.toolName,
+  })),
+];
+export const MCP_SMOKE_TOOL_NAMES = MCP_SMOKE_TOOLS.map((tool) => tool.name);
 
 function parseServiceArg(argv: string[]): string | undefined {
   const serviceIndex = argv.indexOf('--service');
@@ -277,36 +322,48 @@ export async function runMcpSmoke(deps: McpSmokeDeps = {}): Promise<number> {
       return 1;
     }
 
+    const productSearches = new Map<string, Record<string, unknown>>();
     for (const scenario of scenarios) {
       writeOut(`MCP smoke 호출: ${scenario.label}`);
       let result: ToolCallResult | undefined;
+      let args: Record<string, unknown> = scenario.args;
       try {
         const group = COMPACT_CATALOG.find((group) =>
           group.routes.some((route) => route.legacy === scenario.toolName),
         )!;
         const route = group.routes.find((route) => route.legacy === scenario.toolName)!;
+        args = {
+          ...scenario.args,
+          ...(route.service ? { service: route.service } : {}),
+          ...(route.operation ? { operation: route.operation } : {}),
+        };
+        if (scenario.productCode) {
+          const products = productSearches.get(scenario.service)?.products;
+          const first = Array.isArray(products) ? products[0] : undefined;
+          const code = isRecord(first) ? first[scenario.productCode] : undefined;
+          if (typeof code !== 'string' || !code.trim())
+            throw new Error('검색한 상품 코드가 없습니다');
+          args[scenario.productCode] = code;
+        }
         result = await client.callTool({
           name: group.name,
-          arguments: {
-            ...scenario.args,
-            ...(route.service ? { service: route.service } : {}),
-            ...(route.operation ? { operation: route.operation } : {}),
-          },
+          arguments: args,
         });
         const payload = parseToolPayload(result);
         const validationError = scenario.validate(payload);
+        if (group.name === 'search_products') productSearches.set(scenario.service, payload);
         if (validationError) {
-          writeErr(formatScenarioFailure(scenario, validationError, result));
+          writeErr(formatScenarioFailure(scenario, validationError, result, args));
           return 1;
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : '알 수 없는 오류';
-        writeErr(formatScenarioFailure(scenario, message, result));
+        writeErr(formatScenarioFailure(scenario, message, result, args));
         return 1;
       }
     }
 
-    writeOut(`MCP smoke 통과: ${smokeTools.length}개 도구 확인 및 ${scenarios.length}개 호출 완료`);
+    writeOut(`MCP smoke 통과: 공개 도구 10개 확인 및 ${scenarios.length}개 호출 완료`);
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : '알 수 없는 오류';

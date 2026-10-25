@@ -1,3 +1,4 @@
+import { inventoryPayloads } from './mcp-smoke-fixtures.js';
 import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from '../../src/core/compact/catalog.js';
 /**
  * MCP smoke 스크립트 테스트
@@ -30,6 +31,11 @@ describe('runMcpSmoke', () => {
       'seveneleven_get_catalog_snapshot',
       'emart24_search_products',
       'opinet_get_average_prices',
+      ...Object.keys(inventoryPayloads),
+      'megabox_find_nearby_theaters',
+      'lottecinema_find_nearby_theaters',
+      'cgv_find_theaters',
+      'dtryx_list_now_showing',
     ]);
   });
 
@@ -45,6 +51,15 @@ describe('runMcpSmoke', () => {
       'seveneleven',
       'emart24',
       'opinet',
+      'gs25',
+      'seveneleven',
+      'emart24',
+      'cu',
+      'oliveyoung',
+      'megabox',
+      'lottecinema',
+      'cgv',
+      'dtryx',
     ]);
   });
 
@@ -94,7 +109,14 @@ describe('runMcpSmoke', () => {
               country: 'JP',
               stores: [{ id: '0001', name: '渋谷店', brand: 'DAISO' }],
             },
-            gs25_search_products: { keyword: '콜라', products: [{}] },
+            ...inventoryPayloads,
+            megabox_find_nearby_theaters: { theaters: [{ theaterId: '1', theaterName: '강남' }] },
+            lottecinema_find_nearby_theaters: {
+              theaters: [{ theaterId: '1', theaterName: '잠실' }],
+            },
+            cgv_find_theaters: { theaters: [{ theaterCode: '1', theaterName: '강남' }] },
+            dtryx_list_now_showing: { movies: [{ movieCode: '1', movieName: '영화' }] },
+            gs25_search_products: { keyword: '콜라', products: [{ itemCode: 'p1' }] },
             seveneleven_get_search_popwords: { available: false, count: 0, keywords: [] },
             seveneleven_get_catalog_snapshot: {
               pages: { totalCount: 1, items: [{ itemCode: '1', itemName: '상품' }] },
@@ -102,7 +124,7 @@ describe('runMcpSmoke', () => {
               exhibitions: { totalCount: 0, items: [] },
             },
             seveneleven_search_products: { query: '커피', products: [{}] },
-            emart24_search_products: { keyword: '커피', products: [{}] },
+            emart24_search_products: { keyword: '커피', products: [{ pluCd: 'p1' }] },
             opinet_get_average_prices: { provider: 'opinet', prices: [] },
           };
 
@@ -125,6 +147,16 @@ describe('runMcpSmoke', () => {
       name: 'search_products',
       arguments: expect.objectContaining({ service: 'gs25', keyword: '콜라' }),
     });
+    for (const [service, field] of [
+      ['gs25', 'itemCode'],
+      ['emart24', 'pluCd'],
+    ]) {
+      expect(callTool).toHaveBeenCalledWith({
+        name: 'check_inventory',
+        arguments: expect.objectContaining({ service, [field]: 'p1', storeLimit: 1 }),
+      });
+    }
+    expect(callTool.mock.calls.every(([call]) => PUBLIC_TOOL_NAMES.includes(call.name))).toBe(true);
     expect(close).toHaveBeenCalledOnce();
   });
 
@@ -133,9 +165,19 @@ describe('runMcpSmoke', () => {
     const listTools = vi.fn().mockResolvedValue({
       tools: PUBLIC_TOOL_NAMES.map((name) => ({ name })),
     });
-    const callTool = vi.fn().mockResolvedValue({
-      content: [{ type: 'text', text: JSON.stringify({ keyword: '콜라', products: [{}] }) }],
-    });
+    const callTool = vi
+      .fn()
+      .mockResolvedValueOnce({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ keyword: '콜라', products: [{ itemCode: 'p1' }] }),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        content: [{ type: 'text', text: JSON.stringify(inventoryPayloads.gs25_check_inventory) }],
+      });
 
     const exitCode = await runMcpSmoke({
       service: 'gs25',
@@ -145,7 +187,7 @@ describe('runMcpSmoke', () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(callTool).toHaveBeenCalledOnce();
+    expect(callTool).toHaveBeenCalledTimes(2);
     expect(callTool).toHaveBeenCalledWith({
       name: 'search_products',
       arguments: expect.objectContaining({ service: 'gs25', keyword: '콜라' }),
@@ -172,7 +214,7 @@ describe('runMcpSmoke', () => {
     });
 
     expect(exitCode).toBe(1);
-    expect(errors.join('\n')).toContain('tool=daiso_find_inventory_by_name');
+    expect(errors.join('\n')).toContain('scenario=daiso_find_inventory_by_name');
     expect(errors.join('\n')).toContain('"query":"수납박스"');
     expect(errors.join('\n')).toContain('responseExcerpt=');
     expect(close).toHaveBeenCalledOnce();

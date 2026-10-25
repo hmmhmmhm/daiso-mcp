@@ -142,10 +142,10 @@ describe('repository maintenance configuration', () => {
     expect(workflow).toContain("node-version: '24'");
     expect(workflow.match(/npm run build/g)).toHaveLength(1);
     expect(workflow).toContain(
-      'CLI_SMOKE_SERVICES: daiso daiso_jp gs25 seveneleven emart24 oliveyoung megabox lottecinema cgv opinet',
+      'CLI_SMOKE_SERVICES: daiso daiso_jp cu gs25 seveneleven emart24 oliveyoung megabox lottecinema cgv opinet dtryx',
     );
     expect(workflow).toContain(
-      'MCP_SMOKE_SERVICES: daiso daiso_jp gs25 seveneleven emart24 opinet',
+      'MCP_SMOKE_SERVICES: daiso daiso_jp cu gs25 seveneleven emart24 oliveyoung megabox lottecinema cgv opinet dtryx',
     );
     expect(workflow).not.toContain('lottemart');
     expect(workflow).toContain('SMOKE_ATTEMPT_TIMEOUT_SECONDS: 90');
