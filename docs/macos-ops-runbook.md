@@ -18,10 +18,11 @@
 
 ## GUI 세션 활성화
 
-실제 경로를 설치 계획에 맞춘다. 이전 수동 숨김 작업 `page.aka.daiso-oliveyoung-hide`를 사용 중이면 검토 후 그 작업만 먼저 `launchctl bootout`한다. 중계 브라우저는 종료하지 않는다. 새 숨김 작업은 `page.aka.daiso-ops-hide`, 감시기는 `page.aka.daiso-ops-monitor`이다.
+실제 경로를 설치 계획에 맞춘다. 이전 수동 숨김 작업 `page.aka.daiso-oliveyoung-hide`를 사용 중이면 검토 후 그 작업만 먼저 `launchctl bootout`한다. 중계 브라우저는 종료하지 않는다. 기존 plist를 보존하더라도 다음 로그인 때 중복 실행되지 않도록 이전 작업을 disable한다. 새 숨김 작업은 `page.aka.daiso-ops-hide`, 감시기는 `page.aka.daiso-ops-monitor`이다.
 
 ```sh
 launchctl bootout "gui/$(id -u)/page.aka.daiso-oliveyoung-hide"
+launchctl disable "gui/$(id -u)/page.aka.daiso-oliveyoung-hide"
 launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/page.aka.daiso-ops-hide.plist"
 launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/page.aka.daiso-ops-monitor.plist"
 ```
@@ -56,4 +57,4 @@ launchctl bootout "gui/$(id -u)/page.aka.daiso-ops-hide"
 launchctl bootout "gui/$(id -u)/page.aka.daiso-ops-monitor"
 ```
 
-그 뒤 두 `page.aka.daiso-ops-*.plist`와 필요 없는 해당 plist 백업, `ops-helpers`, `ops-status.json`만 검토하여 삭제한다. 중계·터널 plist와 `relay.env`, `dtryx.env`, `state`, 인증·쿼터 원장은 보존한다. 기존 수동 숨김 도우미로 되돌리려면 보존한 기존 plist를 다시 bootstrap한다. 재부팅 후 실동작은 별도로 확인한다.
+그 뒤 두 `page.aka.daiso-ops-*.plist`와 필요 없는 해당 plist 백업, `ops-helpers`, `ops-status.json`만 검토하여 삭제한다. 중계·터널 plist와 `relay.env`, `dtryx.env`, `state`, 인증·쿼터 원장은 보존한다. 기존 수동 숨김 도우미로 되돌리려면 이전 `page.aka.daiso-oliveyoung-hide` 작업을 `launchctl enable`한 뒤 보존한 기존 plist를 다시 bootstrap한다. 재부팅 후 실동작은 별도로 확인한다.
