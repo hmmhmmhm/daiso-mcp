@@ -27,3 +27,8 @@ it('accepts explicit browser and rejects unknown transport', async () => {
   expect(await createTransportLifecycle('browser', '/state')).toBe('browser');
   await expect(createTransportLifecycle('bogus', '/state')).rejects.toThrow('OY_RELAY_TRANSPORT');
 });
+it('브라우저 재시도에 별도 원본 할당량 함수를 전달한다', async () => {
+  const quota = vi.fn().mockResolvedValue(true);
+  await createTransportLifecycle('browser', '/state', undefined, quota);
+  expect(mocks.browser).toHaveBeenLastCalledWith(expect.any(Function), undefined, quota);
+});

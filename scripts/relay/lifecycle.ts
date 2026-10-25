@@ -1,6 +1,6 @@
 /** 한 브라우저 세션의 재사용·교체·회수를 직렬화합니다. */
 import type { Browser, BrowserContext, Page } from 'playwright';
-import { createBrowserRunner } from './browser.js';
+import { BrowserRequestError, createBrowserRunner } from './browser.js';
 import type { BrowserRunner } from './oliveyoung.js';
 export interface BrowserOwner {
   browser: Pick<Browser, 'newContext'>;
@@ -25,6 +25,7 @@ export async function bounded<T>(work: Promise<T>, ms: number): Promise<T> {
 export function createBrowserLifecycle(
   launch: () => Promise<BrowserOwner>,
   onEvent?: (reason: string) => void | Promise<void>,
+  takeRetryQuota?: () => Promise<boolean>,
 ) {
   const emit = (reason: string) => {
     try {
@@ -44,6 +45,7 @@ export function createBrowserLifecycle(
   let born = 0;
   let calls = 0;
   let totalCalls = 0;
+  let sessionFailures = 0;
   let rotations = 0;
   let rssBytes = 0;
   let reason = 'startup';
@@ -119,6 +121,7 @@ export function createBrowserLifecycle(
     }
     born = Date.now();
     calls = 0;
+    sessionFailures = 0;
     if (closed) {
       await retire('shutdown');
       throw new Error('Browser lifecycle unavailable');
@@ -195,11 +198,34 @@ export function createBrowserLifecycle(
     active = true;
     try {
       await ensure();
-      const result = await bounded(createBrowserRunner(page!)(path, body), 18000);
+      calls++;
+      const runner = createBrowserRunner(page!);
+      const request = async () => {
+        try {
+          return await runner(path, body);
+        } catch (error) {
+          if (
+            !(error instanceof Error) ||
+            !error.message.includes('Execution context was destroyed')
+          )
+            throw error;
+          // 초기 페이지의 추가 이동과 겹친 읽기 요청만 한 번 다시 실행합니다.
+          if (takeRetryQuota && !(await takeRetryQuota()))
+            throw new BrowserRequestError('retry-quota');
+          calls++;
+          emit('navigation-retry');
+          await page!.waitForURL('https://www.oliveyoung.co.kr/store/**', {
+            waitUntil: 'domcontentloaded',
+            timeout: 5000,
+          });
+          return runner(path, body);
+        }
+      };
+      const result = await bounded(request(), 18000);
       failures = 0;
       retryAt = 0;
       lastFailure = undefined;
-      calls++;
+      sessionFailures = 0;
       totalCalls++;
       if (calls >= 200 || Date.now() - born >= 30 * 60 * 1000) {
         rotations++;
@@ -208,6 +234,22 @@ export function createBrowserLifecycle(
       }
       return result;
     } catch (error) {
+      // 완료된 HTTP 요청의 실패는 브라우저 프로세스 고장과 구분합니다.
+      if (error instanceof BrowserRequestError) {
+        emit(`request-${error.reason.replaceAll(' ', '-')}`);
+        sessionFailures =
+          error.upstreamStatus === 403 || error.reason === 'invalid-json' ? sessionFailures + 1 : 0;
+        if (sessionFailures >= 3) {
+          sessionFailures = 0;
+          defer(error);
+          await retire('session-rejected');
+        } else if (calls >= 200) {
+          rotations++;
+          replacementPending = true;
+          await retire('rotation');
+        }
+        throw error;
+      }
       defer(error);
       await retire('request-failed');
       throw error;

@@ -2,6 +2,7 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { OLIVEYOUNG_API } from '../../src/services/oliveyoung/api.js';
 import type { OliveyoungApiResponse } from '../../src/services/oliveyoung/types.js';
+import { BrowserRequestError } from './browser.js';
 import { createConsumerQuota } from './consumer.js';
 import { canonicalKey, createResponseCache } from './cache.js';
 import type { QuotaStatus } from './quota.js';
@@ -71,10 +72,17 @@ export function createOliveyoungRelay(
   const expected = Buffer.from(`Bearer ${token}`);
   const cache = createResponseCache();
   const consumers = createConsumerQuota();
-  const consumerDenied = (busy = false) => Response.json({ error: 'Relay quota exceeded', reason: busy ? 'consumer-busy' : 'consumer' }, {
-    status: 429,
-    headers: { 'x-relay-quota-reason': busy ? 'consumer-busy' : 'consumer', 'retry-after': String(busy ? 1 : consumers.retryAfter()) },
-  });
+  const consumerDenied = (busy = false) =>
+    Response.json(
+      { error: 'Relay quota exceeded', reason: busy ? 'consumer-busy' : 'consumer' },
+      {
+        status: 429,
+        headers: {
+          'x-relay-quota-reason': busy ? 'consumer-busy' : 'consumer',
+          'retry-after': String(busy ? 1 : consumers.retryAfter()),
+        },
+      },
+    );
   const ttl: Record<string, number> = {
     'find-store': 300000,
     'product-search-v3': 300000,
@@ -193,7 +201,8 @@ export function createOliveyoungRelay(
             entry!.startedAt = Date.now();
             if (
               [...signals].every(
-                ([signal, arrived]) => signal.aborted || entry!.startedAt - arrived >= MAX_QUEUE_WAIT_MS,
+                ([signal, arrived]) =>
+                  signal.aborted || entry!.startedAt - arrived >= MAX_QUEUE_WAIT_MS,
               )
             )
               return null;
@@ -228,7 +237,11 @@ export function createOliveyoungRelay(
       }
       try {
         const result = await entry.task;
-        if (request.signal.aborted || result === null || entry.startedAt - queuedAt >= MAX_QUEUE_WAIT_MS) {
+        if (
+          request.signal.aborted ||
+          result === null ||
+          entry.startedAt - queuedAt >= MAX_QUEUE_WAIT_MS
+        ) {
           emit('queue', request.signal.aborted ? 'canceled' : 'expired');
           return error(503, 'Request expired');
         }
@@ -248,7 +261,28 @@ export function createOliveyoungRelay(
         if (result === 'unavailable') return error(503, 'Relay quota unavailable');
         if (result?.status !== 'SUCCESS') return error(502, 'Upstream unavailable');
         return Response.json(result, { headers: { 'x-relay-cache': mode } });
-      } catch {
+      } catch (failure) {
+        if (failure instanceof BrowserRequestError) {
+          if (failure.reason === 'retry-quota') {
+            const status = options.takeQuota?.status?.();
+            return Response.json(
+              { error: 'Relay quota exceeded', reason: status?.blockedBy || 'unknown' },
+              {
+                status: 429,
+                headers: {
+                  'x-relay-quota-reason': status?.blockedBy || 'unknown',
+                  'retry-after': String(status?.retryAfter || 60),
+                },
+              },
+            );
+          }
+          const reason = failure.reason.replaceAll(' ', '-');
+          emit('upstream', reason);
+          return Response.json(
+            { error: 'Upstream unavailable', reason, upstreamStatus: failure.upstreamStatus },
+            { status: 502 },
+          );
+        }
         emit('upstream', 'error');
         return error(502, 'Upstream unavailable');
       } finally {

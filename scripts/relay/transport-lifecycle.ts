@@ -4,6 +4,7 @@ export async function createTransportLifecycle(
   mode: string | undefined,
   stateDir: string,
   onEvent?: (reason: string) => void | Promise<void>,
+  takeRetryQuota?: () => Promise<boolean>,
 ) {
   if (mode === 'http') {
     const { createHttpLifecycle } = await import('./http-lifecycle.js');
@@ -16,5 +17,6 @@ export async function createTransportLifecycle(
   return createBrowserLifecycle(
     () => launchGuardedBrowser(join(stateDir, 'browser-owner.json'), onEvent),
     onEvent,
+    takeRetryQuota,
   );
 }

@@ -35,6 +35,7 @@ async function main() {
         operation: process.env.OY_RELAY_TRANSPORT || 'browser',
         outcome,
       }),
+    takeQuota,
   );
   const recover = createRelayWatchdog(lifecycle, (outcome) =>
     log.append({ stage: 'lifecycle', outcome }),
