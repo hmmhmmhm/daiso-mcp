@@ -153,7 +153,11 @@ describe('runMcpSmoke', () => {
     ]) {
       expect(callTool).toHaveBeenCalledWith({
         name: 'check_inventory',
-        arguments: expect.objectContaining({ service, [field]: 'p1', storeLimit: 1 }),
+        arguments: expect.objectContaining({
+          service,
+          [field]: 'p1',
+          storeLimit: service === 'emart24' ? 10 : 1,
+        }),
       });
     }
     expect(callTool.mock.calls.every(([call]) => PUBLIC_TOOL_NAMES.includes(call.name))).toBe(true);

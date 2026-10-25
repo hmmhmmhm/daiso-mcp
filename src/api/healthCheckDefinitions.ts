@@ -193,7 +193,7 @@ export const HEALTH_CHECKS: HealthCheckDefinition[] = [
     service: 'emart24',
     target: 'inventory',
     mode: 'deep',
-    path: '/api/emart24/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&limit=1',
+    path: '/api/emart24/inventory?keyword=%EC%BB%A4%ED%94%BC&storeKeyword=%EA%B0%95%EB%82%A8&storeLimit=10',
     collectionKey: 'stores',
     requiredFields: ['storeCode', 'storeName', 'name'],
     degradedFailurePatterns: EMART24_UPSTREAM_403_PATTERNS,

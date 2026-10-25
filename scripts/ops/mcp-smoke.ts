@@ -226,8 +226,16 @@ export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
     label: `${service} 실제 매장 재고`,
     toolName: `${service}_check_inventory`,
     args: {
-      keyword: service === 'gs25' ? '콜라' : service === 'oliveyoung' ? '선크림' : '커피',
-      storeLimit: 1,
+      keyword:
+        service === 'gs25'
+          ? '콜라'
+          : service === 'oliveyoung'
+            ? '선크림'
+            : service === 'seveneleven'
+              ? '핫식스'
+              : '커피',
+      // 이마트24는 수량이 없는 점포를 응답에서 생략하므로 후보 10곳을 한 번에 묶어 조회합니다.
+      storeLimit: service === 'emart24' ? 10 : 1,
       timeoutMs: 20000,
       ...(service === 'seveneleven' || service === 'emart24' ? { storeKeyword: '강남' } : {}),
       ...(service === 'gs25' || service === 'cu' || service === 'oliveyoung'
