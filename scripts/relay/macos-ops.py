@@ -220,6 +220,7 @@ def login_notification(checks, previous, now, enabled):
 
 
 def monitor(base, tunnel_port, notify_local=False):
+    checked_at = time.time()
     checks = {}
     for name, env_file, token_key, port, path in [
         ('oliveyoung', 'relay.env', 'OY_RELAY_TOKEN', 4319, '/health'),
@@ -248,7 +249,6 @@ def monitor(base, tunnel_port, notify_local=False):
             checks['tunnel'] = {'failed': True, 'reason': 'readiness-unavailable'}
     previous_status = snapshot_status(base / 'ops-status.json')
     previous = previous_status.get('checks', {})
-    checked_at = time.time()
     for name, check in checks.items():
         old = previous.get(name, {})
         if check['failed']:

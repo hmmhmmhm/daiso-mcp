@@ -27,7 +27,7 @@ launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/page.aka.daiso-op
 launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/page.aka.daiso-ops-monitor.plist"
 ```
 
-업데이트할 때는 새 plist 설치 후 이 두 보조 작업만 `bootout`하고 다시 `bootstrap`한다. 중계·터널 작업의 종료나 재시작은 포함하지 않는다. 숨김 도우미는 비공개 `state/browser-owner.json`의 PID·부모 PID·생성 시각과 실제 프로세스 UID·실행 파일이 모두 맞을 때만 숨긴다. 이미 숨겨진 앱도 소유권을 검증한다. 사용자 Chrome이나 소유권이 불확실한 프로세스에는 요청하지 않는다.
+업데이트할 때는 새 plist 설치 후 이 두 보조 작업만 `bootout`하고 다시 `bootstrap`한다. 중계·터널 작업의 종료나 재시작은 포함하지 않는다. 숨김 도우미는 비공개 `state/browser-owner.json`의 PID·부모 PID·생성 시각과 실제 프로세스 UID·실행 파일이 모두 맞을 때만 숨긴다. 이미 숨겨진 앱도 소유권을 검증한다. 새 브라우저 생성 시각 이후의 로컬 감시 기록이 `ready`를 확인한 다음 숨긴다. 초기 브라우저 생성과 숨김이 겹치지 않도록 이전 세션의 기록, 3분 넘게 오래된 기록, 준비 중 또는 실패한 기록은 사용하지 않는다. 감시 기록의 시각은 마지막 저장 시각이 아니라 조회 시작 시각을 사용해, 점검 도중 교체된 새 브라우저에 이전 준비 결과가 적용되지 않게 한다. 로컬 감시는 60초 주기이므로 준비 완료 뒤 숨김까지 최대 한 주기 지연될 수 있다. 사용자 Chrome이나 소유권이 불확실한 프로세스에는 요청하지 않는다.
 
 ## 감시와 상태 확인
 

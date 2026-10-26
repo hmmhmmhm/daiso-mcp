@@ -8,6 +8,16 @@ func argument(_ name: String, fallback: URL) -> URL {
           CommandLine.arguments[index + 1].hasPrefix("/") else { exit(2) }
     return URL(fileURLWithPath: CommandLine.arguments[index + 1]).standardizedFileURL
 }
+// 새 프로세스 준비 전의 이전 스냅샷이나 오래된 상태로 숨기지 않습니다.
+func readinessAllowsHiding(_ value: [String: Any], launchedAt: TimeInterval, now: TimeInterval) -> Bool {
+    guard let checkedAt = value["checkedAt"] as? Double,
+          checkedAt >= launchedAt + 1, checkedAt <= now + 5, now - checkedAt <= 180,
+          let checks = value["checks"] as? [String: Any],
+          let oliveyoung = checks["oliveyoung"] as? [String: Any],
+          oliveyoung["state"] as? String == "ready", oliveyoung["failed"] as? Bool == false else { return false }
+    return true
+}
+
 let base = argument("--state-base", fallback: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/DaisoRelay"))
 let runtime = argument("--runtime", fallback: base.appendingPathComponent("runtime"))
 let marker = base.appendingPathComponent("state/browser-owner.json")
@@ -20,6 +30,20 @@ func safeMarkerPath() -> Bool {
         path.deleteLastPathComponent()
     }
     return true
+}
+
+func readyForHide(_ app: NSRunningApplication) -> Bool {
+    let status = base.appendingPathComponent("ops-status.json")
+    guard let launched = app.launchDate,
+          status.resolvingSymlinksInPath().path == status.path,
+          let attributes = try? FileManager.default.attributesOfItem(atPath: status.path),
+          attributes[.type] as? FileAttributeType == .typeRegular,
+          attributes[.ownerAccountID] as? UInt32 == getuid(),
+          let mode = attributes[.posixPermissions] as? UInt16, mode & 0o077 == 0,
+          let size = attributes[.size] as? UInt64, size <= 65536,
+          let data = try? Data(contentsOf: status),
+          let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+    return readinessAllowsHiding(value, launchedAt: launched.timeIntervalSince1970, now: Date().timeIntervalSince1970)
 }
 
 // 소유 마커가 바뀌거나 검증에 실패하면 숨김을 생략한다.
@@ -57,13 +81,13 @@ func target() -> NSRunningApplication? {
 
 // 매초 확인하되 이미 숨겨진 앱에는 추가 UI 요청을 보내지 않는다.
 func hideOwnedBrowser() {
-    guard let app = target(), !app.isHidden else { return }
+    guard let app = target(), !app.isHidden, readyForHide(app) else { return }
     _ = app.hide()
 }
 
 if CommandLine.arguments.contains("--check") {
     if let app = target() {
-        print("owned=true hidden=\(app.isHidden) pid=\(app.processIdentifier)")
+        print("owned=true hidden=\(app.isHidden) pid=\(app.processIdentifier) readyToHide=\(readyForHide(app))")
     } else {
         print("owned=false")
         exit(1)

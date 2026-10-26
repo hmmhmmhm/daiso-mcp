@@ -108,6 +108,21 @@ class OpsTests(unittest.TestCase):
             self.assertEqual(second['checks']['oliveyoung']['consecutiveFailures'],2)
             self.assertEqual(first['checks']['oliveyoung']['firstFailedAt'], second['checks']['oliveyoung']['firstFailedAt'])
 
+    def test_monitor_timestamps_observation_before_later_checks(self):
+        with tempfile.TemporaryDirectory() as root:
+            base=Path(root).resolve()
+            for name in ['relay.env', 'dtryx.env']:
+                (base/name).write_text('OY_RELAY_TOKEN=secret\nDTRYX_RELAY_TOKEN=secret\nCONVENIENCE_RELAY_TOKEN=secret\n')
+                (base/name).chmod(0o600)
+            clock=[1000]
+            def fetch(port,path,token=None):
+                if path != '/health': clock[0]=1200
+                return {'state':'ready'}
+            with patch.object(ops.time,'time',side_effect=lambda: clock[0]), patch.object(ops,'fetch_health',side_effect=fetch):
+                result=ops.monitor(base,0)
+            self.assertEqual(result['checkedAt'],1000)
+            self.assertEqual(clock[0],1200)
+
     def test_configured_gs_session_requires_observable_authentication(self):
         with tempfile.TemporaryDirectory() as root:
             base=Path(root).resolve()
