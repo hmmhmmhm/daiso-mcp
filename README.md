@@ -2,17 +2,18 @@
 <summary>AI 에이전트 사용 안내</summary>
 
 > [!IMPORTANT]
-> **최신 안내:** [현재 버전](https://mcp.aka.page/guide/2026-10-22.1) · [항상 최신 버전으로 이동](https://mcp.aka.page/guide/latest)
+> **최신 안내:** [현재 버전](https://mcp.aka.page/guide/2026-10-26.1) · [항상 최신 버전으로 이동](https://mcp.aka.page/guide/latest)
 >
-> **안내 버전: 2026-10-22.1 · 갱신일: 2026-10-22**
+> **안내 버전: 2026-10-26.1 · 갱신일: 2026-10-26**
 >
-> **ChatGPT 웹 읽기:** 연결된 MCP 도구가 없으면 [HTML GET으로 바로 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)하세요. 설치·API 키·MCP 연결 설정은 필요 없습니다.
+> **ChatGPT 웹 조회:** 연결된 MCP 도구가 없으면 사용 가능한 실제 브라우저로, 브라우저 도구도 없으면 open/WebFetch로 [HTML GET으로 바로 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)하세요. 설치·API 키·MCP 연결 설정은 필요 없습니다.
 >
 > **로컬 설치·빌드·API 키 준비 없이 실제 조회부터 실행하세요.** 패키지 설치나 전체 스키마 탐색은 필요 없습니다.
 >
 > 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
-> 2. 웹 읽기(open/WebFetch)가 가능하면 [첫 HTML 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)를 바로 엽니다. **셸이 있어도 연결된 MCP 도구가 없으면 HTML GET이 우선입니다.** 경로의 검색어를 사용자 요청으로 바꾸세요. 웹 검색은 URL 열기를 대신하지 않습니다.
-> 3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 터미널·셸 호출로 우회하지 마세요. 셸 DNS 실패를 웹 GET 실패로 확대하거나 실행하지 않은 요청의 실패를 만들지 마세요.
+> 2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 사용 가능합니다.
+> 3. 웹 읽기(open/WebFetch)만 가능하면 같은 HTML GET을 실행합니다. 접근 오류 시 문서의 링크를 따라갈 수 있으나 성공을 보장하지 않습니다. Crawled가 과거인 수집본을 현재 재고로 단정하지 마세요.
+> 4. 위 세 수단이 없거나 모두 실패하면 실제 조회 제약과 오류를 알립니다. 셸이 있어도 설치 없는 웹 조회가 우선이며 터미널·셸로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패로 확대하거나 실행하지 않은 요청의 실패를 만들지 마세요.
 >
 > **검색 링크:** [핫식스 상품 검색](https://mcp.aka.page/browse/daiso/products/%ED%95%AB%EC%8B%9D%EC%8A%A4/pageSize/10) · [강남 매장 검색](https://mcp.aka.page/browse/daiso/stores/%EA%B0%95%EB%82%A8). 웹 읽기는 링크를 직접 열고, 접근 오류만으로 상품 없음이나 재고 0을 판단하지 마세요.
 >
@@ -127,7 +128,7 @@
 2. 서버 URL을 입력하고, 전송 방식을 묻는 경우 **HTTP / Streamable HTTP**를 선택합니다.
 3. 도구를 활성화하고 `다이소 MCP로 수납박스 검색해줘`라고 요청합니다.
 
-[앱별 연결 방법](docs/client-guide.md#원격-mcp-연결) · [WebFetch로 첫 조회](docs/service-reference.md?guide=2026-10-22.1#설치-없이-첫-조회)
+[앱별 연결 방법](docs/client-guide.md#원격-mcp-연결) · [WebFetch로 첫 조회](docs/service-reference.md?guide=2026-10-26.1#설치-없이-첫-조회)
 
 <p align="center">
   <img src="./assets/readme-banners/connect.webp" alt="스마트폰과 노트북을 클라우드로 연결하는 두 햄스터" width="100%">
@@ -205,7 +206,7 @@ MCP 연결 없이 웹 읽기와 GET 요청을 지원하는 에이전트는 [REST
 | 문서                                                            | 내용                                                                                                                                               |
 | :-------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [연결·사용 가이드](docs/client-guide.md)                        | 앱별 MCP 연결, CLI, Skill, OpenAPI                                                                                                                 |
-| [서비스 레퍼런스](docs/service-reference.md?guide=2026-10-22.1) | 서비스별 도구·REST API·응답 모델·가격 비교                                                                                                         |
+| [서비스 레퍼런스](docs/service-reference.md?guide=2026-10-26.1) | 서비스별 도구·REST API·응답 모델·가격 비교                                                                                                         |
 | [일본 다이소](docs/daiso-jp-network-analysis.md)                | 일본 상품·매장 검색과 지원 범위                                                                                                                    |
 | [독립·예술영화관](docs/dtryx.md)                                | 디트릭스 지원 극장과 조회 방법                                                                                                                     |
 | [AI 조회 가이드](docs/ai-instruction.md)                        | 도구 선택과 상품·매장·재고 조회 순서                                                                                                               |

@@ -51,8 +51,8 @@ describe('실제 상품 이미지 카드', () => {
     const assets = buildDiscoveryAssets({ services: [], tools: [] });
     expect(assets['discovery.html']).toMatch(/name="description" content="ChatGPT.*browse\//);
     for (const text of [assets['discovery.html'], buildAgentStartText('https://example.com')]) {
-      expect(text).toContain('안내 버전: 2026-10-22.1');
-      expect(text).toContain('갱신일: 2026-10-22');
+      expect(text).toContain('안내 버전: 2026-10-26.1');
+      expect(text).toContain('갱신일: 2026-10-26');
     }
   });
 });

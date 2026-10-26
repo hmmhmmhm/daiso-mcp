@@ -1,19 +1,20 @@
 /** 검색·읽기 사본의 안내 세대를 구분하는 고정 버전 */
-export const AGENT_GUIDE_VERSION = '2026-10-22.1';
-export const AGENT_GUIDE_UPDATED = '2026-10-22';
+export const AGENT_GUIDE_VERSION = '2026-10-26.1';
+export const AGENT_GUIDE_UPDATED = '2026-10-26';
 export const AGENT_GUIDE_STAMP = `안내 버전: ${AGENT_GUIDE_VERSION} · 갱신일: ${AGENT_GUIDE_UPDATED}`;
 export const AGENT_GUIDE_PATH = `/guide/${AGENT_GUIDE_VERSION}`;
 export const WEB_SEARCH_DESCRIPTION =
-  'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 바로 상품을 조회하세요. open/WebFetch로 /browse/daiso/products/검색어를 엽니다. 쿼리 문자열과 format 지정은 필요 없습니다. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
+  'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 바로 상품을 조회하세요. 사용 가능한 실제 브라우저 도구가 있으면 /browse/daiso/products/검색어를 열고, 없으면 open/WebFetch를 사용합니다. 쿼리 문자열과 format 지정은 필요 없습니다. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
 
 /** 웹 읽기 환경에서 쿼리 없는 HTML 경로를 우선합니다. */
 export const WEB_READ_RULE =
-  '웹 읽기 전용 에이전트는 /browse/ 경로를 사용하세요. 상품 검색·상세·매장·재고·후속 조회가 모두 자동 HTML입니다. format이나 쿼리 문자열은 필요 없습니다. JSON API 주소를 웹 읽기로 열거나 셸로 우회하지 마세요. 접근 오류만으로 서비스 장애·로그인 필요·이 환경에서 실행할 수 없다고 단정하지 마세요.';
+  '웹 조회는 /browse/ 경로를 사용하세요. Work 등에서 실제 브라우저 도구가 있으면 그 도구로 열고, 없으면 open/WebFetch를 사용하세요. 웹 읽기의 접근 오류가 나면 같은 주소를 반복하기 전에 사용 가능한 브라우저로 전환하세요. Crawled가 과거인 수집본을 현재 재고로 단정하지 마세요. 상품 검색·상세·매장·재고·후속 조회가 모두 자동 HTML입니다. format이나 쿼리 문자열은 필요 없습니다. JSON API 주소를 웹 읽기로 열거나 셸로 우회하지 마세요. 접근 오류만으로 서비스 장애·로그인 필요·이 환경에서 실행할 수 없다고 단정하지 마세요.';
 
 /** 셸 존재를 네트워크 접근 가능 여부로 오해하지 않는 실행 순서 */
 export const ROUTE_SELECTION_TEXT = `1. 연결된 MCP 도구가 있으면 search_products {"service":"daiso","query":"수납박스","pageSize":3}를 호출합니다.
-2. 웹 읽기(open/WebFetch)가 가능하면 /browse/ HTML GET 주소를 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 웹 검색(search)은 URL 열기(open)를 대신하지 않습니다.
-3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 터미널·셸 호출로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 확대하지 말고 실제로 실행하지 않은 요청의 실패를 만들지 마세요.`;
+2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 페이지의 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 이 경로를 사용합니다.
+3. 웹 읽기(open/WebFetch)만 가능하면 같은 HTML GET을 실행합니다. 접근 오류가 나면 문서의 링크를 따라갈 수 있으나 성공을 보장하지 않습니다. Crawled가 과거인 수집본은 현재 재고 확인으로 쓰지 않습니다.
+4. 위 세 수단이 없거나 모두 실패하면 실제 조회 제약과 오류를 알립니다. 셸이 있어도 설치 없는 웹 조회가 우선입니다. 터미널·셸 호출로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 확대하지 말고 실제로 실행하지 않은 요청의 실패를 만들지 마세요.`;
 
 /** 유사 상품의 웹 검색 이미지를 실제 상품 사진으로 오인하지 않도록 제한합니다. */
 export const IMAGE_SOURCE_RULE =
@@ -21,7 +22,7 @@ export const IMAGE_SOURCE_RULE =
 
 /** 실행 기록 없이 성공·실패나 HTTP 상태를 단정하지 않도록 안내합니다. */
 export const EXECUTION_EVIDENCE_RULE =
-  '실제로 실행한 도구·요청 URL·반환 데이터와 확인된 오류만 보고하세요. 실행하지 않은 웹 GET을 실패했다고 말하거나 검색 결과·문서 예제를 실제 조회 결과로 제시하지 마세요. 도구가 HTTP 상태를 제공하지 않으면 HTTP 200이라고 추정하지 마세요. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.';
+  '실제로 실행한 도구·요청 URL·반환 데이터와 확인된 오류만 보고하세요. 웹 읽기의 Crawled 시점과 HTML의 응답 생성 시각을 확인하고 오래된 수집본을 현재 재고로 단정하지 마세요. 응답 생성 시각은 원본 재고 갱신 시각이 아닙니다. 실행하지 않은 웹 GET을 실패했다고 말하거나 검색 결과·문서 예제를 실제 조회 결과로 제시하지 마세요. 도구가 HTTP 상태를 제공하지 않으면 HTTP 200이라고 추정하지 마세요. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.';
 
 /** 설치 없이 첫 실제 조회를 실행하는 에이전트 안내 */
 export function buildAgentStartText(baseUrl: string): string {

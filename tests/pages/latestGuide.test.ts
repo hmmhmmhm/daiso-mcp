@@ -4,7 +4,7 @@ import app from '../../src/index.js';
 import { buildDiscoveryAssets } from '../../src/pages/discovery.js';
 import { apiResultHtml } from '../../src/pages/apiResult.js';
 
-const version = '2026-10-22.1';
+const version = '2026-10-26.1';
 describe('최신 안내 경로와 원본 이미지', () => {
   it.each(['/guide/latest', '/guide/2026-10-21.2', '/guide/unknown'])('%s는 캐시 없이 현재 버전으로 연결한다', async path => {
     const r = await app.request(path);

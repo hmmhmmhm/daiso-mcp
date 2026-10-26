@@ -1,7 +1,7 @@
 ---
 name: daiso-cli
-description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Honor explicit no-install requests with connected MCP tools first, then HTML GET via web reading even when a shell is available; otherwise prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
-version: 1.0.8
+description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Honor explicit no-install requests with connected MCP tools first, then HTML GET via an available browser, then web reading even when a shell is available; otherwise prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
+version: 1.0.9
 metadata:
   openclaw:
     requires:
@@ -24,8 +24,9 @@ Use this skill to operate the Daiso MCP project through `npx daiso` and the publ
 최신 지침은 https://mcp.aka.page/guide/latest 를 열어 현재 버전 주소로 이동합니다. 오래된 버전 경로도 최신 지침으로 연결됩니다. 첫 조회에는 지침의 guide 버전을 유지하세요.
 
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
-2. 웹 읽기(open/WebFetch)가 가능하면 아래 HTML GET을 바로 엽니다. 셸이 있어도 연결된 MCP 도구가 없으면 이 경로가 우선입니다. 검색(search)은 URL 열기(open)를 대신하지 않습니다.
-3. 위 두 수단이 없을 때만 사용 가능한 조회 도구가 없음을 알립니다. 셸 호출로 우회하지 않으며, 셸 DNS 오류를 웹 GET 실패로 확대하지 않습니다. 실제로 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
+2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 사용 가능합니다.
+3. 웹 읽기(open/WebFetch)만 가능하면 같은 HTML GET을 실행합니다. 접근 오류 시 문서의 링크를 따라갈 수 있으나 성공을 보장하지 않습니다. Crawled가 과거인 수집본을 현재 재고로 단정하지 마세요.
+4. 위 세 수단이 없거나 모두 실패하면 실제 조회 제약과 오류를 알립니다. 셸이 있어도 설치 없는 웹 조회가 우선이며 터미널·셸로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패로 확대하거나 실행하지 않은 요청의 실패를 만들지 마세요.
 
 https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3
 

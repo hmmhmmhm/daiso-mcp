@@ -118,10 +118,12 @@ export const apiResultHtml: MiddlewareHandler<{ Bindings: AppBindings }> = async
   const inventoryGuide = japan
     ? '일본 매장 재고 미지원. 온라인 판매 가능 여부를 매장 재고로 해석하지 마세요.'
     : '매장 재고는 상품 ID와 매장명 또는 사용자 위치를 확인한 뒤 별도로 조회하세요.';
+  const generatedAt = new Date().toISOString();
   const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${title}: DAISO MCP</title>
 <style>body{font-family:system-ui,sans-serif;max-width:900px;margin:32px auto;padding:0 20px;line-height:1.6;overflow-wrap:anywhere}dt{font-weight:600}dd{margin-bottom:12px}li{border-bottom:1px solid #ddd;padding:12px 0}a{color:#075bb5}.product-card{border:1px solid #d8dee5;border-radius:12px;padding:20px;margin:16px 0}.product-card img{max-width:100%;width:240px;height:240px;object-fit:contain}.product-card figure{margin:0}figcaption,.image-missing{color:#485666;font-size:.9em}</style></head><body><main><h1>${title}</h1>
 <p>${escapeHtml(AGENT_GUIDE_STAMP)} · <a href="${AGENT_GUIDE_PATH}">현재 버전 안내</a> · <a href="/guide/latest">항상 최신 안내</a></p>
 <p><strong>${escapeHtml(WEB_READ_RULE)}</strong></p>
+<p>응답 생성 시각: <time datetime="${generatedAt}">${generatedAt}</time> (UTC). 원본 재고 갱신 시각을 뜻하지 않습니다.</p>
 <p>요청: <code>${source}</code> · HTTP ${c.res.status}</p><p>실제 API 조회 결과입니다. 오류를 상품 없음이나 재고 0으로 해석하지 마세요. ${inventoryGuide}</p>
 <p>${escapeHtml(IMAGE_SOURCE_RULE)}</p>
 <p>${escapeHtml(EXECUTION_EVIDENCE_RULE)}</p>

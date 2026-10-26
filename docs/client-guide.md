@@ -1,5 +1,7 @@
 # 앱 연결·CLI·Skill 가이드
 
+실제 브라우저 도구가 있으면 /browse/ HTML을 그 도구로 여세요. 웹 읽기(open/WebFetch)의 접근 오류 시 사용 가능한 브라우저로 전환합니다. Crawled가 과거인 수집본은 현재 재고 확인이 아닙니다. 응답 생성 시각도 함께 확인하세요.
+
 연결된 MCP 도구가 있으면 [원격 MCP 안내](../README.md#원격-mcp로-바로-시작하기)를 따릅니다. 웹 읽기만 가능하면 설치·연결 설정 없이 [첫 상품 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)를 open/WebFetch로 바로 여세요. 모든 후속 조회도 쿼리 없는 `/browse/` 경로를 사용하며 자동 HTML입니다.
 원격 서버는 `https://mcp.aka.page`, 전송 방식은 Streamable HTTP, 사용자 인증은 없습니다.
 
@@ -253,3 +255,5 @@ npx daiso products 수납박스 --json
 앱의 원격 MCP 지원 여부는 해당 앱 문서에서 확인하세요. 웹 GET 요청을 실행할 수 있다면
 [REST 사용법 페이지](https://mcp.aka.page/prompt)를 읽고 조회할 수 있습니다.
 REST GET 조회는 MCP 프로토콜 연결이 아닙니다.
+
+웹 읽기 접근 오류와 오래된 결과 구별은 [진단 안내](web-reading-troubleshooting.md)를 참고하세요.

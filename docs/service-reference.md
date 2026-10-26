@@ -1,5 +1,7 @@
 # DAISO MCP 서비스 레퍼런스
 
+실제 브라우저 도구가 있으면 /browse/ HTML을 그 도구로 여세요. 웹 읽기(open/WebFetch)의 접근 오류 시 사용 가능한 브라우저로 전환합니다. Crawled가 과거인 수집본은 현재 재고 확인이 아닙니다. 응답 생성 시각도 함께 확인하세요.
+
 README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리한 문서입니다.
 
 ## 설치 없이 첫 조회
@@ -14,7 +16,7 @@ README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리�
 
 모든 후속 웹 GET도 `/browse/`를 사용하세요. 자동 HTML이며 쿼리 문자열이나 format 지정은 필요 없습니다. 상품 검색 결과의 실제 ID로 재고를 조회하고 검색 성공만으로 매장 재고를 단정하지 않습니다. 이미지는 응답 imageUrl과 카드의 원본 Markdown만 사용하고 이미지 검색으로 대체하지 않습니다.
 
-현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-22.1), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
+현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-26.1), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
 
 이미 연결된 MCP 도구가 있는 환경만 `search_products`에 `service=daiso`, `query=수납박스`를 전달합니다. 서버는 https://mcp.aka.page 이며 Streamable HTTP, 인증 없음입니다. 실제로 실행한 도구·URL·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
@@ -811,16 +813,16 @@ GET /api/cgv/timetable?playDate={YYYYMMDD}&theaterCode={극장코드}&movieCode=
 
 웹 읽기(open/WebFetch)는 아래 경로로 실행합니다. `{...}`는 앞선 실제 응답 또는 사용자가 알려 준 조건으로 바꾸고 각 값을 한 번 URL 인코딩합니다. 모든 결과는 자동 HTML입니다.
 
-| 사용자 요청 | 웹 조회 경로 |
-| --- | --- |
-| 수납박스 검색 | `/browse/daiso/products/수납박스/pageSize/3` |
-| 선택한 상품의 안산 중앙역 재고 | `/browse/daiso/inventory/{실제상품ID}/안산중앙역` |
-| 강남역 다이소 매장 | `/browse/daiso/stores/강남역` |
-| 선택한 매장의 진열 위치 | `/browse/daiso/display-location/{실제상품ID}/{재고응답의storeCode}` |
-| 명동 올리브영 매장 | `/browse/oliveyoung/stores/명동` |
-| 강남 CU 과자 재고 | `/browse/cu/inventory/과자/강남` |
-| 잠실 롯데시네마 극장 | `/browse/lottecinema/theaters/잠실` |
-| 선택한 CGV 극장 시간표 | `/browse/cgv/timetable/playDate/{YYYYMMDD}/theaterCode/{실제극장코드}` |
+| 사용자 요청                    | 웹 조회 경로                                                           |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| 수납박스 검색                  | `/browse/daiso/products/수납박스/pageSize/3`                           |
+| 선택한 상품의 안산 중앙역 재고 | `/browse/daiso/inventory/{실제상품ID}/안산중앙역`                      |
+| 강남역 다이소 매장             | `/browse/daiso/stores/강남역`                                          |
+| 선택한 매장의 진열 위치        | `/browse/daiso/display-location/{실제상품ID}/{재고응답의storeCode}`    |
+| 명동 올리브영 매장             | `/browse/oliveyoung/stores/명동`                                       |
+| 강남 CU 과자 재고              | `/browse/cu/inventory/과자/강남`                                       |
+| 잠실 롯데시네마 극장           | `/browse/lottecinema/theaters/잠실`                                    |
+| 선택한 CGV 극장 시간표         | `/browse/cgv/timetable/playDate/{YYYYMMDD}/theaterCode/{실제극장코드}` |
 
 이미 연결된 MCP 도구가 있으면 웹 GET 대신 [공개 통합 도구](mcp-tools.md)를 사용합니다. 예를 들어 상품 검색은 `search_products(service=daiso, query=수납박스)`, 실제 상품 ID로 재고 조회는 `check_inventory(service=daiso, operation=by_id, productId=실제ID, keyword=사용자지역)`입니다. 위 상세 레퍼런스의 deprecated 별칭을 새 호출 예제로 사용하지 않습니다.
 

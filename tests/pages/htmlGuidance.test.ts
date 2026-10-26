@@ -4,7 +4,7 @@ import { buildAgentStartText } from '../../src/pages/agentStart.js';
 import { generatePromptText } from '../../src/pages/prompt.js';
 import app from '../../src/index.js';
 
-const rule = '웹 읽기 전용 에이전트는 /browse/ 경로를 사용하세요';
+const rule = '웹 조회는 /browse/ 경로를 사용하세요';
 describe('웹 읽기 전용 에이전트 안내', () => {
   it('첫 화면과 llms 및 prompt 앞부분에서 HTML 필수 규칙을 발견한다', () => {
     const assets = buildDiscoveryAssets({ services: [], tools: [] });
