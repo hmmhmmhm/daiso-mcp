@@ -237,3 +237,16 @@ it('시작 중 연결 실패도 같은 lease 안에서 비정상 감시자를 �
   await expect(pending).rejects.toThrow('connect failed');
   expect(mocks.recover).toHaveBeenCalledTimes(1);
 });
+
+it('지정한 전용 실행 파일로 헤드리스 세션을 준비하고 기존 소유권 회수를 유지한다', async () => {
+  const child = fixture();
+  const pending = launchGuardedBrowser('/tmp/test-seven-owner', undefined, '/browser/chrome');
+  await ready(child);
+  const owner = await pending;
+  expect(mocks.fork).toHaveBeenCalledWith(
+    expect.any(String),
+    ['/tmp/test-seven-owner', 'headless', '/browser/chrome'],
+    expect.any(Object),
+  );
+  await owner.close();
+});

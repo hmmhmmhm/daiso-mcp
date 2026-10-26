@@ -55,6 +55,8 @@ export default defineConfig({
         'scripts/relay/supervisor.ts',
         'scripts/relay/quota.ts',
         'scripts/relay/consumer.ts',
+        'scripts/relay/seven-session.ts',
+        'scripts/relay/seven-browser-session.ts',
         'scripts/relay/browser-environment.ts',
         'scripts/relay/http-lifecycle.ts',
         'scripts/relay/transport-lifecycle.ts',

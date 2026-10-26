@@ -11,6 +11,8 @@ import {
   assertSeparateQuotaDirectories,
   CONVENIENCE_QUOTA_LIMITS,
 } from './quota.js';
+import { createSevenSessionTransport } from './seven-session.js';
+import { prepareSevenBrowserSession } from './seven-browser-session.js';
 import { createConvenienceRelay } from './convenience.js';
 import { createGs25SessionTransport } from './gs25-session.js';
 import { createJapanProductRelay } from './daiso-jp.js';
@@ -71,11 +73,25 @@ async function main() {
       };
       void maintainAuthentication();
     }
+    const sevenExecutable = process.env.SEVEN_BROWSER_EXECUTABLE?.trim();
+    const sevenSession = sevenExecutable
+      ? createSevenSessionTransport({
+          takeQuota: quota,
+          prepare: () =>
+            prepareSevenBrowserSession(
+              join(convenienceDir, 'seven-browser-owner.json'),
+              sevenExecutable,
+            ),
+          onEvent: (outcome) =>
+            convenienceLog!.append({ stage: 'session', operation: 'seven', outcome }),
+        })
+      : undefined;
     const convenienceHandler = createConvenienceRelay(convenienceToken, {
       takeQuota: quota,
       onEvent: convenienceLog.append,
       gs25ApiKey: process.env.GS25_API_KEY,
       gs25Session: session,
+      fetcher: sevenSession?.fetch,
     });
     convenience = observeRelay(async (request) => {
       const response = await convenienceHandler(request);
@@ -85,6 +101,7 @@ async function main() {
           quota: quota.status(),
           logging: convenienceLog!.status(),
           authentication: session?.status(),
+          sevenSession: sevenSession?.status(),
         });
       return response;
     }, convenienceLog.append);

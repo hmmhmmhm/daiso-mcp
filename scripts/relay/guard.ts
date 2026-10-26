@@ -8,11 +8,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.argv[2],
     (crashDir) =>
       chromium.launchServer({
-        headless: false,
+        headless: process.argv[3] === 'headless',
         chromiumSandbox: true,
         env: browserEnvironment(process.env, crashDir),
         host: '127.0.0.1',
-        executablePath: process.env.OY_BROWSER_EXECUTABLE,
+        executablePath:
+          process.argv[3] === 'headless' ? process.argv[4] : process.env.OY_BROWSER_EXECUTABLE,
         handleSIGINT: false,
         handleSIGTERM: false,
         handleSIGHUP: false,
