@@ -1,8 +1,11 @@
 import { createConnection } from 'node:net';
+import { realpathSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { acquireMarkerLease, markerLeasePort } from '../../scripts/relay/marker-lease.js';
 it('같은 마커의 동시 변경을 차단하고 OS 잠금 해제 뒤에만 새 시작을 허용한다', async () => {
-  const path = '/private/tmp/oy-lease-test-' + process.pid;
+  const path = join(realpathSync(tmpdir()), 'oy-lease-test-' + process.pid);
   const release = await acquireMarkerLease(path);
   try {
     await expect(acquireMarkerLease(path)).rejects.toMatchObject({ code: 'EADDRINUSE' });
