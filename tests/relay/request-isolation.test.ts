@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, expect, it, vi } from 'vitest';
-import { createBrowserLifecycle } from '../../scripts/relay/lifecycle.js';
+import { browserFailureReason, createBrowserLifecycle } from '../../scripts/relay/lifecycle.js';
 function fixture(takeRetryQuota?: () => Promise<boolean>) {
   const page = Object.assign(new EventEmitter(), {
     goto: vi.fn().mockResolvedValue(undefined),
@@ -158,7 +158,7 @@ it('첫 조회 뒤 페이지 이동으로 사라진 컨텍스트는 이동 완�
   );
   try {
     await expect(f.life.run('/p', {})).resolves.toMatchObject({ status: 'SUCCESS' });
-    expect(f.page.waitForURL).toHaveBeenLastCalledWith('https://www.oliveyoung.co.kr/store/**', {
+    expect(f.page.waitForURL).toHaveBeenLastCalledWith('https://www.oliveyoung.co.kr/robots.txt', {
       waitUntil: 'domcontentloaded',
       timeout: 5000,
     });
@@ -222,4 +222,35 @@ it('세션 교체는 이전 세션의 거절 횟수를 이어받지 않는다', 
   } finally {
     await f.life.close();
   }
+});
+it('자동 이동하는 홈페이지 대신 부가 스크립트가 없는 같은 원점의 정적 문서를 준비한다', async () => {
+  const f = fixture();
+  f.page.goto.mockImplementation(async (url) => {
+    if (url === 'https://www.oliveyoung.co.kr/') throw new Error('SPA navigation');
+  });
+  try {
+    await expect(f.life.run('/p', {})).resolves.toMatchObject({ status: 'SUCCESS' });
+    expect(f.page.goto).toHaveBeenCalledWith(
+      'https://www.oliveyoung.co.kr/robots.txt',
+      expect.objectContaining({ waitUntil: 'domcontentloaded' }),
+    );
+    expect(f.page.waitForURL).toHaveBeenCalledWith(
+      'https://www.oliveyoung.co.kr/robots.txt',
+      expect.any(Object),
+    );
+  } finally {
+    await f.life.close();
+  }
+});
+
+it.each([
+  [undefined, 'unknown'],
+  [new Error('Browser watchdog timeout'), 'watchdog-timeout'],
+  [new Error('Browser recovery backoff'), 'backoff'],
+  [new Error('Execution context was destroyed'), 'navigation'],
+  [new Error('Target page has been closed'), 'context-closed'],
+  [Object.assign(new Error('private'), { name: 'TimeoutError' }), 'playwright-timeout'],
+  [new Error('private'), 'unexpected'],
+])('소유 브라우저 오류를 원문 없이 안전한 코드로 구분한다', (error, reason) => {
+  expect(browserFailureReason(error)).toBe(reason);
 });

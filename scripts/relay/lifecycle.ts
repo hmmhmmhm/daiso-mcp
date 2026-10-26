@@ -22,6 +22,16 @@ export async function bounded<T>(work: Promise<T>, ms: number): Promise<T> {
     clearTimeout(timer!);
   }
 }
+/** 원문·검색 조건 없이 브라우저 장애의 종류만 남깁니다. */
+export function browserFailureReason(error: unknown): string {
+  if (!(error instanceof Error)) return 'unknown';
+  if (error.message === 'Browser watchdog timeout') return 'watchdog-timeout';
+  if (error.message === 'Browser recovery backoff') return 'backoff';
+  if (error.message.includes('Execution context was destroyed')) return 'navigation';
+  if (error.message.includes('has been closed')) return 'context-closed';
+  if (error.name === 'TimeoutError') return 'playwright-timeout';
+  return 'unexpected';
+}
 export function createBrowserLifecycle(
   launch: () => Promise<BrowserOwner>,
   onEvent?: (reason: string) => void | Promise<void>,
@@ -139,14 +149,17 @@ export function createBrowserLifecycle(
       page.on('crash', () => retireQuietly('page-crash'));
       page.on('close', () => retireQuietly('page-closed'));
       await bounded(
-        page.goto('https://www.oliveyoung.co.kr/', {
+        page.goto('https://www.oliveyoung.co.kr/robots.txt', {
           waitUntil: 'domcontentloaded',
           timeout: 30000,
         }),
         32000,
       );
       await bounded(
-        page.waitForURL('**/store/**', { waitUntil: 'domcontentloaded', timeout: 30000 }),
+        page.waitForURL('https://www.oliveyoung.co.kr/robots.txt', {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000,
+        }),
         32000,
       );
       if (closed || owner !== sessionOwner) throw new Error('Browser lifecycle unavailable');
@@ -168,6 +181,7 @@ export function createBrowserLifecycle(
           });
       }, 30000);
     } catch (error) {
+      emit(`startup-${browserFailureReason(error)}`);
       await retire('startup-failed');
       throw error;
     }
@@ -209,12 +223,12 @@ export function createBrowserLifecycle(
             !error.message.includes('Execution context was destroyed')
           )
             throw error;
-          // 초기 페이지의 추가 이동과 겹친 읽기 요청만 한 번 다시 실행합니다.
+          // 예기치 않은 문서 이동과 겹친 읽기 요청만 한 번 다시 실행합니다.
           if (takeRetryQuota && !(await takeRetryQuota()))
             throw new BrowserRequestError('retry-quota');
           calls++;
           emit('navigation-retry');
-          await page!.waitForURL('https://www.oliveyoung.co.kr/store/**', {
+          await page!.waitForURL('https://www.oliveyoung.co.kr/robots.txt', {
             waitUntil: 'domcontentloaded',
             timeout: 5000,
           });
@@ -250,6 +264,7 @@ export function createBrowserLifecycle(
         }
         throw error;
       }
+      emit(`request-${browserFailureReason(error)}`);
       defer(error);
       await retire('request-failed');
       throw error;
