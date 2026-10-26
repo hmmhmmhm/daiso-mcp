@@ -5,6 +5,7 @@ export class BrowserRequestError extends Error {
   constructor(
     readonly reason: string,
     readonly upstreamStatus?: number,
+    readonly retryAfter?: number,
   ) {
     super(`올리브영 브라우저 응답 실패: ${reason}`);
   }
@@ -29,7 +30,12 @@ export function createBrowserRunner(page: Pick<Page, 'evaluate'>): BrowserRunner
           status = response.status;
           if (status !== 200) {
             await response.body?.cancel();
-            return { status, body: null };
+            const header = response.headers.get('retry-after');
+            const seconds = header && /^\d+$/.test(header) ? Number(header)
+              : header ? Math.ceil((Date.parse(header) - Date.now()) / 1000) : NaN;
+            const retryAfter = Number.isSafeInteger(seconds) && seconds > 0
+              ? Math.min(seconds, 86400) : undefined;
+            return { status, body: null, retryAfter };
           }
           const reader = response.body?.getReader();
           if (!reader) throw new Error('Browser response body missing');
@@ -79,6 +85,7 @@ export function createBrowserRunner(page: Pick<Page, 'evaluate'>): BrowserRunner
               ? 'business'
               : 'invalid-json'),
         result.status,
+        result.retryAfter,
       );
     return result.body;
   };

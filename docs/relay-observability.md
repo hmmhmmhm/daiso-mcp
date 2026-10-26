@@ -64,7 +64,7 @@ health.cache의 `hits`, `misses`, `expired`, `evicted`는 프로세스 시작 �
 
 ## GitHub Health Checks 판정과 보존
 
-quick/full 모두 운영 인증과 `fresh=true`, `x-health-check-force-fresh: true`를 함께 보내 새 검사 요약을 요청한다. 허용된 원점의 검사 대상에는 운영 인증과 fresh 헤더가 전달되며 REST·OY 내부·공통 릴레이 캐시를 우회한다. 실패 직후 전체 검사를 반복하지 않고, 검증된 분당 중계 한도 429만 만료 후 해당 검사 ID를 한 번 fresh로 재확인한다. HTTP 실패 후 이전 성공 파일을 재사용하지 않으며, 비정상 JSON·빈 검사 목록·모순된 요약은 실패로 처리한다. 각 요청은 최대 240초, 전체 job은 최대 10분이다. 시도별 원본 JSON과 오류 요약은 Actions artifact로 7일 보관한다.
+quick/full 모두 운영 인증과 `fresh=true`, `x-health-check-force-fresh: true`를 함께 보내 새 검사 요약을 요청한다. 허용된 원점의 검사 대상에는 운영 인증과 fresh 헤더가 전달되며 REST·OY 내부·공통 릴레이 캐시를 우회한다. 실패 직후 전체 검사를 반복하지 않고, 검증된 분당 중계 한도 429 또는 명시적인 올리브영 원본 429(`OLIVEYOUNG_UPSTREAM_RATE_LIMITED`, 자체 한도 사유 없음)만 1~60초 대기 만료 후 해당 검사 ID를 한 번 fresh로 재확인한다. HTTP 실패 후 이전 성공 파일을 재사용하지 않으며, 비정상 JSON·빈 검사 목록·모순된 요약은 실패로 처리한다. 각 요청은 최대 240초, 전체 job은 최대 10분이다. 시도별 원본 JSON과 오류 요약은 Actions artifact로 7일 보관한다.
 
 CGV는 `CGV_UPSTREAM_UNAVAILABLE`, API HTTP 503, 원본 HTTP 403이 모두 확인될 때만 `degraded`로 분류한다. 이는 해당 기능이 제한된 상태이며 복구를 뜻하지 않는다. 인증 오류, 타임아웃, JSON 파싱 실패 등은 계속 `fail`이다. 선택 데이터가 없는 `skipped` 검사는 정상 요약에 포함될 수 있다. Actions 성공 여부와 별도로 요약의 저하 서비스 목록을 확인해야 한다. 유료 Zyte 재시도는 활성화하지 않는다.
 

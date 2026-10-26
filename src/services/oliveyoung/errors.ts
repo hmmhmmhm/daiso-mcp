@@ -4,6 +4,16 @@ import { HttpError, UnexpectedHtmlResponseError } from '../../utils/http.js';
 
 export function toOliveyoungRelayError(error: unknown): ServiceError {
   if (error instanceof HttpError) {
+    if (error.status === 429 && !error.quota) {
+      try {
+        const body = JSON.parse(error.bodyText);
+        if (body?.code === 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED' && body.upstreamStatus === 429 &&
+            Number.isInteger(body.retryAfter) && body.retryAfter >= 1 && body.retryAfter <= 86400) {
+          return new ServiceError('OLIVEYOUNG_UPSTREAM_RATE_LIMITED', '올리브영 원본 요청 제한',
+            429, true, 429, undefined, undefined, body.retryAfter);
+        }
+      } catch { /* 안전한 원본 제한 계약만 분류합니다. */ }
+    }
     return new ServiceError(
       'OLIVEYOUNG_RELAY_HTTP_ERROR',
       `올리브영 릴레이 요청 실패 (HTTP ${error.status})`,

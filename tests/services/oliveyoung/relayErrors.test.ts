@@ -72,3 +72,15 @@ it('릴레이 응답 본문을 읽는 중 실제 제한 시간이 지나도 시�
     vi.useRealTimers();
   }
 });
+it.each([
+  null, {}, { code: 'OTHER' },
+  { code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', upstreamStatus: 403, retryAfter: 3 },
+  ...[0, -1, 1.5, 86401, '3', undefined].map(retryAfter => ({ code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', upstreamStatus: 429, retryAfter })),
+])('잘못된 원본 429 계약은 중계 HTTP 오류를 유지한다: %j', async body => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(body, { status: 429 })));
+  await expect(requestOliveyoung('/p', {}, options)).rejects.toMatchObject({ code: 'OLIVEYOUNG_RELAY_HTTP_ERROR', status: 429 });
+});
+it('자체 한도 헤더가 있으면 원본 제한 코드보다 자체 한도를 우선한다', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', upstreamStatus: 429, retryAfter: 3 }, { status: 429, headers: { 'x-relay-quota-reason': 'minute', 'retry-after': '5' } })));
+  await expect(requestOliveyoung('/p', {}, options)).rejects.toMatchObject({ code: 'OLIVEYOUNG_RELAY_HTTP_ERROR', quotaReason: 'minute', retryAfter: 5 });
+});

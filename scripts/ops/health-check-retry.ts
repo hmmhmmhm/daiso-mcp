@@ -1,4 +1,4 @@
-/** 분당 중계 한도로 실패한 알려진 검사만 한 번 다시 확인합니다. */
+/** 확인된 짧은 요청 제한으로 실패한 알려진 검사만 한 번 다시 확인합니다. */
 import type { HealthCheckSummary, HealthCheckResult } from '../../src/api/healthCheckTypes.js';
 export const MINUTE_RECHECK_IDS = [
   'cu.stores', 'cu.inventory', 'gs25.products', 'gs25.stores', 'gs25.inventory',
@@ -37,9 +37,10 @@ export async function retryMinuteChecks(payload: HealthCheckSummary, options: Re
   if (!isValidHealthPayload(payload)) throw new Error('Invalid health payload');
   const candidates = payload.checks.filter(check => check.status === 'fail' &&
     MINUTE_RECHECK_IDS.includes(check.id) && check.httpStatus === 429 && check.upstreamStatus === 429 &&
-    (check.id === 'cli.contract'
+    (((check.id.startsWith('oliveyoung.') || check.id === 'cli.contract') && check.errorCode === 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED' &&
+      check.quotaReason === undefined) || (check.quotaReason === 'minute' && (check.id === 'cli.contract'
       ? ['CONVENIENCE_RELAY_FAILED', 'OLIVEYOUNG_RELAY_HTTP_ERROR', 'DTRYX_RELAY_FAILED', 'CGV_RELAY_FAILED'].includes(check.errorCode ?? '')
-      : check.errorCode === relayErrorCode(check.id)) && check.quotaReason === 'minute' &&
+      : check.errorCode === relayErrorCode(check.id)))) &&
     typeof check.retryAfter === 'number' && Number.isInteger(check.retryAfter) &&
     check.retryAfter >= 1 && check.retryAfter <= 60);
   if (!candidates.length) return { payload, attempts };

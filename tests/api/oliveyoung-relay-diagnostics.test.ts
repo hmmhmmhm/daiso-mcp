@@ -33,3 +33,12 @@ it.each([
   expect(payload.diagnostics).not.toHaveProperty('upstreamStatus');
   expect(JSON.stringify(payload)).not.toContain('private-');
 });
+it('명시한 원본 429의 중립 대기를 자체 한도와 구분한다', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', upstreamStatus: 429, retryAfter: 12, error: 'private-token' }, { status: 429 })));
+  const response = await app.request('/products?keyword=팩', {}, { OY_RELAY_URL: 'https://private-relay.example', OY_RELAY_TOKEN: 'private-token' });
+  expect(response.status).toBe(429);
+  const result = await response.json();
+  expect(result.diagnostics).toMatchObject({ code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', upstreamStatus: 429, retryAfter: 12 });
+  expect(result.diagnostics).not.toHaveProperty('quotaReason');
+  expect(JSON.stringify(result)).not.toContain('private');
+});

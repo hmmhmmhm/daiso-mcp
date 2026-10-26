@@ -89,6 +89,17 @@ export function createOliveyoungRelay(
     'stock-goods-info-v3': 600000,
     'stock-stores': 60000,
   };
+  const cooldowns = new Map<string, { until: number; source: string }>();
+  const cooldownError = (operation: string) => {
+    const cooldown = cooldowns.get(operation);
+    if (!cooldown || cooldown.until <= Date.now()) return undefined;
+    return new BrowserRequestError('http-429', 429, Math.ceil((cooldown.until - Date.now()) / 1000));
+  };
+  const originLimited = (failure: BrowserRequestError, operation: string) => Response.json({
+    error: 'Upstream rate limited', code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED',
+    upstreamStatus: 429, retryAfter: failure.retryAfter,
+    retryAfterSource: cooldowns.get(operation)!.source,
+  }, { status: 429, headers: { 'retry-after': String(failure.retryAfter) } });
   type Result = OliveyoungApiResponse | null | 'quota' | 'unavailable';
   const pending = new Map<
     string,
@@ -188,6 +199,8 @@ export function createOliveyoungRelay(
           headers: { 'content-type': 'application/json', 'x-relay-cache': 'hit' },
         });
       }
+      const cooling = cooldownError(operation);
+      if (cooling) return originLimited(cooling, operation);
       let entry = pending.get(key);
       const mode = entry ? 'coalesced' : 'miss';
       emit('cache', mode, entry?.requestId);
@@ -206,6 +219,8 @@ export function createOliveyoungRelay(
               )
             )
               return null;
+            const cooling = cooldownError(operation);
+            if (cooling) throw cooling;
             if (options.takeQuota) {
               try {
                 if (!(await options.takeQuota())) {
@@ -219,7 +234,18 @@ export function createOliveyoungRelay(
               }
             }
             reservation.commit();
-            const result = await run(paths[operation], body);
+            let result: OliveyoungApiResponse;
+            try {
+              result = await run(paths[operation], body);
+            } catch (failure) {
+              if (failure instanceof BrowserRequestError && failure.upstreamStatus === 429) {
+                const valid = Number.isInteger(failure.retryAfter) && failure.retryAfter! >= 1 && failure.retryAfter! <= 86400;
+                const retryAfter = valid ? failure.retryAfter! : 60;
+                cooldowns.set(operation, { until: Date.now() + retryAfter * 1000, source: valid ? 'upstream' : 'local-policy' });
+                throw new BrowserRequestError('http-429', 429, retryAfter);
+              }
+              throw failure;
+            }
             if (!bypassCache && result?.status === 'SUCCESS')
               cache.set(key, JSON.stringify(result), ttl[operation]);
             emit('upstream', result?.status === 'SUCCESS' ? 'success' : 'error');
@@ -263,6 +289,10 @@ export function createOliveyoungRelay(
         return Response.json(result, { headers: { 'x-relay-cache': mode } });
       } catch (failure) {
         if (failure instanceof BrowserRequestError) {
+          if (failure.upstreamStatus === 429) {
+            emit('upstream', 'http-429');
+            return originLimited(failure, operation);
+          }
           if (failure.reason === 'retry-quota') {
             const status = options.takeQuota?.status?.();
             return Response.json(

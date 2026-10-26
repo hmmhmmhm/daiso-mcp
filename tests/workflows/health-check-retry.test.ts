@@ -180,3 +180,20 @@ it('전체 120초 예산에는 최초 61초 대기도 포함한다', async () =>
   expect(fetchImpl).toHaveBeenCalledTimes(3);
   expect((await task).payload.status).toBe('fail');
 });
+it.each(['oliveyoung.products', 'oliveyoung.inventory', 'cli.contract'])('알려진 원본 429 %s만 인증된 fresh 단일 검사로 다시 확인한다', async id => {
+  const initial = payload([check(id, { errorCode: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', quotaReason: undefined, retryAfter: 2 })]);
+  const fetchImpl = vi.fn(async () => Response.json(payload([check(id, { status: 'ok' })])));
+  const result = await retryMinuteChecks(initial, { endpoint, secret: 'secret', fetchImpl, sleep: async () => undefined });
+  expect(result.payload.status).toBe('ok'); expect(initial.status).toBe('fail'); expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
+it.each([{ id: 'cu.stores' }, { quotaReason: 'minute' as const }, { httpStatus: 502 }, { upstreamStatus: 403 }, { retryAfter: 61 }])('원본 대기 계약과 다르면 재검증하지 않는다: %j', async fields => {
+  const fetchImpl = vi.fn();
+  await retryMinuteChecks(payload([check('oliveyoung.inventory', { errorCode: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', quotaReason: undefined, ...fields })]), { endpoint, secret: 'secret', fetchImpl, sleep: async () => undefined });
+  expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+it.each([{ quotaReason: 'minute' as const }, { httpStatus: 502 }, { upstreamStatus: 403 }, { retryAfter: 61 }, { errorCode: 'OLIVEYOUNG_RELAY_HTTP_ERROR', quotaReason: undefined }])('CLI의 원본 429 계약이 불완전하면 재검증하지 않는다: %j', async fields => {
+  const fetchImpl = vi.fn();
+  await retryMinuteChecks(payload([check('cli.contract', { errorCode: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED', quotaReason: undefined, ...fields })]), { endpoint, secret: 'secret', fetchImpl, sleep: async () => undefined });
+  expect(fetchImpl).not.toHaveBeenCalled();
+});
