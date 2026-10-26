@@ -37,6 +37,15 @@ it.skipIf(process.platform !== 'darwin')(
       );
       const output = execFileSync('/usr/bin/swift', [script, data], { encoding: 'utf8' });
       expect(output.trim().split('\n')).toEqual(['true', ...Array(9).fill('false')]);
+      writeFileSync(
+        script,
+        'import Foundation\n' +
+          implementation +
+          '\nprint(processLaunchTime("Mon Oct 26 00:53:22 2026", timeZone:TimeZone(secondsFromGMT:0)!) == 1792976002)\nprint(processLaunchTime("invalid") == nil)\n',
+      );
+      expect(execFileSync('/usr/bin/swift', [script], { encoding: 'utf8' }).trim()).toBe(
+        'true\ntrue',
+      );
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }

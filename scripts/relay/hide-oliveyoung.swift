@@ -18,6 +18,15 @@ func readinessAllowsHiding(_ value: [String: Any], launchedAt: TimeInterval, now
     return true
 }
 
+// CLI로 시작한 Chrome은 NSRunningApplication.launchDate가 없을 수 있습니다.
+func processLaunchTime(_ birth: String, timeZone: TimeZone = .current) -> TimeInterval? {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = timeZone
+    formatter.dateFormat = "EEE MMM d HH:mm:ss yyyy"
+    return formatter.date(from: birth)?.timeIntervalSince1970
+}
+
 let base = argument("--state-base", fallback: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/DaisoRelay"))
 let runtime = argument("--runtime", fallback: base.appendingPathComponent("runtime"))
 let marker = base.appendingPathComponent("state/browser-owner.json")
@@ -32,10 +41,9 @@ func safeMarkerPath() -> Bool {
     return true
 }
 
-func readyForHide(_ app: NSRunningApplication) -> Bool {
+func readyForHide(_ launchedAt: TimeInterval) -> Bool {
     let status = base.appendingPathComponent("ops-status.json")
-    guard let launched = app.launchDate,
-          status.resolvingSymlinksInPath().path == status.path,
+    guard status.resolvingSymlinksInPath().path == status.path,
           let attributes = try? FileManager.default.attributesOfItem(atPath: status.path),
           attributes[.type] as? FileAttributeType == .typeRegular,
           attributes[.ownerAccountID] as? UInt32 == getuid(),
@@ -43,11 +51,11 @@ func readyForHide(_ app: NSRunningApplication) -> Bool {
           let size = attributes[.size] as? UInt64, size <= 65536,
           let data = try? Data(contentsOf: status),
           let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
-    return readinessAllowsHiding(value, launchedAt: launched.timeIntervalSince1970, now: Date().timeIntervalSince1970)
+    return readinessAllowsHiding(value, launchedAt: launchedAt, now: Date().timeIntervalSince1970)
 }
 
 // 소유 마커가 바뀌거나 검증에 실패하면 숨김을 생략한다.
-func target() -> NSRunningApplication? {
+func target() -> (app: NSRunningApplication, launchedAt: TimeInterval)? {
     guard safeMarkerPath(), let attributes = try? FileManager.default.attributesOfItem(atPath: marker.path),
           attributes[.type] as? FileAttributeType == .typeRegular,
           attributes[.ownerAccountID] as? UInt32 == getuid(),
@@ -76,18 +84,19 @@ func target() -> NSRunningApplication? {
           UInt32(fields[0]) == getuid(), Int(fields[1]) == guardPid,
           fields.dropFirst(2).joined(separator: " ") == birth.split(whereSeparator: { $0.isWhitespace }).joined(separator: " "),
           safeMarkerPath(), (try? Data(contentsOf: marker)) == data else { return nil }
-    return app
+    guard let launchedAt = processLaunchTime(fields.dropFirst(2).joined(separator: " ")) else { return nil }
+    return (app, launchedAt)
 }
 
 // 매초 확인하되 이미 숨겨진 앱에는 추가 UI 요청을 보내지 않는다.
 func hideOwnedBrowser() {
-    guard let app = target(), !app.isHidden, readyForHide(app) else { return }
-    _ = app.hide()
+    guard let owned = target(), !owned.app.isHidden, readyForHide(owned.launchedAt) else { return }
+    _ = owned.app.hide()
 }
 
 if CommandLine.arguments.contains("--check") {
-    if let app = target() {
-        print("owned=true hidden=\(app.isHidden) pid=\(app.processIdentifier) readyToHide=\(readyForHide(app))")
+    if let owned = target() {
+        print("owned=true hidden=\(owned.app.isHidden) pid=\(owned.app.processIdentifier) readyToHide=\(readyForHide(owned.launchedAt))")
     } else {
         print("owned=false")
         exit(1)
