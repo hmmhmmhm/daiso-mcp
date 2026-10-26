@@ -30,6 +30,18 @@ function fixture() {
 }
 
 describe('독립 웹 읽기 실험', () => {
+  it('실험 목록에서 새 링크를 따라 독립 실행을 시작할 수 있다', async () => {
+    const { get } = fixture();
+    const links: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      const page = await (await get('/run/start')).text();
+      const match = page.match(/href="([^" ]+)">새 실험 시작/);
+      expect(match).not.toBeNull();
+      links.push(match![1]);
+      expect((await get(match![1])).status).toBe(200);
+    }
+    expect(links[0]).not.toBe(links[1]);
+  });
   it('동시 요청의 도착과 완료 기록을 덮어쓰지 않는다', async () => {
     const { get } = fixture();
     await Promise.all(Array.from({ length: 20 }, () => get('/run/concurrent/html')));

@@ -2,11 +2,15 @@
 
 독립 Worker에서 웹 읽기 도구의 실패 조건을 비교합니다. 모든 상품과 수량은 가상 데이터이며 운영 API를 호출하지 않습니다. 기존 MCP 도구와 인증·중계·캐시 바인딩을 공유하지 않습니다.
 
+실험 목록: https://daiso-web-read-lab.hmmhmmhm.workers.dev/run/round2
+
+[2026-10-26 실험 결과](../../docs/web-reading-lab-results-2026-10-26.md)
+
 배포: `.github/workflows/deploy-web-read-lab.yml`. Worker 이름은 `daiso-web-read-lab`이며 배포 결과의 workers.dev URL을 사용합니다.
 
 ## 실행
 
-1. 영문·숫자·하이픈으로 새로운 실험번호(최대48자)를 만들고 `/run/{번호}`를 엽니다.
+1. 실험 목록을 연 뒤 **새 실험 시작** 링크를 따라 고유한 실행을 만듭니다. 웹 읽기에서는 URL을 다시 조립하지 말고 실제 링크 ID로 click합니다. 직접 open 실패도 별도 조건으로 기록합니다.
 2. 같은 번호 아래 링크를 한 번씩 열어 응답 여부, requestId, generatedAt, 웹 도구의 Crawled 정보를 기록합니다.
 3. `/observations/{번호}`를 일반 HTTPS로 읽고 도착 기록과 비교합니다. 관측 조회 자체는 기록하지 않습니다.
 4. 독립된 두 번째 번호로 순서를 바꿔 재현합니다. 직접 open과 링크 click은 별도로 기록합니다.

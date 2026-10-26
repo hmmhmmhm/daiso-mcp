@@ -150,7 +150,7 @@ export default {
     let status = 200;
     if (test === 'index') {
       body = html(
-        `<p>가상 상품: 실험용 지갑, 수량7. 실험번호: ${run}</p><ul>${CASES.map((c) => `<li><a href="/run/${run}/${encodeURIComponent(c)}${c === 'query' ? '?q=wallet' : ''}">${c}</a></li>`).join('')}</ul><a href="/run/${run}/query?q=%EC%A7%80%EA%B0%91">한글 쿼리</a><p>응답의 requestId와 generatedAt을 관측 기록과 비교하세요. received는 서버 도착, prepared는 응답 생성 완료이며 클라이언트 수신 성공을 증명하지 않습니다.</p><a href="/observations/${run}">관측 기록 JSON</a><p>현재 요청 번호 ${requestId}</p>`,
+        `<p>가상 상품: 실험용 지갑, 수량7. 실험번호: ${run}</p><p><a href="/run/${requestId}">새 실험 시작</a></p><ul>${CASES.map((c) => `<li><a href="/run/${run}/${encodeURIComponent(c)}${c === 'query' ? '?q=wallet' : ''}">${c}</a></li>`).join('')}</ul><a href="/run/${run}/query?q=%EC%A7%80%EA%B0%91">한글 쿼리</a><p>응답의 requestId와 generatedAt을 관측 기록과 비교하세요. received는 서버 도착, prepared는 응답 생성 완료이며 클라이언트 수신 성공을 증명하지 않습니다.</p><a href="/observations/${run}">관측 기록 JSON</a><p>현재 요청 번호 ${requestId}</p>`,
       );
     } else if (test === 'json' || test === 'text') {
       headers.set(
