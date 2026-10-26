@@ -21,6 +21,8 @@ jobs:
     uses: ./.github/workflows/select-local-runner.yml
     with:
       cloud-runner: ubuntu-latest
+      # 운영 중계와 전체 테스트의 CPU·메모리를 분리합니다.
+      force-cloud: true
     secrets:
       status-token: ${{ secrets.LOCAL_RUNNER_STATUS_TOKEN }}
 

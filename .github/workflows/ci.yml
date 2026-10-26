@@ -20,6 +20,8 @@ jobs:
     uses: ./.github/workflows/select-local-runner.yml
     with:
       cloud-runner: ubuntu-latest
+      # 운영 중계와 전체 테스트의 CPU·메모리를 분리합니다.
+      force-cloud: true
     secrets:
       status-token: ${{ secrets.LOCAL_RUNNER_STATUS_TOKEN }}
 
@@ -57,3 +59,28 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  select-native-runner:
+    uses: ./.github/workflows/select-local-runner.yml
+    with:
+      cloud-runner: macos-latest
+    secrets:
+      status-token: ${{ secrets.LOCAL_RUNNER_STATUS_TOKEN }}
+
+  validate-native:
+    needs: select-native-runner
+    runs-on: ${{ fromJSON(needs.select-native-runner.outputs.runner) }}
+    name: Native Mac helpers
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Native helper regression tests
+        run: npx vitest run tests/scripts/hide-readiness.test.ts tests/scripts/macos-ops.test.ts --maxWorkers=1

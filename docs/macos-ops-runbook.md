@@ -58,3 +58,9 @@ launchctl bootout "gui/$(id -u)/page.aka.daiso-ops-monitor"
 ```
 
 그 뒤 두 `page.aka.daiso-ops-*.plist`와 필요 없는 해당 plist 백업, `ops-helpers`, `ops-status.json`만 검토하여 삭제한다. 중계·터널 plist와 `relay.env`, `dtryx.env`, `state`, 인증·쿼터 원장은 보존한다. 기존 수동 숨김 도우미로 되돌리려면 이전 `page.aka.daiso-oliveyoung-hide` 작업을 `launchctl enable`한 뒤 보존한 기존 plist를 다시 bootstrap한다. 재부팅 후 실동작은 별도로 확인한다.
+
+## 운영 중계와 CI 부하 분리
+
+전체 CI·커버리지는 `force-cloud: true`로 GitHub 호스팅 Ubuntu에서 실행한다. 운영 중계와 같은 Mac에서 수천 개의 테스트를 실행하지 않는다. Swift 실행과 Mac 운영 도구의 회귀는 별도 `Native Mac helpers` 작업에서 단일 worker로 검사하며, 기존 신뢰된 로컬 러너 선택 및 오프라인 시 GitHub 호스팅 Mac 전환을 유지한다.
+
+로컬에서 전체 회귀가 필요한 경우 운영 검증과 겹치지 않게 실행한다. 전체 테스트와 최신 main의 CI가 끝난 뒤 중계 `ready` 및 자동 경로 스냅샷 복귀를 확인하고, 캐시 우회 full Health 다음 External Smoke를 순서대로 실행한다. 실패 시 최초 로그를 보존하며, CPU 부하에 따른 감시 시간 초과를 원본 차단이나 인증 만료로 단정하지 않는다.
