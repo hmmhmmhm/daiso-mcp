@@ -1,0 +1,12 @@
+name = "daiso-web-read-lab"
+main = "worker.ts"
+compatibility_date = "2025-01-23"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "PROBE_LOG"
+class_name = "ProbeLog"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ProbeLog"]
