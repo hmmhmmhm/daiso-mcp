@@ -21,16 +21,16 @@ Use this skill to operate the Daiso MCP project through `npx daiso` and the publ
 
 ## 설치 없이 첫 조회
 
-최신 지침은 https://mcp.aka.page/guide/latest 를 열어 현재 버전 주소로 이동합니다. 오래된 버전 경로도 최신 지침으로 연결됩니다. 첫 조회에는 지침의 guide 버전을 유지하세요.
+최신 서버 안내는 [현재 버전](https://mcp.aka.page/guide/2026-10-27.2)과 [최신 연결](https://mcp.aka.page/guide/latest)에서 제공합니다. 웹 도구는 과거 리디렉션·수집본을 반환할 수 있으므로 표시된 버전과 HTML 생성 시각을 확인하세요.
 
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
 2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 사용 가능합니다.
-3. 웹 읽기(open/WebFetch)만 가능하면 같은 HTML GET을 실행합니다. 접근 오류 시 문서의 링크를 따라갈 수 있으나 성공을 보장하지 않습니다. Crawled가 과거인 수집본을 현재 재고로 단정하지 마세요.
+3. 웹 읽기(open/WebFetch)만 가능하면 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크 ID로 click합니다. 글자 입력·상품·매장 지역 선택 링크를 따르고 새 URL을 조립하지 마세요. 이전 HTML이면 같은 조건으로 새 응답 확인 링크를 최대2번 선택합니다. TimeoutError는 같은 실제 링크를 한 번만 재확인하고 계속 실패하면 미확인으로 보고합니다. 새 HTML도 기존 API 캐시를 사용하며 원본 갱신을 보장하지 않습니다. click이 없는 도구의 동일 동작은 보장하지 않습니다.
 4. 위 세 수단이 없거나 모두 실패하면 실제 조회 제약과 오류를 알립니다. 셸이 있어도 설치 없는 웹 조회가 우선이며 터미널·셸로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패로 확대하거나 실행하지 않은 요청의 실패를 만들지 마세요.
 
-https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3
+https://mcp.aka.page/browse/read
 
-경로의 검색어를 사용자 요청으로 바꾸고 상세·매장·재고를 포함한 모든 후속 웹 GET에도 `/browse/`를 사용하세요. 자동 HTML이며 쿼리 문자열은 필요 없습니다. 첫 조회 전에 npx·패키지·스킬 설치, health/help, 전체 도구 목록이나 OpenAPI 탐색을 요구하지 않습니다. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.
+응답의 글자 선택 링크로 사용자 검색어를 입력하고 상세·매장·재고도 실제 링크 ID로 선택하세요. 모든 후속 웹 GET은 `/browse/` HTML입니다. 자동 HTML이며 쿼리 문자열은 필요 없습니다. 첫 조회 전에 npx·패키지·스킬 설치, health/help, 전체 도구 목록이나 OpenAPI 탐색을 요구하지 않습니다. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.
 
 상품 이미지는 해당 조회 응답의 imageUrl만 사용합니다. 전체 URL과 query string을 유지하고, 없거나 표시되지 않으면 생략하며 image_query·이미지 검색·검색 캐러셀을 사용하거나 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다. 실제 도구·URL·반환 데이터·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
@@ -114,7 +114,7 @@ Lotte Mart is discontinued; MINISO is unsupported. Japan DAISO supports products
 
 ## Fallbacks
 
-- npx 또는 Node.js를 사용할 수 없으면 use connected MCP tools or open the equivalent HTML GET through web reading. Use query-free /browse/ paths for every web GET. HTML is automatic. If neither is available, report the actual limitation without inventing results.
+- npx 또는 Node.js를 사용할 수 없으면 use connected MCP tools or start web reading at /browse/read and click the actual response link IDs. Do not construct new URLs. Use query-free /browse/ paths for every web GET. HTML is automatic. If neither is available, report the actual limitation without inventing results.
 - For network failures, retry once with a narrower query, then report the failing service and command.
 - For no results, preserve the command used and suggest a broader keyword or nearby area.
 - Switch from CLI to MCP only when the user is configuring an AI app, the shell cannot run `npx`, or the host environment already exposes the MCP server.

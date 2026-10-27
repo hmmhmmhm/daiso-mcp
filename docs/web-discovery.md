@@ -1,8 +1,8 @@
 # 웹에서 다이소 MCP 발견하기
 
-실제 브라우저 도구가 있으면 /browse/ HTML을 그 도구로 여세요. 웹 읽기(open/WebFetch)의 접근 오류 시 사용 가능한 브라우저로 전환합니다. Crawled가 과거인 수집본은 현재 재고 확인이 아닙니다. 응답 생성 시각도 함께 확인하세요.
+실제 브라우저가 있으면 /browse/ HTML을 엽니다. 웹 읽기만 있으면 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크 ID로 click합니다. 이전 HTML은 같은 조건의 새 응답 링크를 최대2번 확인하고 TimeoutError 재확인은 한 번만 합니다. HTML 생성 시각은 원본 재고 갱신 시각이 아닙니다.
 
-[공개 첫 화면](https://mcp.aka.page/)은 설치 없는 사용 방법과 첫 실제 조회 링크를 HTML로 제공합니다. 웹 읽기 기능만으로 MCP 도구가 자동 등록되는 것은 아닙니다. 연결된 MCP 도구를 먼저 사용하고, 없으면 실제 브라우저, 그다음 웹 읽기의 HTML GET을 사용합니다. 모든 수단이 없거나 실패하면 실제 조회 도구 제약을 알리며 셸 호출로 우회하지 않습니다. WebFetch 또는 open으로 HTML 링크를 직접 엽니다.
+[공개 첫 화면](https://mcp.aka.page/)은 설치 없는 사용 방법과 첫 실제 조회 링크를 HTML로 제공합니다. 웹 읽기 기능만으로 MCP 도구가 자동 등록되는 것은 아닙니다. 연결된 MCP 도구를 먼저 사용하고, 없으면 실제 브라우저, 그다음 웹 읽기의 HTML GET을 사용합니다. 모든 수단이 없거나 실패하면 실제 조회 도구 제약을 알리며 셸 호출로 우회하지 않습니다. 웹 읽기는 응답의 실제 링크 ID를 click하고 검색어·지역은 글자 링크로 입력합니다. 새 URL을 조립하지 않습니다.
 
 - `/`: HTML 안내. `Accept: application/json`이면 기존 서버 정보 JSON.
 - `/root.json`: 현재 서비스·도구 목록 JSON. API 클라이언트는 이 명시적 주소를 권장합니다.
@@ -39,11 +39,11 @@ OpenAI 검색·사용자 요청·학습 봇의 역할과 공개 IP는 [공식 �
 
 ## 웹 읽기만 가능한 채팅 에이전트
 
-샌드박스나 셸 없이 URL만 읽을 수 있다면 [수납박스 HTML 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)를 먼저 엽니다. 첫 화면과 llms.txt에도 이 링크를 안내합니다. 결과는 서버에서 생성하므로 JavaScript 실행이 필요 없습니다.
+샌드박스나 셸 없이 웹 읽기만 가능하면 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크 ID를 먼저 click합니다. 첫 화면과 llms.txt도 이 시작점을 안내합니다. click이 없는 도구의 동일 동작은 보장하지 않습니다. 결과는 서버에서 생성하므로 JavaScript 실행이 필요 없습니다.
 
-공개 `/browse/` GET 경로는 같은 실제 조회 결과를 항상 HTML로 제공합니다. 쿼리 문자열은 필요 없습니다. 기존 `/api/`의 JSON과 구형 HTML 주소는 하위호환으로 유지합니다. 예: `/browse/daiso/stores/%EA%B0%95%EB%82%A8`, `/browse/daiso/inventory/%EC%8B%A4%EC%A0%9C%EC%83%81%ED%92%88ID/%ED%99%95%EC%9D%B8%ED%95%9C%EB%A7%A4%EC%9E%A5%EB%AA%85/lat/%ED%99%95%EC%9D%B8%ED%95%9C%EC%9C%84%EB%8F%84/lng/%ED%99%95%EC%9D%B8%ED%95%9C%EA%B2%BD%EB%8F%84`. 상품 목록의 상세 링크도 HTML로 연결합니다. 다른 서비스의 필수 파라미터는 `/prompt`에서 확인합니다.
+공개 `/browse/` GET 경로는 같은 실제 조회 결과를 항상 HTML로 제공합니다. 쿼리 문자열은 필요 없습니다. 기존 `/api/`의 JSON과 구형 HTML 주소는 하위호환으로 유지합니다. 일반 API 클라이언트용 기본 경로 예시: `/browse/daiso/stores/%EA%B0%95%EB%82%A8`, `/browse/daiso/inventory/%EC%8B%A4%EC%A0%9C%EC%83%81%ED%92%88ID/%ED%99%95%EC%9D%B8%ED%95%9C%EB%A7%A4%EC%9E%A5%EB%AA%85/lat/%ED%99%95%EC%9D%B8%ED%95%9C%EC%9C%84%EB%8F%84/lng/%ED%99%95%EC%9D%B8%ED%95%9C%EA%B2%BD%EB%8F%84`. 상품 목록의 상세 링크도 HTML로 연결합니다. 다른 서비스의 필수 파라미터는 `/prompt`에서 확인합니다.
 
-HTML은 원래 응답의 성공·오류와 HTTP 상태를 보존합니다. 상품 검색 결과를 매장 재고로 단정하거나 오류를 재고 0으로 해석하면 안 됩니다. POST와 MCP 응답 형식은 변경하지 않습니다. 웹 읽기 도구가 HTML 접근도 거부하는 경우에는 경로 전환만으로 도구 내부의 접근 제한을 해결할 수는 없습니다.
+HTML은 원래 응답의 성공·오류와 HTTP 상태를 보존합니다. 상품 검색 결과를 매장 재고로 단정하거나 오류를 재고 0으로 해석하면 안 됩니다. POST와 MCP 응답 형식은 변경하지 않습니다. 웹 읽기 도구가 HTML 접근도 거부하면 실제 오류를 구분해 기록합니다. 임의 URL open과 실제 링크 click은 이 실험에서 서로 다른 결과를 보였으며 모든 도구·계정에서의 성공을 보장하지 않습니다.
 
 `llms.txt`와 `robots.txt`는 정적 Assets에서도 `text/plain; charset=utf-8`을 명시합니다. UTF-8 본문을 다른 인코딩으로 추측하는 클라이언트에서 한글이 깨지는 것을 방지합니다.
 
