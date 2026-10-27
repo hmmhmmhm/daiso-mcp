@@ -30,6 +30,8 @@ Use this skill to operate the Daiso MCP project through `npx daiso` and the publ
 
 https://mcp.aka.page/browse/read
 
+웹 도구의 `Crawled: today`만으로 현재 재고라고 단정하지 마세요. 응답의 HTML 생성 시각과 실제 수량을 확인하고, 수량이 null이면 품절이 아닌 미확인으로 보고합니다.
+
 응답의 글자 선택 링크로 사용자 검색어를 입력하고 상세·매장·재고도 실제 링크 ID로 선택하세요. 모든 후속 웹 GET은 `/browse/` HTML입니다. 자동 HTML이며 쿼리 문자열은 필요 없습니다. 첫 조회 전에 npx·패키지·스킬 설치, health/help, 전체 도구 목록이나 OpenAPI 탐색을 요구하지 않습니다. REST GET 성공과 MCP 도구 호출 성공은 구분합니다.
 
 상품 이미지는 해당 조회 응답의 imageUrl만 사용합니다. 전체 URL과 query string을 유지하고, 없거나 표시되지 않으면 생략하며 image_query·이미지 검색·검색 캐러셀을 사용하거나 웹 검색 이미지·다른 상품·다른 국가 이미지로 대체하지 않습니다. 실제 도구·URL·반환 데이터·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.

@@ -1,6 +1,8 @@
 # 앱 연결·CLI·Skill 가이드
 
-실제 브라우저가 있으면 /browse/ HTML을 엽니다. 웹 읽기만 있으면 /browse/read에서 실제 링크 ID로 click합니다. 이전 HTML은 같은 조건의 새 응답 링크를 최대2번 확인하고 TimeoutError 재확인은 한 번만 합니다. 응답 생성 시각과 원본 재고 갱신은 구분하며 새 브라우저를 반복 생성하지 마세요.
+실제 브라우저가 있으면 /browse/ HTML을 엽니다. 웹 읽기(open/WebFetch)만 있으면 /browse/read에서 실제 링크 ID로 click합니다. 이전 HTML은 같은 조건의 새 응답 링크를 최대2번 확인하고 TimeoutError 재확인은 한 번만 합니다. 응답 생성 시각과 원본 재고 갱신은 구분하며 새 브라우저를 반복 생성하지 마세요.
+
+웹 도구의 `Crawled: today`만으로 현재 재고라고 단정하지 마세요. 응답의 HTML 생성 시각과 실제 수량을 확인하고, 수량이 null이면 품절이 아닌 미확인으로 보고합니다.
 
 연결된 MCP 도구가 있으면 [원격 MCP 안내](../README.md#원격-mcp로-바로-시작하기)를 따릅니다. 웹 읽기만 가능하면 설치·연결 설정 없이 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크 ID로 click하세요. 검색어와 지역은 글자 선택 링크로 입력하며 새 URL을 조립하지 않습니다. click이 없는 도구의 동일 동작은 보장하지 않습니다. 모든 후속 조회도 쿼리 없는 `/browse/` 경로를 사용하며 자동 HTML입니다.
 원격 서버는 `https://mcp.aka.page`, 전송 방식은 Streamable HTTP, 사용자 인증은 없습니다.
