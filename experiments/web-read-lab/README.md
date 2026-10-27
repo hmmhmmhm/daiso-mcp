@@ -34,7 +34,7 @@
 | html / text / json                            | 같은 가상 상품 데이터의 Content-Type 및 표현             |
 | wallet / 지갑 / query?q=wallet / query?q=지갑 | ASCII·한글 경로와 쿼리                                   |
 | redirect                                      | 같은 실행의 html로302이동                                |
-| delay1 / delay5 / delay15                     | 응답 생성 전 고정1/5/15초 대기                           |
+| delay1 / delay2 / delay3 / delay5 / delay15   | 응답 생성 전 고정1/2/3/5/15초 대기                       |
 | large64 / large256                            | 전체 UTF-8 본문64/256KiB, 앞 데이터와 뒤 END-MARKER 비교 |
 | cache                                         | public,max-age=300 헤더. CDN 캐시 저장을 강제하지 않음   |
 | noindex                                       | X-Robots-Tag:noindex,follow                              |

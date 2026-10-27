@@ -119,6 +119,34 @@ describe('독립 웹 읽기 실험', () => {
     expect((await get('/run/test/unknown')).status).toBe(404);
     expect((await get('/run/test/html', { method: 'POST' })).status).toBe(405);
   });
+  it.each([2, 3, 5])('%s초 지연은 응답 준비 전에 정확히 기다린다', async (seconds) => {
+    vi.useFakeTimers();
+    try {
+      const { get } = fixture();
+      const startedAt = Date.now();
+      let completed = false;
+      const pending = get(`/run/timing/delay${seconds}`).then((response) => {
+        completed = true;
+        return response;
+      });
+      await vi.advanceTimersByTimeAsync(seconds * 1000 - 1);
+      expect(completed).toBe(false);
+      const before = await (await get('/observations/timing')).json();
+      expect(before.events.map((event: { phase: string }) => event.phase)).toEqual(['received']);
+      await vi.advanceTimersByTimeAsync(1);
+      const response = await pending;
+      expect(response.status).toBe(200);
+      const after = await (await get('/observations/timing')).json();
+      expect(after.events.map((event: { phase: string }) => event.phase)).toEqual([
+        'received',
+        'prepared',
+      ]);
+      expect(Date.parse(after.events[1].at) - startedAt).toBe(seconds * 1000);
+      expect(after.events[1].requestId).toBe(response.headers.get('x-lab-request-id'));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('지연 중 도착을 기록하고 개인정보와 임의 쿼리를 저장하지 않는다', async () => {
     vi.useFakeTimers();
     try {

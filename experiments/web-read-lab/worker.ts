@@ -31,6 +31,8 @@ const CASES = [
   'query',
   'redirect',
   'delay1',
+  'delay2',
+  'delay3',
   'delay5',
   'delay15',
   'large64',
@@ -133,7 +135,7 @@ export default {
         }),
       );
     await record('received');
-    if (/^delay(1|5|15)$/.test(test))
+    if (/^delay(1|2|3|5|15)$/.test(test))
       await new Promise((resolve) => setTimeout(resolve, Number(test.slice(5)) * 1000));
     const data = {
       synthetic: true,
