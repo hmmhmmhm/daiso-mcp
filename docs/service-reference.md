@@ -16,7 +16,7 @@ README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리�
 
 모든 후속 웹 GET도 `/browse/`를 사용하세요. 자동 HTML이며 쿼리 문자열이나 format 지정은 필요 없습니다. 상품 검색 결과의 실제 ID로 재고를 조회하고 검색 성공만으로 매장 재고를 단정하지 않습니다. 이미지는 응답 imageUrl과 카드의 원본 Markdown만 사용하고 이미지 검색으로 대체하지 않습니다.
 
-현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-27.2), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
+현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-27.3), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
 
 이미 연결된 MCP 도구가 있는 환경만 `search_products`에 `service=daiso`, `query=수납박스`를 전달합니다. 서버는 https://mcp.aka.page 이며 Streamable HTTP, 인증 없음입니다. 실제로 실행한 도구·URL·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 

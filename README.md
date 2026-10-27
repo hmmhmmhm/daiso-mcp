@@ -2,9 +2,9 @@
 <summary>AI 에이전트 사용 안내</summary>
 
 > [!IMPORTANT]
-> **최신 안내:** [현재 버전](https://mcp.aka.page/guide/2026-10-27.2) · [항상 최신 버전으로 이동](https://mcp.aka.page/guide/latest)
+> **최신 안내:** [현재 버전](https://mcp.aka.page/guide/2026-10-27.3) · [항상 최신 버전으로 이동](https://mcp.aka.page/guide/latest)
 >
-> **안내 버전: 2026-10-27.2 · 갱신일: 2026-10-27**
+> **안내 버전: 2026-10-27.3 · 갱신일: 2026-10-27**
 >
 > **웹 읽기는 실제 링크 ID로 click하세요.** 새 검색 URL을 조립해 open하지 말고 [웹 조회 시작](https://mcp.aka.page/browse/read) 화면의 글자 선택 링크를 사용하세요. 상품의 **매장 지역 선택** 링크에서 지역도 선택할 수 있습니다. 입력 중에는 원본 조회를 실행하지 않습니다. click이 없는 도구의 동일 동작은 보장하지 않습니다.
 >
@@ -130,7 +130,7 @@
 2. 서버 URL을 입력하고, 전송 방식을 묻는 경우 **HTTP / Streamable HTTP**를 선택합니다.
 3. 도구를 활성화하고 `다이소 MCP로 수납박스 검색해줘`라고 요청합니다.
 
-[앱별 연결 방법](docs/client-guide.md#원격-mcp-연결) · [WebFetch로 첫 조회](docs/service-reference.md?guide=2026-10-27.2#설치-없이-첫-조회)
+[앱별 연결 방법](docs/client-guide.md#원격-mcp-연결) · [WebFetch로 첫 조회](docs/service-reference.md?guide=2026-10-27.3#설치-없이-첫-조회)
 
 <p align="center">
   <img src="./assets/readme-banners/connect.webp" alt="스마트폰과 노트북을 클라우드로 연결하는 두 햄스터" width="100%">
@@ -208,7 +208,7 @@ MCP 연결 없이 웹 읽기와 GET 요청을 지원하는 에이전트는 [REST
 | 문서                                                            | 내용                                                                                                                                               |
 | :-------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [연결·사용 가이드](docs/client-guide.md)                        | 앱별 MCP 연결, CLI, Skill, OpenAPI                                                                                                                 |
-| [서비스 레퍼런스](docs/service-reference.md?guide=2026-10-27.2) | 서비스별 도구·REST API·응답 모델·가격 비교                                                                                                         |
+| [서비스 레퍼런스](docs/service-reference.md?guide=2026-10-27.3) | 서비스별 도구·REST API·응답 모델·가격 비교                                                                                                         |
 | [일본 다이소](docs/daiso-jp-network-analysis.md)                | 일본 상품·매장 검색과 지원 범위                                                                                                                    |
 | [독립·예술영화관](docs/dtryx.md)                                | 디트릭스 지원 극장과 조회 방법                                                                                                                     |
 | [AI 조회 가이드](docs/ai-instruction.md)                        | 도구 선택과 상품·매장·재고 조회 순서                                                                                                               |

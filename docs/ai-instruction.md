@@ -2,7 +2,7 @@
 
 ## 설치 없이 첫 조회
 
-최신 서버 안내는 [현재 버전](https://mcp.aka.page/guide/2026-10-27.2)과 [최신 연결](https://mcp.aka.page/guide/latest)에서 제공합니다. 웹 도구는 과거 리디렉션·수집본을 반환할 수 있으므로 표시된 버전과 HTML 생성 시각을 확인하세요.
+최신 서버 안내는 [현재 버전](https://mcp.aka.page/guide/2026-10-27.3)과 [최신 연결](https://mcp.aka.page/guide/latest)에서 제공합니다. 웹 도구는 과거 리디렉션·수집본을 반환할 수 있으므로 표시된 버전과 HTML 생성 시각을 확인하세요.
 
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
 2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 사용 가능합니다.

@@ -4,7 +4,7 @@ import app from '../../src/index.js';
 import { buildDiscoveryAssets } from '../../src/pages/discovery.js';
 import { apiResultHtml } from '../../src/pages/apiResult.js';
 
-const version = '2026-10-27.2';
+const version = '2026-10-27.3';
 describe('최신 안내 경로와 원본 이미지', () => {
   it.each(['/guide/latest', '/guide/2026-10-21.2', '/guide/unknown'])('%s는 캐시 없이 현재 버전으로 연결한다', async path => {
     const r = await app.request(path);
@@ -20,6 +20,20 @@ describe('최신 안내 경로와 원본 이미지', () => {
     expect(text).toContain('/browse/read');
     expect(text).toContain('image_query');
     expect(text).toContain('이미지 검색');
+  });
+  it('현재 안내는 웹 도구가 실제 링크 ID로 선택할 수 있는 HTML을 제공한다', async () => {
+    const response = await app.request('/guide/' + version);
+    const text = await response.text();
+    expect(response.headers.get('Content-Type')).toContain('text/html');
+    expect(text).toContain('<a href="/browse/read">웹 조회 시작</a>');
+    expect(text).toContain('<a href="/guide/latest">최신 안내 확인</a>');
+    expect(text).toContain('응답 생성 시각');
+    expect(text).toContain('<html lang="ko">');
+  });
+  it('llms.txt의 UTF-8 평문 계약은 HTML 안내와 별도로 보존한다', async () => {
+    const response = await app.request('/llms.txt');
+    expect(response.headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
+    expect(await response.text()).not.toContain('<a href=');
   });
   it('프롬프트의 전체 웹 조회 예제는 쿼리 없는 browse 경로다', async () => {
     const text=await (await app.request('/prompt')).text();
