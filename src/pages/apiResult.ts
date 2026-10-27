@@ -60,7 +60,11 @@ function renderValue(
         source,
       );
       let detail = '';
-      if (productLinks && key === 'id' && (typeof item === 'string' || typeof item === 'number')) {
+      if (
+        productLinks &&
+        (key === 'id' || key === 'productId') &&
+        (typeof item === 'string' || typeof item === 'number')
+      ) {
         const path = toBrowsePath(
           new URL(`${productLinks}/${encodeURIComponent(String(item))}`, 'https://browse.local'),
         );
