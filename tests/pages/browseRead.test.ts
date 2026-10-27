@@ -73,6 +73,16 @@ describe('웹 수집본과 구분할 수 있는 읽기 세션 링크', () => {
     expect(await (await app.request(refresh[1])).text()).toContain('response 2');
     expect(hits[1].search).toBe(hits[0].search);
   });
+  it('HTML entity처럼 보이는 검색어도 새 응답 링크에서 그대로 유지한다', async () => {
+    const { app, hits } = fixture();
+    const { prefix } = await seed(app);
+    const body = await (await app.request(prefix + '/daiso/products/&copy;/pageSize/3')).text();
+    expect(hits[0].searchParams.get('q')).toBe('&copy;');
+    const refresh = body.match(/href="([^"]+)">같은 조건으로 새 응답 확인/)!;
+    expect(refresh[1]).toContain('/daiso/products/&amp;copy;/pageSize/3');
+    await app.request(refresh[1].replaceAll('&amp;', '&'));
+    expect(hits[1].searchParams.get('q')).toBe('&copy;');
+  });
   it('기존 실패 상태를 성공으로 바꾸지 않는다', async () => {
     const { app } = fixture();
     const { prefix } = await seed(app);
