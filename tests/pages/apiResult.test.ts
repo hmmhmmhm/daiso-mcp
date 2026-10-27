@@ -65,10 +65,14 @@ describe('GET HTML 결과', () => {
     expect(res.status).toBe(400); expect(res.headers.get('Content-Type')).toContain('text/html');
     expect(await res.text()).toContain('MISSING_QUERY');
   });
-  it('셸 없는 에이전트에게 HTML GET을 안내하며 txt charset을 명시한다', () => {
+  it('셸 없는 에이전트에게 HTML GET을 안내하며 txt charset을 명시한다', async () => {
     const assets = buildDiscoveryAssets({ services: [], tools: [] });
-    expect(assets['discovery.html']).toContain('/pageSize/3');
-    expect(assets['llms.txt']).toContain('/pageSize/3');
+    expect(assets['discovery.html']).toContain('/browse/read');
+    expect(assets['llms.txt']).toContain('/browse/read');
+    const { default: app } = await import('../../src/index.js');
+    const entry = await app.request('/browse/read');
+    expect(entry.status).toBe(200);
+    expect(await entry.text()).toContain('/pageSize/3');
     expect(assets['_headers']).toContain('/llms.txt\n  Content-Type: text/plain; charset=utf-8');
   });
 });
