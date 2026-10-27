@@ -1,22 +1,22 @@
 # DAISO MCP 서비스 레퍼런스
 
-실제 브라우저 도구가 있으면 /browse/ HTML을 그 도구로 여세요. 웹 읽기(open/WebFetch)는 [글자 선택 입력](https://mcp.aka.page/browse/compose/daiso/products/~)을 응답의 실제 링크 ID로 click합니다. 새 검색 URL을 조립하지 않고 상품·매장 지역·실제 재고 링크를 선택합니다. 접근 오류 시 사용 가능한 브라우저로 전환할 수 있으나 새 브라우저를 계속 실행하지 마세요. Crawled가 과거인 수집본은 현재 재고 확인이 아닙니다. 응답 생성 시각도 함께 확인하세요.
+실제 브라우저 도구가 있으면 /browse/ HTML을 그 도구로 여세요. 웹 읽기(open/WebFetch)는 [웹 조회 시작](https://mcp.aka.page/browse/read) 화면의 글자 선택 링크를 응답의 실제 링크 ID로 click합니다. 새 검색 URL을 조립하지 않고 상품·매장 지역·실제 재고 링크를 선택합니다. 접근 오류 시 사용 가능한 브라우저로 전환할 수 있으나 새 브라우저를 계속 실행하지 마세요. Crawled가 과거인 수집본은 현재 재고 확인이 아닙니다. 응답 생성 시각도 함께 확인하세요. 이전 HTML이면 같은 조건의 새 응답 링크를 최대2번 선택합니다. `TimeoutError`만 같은 실제 링크를 한 번 재확인하고 계속 실패하면 미확인으로 보고하세요. 새 주소도 기존 API 캐시를 사용하며 원본 갱신을 보장하지 않습니다.
 
 README 하단에 있던 기능, REST API, 개발, 아키텍처 설명을 분리한 문서입니다.
 
 ## 설치 없이 첫 조회
 
-**ChatGPT 및 웹 읽기 에이전트는 터미널을 실행하지 말고 WebFetch 또는 URL 열기(open) 도구로 아래 링크를 직접 여세요.** 설치·API 키·MCP 연결 설정 없이 상품 검색 결과를 읽을 수 있습니다. 검색 도구(search)는 URL 열기를 대신하지 않습니다.
+**ChatGPT 및 웹 읽기 에이전트는 문서에 표시된 실제 링크 ID로 아래 시작 링크를 click하세요.** 설치·API 키·MCP 연결 설정 없이 화면의 상품·지역 링크로 조회합니다. 새 URL을 조립하거나 터미널로 우회하지 마세요. click이 없는 도구는 실제 링크를 열되 같은 동작을 보장하지 않습니다.
 
-[WebFetch로 다이소 수납박스 3개 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)
+[WebFetch로 상품·매장·재고 조회 시작](https://mcp.aka.page/browse/read)
 
-[핫식스 상품 검색](https://mcp.aka.page/browse/daiso/products/%ED%95%AB%EC%8B%9D%EC%8A%A4/pageSize/10) · [강남 매장 검색](https://mcp.aka.page/browse/daiso/stores/%EA%B0%95%EB%82%A8)
+시작 화면에서 수납박스·핫식스 예제 또는 글자 입력 링크를 선택하세요.
 
-웹 읽기 도구에서는 위 링크를 직접 열어 조회하세요. URL 접근 오류가 나오면 실제 오류를 보고하고 상품 없음이나 재고 0으로 해석하지 마세요.
+웹 읽기 도구에서는 위 응답의 실제 링크 ID를 선택해 조회하세요. URL 접근 오류가 나오면 실제 오류를 보고하고 상품 없음이나 재고 0으로 해석하지 마세요.
 
 모든 후속 웹 GET도 `/browse/`를 사용하세요. 자동 HTML이며 쿼리 문자열이나 format 지정은 필요 없습니다. 상품 검색 결과의 실제 ID로 재고를 조회하고 검색 성공만으로 매장 재고를 단정하지 않습니다. 이미지는 응답 imageUrl과 카드의 원본 Markdown만 사용하고 이미지 검색으로 대체하지 않습니다.
 
-현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-27.1), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
+현재 안내는 [버전 안내](https://mcp.aka.page/guide/2026-10-27.2), 다음 버전도 따라가려면 [항상 최신 안내](https://mcp.aka.page/guide/latest)를 여세요. 이 상세 레퍼런스를 끝까지 읽기 전에 첫 조회를 실행하세요.
 
 이미 연결된 MCP 도구가 있는 환경만 `search_products`에 `service=daiso`, `query=수납박스`를 전달합니다. 서버는 https://mcp.aka.page 이며 Streamable HTTP, 인증 없음입니다. 실제로 실행한 도구·URL·오류만 보고하고 실행하지 않은 요청의 성공·실패를 만들지 않습니다.
 
