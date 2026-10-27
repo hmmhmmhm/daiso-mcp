@@ -1,4 +1,5 @@
 /** 운영 API와 분리된 고정 데이터 웹 읽기 실험. 개인정보는 기록하지 않습니다. */
+import { renderComposer } from './composer.js';
 type Event = {
   run: string;
   test: string;
@@ -103,16 +104,20 @@ export default {
     const log = env.PROBE_LOG.get(env.PROBE_LOG.idFromName('bounded-log'));
     if (parts[0] === 'observations' && parts.length === 2)
       return log.fetch(new Request(`https://log/?run=${run}`));
-    if (parts[0] !== 'run' || parts.length > 3) return new Response('Not found', { status: 404 });
+    const isComposer = parts[0] === 'compose';
+    if (!isComposer && (parts[0] !== 'run' || parts.length > 3))
+      return new Response('Not found', { status: 404 });
+    const requestId = crypto.randomUUID();
+    const composer = isComposer ? renderComposer(parts, requestId) : null;
+    if (isComposer && composer === null) return new Response('Invalid input', { status: 400 });
     let test: string;
     try {
-      test = decodeURIComponent(parts[2] ?? 'index');
+      test = isComposer ? 'compose' : decodeURIComponent(parts[2] ?? 'index');
     } catch {
       return new Response('Invalid path', { status: 400 });
     }
-    if (test !== 'index' && !CASES.includes(test))
+    if (!isComposer && test !== 'index' && !CASES.includes(test))
       return new Response('Not found', { status: 404 });
-    const requestId = crypto.randomUUID();
     const record = (phase: string) =>
       log.fetch(
         new Request('https://log/', {
@@ -148,9 +153,12 @@ export default {
       `<p>가상 실험 데이터, 실제 상품 재고가 아닙니다.</p><pre>${JSON.stringify(data, null, 2)}</pre>`,
     );
     let status = 200;
-    if (test === 'index') {
+    if (isComposer) {
+      headers.set('X-Robots-Tag', 'noindex');
+      body = html(composer!);
+    } else if (test === 'index') {
       body = html(
-        `<p>가상 상품: 실험용 지갑, 수량7. 실험번호: ${run}</p><p><a href="/run/${requestId}">새 실험 시작</a></p><ul>${CASES.map((c) => `<li><a href="/run/${run}/${encodeURIComponent(c)}${c === 'query' ? '?q=wallet' : ''}">${c}</a></li>`).join('')}</ul><a href="/run/${run}/query?q=%EC%A7%80%EA%B0%91">한글 쿼리</a><p>응답의 requestId와 generatedAt을 관측 기록과 비교하세요. received는 서버 도착, prepared는 응답 생성 완료이며 클라이언트 수신 성공을 증명하지 않습니다.</p><a href="/observations/${run}">관측 기록 JSON</a><p>현재 요청 번호 ${requestId}</p>`,
+        `<p>가상 상품: 실험용 지갑, 수량7. 실험번호: ${run}</p><p><a href="/run/${requestId}">새 실험 시작</a> · <a href="/compose/${run}/~">링크로 검색어 만들기</a></p><ul>${CASES.map((c) => `<li><a href="/run/${run}/${encodeURIComponent(c)}${c === 'query' ? '?q=wallet' : ''}">${c}</a></li>`).join('')}</ul><a href="/run/${run}/query?q=%EC%A7%80%EA%B0%91">한글 쿼리</a><p>응답의 requestId와 generatedAt을 관측 기록과 비교하세요. received는 서버 도착, prepared는 응답 생성 완료이며 클라이언트 수신 성공을 증명하지 않습니다.</p><a href="/observations/${run}">관측 기록 JSON</a><p>현재 요청 번호 ${requestId}</p>`,
       );
     } else if (test === 'json' || test === 'text') {
       headers.set(
