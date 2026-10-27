@@ -36,11 +36,17 @@ it('전체 서비스 상세 안내의 모든 웹 실행 URL이 쿼리 없는 경
 });
 it('완전한 웹 예시 URL은 공백 없이 열리고 등록된 조회로 해석된다', async () => {
   const { browseApiUrl } = await import('../../src/pages/browsePaths.js');
+  const { renderBrowseComposer } = await import('../../src/pages/browseComposer.js');
   const lines = generatePromptText('https://guide.example').split('\n');
   for (const line of lines) {
     const url = line.match(/https:\/\/guide\.example\/browse\/.*$/)?.[0];
     if (!url) continue;
     expect(url).not.toMatch(/\s/);
-    expect(browseApiUrl(new URL(url))).not.toBeNull();
+    const source = new URL(url);
+    if (source.pathname.startsWith('/browse/compose/')) {
+      expect(renderBrowseComposer(source)).not.toBeNull();
+    } else {
+      expect(browseApiUrl(source)).not.toBeNull();
+    }
   }
 });

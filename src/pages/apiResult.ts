@@ -65,8 +65,8 @@ function renderValue(
           new URL(`${productLinks}/${encodeURIComponent(String(item))}`, 'https://browse.local'),
         );
         detail = ` <a href="${escapeHtml(path)}">상품 상세</a>`;
-        if (productLinks === '/api/daiso/products')
-          detail += ` <a href="${escapeHtml(toBrowsePath(new URL('/api/daiso/inventory?productId=' + encodeURIComponent(String(item)), 'https://browse.local')))}">매장 재고 (사용자 지역을 경로에 추가하세요)</a>`;
+        if (productLinks === '/api/daiso/products' && /^[1-9][0-9]{0,19}$/.test(String(item)))
+          detail += ` <a href="/browse/compose/daiso/inventory/${String(item)}/~">매장 지역 선택</a>`;
       }
       if (
         source.pathname === '/api/daiso/inventory' &&

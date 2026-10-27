@@ -11,6 +11,7 @@ describe('쿼리 없는 웹 조회 경로', () => {
       '/browse/daiso/products/핫식스/pageSize/3',
     ],
     ['/api/daiso/stores?keyword=강남역', '/browse/daiso/stores/강남역'],
+    ['/api/daiso/inventory?productId=105603886', '/browse/daiso/inventory/105603886'],
     [
       '/api/daiso/inventory?productId=105603886&keyword=강남역&pageSize=2',
       '/browse/daiso/inventory/105603886/강남역/pageSize/2',
