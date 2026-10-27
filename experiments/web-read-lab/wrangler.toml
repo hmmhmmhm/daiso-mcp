@@ -2,6 +2,7 @@ name = "daiso-web-read-lab"
 main = "worker.ts"
 compatibility_date = "2025-01-23"
 workers_dev = true
+routes = [{ pattern = "web-read-lab.aka.page", custom_domain = true }]
 
 [[durable_objects.bindings]]
 name = "PROBE_LOG"

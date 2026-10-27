@@ -4,6 +4,10 @@
 
 실험 목록: https://daiso-web-read-lab.hmmhmmhm.workers.dev/run/round2
 
+도메인 비교용 별칭: https://web-read-lab.aka.page/run/domain-test
+
+두 주소는 동일한 Worker와 관측 로그를 사용합니다. 호스트별로 다른 실행번호를 사용해 요청을 구분하세요. 별칭의 배포 완료와 웹 읽기 성공은 별도로 검증합니다.
+
 [2026-10-26 실험 결과](../../docs/web-reading-lab-results-2026-10-26.md)
 
 배포: `.github/workflows/deploy-web-read-lab.yml`. Worker 이름은 `daiso-web-read-lab`이며 배포 결과의 workers.dev URL을 사용합니다.
