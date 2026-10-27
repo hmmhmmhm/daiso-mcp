@@ -3,6 +3,7 @@ import type { Hono } from 'hono';
 import type { AppBindings } from '../api/response.js';
 import { BROWSE_ROUTES, browseApiUrl } from './browsePaths.js';
 import { renderBrowseComposer } from './browseComposer.js';
+import { registerBrowseReadRoutes } from './browseRead.js';
 
 function page(content: string, status = 200): Response {
   return new Response(
@@ -20,6 +21,7 @@ function page(content: string, status = 200): Response {
 }
 
 export function registerBrowseRoutes(app: Hono<{ Bindings: AppBindings }>): void {
+  registerBrowseReadRoutes(app);
   app.get('/browse/compose', () =>
     page(
       '<h1>링크를 선택하여 검색하기</h1><p>검색어를 URL에 직접 조립하지 않고 한 글자씩 선택합니다. 아직 실제 조회를 실행하지 않습니다.</p><ul><li><a href="/browse/compose/daiso/products/~">상품 검색어 선택</a></li><li><a href="/browse/compose/daiso/stores/~">매장 검색어 선택</a></li></ul>',

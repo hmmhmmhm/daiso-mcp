@@ -7,15 +7,24 @@ const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12
 function fixture() {
   const app = new Hono<{ Bindings: AppBindings }>();
   const hits: URL[] = [];
-  registerBrowseRoutes(app);
   app.get('/api/daiso/products', (c) => {
     hits.push(new URL(c.req.url));
     return c.html(
       `<main>response ${hits.length}<a href="/browse/daiso/product/58450">상세</a><a href="/browse/compose/daiso/inventory/58450/~">지역 선택</a><a href="https://cdn.daisomall.co.kr/image.jpg">이미지</a><a href="/guide/latest">안내</a></main>`,
     );
   });
-  app.get('/api/daiso/products/:id', (c) => c.html(`<main>상품 ${c.req.param('id')}</main>`));
-  app.get('/api/daiso/stores', (c) => c.html('<main>실패</main>', 503));
+  app.get('/api/daiso/products/:id', (c) =>
+    c.req.param('id') === 'redirect'
+      ? c.redirect('/browse/daiso/product/58450')
+      : c.html(`<main>상품 ${c.req.param('id')}</main>`),
+  );
+  app.get('/api/daiso/stores', (c) =>
+    c.req.query('keyword') === 'json'
+      ? c.json({ success: false }, 503)
+      : c.html('<main>실패</main>', 503),
+  );
+  app.get('/browse/existing-read', (c) => c.html('<a href="/browse/read">새 세션</a><a href="/browse/read/12345678-1234-4123-8123-123456789abc">기존 세션</a>'));
+  registerBrowseRoutes(app);
   return { app, hits };
 }
 async function seed(app: ReturnType<typeof fixture>['app']) {
@@ -77,6 +86,24 @@ describe('웹 수집본과 구분할 수 있는 읽기 세션 링크', () => {
     const response = await app.request(prefix + '/');
     expect(response.status).toBe(307);
     expect(response.headers.get('Location')).toBe(prefix);
+    const detail = await app.request(prefix + '/daiso/product/redirect');
+    expect(detail.status).toBe(302);
+    expect(detail.headers.get('Location')).toBe(prefix + '/daiso/product/58450');
+    expect(await (await app.request(detail.headers.get('Location')!)).text()).toContain('상품 58450');
+  });
+  it('기존 읽기 링크는 이중으로 감싸지 않는다', async () => {
+    const { app } = fixture();
+    const { prefix } = await seed(app);
+    const body = await (await app.request(prefix + '/existing-read')).text();
+    expect(body).toContain('href="/browse/read"');
+    expect(body).toContain('href="/browse/read/12345678-1234-4123-8123-123456789abc"');
+  });
+  it('비 HTML 오류 본문은 변형하지 않는다', async () => {
+    const { app } = fixture();
+    const { prefix } = await seed(app);
+    const response = await app.request(prefix + '/daiso/stores/json');
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ success: false });
   });
   it.each(['invalid', '00000000-0000-0000-0000-000000000000'])('잘못된 ID를 거절한다: %s', async (id) => {
     const { app, hits } = fixture();
