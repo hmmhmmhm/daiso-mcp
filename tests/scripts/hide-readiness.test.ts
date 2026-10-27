@@ -35,7 +35,11 @@ it.skipIf(process.platform !== 'darwin')(
           implementation +
           '\nlet cases=try JSONSerialization.jsonObject(with:Data(contentsOf:URL(fileURLWithPath:CommandLine.arguments[1]))) as! [[String:Any]]\nfor row in cases { print(readinessAllowsHiding(row, launchedAt:1000, now:1200)) }\n',
       );
-      const output = execFileSync('/usr/bin/swift', [script, data], { encoding: 'utf8' });
+      // 클라우드 Mac의 첫 Swift 컴파일도 제한 시간 안에서 끝나도록 별도 상한을 둡니다.
+      const output = execFileSync('/usr/bin/swift', [script, data], {
+        encoding: 'utf8',
+        timeout: 20_000,
+      });
       expect(output.trim().split('\n')).toEqual(['true', ...Array(9).fill('false')]);
       writeFileSync(
         script,
@@ -43,11 +47,12 @@ it.skipIf(process.platform !== 'darwin')(
           implementation +
           '\nprint(processLaunchTime("Mon Oct 26 00:53:22 2026", timeZone:TimeZone(secondsFromGMT:0)!) == 1792976002)\nprint(processLaunchTime("invalid") == nil)\n',
       );
-      expect(execFileSync('/usr/bin/swift', [script], { encoding: 'utf8' }).trim()).toBe(
+      expect(execFileSync('/usr/bin/swift', [script], { encoding: 'utf8', timeout: 20_000 }).trim()).toBe(
         'true\ntrue',
       );
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
   },
+  45_000,
 );

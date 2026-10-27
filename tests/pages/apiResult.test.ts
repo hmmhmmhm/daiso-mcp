@@ -76,7 +76,9 @@ describe('GET HTML 결과', () => {
 it('후속 상세·재고·페이지 링크는 실제 식별자와 필터를 보존하는 browse 경로다', async () => {
   const html = await (await fixture().request('/api/daiso/products?q=핫식스&page=1&pageSize=1&format=html')).text();
   expect(html).toContain('href="/browse/daiso/product/123%26%22"');
-  expect(html).toContain('href="/browse/daiso/inventory/123%26%22"');
+  expect(html).not.toContain('href="/browse/compose/daiso/inventory/123%26%22/~"');
+  expect(html).toContain('href="/browse/compose/daiso/inventory/7/~"');
+  expect(html).not.toContain('href="/browse/daiso/inventory/123%26%22"');
   expect(html).toContain('/browse/daiso/products/');
   expect(html).not.toMatch(/href="\/api\//);
 });

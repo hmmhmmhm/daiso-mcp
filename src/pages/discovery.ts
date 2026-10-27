@@ -40,7 +40,7 @@ export function buildDiscoveryAssets(info: {
 <h1>DAISO MCP</h1><p>${escapeHtml(AGENT_GUIDE_STAMP)} · <a href="${AGENT_GUIDE_PATH}">현재 버전 안내</a> · <a href="/guide/latest">항상 최신 안내로 이동</a></p><p>설치 없이 상품·매장·재고와 영화관 정보를 조회하세요. 사용자 API 키나 로그인 없이 쓸 수 있는 공개 서비스입니다.</p>
 <p>${escapeHtml(WEB_SEARCH_DESCRIPTION)}</p>
 <p><strong>${escapeHtml(WEB_READ_RULE)}</strong></p>
-<section><h2>바로 조회하기</h2><p><a href="${escapeHtml(firstQuery)}">다이소 수납박스 상품 3개 조회</a></p>
+<section><h2>바로 조회하기</h2><p><a href="/browse/compose/daiso/products/~">원하는 상품 검색어를 링크로 선택하기</a> · <a href="/browse/compose/daiso/stores/~">매장 검색어를 링크로 선택하기</a></p><p><a href="${escapeHtml(firstQuery)}">다이소 수납박스 상품 3개 조회</a></p>
 <p><a href="/browse/daiso/products/%ED%95%AB%EC%8B%9D%EC%8A%A4/pageSize/10">핫식스 상품 검색</a> · <a href="/browse/daiso/stores/%EA%B0%95%EB%82%A8">강남 매장 검색</a></p>
 <p>위 링크는 셸·설치 없이 웹 읽기로 호출하는 공개 REST GET의 HTML 결과입니다. <a href="/browse">모든 서비스의 /browse/ 경로</a>는 자동 HTML이며 쿼리 문자열은 필요 없습니다. 검색한 상품의 실제 ID로 재고를 조회하세요. 상품 검색만으로 매장 재고를 단정하지 마세요.</p></section>
 <section><h2>에이전트에서 설치 없이 사용하기</h2><p>원격 MCP 주소: <code>${BASE}</code><br>전송: Streamable HTTP · 인증: 없음</p>
@@ -79,6 +79,7 @@ export function buildDiscoveryAssets(info: {
       [
         '/',
         '/browse',
+        '/browse/compose',
         '/browse/daiso/products/%ED%95%AB%EC%8B%9D%EC%8A%A4',
         '/browse/daiso/stores/%EA%B0%95%EB%82%A8',
         AGENT_GUIDE_PATH,
