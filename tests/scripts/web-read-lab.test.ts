@@ -48,6 +48,10 @@ describe('독립 웹 읽기 실험', () => {
     expect(body).toContain('연필7');
     expect(body).toContain('synthetic');
     expect(body).toContain('requestId');
+    expect(body).toContain(
+      'https://mcp.aka.page/browse/daiso/products/%EC%97%B0%ED%95%847/pageSize/3',
+    );
+    expect(body).toContain('https://mcp.aka.page/browse/daiso/stores/%EC%97%B0%ED%95%847');
     const log = JSON.stringify(await (await get('/observations/compose-test')).json());
     expect(log).not.toContain('연필');
   });

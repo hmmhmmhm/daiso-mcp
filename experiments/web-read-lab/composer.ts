@@ -24,7 +24,8 @@ export function renderComposer(parts: string[], requestId: string): string | nul
     if (!text.trim()) return null;
     return (
       intro +
-      `<pre>${JSON.stringify({ synthetic: true, query: text, requestId, generatedAt: new Date().toISOString() }, null, 2)}</pre>`
+      `<pre>${JSON.stringify({ synthetic: true, query: text, requestId, generatedAt: new Date().toISOString() }, null, 2)}</pre>` +
+      `<h3>입력한 검색어로 실제 조회하기</h3><p>아래 링크는 별도 운영 서비스로 이동합니다. 링크를 열기 전에는 실제 상품이나 매장을 조회한 것이 아닙니다. 상품 검색 성공은 매장 재고 보유를 뜻하지 않습니다.</p><ul><li><a href="https://mcp.aka.page/browse/daiso/products/${encodeURIComponent(text)}/pageSize/3">실제 다이소 상품 검색</a></li><li><a href="https://mcp.aka.page/browse/daiso/stores/${encodeURIComponent(text)}">실제 다이소 매장 검색</a></li></ul><p>${link('입력 수정', text)}</p>`
     );
   }
   const choice = /^ko-(\d{1,2})(?:-(\d{1,2}))?$/.exec(stage);
