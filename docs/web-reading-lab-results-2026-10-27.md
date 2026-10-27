@@ -30,7 +30,7 @@ PR335의 실험 Worker 배포40437090435가 성공했다. 별도 브라우저를
 - [history.rs](https://github.com/openai/codex/blob/main/codex-rs/ext/web-search/src/history.rs)는 최근 사용자 텍스트2건과 제한된 assistant 텍스트를 검색 요청에 포함한다. 이것이 이번 URL 실패의 원인이라는 증거는 없다.
 - [독립 재현 질문53849](https://github.com/openai/codex/discussions/53849)도 URL별 성공 차이와 원본 로그 부재를 보고하지만 미답변 상태다. 이를 공식 원인 설명으로 사용하지 않는다.
 
-## 남은 작업
+## 11:48 KST 시점의 남은 작업
 
 실제 상품 HTML의 재고 링크는 사용자 지역을 URL에 직접 추가하도록 요구한다. 따라서 지역도 링크로 입력하고 실제 상품 ID를 유지하는 운영 경로가 필요하다. 이 흐름의 실제 재고·진열 위치, 독립 실행 및 새 ChatGPT Chat 대화의 성공은 아직 검증하지 않았다. 오후2시 연구 목표는 계속 active이며 이번 결과만으로 완료 처리하지 않는다.
 
