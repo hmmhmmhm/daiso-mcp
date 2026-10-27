@@ -4,7 +4,7 @@ import app from '../../src/index.js';
 import { buildDiscoveryAssets } from '../../src/pages/discovery.js';
 import { apiResultHtml } from '../../src/pages/apiResult.js';
 
-const version = '2026-10-27.1';
+const version = '2026-10-27.2';
 describe('최신 안내 경로와 원본 이미지', () => {
   it.each(['/guide/latest', '/guide/2026-10-21.2', '/guide/unknown'])('%s는 캐시 없이 현재 버전으로 연결한다', async path => {
     const r = await app.request(path);
@@ -17,7 +17,7 @@ describe('최신 안내 경로와 원본 이미지', () => {
     expect(r.status).toBe(200);
     expect(r.headers.get('Cache-Control')).toBe('no-store');
     expect(text).toContain('안내 버전: '+version);
-    expect(text).toContain('/browse/daiso/products/');
+    expect(text).toContain('/browse/read');
     expect(text).toContain('image_query');
     expect(text).toContain('이미지 검색');
   });
@@ -33,7 +33,7 @@ describe('최신 안내 경로와 원본 이미지', () => {
   it('발견 HTML/robots/sitemap에서 현재 버전 안내를 발견한다', () => {
     const a = buildDiscoveryAssets({ services: [], tools: [] });
     for (const key of ['discovery.html','robots.txt','sitemap.xml']) expect(a[key]).toContain('/guide/'+version);
-    expect(a['discovery.html']).toContain('/browse/daiso/products/');
+    expect(a['discovery.html']).toContain('/browse/read');
     expect(a['_headers']).toContain('Cache-Control: no-store');
   });
   it('HTML 후속 링크와 원본 Markdown은 현재 버전을 사용하고 JSON 캐시는 유지한다', async () => {

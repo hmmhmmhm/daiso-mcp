@@ -1,8 +1,10 @@
 # 앱 연결·CLI·Skill 가이드
 
-실제 브라우저 도구가 있으면 /browse/ HTML을 그 도구로 여세요. 웹 읽기(open/WebFetch)의 접근 오류 시 사용 가능한 브라우저로 전환합니다. Crawled가 과거인 수집본은 현재 재고 확인이 아닙니다. 응답 생성 시각도 함께 확인하세요.
+실제 브라우저가 있으면 /browse/ HTML을 엽니다. 웹 읽기(open/WebFetch)만 있으면 /browse/read에서 실제 링크 ID로 click합니다. 이전 HTML은 같은 조건의 새 응답 링크를 최대2번 확인하고 TimeoutError 재확인은 한 번만 합니다. 응답 생성 시각과 원본 재고 갱신은 구분하며 새 브라우저를 반복 생성하지 마세요.
 
-연결된 MCP 도구가 있으면 [원격 MCP 안내](../README.md#원격-mcp로-바로-시작하기)를 따릅니다. 웹 읽기만 가능하면 설치·연결 설정 없이 [첫 상품 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)를 open/WebFetch로 바로 여세요. 모든 후속 조회도 쿼리 없는 `/browse/` 경로를 사용하며 자동 HTML입니다.
+웹 도구의 `Crawled: today`만으로 현재 재고라고 단정하지 마세요. 응답의 HTML 생성 시각과 실제 수량을 확인하고, 수량이 null이면 품절이 아닌 미확인으로 보고합니다.
+
+연결된 MCP 도구가 있으면 [원격 MCP 안내](../README.md#원격-mcp로-바로-시작하기)를 따릅니다. 웹 읽기만 가능하면 설치·연결 설정 없이 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크 ID로 click하세요. 검색어와 지역은 글자 선택 링크로 입력하며 새 URL을 조립하지 않습니다. click이 없는 도구의 동일 동작은 보장하지 않습니다. 모든 후속 조회도 쿼리 없는 `/browse/` 경로를 사용하며 자동 HTML입니다.
 원격 서버는 `https://mcp.aka.page`, 전송 방식은 Streamable HTTP, 사용자 인증은 없습니다.
 
 ## 원격 MCP 연결
@@ -235,7 +237,7 @@ npx daiso products 수납박스 --json
 - 공개 페이지: `https://clawhub.ai/hmmhmmhm/daiso-cli`
 - 스킬 파일: [skills/daiso-cli/SKILL.md](../skills/daiso-cli/SKILL.md)
 - 명령 맵: [CLI 명령 맵](../skills/daiso-cli/references/cli-command-map.md)
-- 사용자가 무설치 조회를 요청하면 연결된 MCP 도구를 사용하고, 없으면 웹 읽기의 HTML GET을 우선 사용합니다. 셸이 있어도 이 순서를 유지하며, 두 수단이 없으면 실제 도구 제약을 알리고 셸 호출로 우회하지 않습니다. WebFetch 또는 open으로 HTML 링크를 직접 여세요. `npx`나 Skill 설치, 전체 스키마 탐색은 필요하지 않습니다.
+- 사용자가 무설치 조회를 요청하면 연결된 MCP 도구를 사용하고, 없으면 웹 읽기의 HTML GET을 우선 사용합니다. 셸이 있어도 이 순서를 유지하며, 두 수단이 없으면 실제 도구 제약을 알리고 셸 호출로 우회하지 않습니다. /browse/read의 실제 링크 ID로 click하고 글자 입력·상품·재고 링크를 따르세요. 새 URL을 조립하지 마세요. `npx`나 Skill 설치, 전체 스키마 탐색은 필요하지 않습니다.
 - CLI를 사용하기로 선택했고 쉘 실행이 가능한 환경에서만 `npx daiso`를 사용합니다. AI 앱 연결에는 MCP 서버 URL `https://mcp.aka.page`를 사용합니다.
 - 구조화 결과가 필요하면 스킬은 `npx daiso ... --json` 형태를 선택합니다.
 - 상황별 레시피는 `콜라 어디가 싸?`, `강남역 근처 카페`, `다이소 핫식스 재고`, `오늘 강남 CGV 시간표`처럼 실제 사용자 문장 기준으로 정리되어 있습니다.

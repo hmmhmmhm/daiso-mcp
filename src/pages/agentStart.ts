@@ -1,19 +1,19 @@
 /** 검색·읽기 사본의 안내 세대를 구분하는 고정 버전 */
-export const AGENT_GUIDE_VERSION = '2026-10-27.1';
+export const AGENT_GUIDE_VERSION = '2026-10-27.2';
 export const AGENT_GUIDE_UPDATED = '2026-10-27';
 export const AGENT_GUIDE_STAMP = `안내 버전: ${AGENT_GUIDE_VERSION} · 갱신일: ${AGENT_GUIDE_UPDATED}`;
 export const AGENT_GUIDE_PATH = `/guide/${AGENT_GUIDE_VERSION}`;
 export const WEB_SEARCH_DESCRIPTION =
-  'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 상품을 조회하세요. /browse/compose의 실제 글자 링크를 선택하면 임의 검색어와 지역을 전달할 수 있습니다. 새 URL을 조립하지 말고 문서의 링크 ID로 click하세요. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
+  'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 조회하세요. /browse/read의 실제 링크 ID를 click하고 임의 검색어·지역을 글자로 선택합니다. 같은 조건의 새 응답 링크로 새 HTML 주소를 확인할 수 있습니다. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
 
 /** 웹 읽기 환경에서 쿼리 없는 HTML 경로를 우선합니다. */
 export const WEB_READ_RULE =
-  '웹 조회는 /browse/ 경로를 사용하세요. Work 등에서 실제 브라우저 도구가 있으면 그 도구로 열고, 없으면 open/WebFetch를 사용하세요. 웹 읽기는 문서의 실제 링크 ID로 click하여 이동하세요. 검색어를 바꾼 새 URL을 조립해 open하지 말고 /browse/compose에서 글자를 선택하세요. 상품 HTML의 매장 지역 선택 링크는 실제 상품 ID를 유지합니다. 접근 오류가 나면 같은 주소를 반복하기 전에 실제 링크 선택을 확인하고 사용 가능한 브라우저로 전환할 수 있습니다. 브라우저를 추가로 계속 실행하지 마세요. Crawled가 과거인 수집본을 현재 재고로 단정하지 마세요. 상품 검색·상세·매장·재고·후속 조회가 모두 자동 HTML입니다. format이나 쿼리 문자열은 필요 없습니다. JSON API 주소를 웹 읽기로 열거나 셸로 우회하지 마세요. 접근 오류만으로 서비스 장애·로그인 필요·이 환경에서 실행할 수 없다고 단정하지 마세요.';
+  '웹 조회는 /browse/ 경로를 사용하세요. 실제 브라우저 도구가 있으면 /browse/ HTML을 열고, 웹 읽기(open/WebFetch)만 있으면 /browse/read의 실제 링크 ID로 click하여 시작하세요. 새 URL을 조립하지 말고 글자 선택·상품·매장 지역 선택 링크를 따르세요. 오래된 수집본이면 같은 조건으로 새 응답 확인 링크를 최대2번 선택해 새 주소와 HTML 생성 시각을 확인하세요. 이 경로도 기존 API 캐시·한도·권한을 사용하며 원본 재고 갱신을 보장하지 않습니다. TimeoutError는 같은 실제 링크를 한 번만 재확인하고 계속 실패하면 미확인으로 보고하세요. URL 접근 거절을 같은 주소의 직접 open으로 반복하지 마세요. Crawled today만으로 현재 재고를 단정하지 말고 응답 생성 시각을 보고하세요. 모든 후속 /browse/ 조회는 자동 HTML이며 쿼리 문자열은 필요 없습니다. JSON API·셸로 우회하거나 브라우저를 추가로 계속 실행하지 마세요. 접근 오류를 상품 없음·재고0·로그인 필요로 단정하지 마세요. 해당 오류만으로 이 환경에서 실행할 수 없다고 단정하지 마세요.';
 
 /** 셸 존재를 네트워크 접근 가능 여부로 오해하지 않는 실행 순서 */
 export const ROUTE_SELECTION_TEXT = `1. 연결된 MCP 도구가 있으면 search_products {"service":"daiso","query":"수납박스","pageSize":3}를 호출합니다.
 2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 페이지의 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 이 경로를 사용합니다.
-3. 웹 읽기(open/WebFetch)만 가능하면 문서의 실제 링크 ID로 click합니다. /browse/compose에서 임의 검색어를 글자로 선택하고 상품 HTML의 매장 지역 선택으로 재고를 조회합니다. 새 URL 조립이나 직접 open 실패를 반복하지 마세요. 도구에 click이 없으면 결과의 실제 링크를 열되 같은 동작을 보장하지 않습니다. Crawled가 과거인 수집본은 현재 재고 확인으로 쓰지 않습니다.
+3. 웹 읽기(open/WebFetch)만 가능하면 /browse/read의 실제 링크 ID로 click합니다. 임의 검색어를 글자로 선택하고 상품의 매장 지역 선택으로 재고를 조회합니다. 이전 HTML이면 같은 조건의 새 응답 링크를 최대2번 선택하고 생성 시각을 확인하세요. TimeoutError 재확인은 한 번만 합니다. 도구에 click이 없으면 실제 링크를 열되 같은 동작을 보장하지 않습니다. 수집본이나 미확인 수량을 현재 재고0으로 바꾸지 마세요.
 4. 위 세 수단이 없거나 모두 실패하면 실제 조회 제약과 오류를 알립니다. 셸이 있어도 설치 없는 웹 조회가 우선입니다. 터미널·셸 호출로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 확대하지 말고 실제로 실행하지 않은 요청의 실패를 만들지 마세요.`;
 
 /** 유사 상품의 웹 검색 이미지를 실제 상품 사진으로 오인하지 않도록 제한합니다. */
@@ -38,19 +38,15 @@ ${AGENT_GUIDE_STAMP}
 
 ${ROUTE_SELECTION_TEXT}
 
-웹 읽기용 임의 검색어 입력 (응답의 실제 글자 링크 ID를 선택):
-${baseUrl}/browse/compose/daiso/products/~
-매장 검색어 입력: ${baseUrl}/browse/compose/daiso/stores/~
-아래 고정 예제도 문서의 실제 링크를 click하여 조회할 수 있습니다:
-${baseUrl}/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3
-핫식스: ${baseUrl}/browse/daiso/products/%ED%95%AB%EC%8B%9D%EC%8A%A4
-강남역 매장: ${baseUrl}/browse/daiso/stores/%EA%B0%95%EB%82%A8%EC%97%AD
+웹 읽기 시작 (문서의 실제 링크 ID를 선택):
+${baseUrl}/browse/read
+응답의 글자 입력 링크에서 임의 상품명·매장 지역을 선택하세요. 수납박스·핫식스 등 예제도 이 화면의 실제 링크로 조회합니다. 동일 주소의 수집본이 오래됐으면 새 응답 확인 링크를 선택하세요. 새 HTML 주소도 원본 API의 캐시를 사용하며 원본 재고의 새 갱신을 보장하지 않습니다.
 이것은 공개 REST GET의 웹 조회이며 MCP 프로토콜 호출이 아닙니다. 상품 결과의 실제 상품 상세·매장 지역 선택 링크를 따르세요. 지역 입력 후 표시된 실제 재고 조회 링크를 선택합니다. 후속 URL을 새로 조립하지 마세요. 상품 검색만으로 매장 재고를 단정하지 마세요. 일반 API 클라이언트의 경로·필터 문법은 상세 사용 안내를 참고하세요.
 
 ${IMAGE_SOURCE_RULE}
 ${EXECUTION_EVIDENCE_RULE}
 
-연결된 MCP 클라이언트는 initialize 절차를 처리합니다. MCP 결과의 isError=true/error를 확인하고 structuredContent 또는 content[].text에서 실제 상품을 읽습니다. 웹 읽기는 WebFetch·open 도구에서 위 HTML GET 링크를 그대로 여세요.
+연결된 MCP 클라이언트는 initialize 절차를 처리합니다. MCP 결과의 isError=true/error를 확인하고 structuredContent 또는 content[].text에서 실제 상품을 읽습니다. 웹 읽기는 위 화면의 실제 링크 ID로 click하세요.
 기존 서비스별 MCP 이름은 deprecated 호출 별칭입니다. 새 연동은 공개 도구 10개만 사용하며 도구를 늘리지 않습니다.
 상세 API와 서비스 안내: ${baseUrl}/prompt · 전체 웹 조회: ${baseUrl}/browse
 
