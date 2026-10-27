@@ -64,6 +64,8 @@ jobs:
     uses: ./.github/workflows/select-local-runner.yml
     with:
       cloud-runner: macos-latest
+      # 브라우저 실험·운영 중계와 분리하되 실제 macOS에서 검증합니다.
+      force-cloud: true
     secrets:
       status-token: ${{ secrets.LOCAL_RUNNER_STATUS_TOKEN }}
 
