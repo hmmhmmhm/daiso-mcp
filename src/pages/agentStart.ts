@@ -1,5 +1,5 @@
 /** 검색·읽기 사본의 안내 세대를 구분하는 고정 버전 */
-export const AGENT_GUIDE_VERSION = '2026-10-27.2';
+export const AGENT_GUIDE_VERSION = '2026-10-27.3';
 export const AGENT_GUIDE_UPDATED = '2026-10-27';
 export const AGENT_GUIDE_STAMP = `안내 버전: ${AGENT_GUIDE_VERSION} · 갱신일: ${AGENT_GUIDE_UPDATED}`;
 export const AGENT_GUIDE_PATH = `/guide/${AGENT_GUIDE_VERSION}`;
@@ -65,9 +65,24 @@ export function createAgentStartResponse(baseUrl: string): Response {
   });
 }
 
+/** 웹 읽기 도구가 후속 주소를 실제 링크로 선택할 수 있는 안내입니다. */
+function createGuideHtmlResponse(baseUrl: string): Response {
+  const text = buildAgentStartText(baseUrl)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAISO MCP 사용 안내 ${AGENT_GUIDE_VERSION}</title></head><body><main>
+<h1>DAISO MCP: 설치 없이 시작하기</h1><p>${AGENT_GUIDE_STAMP}</p>
+<nav><a href="/browse/read">웹 조회 시작</a> · <a href="/guide/latest">최신 안내 확인</a> · <a href="/prompt">상세 사용법</a></nav>
+<p>안내 응답 생성 시각: <time>${new Date().toISOString()}</time>. 원본 재고 갱신 시각이 아닙니다.</p>
+<pre style="white-space:pre-wrap">${text}</pre></main></body></html>`, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
 /** 오래된 버전 주소도 현재 안내로 연결하며 영구 리다이렉트 캐시를 만들지 않습니다. */
 export function createVersionedGuideResponse(baseUrl: string, version: string): Response {
-  if (version === AGENT_GUIDE_VERSION) return createAgentStartResponse(baseUrl);
+  if (version === AGENT_GUIDE_VERSION) return createGuideHtmlResponse(baseUrl);
   return new Response(null, {
     status: 307,
     headers: { Location: AGENT_GUIDE_PATH, 'Cache-Control': 'no-store' },
