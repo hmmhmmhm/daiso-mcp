@@ -36,7 +36,11 @@ export function registerBrowseReadRoutes(app: Hono<Bindings>): void {
       /href="(\/browse(?:\/[^"]*)?)"/g,
       (_, path: string) => `href="${scoped(path)}"`,
     );
-    const refresh = `/browse/read/${crypto.randomUUID()}${suffix}`;
+    const refresh = `/browse/read/${crypto.randomUUID()}${suffix}`
+      .replaceAll('&', '&amp;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
     const note = `<footer><p>읽기 세션: <code>${id}</code> · HTML 응답 생성: ${new Date().toISOString()}</p><p>새 주소도 기존 API 캐시·한도·권한을 사용합니다. HTML 응답 생성 시각은 원본 재고 갱신 시각이 아닙니다.</p><p><a href="${refresh}">같은 조건으로 새 응답 확인</a></p></footer>`;
     body = body.includes('</body>') ? body.replace('</body>', note + '</body>') : body + note;
     headers.delete('Content-Length');
