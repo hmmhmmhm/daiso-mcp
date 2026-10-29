@@ -12,7 +12,8 @@ import { ownedGroup, processSnapshot, type ProcessIdentity } from './ownership.j
 export async function launchGuardedBrowser(
   markerPath: string,
   onEvent?: (reason: string) => void | Promise<void>,
-  headlessExecutable?: string,
+  browserExecutable?: string,
+  browserMode?: 'headless' | 'headed',
 ): Promise<BrowserOwner> {
   const release = await acquireMarkerLease(markerPath);
   markerPath = release.markerPath;
@@ -27,7 +28,7 @@ export async function launchGuardedBrowser(
     }
   };
   try {
-    return await launchWhileLocked(markerPath, serial, onEvent, headlessExecutable);
+    return await launchWhileLocked(markerPath, serial, onEvent, browserExecutable, browserMode);
   } finally {
     starting = false;
     await release();
@@ -37,7 +38,8 @@ async function launchWhileLocked(
   markerPath: string,
   serial: (action: () => Promise<boolean>) => Promise<boolean>,
   onEvent?: (reason: string) => void | Promise<void>,
-  headlessExecutable?: string,
+  browserExecutable?: string,
+  browserMode?: 'headless' | 'headed',
 ): Promise<BrowserOwner> {
   const emit = (reason: string) => {
     try {
@@ -55,7 +57,7 @@ async function launchWhileLocked(
   }
   const guard = fork(
     fileURLToPath(new URL('./guard.ts', import.meta.url)),
-    [markerPath, ...(headlessExecutable ? ['headless', headlessExecutable] : [])],
+    [markerPath, ...(browserExecutable ? [browserMode ?? 'headless', browserExecutable] : [])],
     {
       stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
     },

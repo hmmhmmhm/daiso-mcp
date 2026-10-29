@@ -6,7 +6,7 @@ export async function prepareSevenBrowserSession(
   marker: string,
   executable: string,
 ): Promise<SevenPublicSession> {
-  const owner = await launchGuardedBrowser(marker, undefined, executable);
+  const owner = await launchGuardedBrowser(marker, undefined, executable, 'headed');
   try {
     return await bounded(
       (async () => {
