@@ -250,3 +250,21 @@ it('지정한 전용 실행 파일로 헤드리스 세션을 준비하고 기존
   );
   await owner.close();
 });
+
+it('명시한 일반 브라우저 모드에도 전용 실행 파일과 종료 확인을 유지한다', async () => {
+  const child = fixture();
+  const pending = launchGuardedBrowser(
+    '/tmp/test-seven-owner',
+    undefined,
+    '/browser/chrome',
+    'headed',
+  );
+  await ready(child);
+  const owner = await pending;
+  expect(mocks.fork).toHaveBeenCalledWith(
+    expect.any(String),
+    ['/tmp/test-seven-owner', 'headed', '/browser/chrome'],
+    expect.any(Object),
+  );
+  await owner.close();
+});

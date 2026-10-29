@@ -16,9 +16,14 @@ beforeEach(() => {
   context.cookies.mockResolvedValue([{ name: 'public', value: 'session' }]);
   owner.close.mockResolvedValue(undefined);
 });
-it('비개인 헤드리스 브라우저에서 고정 원점의 쿠키만 준비하고 API 재고는 호출하지 않는다', async () => {
+it('비개인 일반 브라우저에서 고정 원점의 쿠키만 준비하고 API 재고는 호출하지 않는다', async () => {
   const result = await prepareSevenBrowserSession('/state/seven-marker', '/browser/chrome');
-  expect(mocks.launch).toHaveBeenCalledWith('/state/seven-marker', undefined, '/browser/chrome');
+  expect(mocks.launch).toHaveBeenCalledWith(
+    '/state/seven-marker',
+    undefined,
+    '/browser/chrome',
+    'headed',
+  );
   expect(result).toMatchObject({ cookie: 'public=session', userAgent: 'Browser' });
   expect(page.goto).toHaveBeenCalledWith(
     'https://new.7-elevenapp.co.kr/',
