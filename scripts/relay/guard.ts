@@ -13,7 +13,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         env: browserEnvironment(process.env, crashDir),
         host: '127.0.0.1',
         executablePath:
-          process.argv[3] === 'headless' ? process.argv[4] : process.env.OY_BROWSER_EXECUTABLE,
+          process.argv[3] === 'headless' || process.argv[3] === 'headed'
+            ? process.argv[4]
+            : process.env.OY_BROWSER_EXECUTABLE,
         handleSIGINT: false,
         handleSIGTERM: false,
         handleSIGHUP: false,
