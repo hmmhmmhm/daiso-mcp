@@ -1,5 +1,10 @@
 /** 개인 프로필과 분리된 브라우저의 동일 출처 조회. */
 import type { Page } from 'playwright';
+import {
+  buildOliveyoungHtmlPath,
+  isOliveyoungHtmlPath,
+  toOliveyoungHtmlResponse,
+} from '../../src/services/oliveyoung/htmlRoute.js';
 import type { BrowserRunner } from './oliveyoung.js';
 export class BrowserRequestError extends Error {
   constructor(
@@ -12,19 +17,24 @@ export class BrowserRequestError extends Error {
 }
 export function createBrowserRunner(page: Pick<Page, 'evaluate'>): BrowserRunner {
   return async (path, body) => {
+    // 오특은 JSON API가 없어 고정 HTML 경로만 GET으로 읽고 검증한 뒤 JSON으로 감쌉니다.
+    const html = isOliveyoungHtmlPath(path);
+    const target = html ? buildOliveyoungHtmlPath(path, body) : path;
     const result = await page.evaluate(
-      async ({ path, body, timeout }) => {
+      async ({ path, body, html, timeout }) => {
         let status: number | undefined;
         try {
           const response = await fetch(`https://www.oliveyoung.co.kr${path}`, {
-            method: 'POST',
+            method: html ? 'GET' : 'POST',
             credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-              'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify(body),
+            headers: html
+              ? { Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
+              : {
+                  'Content-Type': 'application/json',
+                  Accept: 'application/json',
+                  'X-Requested-With': 'XMLHttpRequest',
+                },
+            body: html ? undefined : JSON.stringify(body),
             signal: AbortSignal.timeout(timeout),
           });
           status = response.status;
@@ -53,6 +63,7 @@ export function createBrowserRunner(page: Pick<Page, 'evaluate'>): BrowserRunner
             text += decoder.decode(chunk.value, { stream: true });
           }
           text += decoder.decode();
+          if (html) return { status: response.status, body: text };
           let parsed = null;
           try {
             parsed = JSON.parse(text);
@@ -74,8 +85,16 @@ export function createBrowserRunner(page: Pick<Page, 'evaluate'>): BrowserRunner
           return { status, body: null, reason };
         }
       },
-      { path, body, timeout: 15000 },
+      { path: target, body, html, timeout: 15000 },
     );
+    if (html && !result.reason && result.status === 200) {
+      try {
+        return toOliveyoungHtmlResponse(path, result.body);
+      } catch {
+        // 보안 확인 화면이나 다른 페이지를 빈 오특 목록으로 반환하지 않습니다.
+        throw new BrowserRequestError('invalid-html', result.status);
+      }
+    }
     if (result.reason || result.status !== 200 || result.body?.status !== 'SUCCESS')
       throw new BrowserRequestError(
         result.reason ||

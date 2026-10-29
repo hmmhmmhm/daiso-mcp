@@ -130,7 +130,7 @@ MCP 연결 정보: ${baseUrl}/mcp
 - find_places: 주변 장소·영화관 검색
 - get_showtimes: 영화·시간표·잔여석
 - get_fuel_info: 유가·주유소 조회
-- get_catalog: 인기 검색어·기획전
+- get_catalog: 인기 검색어·기획전·올리브영 오특
 - compare_products: 상품 비교
 - submit_request: 요청 제출 (현재 requestType=developer)
 

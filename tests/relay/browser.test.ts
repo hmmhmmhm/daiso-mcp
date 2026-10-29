@@ -91,3 +91,30 @@ it.each([[17000, 17], [17001, 18], [-1000, undefined], [0, undefined], [86401000
     await expect(createBrowserRunner(page)('/p', {})).rejects.toMatchObject({ reason: 'http-429', upstreamStatus: 429, retryAfter });
   } finally { clock.mockRestore(); vi.unstubAllGlobals(); }
 });
+it('오특 HTML은 고정 주소를 GET으로 읽고 검증한 HTML만 성공으로 감싼다', async () => {
+  const html = '<li data-impression="A1^오특_오특상품리스트_인기순^1">';
+  const fetch = vi.fn().mockResolvedValue(new Response(html));
+  vi.stubGlobal('fetch', fetch);
+  const page = { evaluate: vi.fn().mockImplementation((fn, args) => fn(args)) };
+  const run = createBrowserRunner(page);
+  const list = '/store/main/getHotdealPagingListAjax.do';
+  try {
+    expect(await run(list, { date: '20261026', pageIdx: 2 })).toEqual({
+      status: 'SUCCESS',
+      data: { html },
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      `https://www.oliveyoung.co.kr${list}?date=20261026&pageIdx=2&fltCondition=02&fltDispCatNo=&prdSort=rank`,
+      expect.objectContaining({ method: 'GET', credentials: 'include', body: undefined }),
+    );
+    expect(fetch.mock.calls[0][1].headers).not.toHaveProperty('Content-Type');
+    fetch.mockResolvedValue(new Response('<html>잠시만 기다려 주세요</html>'));
+    await expect(run(list, { date: '20261026', pageIdx: 1 })).rejects.toThrow('브라우저 응답 실패');
+    fetch.mockResolvedValue(new Response(html, { status: 403 }));
+    await expect(run(list, { date: '20261026', pageIdx: 1 })).rejects.toThrow('브라우저 응답 실패');
+    await expect(run(list, { date: 'today', pageIdx: 1 })).rejects.toThrow('날짜 형식');
+    expect(fetch).toHaveBeenCalledTimes(3);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

@@ -9,7 +9,7 @@ export interface FetchOptions extends RequestInit {
   timeout?: number;
   /** 모든 시도와 대기 시간을 합친 제한 시간입니다. */
   totalTimeout?: number;
-  /** fetchJson에서 허용할 정확한 HTTP 상태입니다. 생략하면 모든 2xx를 허용합니다. */
+  /** fetchJson/fetchText에서 허용할 정확한 HTTP 상태입니다. 생략하면 모든 2xx를 허용합니다. */
   expectedStatus?: number;
   retries?: number;
   retryDelayMs?: number;
@@ -271,7 +271,10 @@ export async function fetchJson<T>(url: string, options: FetchOptions = {}): Pro
 export async function fetchText(url: string, options: FetchOptions = {}): Promise<string> {
   const { response, body } = await readTextResponse(url, options);
 
-  if (!response.ok) {
+  if (
+    !response.ok ||
+    (options.expectedStatus !== undefined && response.status !== options.expectedStatus)
+  ) {
     throw new HttpError(response.status, response.statusText, body, response.headers);
   }
 

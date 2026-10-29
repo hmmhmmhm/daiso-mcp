@@ -456,3 +456,20 @@ it('fresh authenticated calls skip cached and pending values while retaining quo
   expect(runner).toHaveBeenCalledTimes(4);
   expect((await relay(new Request(fresh(), { headers: { Authorization: 'Bearer wrong', 'x-relay-cache-bypass': 'true' } }))).status).toBe(401);
 });
+it('오특 작업은 날짜·페이지만 받아 공식 경로로 전달하고 다른 인수는 거절한다', async () => {
+  const result = { status: 'SUCCESS', data: { html: '<li data-impression="x">' } };
+  const runner = vi.fn().mockResolvedValue(result);
+  const relay = createOliveyoungRelay('test', runner);
+  const list = JSON.stringify({ date: '20261026', pageIdx: 1 });
+  expect(await (await relay(request('today-deals-list', list))).json()).toEqual(result);
+  expect(runner).toHaveBeenCalledWith('/store/main/getHotdealPagingListAjax.do', {
+    date: '20261026',
+    pageIdx: 1,
+  });
+  expect((await relay(request('today-deals-page', JSON.stringify({ date: '20261026' })))).status).toBe(200);
+  expect(runner).toHaveBeenLastCalledWith('/store/main/getHotdealList.do', { date: '20261026' });
+  for (const body of [{ date: '20261026' }, { date: '20261026', pageIdx: 1, prdSort: 'x' }]) {
+    expect((await relay(request('today-deals-list', JSON.stringify(body)))).status).toBe(400);
+  }
+  expect(runner).toHaveBeenCalledTimes(2);
+});

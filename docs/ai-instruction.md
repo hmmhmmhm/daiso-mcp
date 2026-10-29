@@ -55,7 +55,7 @@ GPT Actions가 이미 연결된 환경은 `queryAction(action=...)`을 사용하
 - 상품 검색: `search_products`, 매장 검색: `find_stores`, 재고: `check_inventory`에 `service`를 전달합니다. 지원 서비스별 필수 인수는 입력 스키마를 따릅니다.
 - 상품 상세·가격·진열 위치: `get_product_details`에 `service`와 `operation`을 전달합니다.
 - 주변 장소·영화관: `find_places`, 영화·시간표·잔여석: `get_showtimes`에 `service`와 필요한 `operation`을 전달합니다.
-- 유가·주유소: `get_fuel_info`, 인기 검색어·기획전: `get_catalog`의 `operation`을 선택합니다.
+- 유가·주유소: `get_fuel_info`, 인기 검색어·기획전: `get_catalog`의 `operation`을 선택합니다. 올리브영 오특(오늘의 특가)은 `get_catalog`에 `service=oliveyoung`, `operation=today_deals`를 전달합니다.
 - 가격 비교: `compare_products`를 사용합니다.
 - 요청 제출: 사용자가 명시적으로 개발자 전달을 요청한 경우에만 `submit_request`에 `requestType=developer`, `request` 객체를 전달합니다. 오류 발생만으로 자동 제출하지 않습니다.
 - 일본 다이소는 `service=daiso_jp`의 상품·매장 검색 및 온라인 구매 가능 여부만 지원합니다. 매장 재고는 미지원이고 가격은 JPY입니다. 한국 KRW와 섞지 않습니다. 롯데마트는 지원 중단, MINISO는 미지원입니다.

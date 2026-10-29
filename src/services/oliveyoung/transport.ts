@@ -3,9 +3,15 @@ import { routeOperation, type RouteKey } from '../../utils/routeHealth.js';
 import { diagnosticHeaders, relayConsumer } from '../../utils/diagnostics.js';
 /** 올리브영 무료 직접 요청 및 운영자가 설정한 브라우저 릴레이 전송. */
 import { createRelayCooldown, relayCredentialScope } from '../../utils/relayQuota.js';
-import { HttpError, fetchJson } from '../../utils/http.js';
+import { HttpError, fetchJson, fetchText } from '../../utils/http.js';
 import { toOliveyoungRelayError } from './errors.js';
 import { OLIVEYOUNG_API } from './api.js';
+import {
+  buildOliveyoungHtmlPath,
+  isOliveyoungHtmlPath,
+  oliveyoungHtmlOperation,
+  toOliveyoungHtmlResponse,
+} from './htmlRoute.js';
 import type { OliveyoungApiResponse } from './types.js';
 
 const cooldown = createRelayCooldown();
@@ -110,7 +116,8 @@ async function requestOliveyoungRaw(
   let url = `${OLIVEYOUNG_API.BASE_URL}${path}`;
   if (relayUrl) {
     validateRelay(options);
-    url = `${relayUrl.replace(/\/$/, '')}/v1/oliveyoung/${path.split('/').pop()}`;
+    const operation = oliveyoungHtmlOperation(path) ?? path.split('/').pop();
+    url = `${relayUrl.replace(/\/$/, '')}/v1/oliveyoung/${operation}`;
     Object.assign(headers, diagnosticHeaders());
     headers.Authorization = `Bearer ${relayToken}`;
     if (options.bypassCache) headers['x-relay-cache-bypass'] = 'true';
@@ -155,17 +162,20 @@ async function requestOliveyoungRaw(
             'retry-after': String(cachedQuota.retryAfter),
           }),
         );
-      result = await fetchJson<OliveyoungApiResponse>(url, {
-        method: 'POST',
-        // Workers는 error 모드를 지원하지 않으므로 따라가지 않고 아래 200 검사로 거절합니다.
-        redirect: 'manual',
-        headers,
-        body: JSON.stringify(body),
-        timeout: remaining,
-        signal: options.signal,
-        retries: 0,
-        expectedStatus: 200,
-      });
+      result =
+        !relayUrl && isOliveyoungHtmlPath(path)
+          ? await requestOliveyoungHtml(path, body, headers, remaining, options.signal)
+          : await fetchJson<OliveyoungApiResponse>(url, {
+              method: 'POST',
+              // Workers는 error 모드를 지원하지 않으므로 따라가지 않고 아래 200 검사로 거절합니다.
+              redirect: 'manual',
+              headers,
+              body: JSON.stringify(body),
+              timeout: remaining,
+              signal: options.signal,
+              retries: 0,
+              expectedStatus: 200,
+            });
     } catch (error) {
       if (relayUrl) {
         if (error instanceof HttpError && error.quota) {
@@ -199,4 +209,26 @@ async function requestOliveyoungRaw(
     }
     return result;
   }
+}
+
+/** 오특 HTML은 공식 사이트에서 GET으로만 제공되어 JSON 성공 응답으로 감싸 반환합니다. */
+async function requestOliveyoungHtml(
+  path: string,
+  body: Record<string, unknown>,
+  headers: Record<string, string>,
+  timeout: number,
+  signal?: AbortSignal,
+): Promise<OliveyoungApiResponse> {
+  const pageHeaders: Record<string, string> = { ...headers, Accept: 'text/html' };
+  delete pageHeaders['Content-Type'];
+  const html = await fetchText(`${OLIVEYOUNG_API.BASE_URL}${buildOliveyoungHtmlPath(path, body)}`, {
+    method: 'GET',
+    redirect: 'manual',
+    headers: pageHeaders,
+    timeout,
+    signal,
+    retries: 0,
+    expectedStatus: 200,
+  });
+  return toOliveyoungHtmlResponse(path, html);
 }

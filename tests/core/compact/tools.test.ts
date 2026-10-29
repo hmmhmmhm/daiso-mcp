@@ -19,9 +19,9 @@ function fixtures() {
   }));
 }
 describe('공개 MCP 10개 계약', () => {
-  it('기존44개 작업 전체를 중복 없이 매핑한다', () => {
+  it('기존44개 작업과 오특 내부 작업 전체를 중복 없이 매핑한다', () => {
     const tools = fixtures();
-    expect(tools).toHaveLength(44);
+    expect(tools).toHaveLength(45);
     expect(PUBLIC_TOOL_NAMES).toHaveLength(10);
     expect(createCompactTools(tools).map((t) => t.name)).toEqual([...PUBLIC_TOOL_NAMES]);
     expect(() =>
@@ -82,5 +82,27 @@ describe('공개 MCP 10개 계약', () => {
     expect(legacy.find((t) => t.name === 'submit_developer_request')!.handler).toHaveBeenCalledWith(
       { limit: 5 },
     );
+  });
+});
+describe('get_catalog 서비스 확장', () => {
+  it('service를 생략한 기존 호출은 세븐일레븐으로 보내고 올리브영 오특은 명시해 호출한다', async () => {
+    const legacy = fixtures();
+    const tool = createCompactTools(legacy).find((t) => t.name === 'get_catalog')!;
+    const schema = z.toJSONSchema(z.object(tool.metadata.inputSchema), { io: 'input' });
+    expect(schema.required).toEqual(['operation']);
+    expect(tool.metadata.inputSchema.service.description).toContain('생략하면 seveneleven');
+    const call = async (args: unknown) => JSON.parse((await tool.handler(args)).content[0].text).name;
+    expect(await call({ operation: 'popwords' })).toBe('seveneleven_get_search_popwords');
+    expect(await call({ service: 'seveneleven', operation: 'snapshot' })).toBe(
+      'seveneleven_get_catalog_snapshot',
+    );
+    expect(await call({ service: 'oliveyoung', operation: 'today_deals' })).toBe(
+      'oliveyoung_get_today_deals',
+    );
+    await expect(tool.handler({ operation: 'today_deals' })).rejects.toThrow('service/operation');
+    await expect(tool.handler({ service: 'oliveyoung', operation: 'popwords' })).rejects.toThrow(
+      'service/operation',
+    );
+    await expect(tool.handler({ service: 'oliveyoung' })).rejects.toThrow();
   });
 });
