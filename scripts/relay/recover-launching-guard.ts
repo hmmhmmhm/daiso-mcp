@@ -7,7 +7,6 @@ import { open, lstat, rename } from 'node:fs/promises';
 import { dirname, basename } from 'node:path';
 import { bounded } from './lifecycle.js';
 import { processSnapshot } from './ownership.js';
-const execute = promisify(execFile);
 export function environmentSnapshotArgs(platform: string, uid: number): string[] {
   return [platform === 'darwin' ? '-Eww' : 'eww', '-U', String(uid), '-o', 'pid=,command='];
 }
@@ -19,7 +18,8 @@ export async function processReferencesDirectory(
   capture: (
     args: string[],
     options: { timeout: number; maxBuffer: number; env: NodeJS.ProcessEnv },
-  ) => Promise<{ stdout: string }> = (args, options) => execute('/bin/ps', args, options),
+  ) => Promise<{ stdout: string }> = (args, options) =>
+    promisify(execFile)('/bin/ps', args, options),
 ): Promise<boolean> {
   const nonce = randomUUID();
   const { stdout } = await capture(environmentSnapshotArgs(process.platform, process.getuid!()), {
