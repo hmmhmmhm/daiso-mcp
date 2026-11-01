@@ -204,9 +204,7 @@ describe('전체 서비스 공개 MCP smoke 확장', () => {
         products: [],
       });
       expect(code).toBe(1);
-      expect(callTool).toHaveBeenCalledTimes(
-        MCP_SMOKE_SCENARIOS.filter((s) => s.service === service).length,
-      );
+      expect(callTool).toHaveBeenCalledOnce();
       expect(errors.join(' ')).toContain('검색한 상품 코드가 없습니다');
     },
   );
