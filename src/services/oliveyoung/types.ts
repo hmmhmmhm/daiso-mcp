@@ -52,6 +52,8 @@ export interface OliveyoungProductStoreInventory {
 }
 
 interface OliveyoungApiData {
+  /** 오특 HTML 조회의 원문입니다. */
+  html?: string;
   totalCount?: number;
   nextPage?: boolean;
   goodsInfo?: {

@@ -27,13 +27,17 @@
 
 일본 상세: `get_product_details {"service":"daiso_jp","operation":"product","id":"4550746075917"}`. 일본 매장별 재고는 지원하지 않습니다.
 
+올리브영 오특: `get_catalog {"service":"oliveyoung","operation":"today_deals"}`
+
 요청 제출: `submit_request {"requestType":"developer","request":{"title":"문서 개선","description":"개선할 내용을 적습니다","type":"docs"}}`. 현재 개발자 요청 저장만 지원합니다. 다른 요청 유형은 거절하며 요청자의 의도 없이 제출하지 않습니다. 이 도구의 이름과 요청 구분은 미래 유형 확장을 위해 범용으로 유지합니다.
 
 매개변수는 기존 작업의 이름과 형식을 사용합니다. operation은 같은 서비스에 작업이 여러 개인 경우 필수입니다. 예를 들어 CGV 시간표는 service=cgv, operation=timetable, playDate=YYYYMMDD이며 seats 작업은 지원하지 않습니다. 미지원 조합과 알 수 없는 인수·오타는 조회 전에 거절합니다. 공개 스키마에 있지만 선택한 서비스/작업에서 쓰지 않는 옵션은 실행을 막지 않고 응답의 추가 안내와 `_meta.ignoredArguments`로 미적용 사실을 알립니다. 미적용 조건을 충족했다고 안내하면 안 됩니다. 기본값은 선택한 작업의 기본값만 적용합니다. tools/list의 입력/출력 스키마를 참고하세요.
 
 ### 카탈로그와 매장 재고 검증
 
-`get_catalog`는 세븐일레븐의 공개 콘텐츠 조회입니다. `operation`은 필수이며 `popwords`(인기 검색어) 또는 `snapshot`(상품·이슈·기획전)을 지정합니다. `includeIssues`와 `includeExhibition`은 `snapshot` 전용입니다. 인기 검색어 원본 목록이 비어 있으면 `available=false`이며 외부 오류와 구분합니다. 원본 차단·중계 실패는 오류로 반환하며 빈 성공으로 바꾸지 않습니다.
+`get_catalog`는 공개 콘텐츠 조회입니다. `operation`은 필수입니다. `service`를 생략하면 기존 호출과 같이 세븐일레븐이며 `popwords`(인기 검색어) 또는 `snapshot`(상품·이슈·기획전)을 지정합니다. `includeIssues`와 `includeExhibition`은 `snapshot` 전용입니다. 인기 검색어 원본 목록이 비어 있으면 `available=false`이며 외부 오류와 구분합니다. 원본 차단·중계 실패는 오류로 반환하며 빈 성공으로 바꾸지 않습니다.
+
+`service=oliveyoung`, `operation=today_deals`는 올리브영 오특(오늘의 특가) 화면의 `brandDeals`(오늘의 브랜드 특가)와 `todayDeals`(오늘의 특가 전체 목록)를 한국 날짜 기준으로 반환합니다. 가격은 조회 시점 화면 기준이며 `priceFrom=true`는 옵션별 최저가입니다. 실시간 재고가 아니므로 재고는 상품명으로 `check_inventory`(service=oliveyoung)를 조회합니다. 원본 차단·형식 변경은 빈 목록이 아니라 오류입니다.
 
 다이소 `check_inventory`에서 `storeLimit`은 `pageSize`와 같은 매장 수 조건입니다. 함께 전달하면 두 값이 같아야 합니다. `productLimit`은 상품 후보 수이며 여러 상품의 재고를 모두 조회하는 옵션이 아닙니다. 결과의 `selectedProduct`가 재고 조회 기준 상품입니다.
 
@@ -44,6 +48,8 @@
 ## Deprecated 하위호환
 
 기존 44개 호출 계약은 유지합니다. compare_products는 공개 이름이 그대로이며 나머지 43개 구형 이름은 deprecated 별칭입니다. 구형 이름도 동일한 / 및 /mcp의 tools/call로 호출할 수 있고 기존 인수/결과/오류 의미를 유지합니다. 성공 또는 반환된 오류 응답의 _meta.deprecated=true와 _meta.replacement는 이동할 공개 도구를 안내합니다. SDK 입력 검증 단계에서 거절된 요청에는 이 추가 정보가 없을 수 있습니다. tools/list와 공개 발견 목록에는 구형 별칭을 노출하지 않습니다.
+
+공개 도구 통합 이후 추가한 내부 작업 `oliveyoung_get_today_deals`는 처음부터 공개 목록에 등록하지 않았으며 `get_catalog`로만 안내합니다. 구형 별칭과 같은 방식으로 호출은 가능하지만 새 연동에서는 사용하지 않습니다.
 
 REST 경로와 CLI 명령은 변경하지 않습니다. 구형 별칭을 삭제하거나 다시 공개 목록에 등록하지 마세요. 새 연동은 아래 오른쪽 도구만 사용합니다.
 
@@ -89,8 +95,8 @@ REST 경로와 CLI 명령은 변경하지 않습니다. 구형 별칭을 삭제�
 | `opinet_get_lowest_price_stations` | `get_fuel_info`       |             | lowest           |
 | `opinet_search_stations_around`    | `get_fuel_info`       |             | around           |
 | `opinet_get_station_detail`        | `get_fuel_info`       |             | detail           |
-| `seveneleven_get_search_popwords`  | `get_catalog`         |             | popwords         |
-| `seveneleven_get_catalog_snapshot` | `get_catalog`         |             | snapshot         |
+| `seveneleven_get_search_popwords`  | `get_catalog`         | seveneleven | popwords         |
+| `seveneleven_get_catalog_snapshot` | `get_catalog`         | seveneleven | snapshot         |
 | `compare_products`                 | `compare_products`    |             |                  |
 | `submit_developer_request`         | `submit_request`      |             |                  |
 

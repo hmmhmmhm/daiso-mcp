@@ -1,6 +1,7 @@
 /** 고정된 올리브영 조회만 허용하는 인증 릴레이. */
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { OLIVEYOUNG_API } from '../../src/services/oliveyoung/api.js';
+import { OLIVEYOUNG_HTML_OPERATIONS } from '../../src/services/oliveyoung/htmlRoute.js';
 import type { OliveyoungApiResponse } from '../../src/services/oliveyoung/types.js';
 import { BrowserRequestError } from './browser.js';
 import { createConsumerQuota } from './consumer.js';
@@ -18,6 +19,7 @@ const paths: Record<string, string> = {
   'product-search-v3': OLIVEYOUNG_API.PRODUCT_SEARCH_PATH,
   'stock-goods-info-v3': OLIVEYOUNG_API.STOCK_GOODS_INFO_PATH,
   'stock-stores': OLIVEYOUNG_API.STOCK_STORES_PATH,
+  ...OLIVEYOUNG_HTML_OPERATIONS,
 };
 const fields: Record<string, Record<string, 'string' | 'number' | 'boolean'>> = {
   'find-store': {
@@ -47,6 +49,9 @@ const fields: Record<string, Record<string, 'string' | 'number' | 'boolean'>> = 
     mapLat: 'number',
     mapLon: 'number',
   },
+  // 오특 날짜는 한국 자정 전후 응답을 다른 캐시로 구분합니다.
+  'today-deals-page': { date: 'string' },
+  'today-deals-list': { date: 'string', pageIdx: 'number' },
 };
 const error = (status: number, message: string) => Response.json({ error: message }, { status });
 
@@ -88,18 +93,30 @@ export function createOliveyoungRelay(
     'product-search-v3': 300000,
     'stock-goods-info-v3': 600000,
     'stock-stores': 60000,
+    'today-deals-page': 300000,
+    'today-deals-list': 300000,
   };
   const cooldowns = new Map<string, { until: number; source: string }>();
   const cooldownError = (operation: string) => {
     const cooldown = cooldowns.get(operation);
     if (!cooldown || cooldown.until <= Date.now()) return undefined;
-    return new BrowserRequestError('http-429', 429, Math.ceil((cooldown.until - Date.now()) / 1000));
+    return new BrowserRequestError(
+      'http-429',
+      429,
+      Math.ceil((cooldown.until - Date.now()) / 1000),
+    );
   };
-  const originLimited = (failure: BrowserRequestError, operation: string) => Response.json({
-    error: 'Upstream rate limited', code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED',
-    upstreamStatus: 429, retryAfter: failure.retryAfter,
-    retryAfterSource: cooldowns.get(operation)!.source,
-  }, { status: 429, headers: { 'retry-after': String(failure.retryAfter) } });
+  const originLimited = (failure: BrowserRequestError, operation: string) =>
+    Response.json(
+      {
+        error: 'Upstream rate limited',
+        code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED',
+        upstreamStatus: 429,
+        retryAfter: failure.retryAfter,
+        retryAfterSource: cooldowns.get(operation)!.source,
+      },
+      { status: 429, headers: { 'retry-after': String(failure.retryAfter) } },
+    );
   type Result = OliveyoungApiResponse | null | 'quota' | 'unavailable';
   const pending = new Map<
     string,
@@ -239,9 +256,15 @@ export function createOliveyoungRelay(
               result = await run(paths[operation], body);
             } catch (failure) {
               if (failure instanceof BrowserRequestError && failure.upstreamStatus === 429) {
-                const valid = Number.isInteger(failure.retryAfter) && failure.retryAfter! >= 1 && failure.retryAfter! <= 86400;
+                const valid =
+                  Number.isInteger(failure.retryAfter) &&
+                  failure.retryAfter! >= 1 &&
+                  failure.retryAfter! <= 86400;
                 const retryAfter = valid ? failure.retryAfter! : 60;
-                cooldowns.set(operation, { until: Date.now() + retryAfter * 1000, source: valid ? 'upstream' : 'local-policy' });
+                cooldowns.set(operation, {
+                  until: Date.now() + retryAfter * 1000,
+                  source: valid ? 'upstream' : 'local-policy',
+                });
                 throw new BrowserRequestError('http-429', 429, retryAfter);
               }
               throw failure;

@@ -9,6 +9,8 @@ export interface CompactGroup {
   title: string;
   description: string;
   routes: CompactRoute[];
+  /** service를 생략한 기존 호출이 선택할 서비스입니다. 서비스가 나중에 추가된 도구에만 지정합니다. */
+  defaultService?: string;
 }
 const retail = (names: Record<string, string>): CompactRoute[] =>
   Object.entries(names).map(([service, legacy]) => ({ service, legacy }));
@@ -115,10 +117,12 @@ export const COMPACT_CATALOG: CompactGroup[] = [
     name: 'get_catalog',
     title: '인기 검색어와 기획전',
     description:
-      '세븐일레븐 공개 카탈로그. operation=popwords 인기 검색어, snapshot 기획전/이슈 목록입니다. operation은 필수입니다. includeIssues/includeExhibition/limit은 snapshot 전용이며 popwords에는 label만 지정합니다. 실시간 재고를 의미하지 않습니다.',
+      '공개 카탈로그. operation은 필수입니다. service를 생략하면 세븐일레븐이며 operation=popwords 인기 검색어, snapshot 기획전/이슈 목록입니다. includeIssues/includeExhibition/limit은 snapshot 전용이며 popwords에는 label만 지정합니다. service=oliveyoung, operation=today_deals는 올리브영 오특(오늘의 브랜드 특가와 오늘의 특가)입니다. 실시간 재고를 의미하지 않습니다.',
+    defaultService: 'seveneleven',
     routes: [
-      { operation: 'popwords', legacy: 'seveneleven_get_search_popwords' },
-      { operation: 'snapshot', legacy: 'seveneleven_get_catalog_snapshot' },
+      { service: 'seveneleven', operation: 'popwords', legacy: 'seveneleven_get_search_popwords' },
+      { service: 'seveneleven', operation: 'snapshot', legacy: 'seveneleven_get_catalog_snapshot' },
+      { service: 'oliveyoung', operation: 'today_deals', legacy: 'oliveyoung_get_today_deals' },
     ],
   },
   {

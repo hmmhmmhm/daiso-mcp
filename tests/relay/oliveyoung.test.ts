@@ -1,7 +1,9 @@
 import { expect, it, vi } from 'vitest';
 import { createOliveyoungRelay } from '../../scripts/relay/oliveyoung.js';
 let consumerSequence = 0;
-const consumerHeaders = () => ({ 'x-relay-consumer': (++consumerSequence).toString(16).padStart(64, '0') });
+const consumerHeaders = () => ({
+  'x-relay-consumer': (++consumerSequence).toString(16).padStart(64, '0'),
+});
 const payload = { goodsNo: 'A1' };
 const request = (path = 'stock-goods-info-v3', body = JSON.stringify(payload), token = 'test') =>
   new Request(`http://localhost/v1/oliveyoung/${path}`, {
@@ -412,16 +414,27 @@ it('브라우저 교체 중 39999밀리초 기다린 작업은 실행하고 40�
   const clock = vi.spyOn(Date, 'now').mockReturnValue(0);
   const events: unknown[] = [];
   let release!: (value: { status: string }) => void;
-  const runner = vi.fn().mockImplementationOnce(() => new Promise(resolve => { release = resolve; }))
+  const runner = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    )
     .mockResolvedValue({ status: 'SUCCESS' });
-  const relay = createOliveyoungRelay('test', runner, { onEvent: event => { events.push(event); } });
+  const relay = createOliveyoungRelay('test', runner, {
+    onEvent: (event) => {
+      events.push(event);
+    },
+  });
   const first = relay(request());
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
   const expired = relay(request(undefined, JSON.stringify({ goodsNo: 'expired' })));
-  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
   clock.mockReturnValue(1);
   const valid = relay(request(undefined, JSON.stringify({ goodsNo: 'valid' })));
-  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
   clock.mockReturnValue(40000);
   release({ status: 'SUCCESS' });
   expect((await first).status).toBe(200);
@@ -436,13 +449,25 @@ it('fresh authenticated calls skip cached and pending values while retaining quo
   const takeQuota = vi.fn().mockResolvedValue(true);
   const relay = createOliveyoungRelay('test', runner, { takeQuota });
   await relay(request());
-  const fresh = () => new Request(request(), { headers: { Authorization: 'Bearer test', ...consumerHeaders(), 'x-relay-cache-bypass': 'true' } });
+  const fresh = () =>
+    new Request(request(), {
+      headers: {
+        Authorization: 'Bearer test',
+        ...consumerHeaders(),
+        'x-relay-cache-bypass': 'true',
+      },
+    });
   const response = await relay(fresh());
   expect(response.headers.get('x-relay-cache')).toBe('miss');
   expect(runner).toHaveBeenCalledTimes(2);
   expect(takeQuota).toHaveBeenCalledTimes(2);
   let finish!: (value: unknown) => void;
-  runner.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
+  runner.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
   const first = relay(fresh());
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(3));
   const second = relay(fresh());
@@ -454,5 +479,32 @@ it('fresh authenticated calls skip cached and pending values while retaining quo
   takeQuota.mockResolvedValueOnce(false);
   expect((await relay(fresh())).status).toBe(429);
   expect(runner).toHaveBeenCalledTimes(4);
-  expect((await relay(new Request(fresh(), { headers: { Authorization: 'Bearer wrong', 'x-relay-cache-bypass': 'true' } }))).status).toBe(401);
+  expect(
+    (
+      await relay(
+        new Request(fresh(), {
+          headers: { Authorization: 'Bearer wrong', 'x-relay-cache-bypass': 'true' },
+        }),
+      )
+    ).status,
+  ).toBe(401);
+});
+it('오특 작업은 날짜·페이지만 받아 공식 경로로 전달하고 다른 인수는 거절한다', async () => {
+  const result = { status: 'SUCCESS', data: { html: '<li data-impression="x">' } };
+  const runner = vi.fn().mockResolvedValue(result);
+  const relay = createOliveyoungRelay('test', runner);
+  const list = JSON.stringify({ date: '20261026', pageIdx: 1 });
+  expect(await (await relay(request('today-deals-list', list))).json()).toEqual(result);
+  expect(runner).toHaveBeenCalledWith('/store/main/getHotdealPagingListAjax.do', {
+    date: '20261026',
+    pageIdx: 1,
+  });
+  expect(
+    (await relay(request('today-deals-page', JSON.stringify({ date: '20261026' })))).status,
+  ).toBe(200);
+  expect(runner).toHaveBeenLastCalledWith('/store/main/getHotdealList.do', { date: '20261026' });
+  for (const body of [{ date: '20261026' }, { date: '20261026', pageIdx: 1, prdSort: 'x' }]) {
+    expect((await relay(request('today-deals-list', JSON.stringify(body)))).status).toBe(400);
+  }
+  expect(runner).toHaveBeenCalledTimes(2);
 });

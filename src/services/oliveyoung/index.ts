@@ -7,12 +7,14 @@ import type { ServiceMetadata, ToolRegistration } from '../../core/types.js';
 import { createFindNearbyStoresTool } from './tools/findNearbyStores.js';
 import { createCheckInventoryTool } from './tools/checkInventory.js';
 import { createSearchProductsTool } from './tools/searchProducts.js';
+import { createGetTodayDealsTool } from './tools/getTodayDeals.js';
 
 const OLIVEYOUNG_METADATA: ServiceMetadata = {
   id: 'oliveyoung',
   name: '올리브영',
   version: '1.0.0',
-  description: '올리브영 상품 검색, 주변 매장 탐색 및 재고 파악 서비스 (무료 직접 요청 및 브라우저 릴레이)',
+  description:
+    '올리브영 상품 검색, 주변 매장 탐색, 재고 파악 및 오특(오늘의 특가) 조회 서비스 (무료 직접 요청 및 브라우저 릴레이)',
 };
 
 interface OliveyoungServiceOptions {
@@ -33,6 +35,7 @@ class OliveyoungService implements ServiceProvider {
       createSearchProductsTool(this.options.zyteApiKey, this.options),
       createFindNearbyStoresTool(this.options.zyteApiKey, this.options),
       createCheckInventoryTool(this.options.zyteApiKey, this.options),
+      createGetTodayDealsTool(this.options),
     ];
   }
 }

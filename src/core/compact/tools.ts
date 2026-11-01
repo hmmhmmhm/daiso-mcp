@@ -56,13 +56,18 @@ function mergedInputs(group: CompactGroup, legacy: Map<string, ToolRegistration>
   const operations = [
     ...new Set(group.routes.flatMap((route) => (route.operation ? [route.operation] : []))),
   ];
-  if (services.length)
-    shape.service = z.enum(services as [string, ...string[]]).describe('조회할 서비스');
+  if (services.length) {
+    const service = z.enum(services as [string, ...string[]]);
+    shape.service = group.defaultService
+      ? service.optional().describe(`조회할 서비스. 생략하면 ${group.defaultService}`)
+      : service.describe('조회할 서비스');
+  }
   if (operations.length) {
     const operation = z.enum(operations as [string, ...string[]]);
-    shape.operation = (services.length ? operation.optional() : operation).describe(
-      '조회 작업. 같은 서비스에 작업이 여러 개면 필수입니다.',
-    );
+    // 서비스 없이 작업만으로 호출하던 도구는 작업을 계속 필수로 요구합니다.
+    shape.operation = (
+      services.length && !group.defaultService ? operation.optional() : operation
+    ).describe('조회 작업. 같은 서비스에 작업이 여러 개면 필수입니다.');
   }
   return shape;
 }
@@ -98,7 +103,7 @@ export function createCompactTools(legacyTools: ToolRegistration[]): ToolRegistr
       handler: async (args: unknown) => {
         const parsed = z.object(inputSchema).strict().parse(args);
         if (group.name === 'submit_request') return single.handler(parsed.request);
-        const { service, operation, ...input } = parsed;
+        const { service = group.defaultService, operation, ...input } = parsed;
         const matches = group.routes.filter(
           (route) =>
             route.service === service && (operation === undefined || route.operation === operation),

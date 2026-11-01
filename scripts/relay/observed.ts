@@ -22,7 +22,7 @@ export function observeRelay(
     const forwarded = new Request(request, { headers });
     const path = new URL(request.url).pathname;
     const match =
-      /^\/v1\/(?:oliveyoung|dtryx)\/(find-store|product-search-v3|stock-goods-info-v3|stock-stores|movies|play-dates|timetable)$/.exec(
+      /^\/v1\/(?:oliveyoung|dtryx)\/(find-store|product-search-v3|stock-goods-info-v3|stock-stores|today-deals-page|today-deals-list|movies|play-dates|timetable)$/.exec(
         path,
       );
     const operation = match ? match[1] : 'other';
