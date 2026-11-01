@@ -95,9 +95,14 @@ export function toKstDate(now: Date): string {
  */
 export function parseOliveyoungTodayDeals(html: string, section?: string): OliveyoungTodayDeal[] {
   const deals: OliveyoungTodayDeal[] = [];
-  const cards = html.split('<li data-impression="').slice(1);
-  const sourceCount = (html.match(section ? /<li\b[^>]*\bdata-impression\s*=/g : /<li\b/g) ?? [])
-    .length;
+  const source = section
+    ? [...html.matchAll(/<ul\b[^>]*class="[^"]*\bprod-list\b[^"]*"[^>]*>[\s\S]*?<\/ul>/g)]
+        .map((match) => match[0])
+        .filter((list) => list.includes(`_${section}`))
+        .join('\n')
+    : html;
+  const cards = source.split('<li data-impression="').slice(1);
+  const sourceCount = (source.match(/<li\b/g) ?? []).length;
   // 인식하지 못한 카드가 있으면 부분 결과로 페이지 순회를 종료하지 않습니다.
   if (cards.length !== sourceCount || (!section && html.trim() !== '' && !cards.length)) invalid();
   for (const card of cards) {
@@ -127,6 +132,12 @@ export function parseOliveyoungTodayDeals(html: string, section?: string): Olive
       imageUrl: card.match(/<img src="([^"]+)"/)?.[1] ?? '',
       productUrl: `${OLIVEYOUNG_API.BASE_URL}/store/goods/getGoodsDetail.do?goodsNo=${goodsNo}`,
     });
+  }
+  if (section) {
+    const expected = [...html.matchAll(/data-ref-cornernm="([^"]*)"/g)].filter((match) =>
+      match[1].endsWith(`_${section}`),
+    ).length;
+    if (deals.length !== expected) invalid();
   }
   return deals;
 }

@@ -245,3 +245,11 @@ describe('오특 원본 구조 변경의 부분 성공 방지', () => {
     await expect(fetchOliveyoungTodayDeals({}, now)).rejects.toThrow('형식이 변경');
   });
 });
+
+it.each([
+  page.replace(/data-impression="[^"]*"/, ''),
+  page.replace(/data-impression="[^"]*"/, '').replace(/data-ref-cornernm="[^"]*"/, ''),
+  page.replace('prod-list v2', 'changed-list'),
+])('브랜드 카드 추적 속성이나 목록 구조가 바뀌어도 일부 성공으로 반환하지 않는다', (html) => {
+  expect(() => parseOliveyoungTodayDeals(html, '스페셜')).toThrow('형식이 변경');
+});
