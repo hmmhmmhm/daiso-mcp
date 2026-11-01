@@ -85,4 +85,4 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Native helper regression tests
-        run: npm test -- tests/scripts/hide-readiness.test.ts tests/scripts/macos-ops.test.ts --maxWorkers=1
+        run: npm test -- tests/scripts/hide-readiness.test.ts tests/scripts/macos-ops.test.ts tests/relay/recover-launching-guard.test.ts --maxWorkers=1
