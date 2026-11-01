@@ -106,7 +106,8 @@
     "miniflare": {
       "sharp": "0.35.5",
       "undici": "7.30.1"
-    }
+    },
+    "minimatch": "11.0.1"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
