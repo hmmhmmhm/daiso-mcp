@@ -100,13 +100,23 @@ export function createOliveyoungRelay(
   const cooldownError = (operation: string) => {
     const cooldown = cooldowns.get(operation);
     if (!cooldown || cooldown.until <= Date.now()) return undefined;
-    return new BrowserRequestError('http-429', 429, Math.ceil((cooldown.until - Date.now()) / 1000));
+    return new BrowserRequestError(
+      'http-429',
+      429,
+      Math.ceil((cooldown.until - Date.now()) / 1000),
+    );
   };
-  const originLimited = (failure: BrowserRequestError, operation: string) => Response.json({
-    error: 'Upstream rate limited', code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED',
-    upstreamStatus: 429, retryAfter: failure.retryAfter,
-    retryAfterSource: cooldowns.get(operation)!.source,
-  }, { status: 429, headers: { 'retry-after': String(failure.retryAfter) } });
+  const originLimited = (failure: BrowserRequestError, operation: string) =>
+    Response.json(
+      {
+        error: 'Upstream rate limited',
+        code: 'OLIVEYOUNG_UPSTREAM_RATE_LIMITED',
+        upstreamStatus: 429,
+        retryAfter: failure.retryAfter,
+        retryAfterSource: cooldowns.get(operation)!.source,
+      },
+      { status: 429, headers: { 'retry-after': String(failure.retryAfter) } },
+    );
   type Result = OliveyoungApiResponse | null | 'quota' | 'unavailable';
   const pending = new Map<
     string,
@@ -246,9 +256,15 @@ export function createOliveyoungRelay(
               result = await run(paths[operation], body);
             } catch (failure) {
               if (failure instanceof BrowserRequestError && failure.upstreamStatus === 429) {
-                const valid = Number.isInteger(failure.retryAfter) && failure.retryAfter! >= 1 && failure.retryAfter! <= 86400;
+                const valid =
+                  Number.isInteger(failure.retryAfter) &&
+                  failure.retryAfter! >= 1 &&
+                  failure.retryAfter! <= 86400;
                 const retryAfter = valid ? failure.retryAfter! : 60;
-                cooldowns.set(operation, { until: Date.now() + retryAfter * 1000, source: valid ? 'upstream' : 'local-policy' });
+                cooldowns.set(operation, {
+                  until: Date.now() + retryAfter * 1000,
+                  source: valid ? 'upstream' : 'local-policy',
+                });
                 throw new BrowserRequestError('http-429', 429, retryAfter);
               }
               throw failure;

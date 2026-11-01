@@ -9,9 +9,8 @@ const fetchOliveyoungTodayDeals = vi.hoisted(() => vi.fn());
 vi.mock('../../../../src/services/oliveyoung/todayDeals.js', () => ({
   fetchOliveyoungTodayDeals,
 }));
-const { createGetTodayDealsTool } = await import(
-  '../../../../src/services/oliveyoung/tools/getTodayDeals.js'
-);
+const { createGetTodayDealsTool } =
+  await import('../../../../src/services/oliveyoung/tools/getTodayDeals.js');
 
 const deal = {
   rank: 1,

@@ -41,10 +41,14 @@ export function createBrowserRunner(page: Pick<Page, 'evaluate'>): BrowserRunner
           if (status !== 200) {
             await response.body?.cancel();
             const header = response.headers.get('retry-after');
-            const seconds = header && /^\d+$/.test(header) ? Number(header)
-              : header ? Math.ceil((Date.parse(header) - Date.now()) / 1000) : NaN;
-            const retryAfter = Number.isSafeInteger(seconds) && seconds > 0
-              ? Math.min(seconds, 86400) : undefined;
+            const seconds =
+              header && /^\d+$/.test(header)
+                ? Number(header)
+                : header
+                  ? Math.ceil((Date.parse(header) - Date.now()) / 1000)
+                  : NaN;
+            const retryAfter =
+              Number.isSafeInteger(seconds) && seconds > 0 ? Math.min(seconds, 86400) : undefined;
             return { status, body: null, retryAfter };
           }
           const reader = response.body?.getReader();

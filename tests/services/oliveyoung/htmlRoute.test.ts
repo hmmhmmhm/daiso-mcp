@@ -49,7 +49,10 @@ describe('오특 HTML 조회 계약', () => {
     });
     for (const [path, html] of [
       [PAGE, '<div>다른 페이지</div>'],
-      [PAGE, `${page}<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=1&_cf_chl_opt=1"></script>`],
+      [
+        PAGE,
+        `${page}<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1?ray=1&_cf_chl_opt=1"></script>`,
+      ],
       [LIST, '<div>x</div>'],
       [LIST, '잠시만 기다려 주세요'],
       [LIST, null],

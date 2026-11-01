@@ -91,7 +91,8 @@ describe('get_catalog 서비스 확장', () => {
     const schema = z.toJSONSchema(z.object(tool.metadata.inputSchema), { io: 'input' });
     expect(schema.required).toEqual(['operation']);
     expect(tool.metadata.inputSchema.service.description).toContain('생략하면 seveneleven');
-    const call = async (args: unknown) => JSON.parse((await tool.handler(args)).content[0].text).name;
+    const call = async (args: unknown) =>
+      JSON.parse((await tool.handler(args)).content[0].text).name;
     expect(await call({ operation: 'popwords' })).toBe('seveneleven_get_search_popwords');
     expect(await call({ service: 'seveneleven', operation: 'snapshot' })).toBe(
       'seveneleven_get_catalog_snapshot',
