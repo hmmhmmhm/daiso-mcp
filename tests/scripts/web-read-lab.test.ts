@@ -30,6 +30,45 @@ function fixture() {
 }
 
 describe('독립 웹 읽기 실험', () => {
+  it('실제 링크만 따라 고정 예제에 없는 검색어를 완성한다', async () => {
+    const { get } = fixture();
+    let body = await (await get('/run/compose-test')).text();
+    const follow = async (label: string) => {
+      const links = [...body.matchAll(/href="([^"]+)">([^<]+)<\/a>/g)];
+      const link = links.find((entry) => entry[2] === label);
+      expect(link, `링크 없음: ${label}`).toBeDefined();
+      const response = await get(link![1].replaceAll('&amp;', '&'));
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-robots-tag')).toBe('noindex');
+      body = await response.text();
+    };
+    await follow('링크로 검색어 만들기');
+    for (const label of ['초성 ㅇ', '중성 ㅕ', '연', '초성 ㅍ', '중성 ㅣ', '필', '7', '입력 완료'])
+      await follow(label);
+    expect(body).toContain('연필7');
+    expect(body).toContain('synthetic');
+    expect(body).toContain('requestId');
+    expect(body).toContain(
+      'https://mcp.aka.page/browse/daiso/products/%EC%97%B0%ED%95%847/pageSize/3',
+    );
+    expect(body).toContain('https://mcp.aka.page/browse/daiso/stores/%EC%97%B0%ED%95%847');
+    const log = JSON.stringify(await (await get('/observations/compose-test')).json());
+    expect(log).not.toContain('연필');
+  });
+  it('문자 선택기의 잘못된 입력과 단계는 거절한다', async () => {
+    const { get } = fixture();
+    for (const path of [
+      '/compose/check/%ZZ',
+      '/compose/check/%3Cscript%3E',
+      '/compose/check/~/ko-19',
+      '/compose/check/~/ko-0-21',
+      '/compose/check/~/unknown',
+      '/compose/check/~/done/extra',
+      `/compose/check/${'a'.repeat(33)}`,
+    ])
+      expect((await get(path)).status).toBe(400);
+    expect((await get('/compose/check/~/done')).status).toBe(400);
+  });
   it('실험 목록에서 새 링크를 따라 독립 실행을 시작할 수 있다', async () => {
     const { get } = fixture();
     const links: string[] = [];
@@ -79,6 +118,34 @@ describe('독립 웹 읽기 실험', () => {
     expect((await get('/run/test/cache')).headers.get('cache-control')).toBe('public, max-age=300');
     expect((await get('/run/test/unknown')).status).toBe(404);
     expect((await get('/run/test/html', { method: 'POST' })).status).toBe(405);
+  });
+  it.each([2, 3, 5])('%s초 지연은 응답 준비 전에 정확히 기다린다', async (seconds) => {
+    vi.useFakeTimers();
+    try {
+      const { get } = fixture();
+      const startedAt = Date.now();
+      let completed = false;
+      const pending = get(`/run/timing/delay${seconds}`).then((response) => {
+        completed = true;
+        return response;
+      });
+      await vi.advanceTimersByTimeAsync(seconds * 1000 - 1);
+      expect(completed).toBe(false);
+      const before = await (await get('/observations/timing')).json();
+      expect(before.events.map((event: { phase: string }) => event.phase)).toEqual(['received']);
+      await vi.advanceTimersByTimeAsync(1);
+      const response = await pending;
+      expect(response.status).toBe(200);
+      const after = await (await get('/observations/timing')).json();
+      expect(after.events.map((event: { phase: string }) => event.phase)).toEqual([
+        'received',
+        'prepared',
+      ]);
+      expect(Date.parse(after.events[1].at) - startedAt).toBe(seconds * 1000);
+      expect(after.events[1].requestId).toBe(response.headers.get('x-lab-request-id'));
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('지연 중 도착을 기록하고 개인정보와 임의 쿼리를 저장하지 않는다', async () => {
     vi.useFakeTimers();

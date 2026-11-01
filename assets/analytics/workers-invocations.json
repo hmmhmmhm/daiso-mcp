@@ -14,61 +14,33 @@
   "timezone": "Asia/Seoul",
   "coverageVersion": 1,
   "days": 30,
-  "startDate": "2026-09-26",
-  "endDate": "2026-10-25",
-  "updatedAt": "2026-10-25T18:43:49.283Z",
-  "renderedAt": "2026-10-25T18:43:49.283Z",
-  "total": 232264783,
-  "average": 7742159,
-  "median": 6832770,
+  "startDate": "2026-10-03",
+  "endDate": "2026-11-01",
+  "updatedAt": "2026-11-01T19:43:51.065Z",
+  "renderedAt": "2026-11-01T19:43:51.065Z",
+  "total": 317864492,
+  "average": 10595483,
+  "median": 12293140,
   "peak": {
-    "date": "2026-10-23",
-    "requests": 15836868
+    "date": "2026-10-30",
+    "requests": 18445449
   },
-  "recent7Total": 95478804,
-  "recent7Average": 13639829,
-  "previous7Total": 76436414,
-  "weekOverWeekDiff": 19042390,
-  "weekOverWeekPercent": 24.912720264454062,
+  "recent7Total": 105741191,
+  "recent7Average": 15105884,
+  "previous7Total": 95478809,
+  "weekOverWeekDiff": 10262382,
+  "weekOverWeekPercent": 10.748334743052775,
   "latest": {
-    "date": "2026-10-25",
-    "requests": 13309758
+    "date": "2026-11-01",
+    "requests": 12374377
   },
   "previous": {
-    "date": "2026-10-24",
-    "requests": 12211903
+    "date": "2026-10-31",
+    "requests": 13212155
   },
-  "dayOverDayDiff": 1097855,
-  "dayOverDayPercent": 8.990040291017706,
+  "dayOverDayDiff": -837778,
+  "dayOverDayPercent": -6.340964059231821,
   "points": [
-    {
-      "date": "2026-09-26",
-      "requests": 1896815
-    },
-    {
-      "date": "2026-09-27",
-      "requests": 2543888
-    },
-    {
-      "date": "2026-09-28",
-      "requests": 2910692
-    },
-    {
-      "date": "2026-09-29",
-      "requests": 3358595
-    },
-    {
-      "date": "2026-09-30",
-      "requests": 3124858
-    },
-    {
-      "date": "2026-10-01",
-      "requests": 3017461
-    },
-    {
-      "date": "2026-10-02",
-      "requests": 3289178
-    },
     {
       "date": "2026-10-03",
       "requests": 2413254
@@ -159,7 +131,35 @@
     },
     {
       "date": "2026-10-25",
-      "requests": 13309758
+      "requests": 13309763
+    },
+    {
+      "date": "2026-10-26",
+      "requests": 16967613
+    },
+    {
+      "date": "2026-10-27",
+      "requests": 14504992
+    },
+    {
+      "date": "2026-10-28",
+      "requests": 14756364
+    },
+    {
+      "date": "2026-10-29",
+      "requests": 15480241
+    },
+    {
+      "date": "2026-10-30",
+      "requests": 18445449
+    },
+    {
+      "date": "2026-10-31",
+      "requests": 13212155
+    },
+    {
+      "date": "2026-11-01",
+      "requests": 12374377
     }
   ]
 }

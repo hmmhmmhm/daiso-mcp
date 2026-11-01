@@ -20,7 +20,7 @@ describe('공개 발견 자산', () => {
     expect(assets['discovery.html']).toContain('<html lang="ko">');
     expect(assets['discovery.html']).toContain('설치 없이');
     expect(assets['discovery.html']).toContain('search_products');
-    expect(assets['discovery.html']).toContain('/browse/daiso/products/');
+    expect(assets['discovery.html']).toContain('/browse/read');
     expect(assets['discovery.html']).toContain('https://mcp.aka.page/');
     expect(assets['discovery.html']).not.toContain('lottemart');
     expect(assets['discovery.html']).not.toContain('Zyte');

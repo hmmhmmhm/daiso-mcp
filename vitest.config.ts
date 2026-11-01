@@ -7,6 +7,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // 운영 중계와 메모리를 공유하는 Mac은 한 워커만 사용합니다.
+    maxWorkers: process.platform === 'darwin' ? 1 : 2,
     // 테스트 환경
     environment: 'node',
 
