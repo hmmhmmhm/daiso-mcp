@@ -69,7 +69,10 @@ describe('오특 HTML 파싱', () => {
         soldOut: true,
       }),
     ]);
-    const others = [...parseOliveyoungTodayDeals(page, '스페셜'), ...parseOliveyoungTodayDeals(list1)];
+    const others = [
+      ...parseOliveyoungTodayDeals(page, '스페셜'),
+      ...parseOliveyoungTodayDeals(list1),
+    ];
     expect(others.some((d) => d.soldOut)).toBe(false);
   });
   it('정가와 할인율이 없는 카드와 HTML 문자 참조를 처리한다', () => {
@@ -107,8 +110,11 @@ describe('오특 HTML 파싱', () => {
 
 describe('오특 조회', () => {
   it('페이지와 목록을 직접 GET으로 읽고 마지막 페이지에서 멈춘다', async () => {
-    const fetch = vi.fn(async (url: string) =>
-      new Response(url.includes('getHotdealList.do') ? page : url.includes('pageIdx=1') ? list1 : list3),
+    const fetch = vi.fn(
+      async (url: string) =>
+        new Response(
+          url.includes('getHotdealList.do') ? page : url.includes('pageIdx=1') ? list1 : list3,
+        ),
     );
     vi.stubGlobal('fetch', fetch);
     const result = await fetchOliveyoungTodayDeals({}, now);
@@ -128,7 +134,10 @@ describe('오특 조회', () => {
   it('빈 목록 페이지에서 끝내고 중복 상품은 한 번만 반환한다', async () => {
     const full = Array.from({ length: 10 }, (_, i) => card(`A0000000000${10 + i}`, i + 1)).join('');
     const pages = [page, full, full, '\n  \n'];
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(pages.shift())));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(pages.shift())),
+    );
     const result = await fetchOliveyoungTodayDeals({}, now);
     expect(result.todayDeals).toHaveLength(10);
     expect(pages).toHaveLength(0);
@@ -140,7 +149,9 @@ describe('오특 조회', () => {
       vi.fn(async (url: string) => {
         if (url.includes('getHotdealList.do')) return new Response(page);
         return new Response(
-          Array.from({ length: 10 }, () => card(`A${String(++index).padStart(12, '0')}`, index)).join(''),
+          Array.from({ length: 10 }, () =>
+            card(`A${String(++index).padStart(12, '0')}`, index),
+          ).join(''),
         );
       }),
     );
@@ -160,7 +171,10 @@ describe('오특 조회', () => {
     }
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => new Response(url.includes('getHotdealList.do') ? page : '<div>x</div>')),
+      vi.fn(
+        async (url: string) =>
+          new Response(url.includes('getHotdealList.do') ? page : '<div>x</div>'),
+      ),
     );
     await expect(fetchOliveyoungTodayDeals({}, now)).rejects.toThrow('직접 요청 실패');
   });
@@ -183,7 +197,10 @@ describe('오특 조회', () => {
     ]);
   });
   it('릴레이 성공 응답에 HTML이 없으면 형식 오류로 거절한다', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ status: 'SUCCESS', data: {} })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ status: 'SUCCESS', data: {} })),
+    );
     await expect(
       fetchOliveyoungTodayDeals({ relayUrl: 'https://relay.example', relayToken: 'test' }, now),
     ).rejects.toThrow('형식이 변경');
@@ -201,5 +218,30 @@ describe('오특 조회', () => {
     } finally {
       clock.mockRestore();
     }
+  });
+});
+
+describe('오특 원본 구조 변경의 부분 성공 방지', () => {
+  it.each([
+    list1.replace(/data-impression="([^"]*)"/g, "data-impression='$1'"),
+    list1.replace('data-impression="', "data-impression='"),
+    list1.replace('<li data-impression=', '<li class="changed" data-impression='),
+    list1.replace(/data-impression="[^"]*"/, ''),
+    '<div>원본 구조 변경</div>',
+  ])('상품 카드 일부를 생략한 목록은 빈 목록이나 마지막 페이지로 처리하지 않는다', (html) => {
+    expect(() => parseOliveyoungTodayDeals(html)).toThrow('형식이 변경');
+  });
+  it('브랜드 섹션이 사라지면 부분 결과 대신 형식 오류를 반환한다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async (url: string) =>
+          new Response(
+            url.includes('getHotdealList.do') ? page.replaceAll('_스페셜', '_변경됨') : '',
+            { status: 200 },
+          ),
+      ),
+    );
+    await expect(fetchOliveyoungTodayDeals({}, now)).rejects.toThrow('형식이 변경');
   });
 });
