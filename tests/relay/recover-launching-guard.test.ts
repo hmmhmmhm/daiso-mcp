@@ -1,12 +1,15 @@
 import { mkdtemp, writeFile, rm, readdir, stat, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { afterEach, expect, it, vi } from 'vitest';
 import { recoverAbandonedGuard } from '../../scripts/relay/recover-abandoned-guard.js';
 import {
   recoverLaunchingGuard,
   processReferencesDirectory,
+  environmentSnapshotArgs,
 } from '../../scripts/relay/recover-launching-guard.js';
 const dirs: string[] = [];
 afterEach(async () => {
@@ -201,3 +204,40 @@ it('환경 원문을 반환하지 않고 태그·PID와 관측 완전성만 검�
     expect(capture.mock.calls[0][1]).toMatchObject({ timeout: 1, maxBuffer: 16 * 1024 * 1024 });
   }
 });
+
+it('운영체제별 ps 환경 조회 인수를 명시한다', () => {
+  expect(environmentSnapshotArgs('darwin', 501)).toEqual([
+    '-Eww',
+    '-U',
+    '501',
+    '-o',
+    'pid=,command=',
+  ]);
+  expect(environmentSnapshotArgs('linux', 1000)).toEqual([
+    'eww',
+    '-U',
+    '1000',
+    '-o',
+    'pid=,command=',
+  ]);
+});
+it('명령 인수에는 없는 실제 자식의 환경 태그가 남으면 회수하지 않는다', async () => {
+  const f = await fixture({ guardPid: 99999999 });
+  const child = spawn(
+    process.execPath,
+    ['-e', 'process.stdout.write("ready"); setInterval(() => {}, 1000)'],
+    {
+      env: { ...process.env, BREAKPAD_DUMP_LOCATION: f.value.crashDir },
+      stdio: ['ignore', 'pipe', 'ignore'],
+    },
+  );
+  const exited = once(child, 'exit');
+  try {
+    await once(child.stdout!, 'data');
+    expect(await recoverAbandonedGuard(f.marker, Date.now() + 10000)).toBe(false);
+  } finally {
+    child.kill('SIGTERM');
+    await exited;
+  }
+  expect(await recoverAbandonedGuard(f.marker, Date.now() + 10000)).toBe(true);
+}, 30000);

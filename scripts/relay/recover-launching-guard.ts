@@ -8,6 +8,9 @@ import { dirname, basename } from 'node:path';
 import { bounded } from './lifecycle.js';
 import { processSnapshot } from './ownership.js';
 const execute = promisify(execFile);
+export function environmentSnapshotArgs(platform: string, uid: number): string[] {
+  return [platform === 'darwin' ? '-Eww' : 'eww', '-U', String(uid), '-o', 'pid=,command='];
+}
 /** 원문 환경은 반환하거나 기록하지 않고 해당 태그·PID의 존재 여부만 반환합니다. */
 export async function processReferencesDirectory(
   directory: string,
@@ -19,14 +22,11 @@ export async function processReferencesDirectory(
   ) => Promise<{ stdout: string }> = (args, options) => execute('/bin/ps', args, options),
 ): Promise<boolean> {
   const nonce = randomUUID();
-  const { stdout } = await capture(
-    ['eww', '-U', String(process.getuid!()), '-o', 'pid=,command='],
-    {
-      timeout: Math.max(1, Math.min(2000, deadline - Date.now())),
-      maxBuffer: 16 * 1024 * 1024,
-      env: { ...process.env, DAISO_RECOVERY_SNAPSHOT: nonce },
-    },
-  );
+  const { stdout } = await capture(environmentSnapshotArgs(process.platform, process.getuid!()), {
+    timeout: Math.max(1, Math.min(2000, deadline - Date.now())),
+    maxBuffer: 16 * 1024 * 1024,
+    env: { ...process.env, DAISO_RECOVERY_SNAPSHOT: nonce },
+  });
   const containsPid = (pid: number) => new RegExp(`^\\s*${pid}\\s`, 'm').test(stdout);
   // 환경 조회 자체가 생략되거나 불완전한 관측이면 회수를 거절합니다.
   if (!containsPid(process.pid) || !stdout.includes(`DAISO_RECOVERY_SNAPSHOT=${nonce}`))
