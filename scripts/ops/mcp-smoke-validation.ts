@@ -165,3 +165,17 @@ export function validateCinemaCollection(
         });
   return schema.safeParse(payload).success ? null : '실제 극장 또는 상영작 목록이 없습니다';
 }
+
+const deal = z.object({ goodsNo: text, name: text, price: count.positive(), soldOut: z.boolean() });
+const deals = z.object({
+  date: text,
+  brandDeals: z.array(deal).min(1),
+  todayDeals: z.array(deal).min(1),
+  truncated: z.boolean(),
+});
+export function validateOliveyoungTodayDeals(payload: Record<string, unknown>): string | null {
+  const date = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return deals.safeParse(payload).success && payload.date === date
+    ? null
+    : '한국 날짜 기준 오특 상품·가격·품절 정보가 없습니다';
+}

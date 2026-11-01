@@ -4,6 +4,7 @@ import {
   validateCatalogSnapshot,
   validateRetailInventory,
   validateCinemaCollection,
+  validateOliveyoungTodayDeals,
 } from './mcp-smoke-validation.js';
 import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from '../../src/core/compact/catalog.js';
 /**
@@ -261,6 +262,13 @@ export const MCP_SMOKE_SCENARIOS: McpSmokeScenario[] = [
     toolName: 'dtryx_list_now_showing',
     args: { cinemaCode: '000067', includePlayDates: false, timeoutMs: 15000 },
     validate: (payload) => validateCinemaCollection(payload, 'dtryx'),
+  },
+  {
+    service: 'oliveyoung',
+    label: '올리브영 오늘의 특가',
+    toolName: 'oliveyoung_get_today_deals',
+    args: { timeoutMs: 60000 },
+    validate: validateOliveyoungTodayDeals,
   },
 ];
 

@@ -36,6 +36,7 @@ describe('runMcpSmoke', () => {
       'lottecinema_find_nearby_theaters',
       'cgv_find_theaters',
       'dtryx_list_now_showing',
+      'oliveyoung_get_today_deals',
     ]);
   });
 
@@ -60,6 +61,7 @@ describe('runMcpSmoke', () => {
       'lottecinema',
       'cgv',
       'dtryx',
+      'oliveyoung',
     ]);
   });
 
@@ -126,6 +128,16 @@ describe('runMcpSmoke', () => {
             seveneleven_search_products: { query: '커피', products: [{}] },
             emart24_search_products: { keyword: '커피', products: [{ pluCd: 'p1' }] },
             opinet_get_average_prices: { provider: 'opinet', prices: [] },
+            oliveyoung_get_today_deals: {
+              date: new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10),
+              brandDeals: [
+                { goodsNo: 'A000000000001', name: '브랜드 상품', price: 1000, soldOut: false },
+              ],
+              todayDeals: [
+                { goodsNo: 'A000000000002', name: '오늘 상품', price: 1000, soldOut: true },
+              ],
+              truncated: false,
+            },
           };
 
           return Promise.resolve({
