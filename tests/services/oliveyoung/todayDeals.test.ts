@@ -255,7 +255,7 @@ it.each([
 });
 
 it.each([
-  page.replaceAll('^오특_스페셜^', '^오특_변경됨^'),
+  page.replaceAll('_스페셜^', '_변경됨^'),
   page.replace(/data-impression="[^"]*"/, 'data-impression="A000000171422"'),
 ])('브랜드 카드의 섹션 추적 정보가 불일치해도 일부 결과를 반환하지 않는다', (html) => {
   expect(() => parseOliveyoungTodayDeals(html, '스페셜')).toThrow('형식이 변경');
