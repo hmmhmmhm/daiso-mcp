@@ -59,7 +59,7 @@
     <tr>
       <td>생활용품·뷰티</td>
       <td>다이소, 올리브영</td>
-      <td>상품·매장·재고</td>
+      <td>상품·매장·재고, 올리브영 오늘의 특가</td>
     </tr>
     <tr>
       <td>편의점</td>
@@ -227,6 +227,7 @@ MCP 연결 없이 웹 읽기와 GET 요청을 지원하는 에이전트는 [REST
 - [@vkehfdl1](https://github.com/vkehfdl1): 롯데시네마 잔여 좌석 계산 수정
 - [@bgmbgm94](https://github.com/bgmbgm94): 디트릭스 표준 포트 전환
 - [@Jacob-9909](https://github.com/Jacob-9909): 개발자 요청 API의 null 본문 오류 수정, 메가박스 경기 광주시 지역 코드 판정 수정
+- [@chuuminggg](https://github.com/chuuminggg): 올리브영 오특(오늘의 특가) 조회
 - [제로초님](https://youtube.com/shorts/ZgIqA1NCEp0?si=UW0pKsSpqmEi7lXG): 프로젝트 홍보
 
 <p align="center">
