@@ -3,11 +3,13 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { bounded } from './lifecycle.js';
 import { processSnapshot, type ProcessIdentity } from './ownership.js';
+import { recoverLaunchingGuard, processReferencesDirectory } from './recover-launching-guard.js';
 import { recoverExitedGuard } from './recover-exited-guard.js';
 export async function recoverAbandonedGuard(
   markerPath: string,
   deadline: number,
   snapshot = processSnapshot,
+  references = processReferencesDirectory,
 ): Promise<boolean> {
   const remaining = () => Math.max(0, deadline - Date.now());
   try {
@@ -24,7 +26,10 @@ export async function recoverAbandonedGuard(
         stat.mode & 0o077
       )
         return false;
-      const marker = JSON.parse(await bounded(handle.readFile('utf8'), remaining()));
+      const raw = await bounded(handle.readFile('utf8'), remaining());
+      const marker = JSON.parse(raw);
+      if (marker?.state === 'launching' && !marker.browser)
+        return await recoverLaunchingGuard(markerPath, raw, stat, deadline, snapshot, references);
       const root = marker?.browser as ProcessIdentity | undefined;
       if (
         !root ||
