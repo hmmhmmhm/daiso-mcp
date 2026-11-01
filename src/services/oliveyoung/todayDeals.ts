@@ -95,7 +95,12 @@ export function toKstDate(now: Date): string {
  */
 export function parseOliveyoungTodayDeals(html: string, section?: string): OliveyoungTodayDeal[] {
   const deals: OliveyoungTodayDeal[] = [];
-  for (const card of html.split('<li data-impression="').slice(1)) {
+  const cards = html.split('<li data-impression="').slice(1);
+  const sourceCount = (html.match(section ? /<li\b[^>]*\bdata-impression\s*=/g : /<li\b/g) ?? [])
+    .length;
+  // 인식하지 못한 카드가 있으면 부분 결과로 페이지 순회를 종료하지 않습니다.
+  if (cards.length !== sourceCount || (!section && html.trim() !== '' && !cards.length)) invalid();
+  for (const card of cards) {
     const impression = card.slice(0, card.indexOf('"')).split('^');
     if (section && !impression[1]?.endsWith(`_${section}`)) continue;
     const goodsNo = card.match(/data-ref-goodsNo="([A-Z]\d{12})"/)?.[1];
@@ -149,12 +154,18 @@ export async function fetchOliveyoungTodayDeals(
   const request = (path: string, body: Record<string, unknown>) => {
     const timeout = deadline - Date.now();
     if (timeout <= 0) {
-      throw new ServiceError('OLIVEYOUNG_TODAY_DEALS_TIMEOUT', '올리브영 오특 조회 시간 초과', 504, true);
+      throw new ServiceError(
+        'OLIVEYOUNG_TODAY_DEALS_TIMEOUT',
+        '올리브영 오특 조회 시간 초과',
+        504,
+        true,
+      );
     }
     return requestOliveyoung(path, body, { ...options, timeout });
   };
   const page = await request(OLIVEYOUNG_API.TODAY_DEALS_PAGE_PATH, { date });
   const brandDeals = parseOliveyoungTodayDeals(htmlOf(page), '스페셜');
+  if (!brandDeals.length) invalid();
   const todayDeals: OliveyoungTodayDeal[] = [];
   const seen = new Set<string>();
   let truncated = false;
