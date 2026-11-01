@@ -11,7 +11,29 @@ const stores = [{ storeCode: 's1', storeName: '강남점' }];
 const invoke = async (service: string, payload: unknown) => {
   const callTool = vi
     .fn()
-    .mockResolvedValue({ content: [{ type: 'text', text: JSON.stringify(payload) }] });
+    .mockImplementation(({ arguments: args }: { arguments: Record<string, unknown> }) =>
+      Promise.resolve({
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              service === 'oliveyoung' && args.operation === 'today_deals'
+                ? {
+                    date: new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10),
+                    brandDeals: [
+                      { goodsNo: 'A000000000001', name: '상품', price: 1000, soldOut: false },
+                    ],
+                    todayDeals: [
+                      { goodsNo: 'A000000000002', name: '상품2', price: 1000, soldOut: true },
+                    ],
+                    truncated: false,
+                  }
+                : payload,
+            ),
+          },
+        ],
+      }),
+    );
   const errors: string[] = [];
   const code = await runMcpSmoke({
     service,
@@ -166,7 +188,9 @@ describe('전체 서비스 공개 MCP smoke 확장', () => {
           : { theaters: [{ theaterId: '1', theaterCode: '1', theaterName: '강남' }] });
       const { code, callTool } = await invoke(service, payload);
       expect(code).toBe(0);
-      expect(callTool).toHaveBeenCalledOnce();
+      expect(callTool).toHaveBeenCalledTimes(
+        MCP_SMOKE_SCENARIOS.filter((s) => s.service === service).length,
+      );
       expect(callTool.mock.calls[0][0].name).toBe(group?.name);
       expect(PUBLIC_TOOL_NAMES).toContain(callTool.mock.calls[0][0].name);
     },
@@ -180,7 +204,9 @@ describe('전체 서비스 공개 MCP smoke 확장', () => {
         products: [],
       });
       expect(code).toBe(1);
-      expect(callTool).toHaveBeenCalledOnce();
+      expect(callTool).toHaveBeenCalledTimes(
+        MCP_SMOKE_SCENARIOS.filter((s) => s.service === service).length,
+      );
       expect(errors.join(' ')).toContain('검색한 상품 코드가 없습니다');
     },
   );
