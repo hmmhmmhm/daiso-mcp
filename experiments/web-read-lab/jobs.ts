@@ -28,10 +28,12 @@ export async function completeJob(storage: Storage): Promise<void> {
 
 export async function alarmJob(storage: Storage): Promise<void> {
   const job = (await storage.get('job')) as Job | undefined;
-  if (job?.status === 'pending' && Date.now() < job.acceptedAt + DAY) {
-    await completeJob(storage);
-    await storage.setAlarm(job.acceptedAt + DAY);
-  } else await storage.deleteAll();
+  if (!job || Date.now() >= job.acceptedAt + DAY) {
+    await storage.deleteAll();
+    return;
+  }
+  await completeJob(storage);
+  await storage.setAlarm(Date.now() < job.readyAt ? job.readyAt : job.acceptedAt + DAY);
 }
 
 export async function jobResponse(storage: Storage, mode: string): Promise<Response> {

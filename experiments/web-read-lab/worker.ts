@@ -166,9 +166,10 @@ export default {
       const job = env.PROBE_LOG.get(env.PROBE_LOG.idFromName(`job-${run}`));
       const result = await job.fetch(new Request(`https://job/${test}`));
       const state = await result.json();
+      const { quantity: _quantity, ...metadata } = data;
       status = result.status;
       body = html(
-        `<p>가상 작업 실험. pending은 조회 완료나 재고가 아닙니다.</p><pre>${JSON.stringify({ ...data, job: state }, null, 2)}</pre><p><a href="/run/${run}/result5">결과 확인</a></p><p>결과가 pending이면 잠시 후 같은 실제 링크를 한 번만 다시 확인하세요.</p>`,
+        `<p>가상 작업 실험. pending은 조회 완료나 재고가 아닙니다.</p><pre>${JSON.stringify({ ...metadata, job: state }, null, 2)}</pre><p><a href="/run/${run}/result5">결과 확인</a></p><p>결과가 pending이면 잠시 후 같은 실제 링크를 한 번만 다시 확인하세요.</p>`,
       );
     } else if (isComposer) {
       headers.set('X-Robots-Tag', 'noindex');
