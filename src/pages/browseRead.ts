@@ -44,11 +44,25 @@ export function registerBrowseReadRoutes(app: Hono<Bindings>): void {
             headers.set('Location', scoped(location));
           if (!headers.get('Content-Type')?.includes('text/html'))
             return new Response(source.body, { status: source.status, headers });
-          let body = (
-            await (suffix.startsWith('/daiso/') && c.env?.BROWSE_READ_JOBS
+          let raw: string;
+          try {
+            raw = await (suffix.startsWith('/daiso/') && c.env?.BROWSE_READ_JOBS
               ? readBrowseText(source)
-              : source.text())
-          ).replace(
+              : source.text());
+          } catch (error) {
+            if (!(error instanceof RangeError)) throw error;
+            return new Response(
+              '<h1>조회 결과가 웹 읽기 크기 제한을 초과했습니다.</h1><p>수량 미확인. 결과를 잘라 정상으로 표시하지 않습니다.</p>',
+              {
+                status: 502,
+                headers: {
+                  'Content-Type': 'text/html; charset=utf-8',
+                  'Cache-Control': 'no-store',
+                },
+              },
+            );
+          }
+          let body = raw.replace(
             /href="(\/browse(?:\/[^"]*)?)"/g,
             (_, path: string) => `href="${scoped(path)}"`,
           );

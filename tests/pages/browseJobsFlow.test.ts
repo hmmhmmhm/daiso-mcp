@@ -121,24 +121,27 @@ describe('읽기 접수와 실제 결과 전달', () => {
     expect(f.values.size).toBe(0);
     expect(f.pending).toHaveLength(1);
   });
-  it.each(['fast', 'slow'])('%s 과대 HTML을 시간 초과가 아닌 명시적 크기 오류로 반환한다', async (mode) => {
-    vi.useFakeTimers();
-    const f = fixture();
-    const large = new Response('가'.repeat(90000), { headers: { 'Content-Type': 'text/html' } });
-    if (mode === 'fast') f.resolve(large);
-    const request = f.get(`/browse/read/${id}/daiso/products/지갑`);
-    if (mode === 'slow') await vi.advanceTimersByTimeAsync(1001);
-    const first = await request;
-    let result = first;
-    if (mode === 'slow') {
-      const link = (await first.text()).match(/href="(\/browse\/jobs\/[^" ]+)">결과 확인/)![1];
-      f.resolve(large);
-      await Promise.all(f.pending);
-      result = await f.get(link);
-    }
-    expect(result.status).toBe(502);
-    expect(await result.text()).toContain('크기 제한');
-  });
+  it.each(['fast', 'slow'])(
+    '%s 과대 HTML을 시간 초과가 아닌 명시적 크기 오류로 반환한다',
+    async (mode) => {
+      vi.useFakeTimers();
+      const f = fixture();
+      const large = new Response('가'.repeat(90000), { headers: { 'Content-Type': 'text/html' } });
+      if (mode === 'fast') f.resolve(large);
+      const request = f.get(`/browse/read/${id}/daiso/products/지갑`);
+      if (mode === 'slow') await vi.advanceTimersByTimeAsync(1001);
+      const first = await request;
+      let result = first;
+      if (mode === 'slow') {
+        const link = (await first.text()).match(/href="(\/browse\/jobs\/[^" ]+)">결과 확인/)![1];
+        f.resolve(large);
+        await Promise.all(f.pending);
+        result = await f.get(link);
+      }
+      expect(result.status).toBe(502);
+      expect(await result.text()).toContain('크기 제한');
+    },
+  );
   it('작업 조회의 잘못된 ID·메서드·만료를 구별하고 원본을 재호출하지 않는다', async () => {
     const f = fixture();
     expect((await f.get('/browse/jobs/bad/bad')).status).toBe(400);
