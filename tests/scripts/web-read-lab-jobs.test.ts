@@ -3,30 +3,42 @@ import worker, { ProbeLog, type Storage } from '../../experiments/web-read-lab/w
 
 function fixture() {
   const objects = new Map<string, ProbeLog>();
-  const env = { PROBE_LOG: {
-    idFromName: (name: string) => name,
-    get(id: unknown) {
-      const key = String(id);
-      if (!objects.has(key)) {
-        const values = new Map<string, unknown>();
-        let queue = Promise.resolve();
-        const storage: Storage = {
-          transaction<T>(fn: (tx: Pick<Storage, 'get' | 'put'>) => Promise<T>) {
-            const result = queue.then(() => fn(storage));
-            queue = result.then(() => {}, () => {});
-            return result;
-          },
-          get: async (name) => values.get(name),
-          put: async (name, value) => { values.set(name, value); },
-          setAlarm: vi.fn(async () => {}),
-          deleteAll: async () => { values.clear(); },
-        };
-        objects.set(key, new ProbeLog({ storage }));
-      }
-      return objects.get(key)!;
+  const env = {
+    PROBE_LOG: {
+      idFromName: (name: string) => name,
+      get(id: unknown) {
+        const key = String(id);
+        if (!objects.has(key)) {
+          const values = new Map<string, unknown>();
+          let queue = Promise.resolve();
+          const storage: Storage = {
+            transaction<T>(fn: (tx: Pick<Storage, 'get' | 'put'>) => Promise<T>) {
+              const result = queue.then(() => fn(storage));
+              queue = result.then(
+                () => {},
+                () => {},
+              );
+              return result;
+            },
+            get: async (name) => values.get(name),
+            put: async (name, value) => {
+              values.set(name, value);
+            },
+            setAlarm: vi.fn(async () => {}),
+            deleteAll: async () => {
+              values.clear();
+            },
+          };
+          objects.set(key, new ProbeLog({ storage }));
+        }
+        return objects.get(key)!;
+      },
     },
-  } };
-  return { env, get: (path: string) => worker.fetch(new Request(`https://lab.example${path}`), env) };
+  };
+  return {
+    env,
+    get: (path: string) => worker.fetch(new Request(`https://lab.example${path}`), env),
+  };
 }
 afterEach(() => vi.useRealTimers());
 
@@ -50,14 +62,19 @@ describe('웹 읽기 저장 결과와 접수 실험', () => {
     vi.useFakeTimers();
     const { get } = fixture();
     let done = false;
-    const cold = get('/run/cold/cold5').then((r) => { done = true; return r; });
+    const cold = get('/run/cold/cold5').then((r) => {
+      done = true;
+      return r;
+    });
     await vi.advanceTimersByTimeAsync(4999);
     expect(done).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     const first = await (await cold).text();
     expect(first).toContain('ready');
     const second = await (await get('/run/cold/cold5')).text();
-    expect(second.match(/"resultId": "([^"]+)"/)?.[1]).toBe(first.match(/"resultId": "([^"]+)"/)?.[1]);
+    expect(second.match(/"resultId": "([^"]+)"/)?.[1]).toBe(
+      first.match(/"resultId": "([^"]+)"/)?.[1],
+    );
     expect(first.match(/"resultId": "([^"]+)"/)?.[1]).toBeTruthy();
     expect(second).toContain('cacheHit');
   });
