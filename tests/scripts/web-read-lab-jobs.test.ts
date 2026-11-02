@@ -50,6 +50,7 @@ describe('웹 읽기 저장 결과와 접수 실험', () => {
     expect(first.status).toBe(200);
     const body = await first.text();
     expect(body).toContain('pending');
+    expect(body).not.toContain('quantity');
     expect(body).toContain('href="/run/staged/result5"');
     expect(await (await get('/run/staged/result5')).text()).toContain('pending');
     await vi.advanceTimersByTimeAsync(5000);
@@ -60,7 +61,7 @@ describe('웹 읽기 저장 결과와 접수 실험', () => {
   });
   it('첫 조회만 느리고 재시도는 동일한 저장 결과를 즉시 반환한다', async () => {
     vi.useFakeTimers();
-    const { get } = fixture();
+    const { get, env } = fixture();
     let done = false;
     const cold = get('/run/cold/cold5').then((r) => {
       done = true;
@@ -77,6 +78,8 @@ describe('웹 읽기 저장 결과와 접수 실험', () => {
     );
     expect(first.match(/"resultId": "([^"]+)"/)?.[1]).toBeTruthy();
     expect(second).toContain('cacheHit');
+    await env.PROBE_LOG.get('job-cold').alarm();
+    expect(await (await get('/run/cold/result5')).text()).toContain('ready');
   });
   it('동시 접수는 한 작업을 공유하며 알람이 결과를 보존하고 만료 후 정리한다', async () => {
     vi.useFakeTimers();
