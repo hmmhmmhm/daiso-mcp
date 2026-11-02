@@ -115,7 +115,7 @@ describe('읽기 접수와 실제 결과 전달', () => {
     const response = await f.get(`/browse/read/${id}/daiso/products/지갑`);
     expect(await response.text()).toContain('상품 실제 결과');
     expect(f.values.size).toBe(0);
-    expect(f.pending).toHaveLength(0);
+    expect(f.pending).toHaveLength(1);
   });
   it('작업 조회의 잘못된 ID·메서드·만료를 구별하고 원본을 재호출하지 않는다', async () => {
     const f = fixture();

@@ -1,7 +1,22 @@
 /** 읽기 결과만 잠시 저장합니다. 요청 헤더·인증값·원본 호출 조건은 저장하지 않습니다. */
+export const BROWSE_RESULT_HEADERS = [
+  'retry-after',
+  'location',
+  'content-security-policy',
+  'x-content-type-options',
+  'x-daiso-read-id',
+  'x-ratelimit-limit',
+  'x-ratelimit-remaining',
+  'x-ratelimit-reset',
+];
 export const BROWSE_JOB_TTL = 300000;
 export const BROWSE_JOB_DEADLINE = 25000;
-export type ReadSnapshot = { status: number; body: string; contentType: string };
+export type ReadSnapshot = {
+  status: number;
+  body: string;
+  contentType: string;
+  headers?: Record<string, string>;
+};
 type Job = {
   status: 'pending' | 'ready';
   createdAt: number;
@@ -26,7 +41,14 @@ function validSnapshot(input: unknown): input is ReadSnapshot {
     new TextEncoder().encode(v.body).length <= 262144 &&
     typeof v.contentType === 'string' &&
     v.contentType.length <= 128 &&
-    !/[\r\n]/.test(v.contentType)
+    !/[\r\n]/.test(v.contentType) &&
+    Object.entries(v.headers ?? {}).every(
+      ([key, value]) =>
+        BROWSE_RESULT_HEADERS.includes(key) &&
+        typeof value === 'string' &&
+        value.length <= 2048 &&
+        !/[\r\n]/.test(value),
+    )
   );
 }
 
@@ -42,10 +64,13 @@ export class BrowseReadJob {
       return Response.json(current);
     }
     if (request.method === 'POST' && path === '/start') {
-      if (current) return new Response(null, { status: 409 });
-      await storage.put('job', { status: 'pending', createdAt: Date.now() });
-      await storage.setAlarm(Date.now() + BROWSE_JOB_DEADLINE);
-      return new Response(null, { status: 201 });
+      const accepted = await storage.transaction(async (tx) => {
+        if (await tx.get('job')) return false;
+        await tx.put('job', { status: 'pending', createdAt: Date.now() });
+        return true;
+      });
+      if (accepted) await storage.setAlarm(Date.now() + BROWSE_JOB_DEADLINE);
+      return new Response(null, { status: accepted ? 201 : 409 });
     }
     if (request.method !== 'POST' || path !== '/complete')
       return new Response(null, { status: 405 });
@@ -76,14 +101,17 @@ export class BrowseReadJob {
       await this.state.storage.deleteAll();
       return;
     }
-    if (job.status === 'pending' && Date.now() >= job.createdAt + BROWSE_JOB_DEADLINE) {
-      await this.state.storage.put('job', {
-        ...job,
-        status: 'ready',
-        completedAt: new Date().toISOString(),
-        response: expiredReadSnapshot(),
-      });
-    }
+    await this.state.storage.transaction(async (tx) => {
+      const latest = await tx.get<Job>('job');
+      if (latest?.status === 'pending' && Date.now() >= latest.createdAt + BROWSE_JOB_DEADLINE) {
+        await tx.put('job', {
+          ...latest,
+          status: 'ready',
+          completedAt: new Date().toISOString(),
+          response: expiredReadSnapshot(),
+        });
+      }
+    });
     await this.state.storage.setAlarm(
       job.createdAt +
         (Date.now() < job.createdAt + BROWSE_JOB_DEADLINE ? BROWSE_JOB_DEADLINE : BROWSE_JOB_TTL),

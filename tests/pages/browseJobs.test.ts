@@ -79,7 +79,9 @@ describe('느린 읽기 작업의 저장 경계', () => {
       f.storage.get.mockResolvedValueOnce(old);
       await f.job.alarm();
       expect(await (await f.get()).json()).toMatchObject({ response: { body: '정상 완료' } });
-    } finally { vi.useRealTimers(); }
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('잘못된 완료·과대한 본문·미생성 완료·지원하지 않는 요청을 거절한다', async () => {
     const { job, complete, start } = fixture();
