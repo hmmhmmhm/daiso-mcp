@@ -1,3 +1,4 @@
+import { renderQuickBrowseLinks } from './browseQuickLinks.js';
 /** 새 URL을 조립하지 않고 실제 링크만 선택하여 검색 조건을 입력합니다. */
 const INITIALS = [...'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'];
 const VOWELS = [...'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ'];
@@ -65,6 +66,16 @@ export function renderBrowseComposer(source: URL): string | null {
       : mode === 'stores'
         ? '매장 검색어 선택'
         : '상품 검색어 선택';
+  const quick =
+    !text && !stage
+      ? renderQuickBrowseLinks(
+          mode === 'inventory'
+            ? { mode: 'inventory', productId: productId! }
+            : mode === 'stores'
+              ? { mode: 'stores' }
+              : { mode: 'products' },
+        )
+      : '';
   const query = encodeURIComponent(text);
   const target =
     mode === 'inventory'
@@ -72,7 +83,7 @@ export function renderBrowseComposer(source: URL): string | null {
       : mode === 'stores'
         ? `/browse/daiso/stores/${query}/limit/3`
         : `/browse/daiso/products/${query}/pageSize/3`;
-  return `<h1>${title}</h1>${productId ? `<p>선택한 상품 ID: <code>${productId}</code></p>` : ''}
+  return `<h1>${title}</h1>${productId ? `<p>선택한 상품 ID: <code>${productId}</code></p>` : ''}${quick}
 <p>현재 입력: <strong>${text || '(비어 있음)'}</strong></p>
 <p>아직 상품·매장·재고를 조회하지 않았습니다. 아래 실제 링크 ID로 이동하세요. URL을 직접 조립하지 마세요. 한글은 초성, 중성, 완성 글자를 차례로 선택하고 영문·숫자는 바로 선택합니다. 최대32자이며 개인정보는 입력하지 마세요.</p>
 ${text.trim() ? `<p><a href="${target}">입력한 검색어로 실제 조회</a></p>` : ''}
