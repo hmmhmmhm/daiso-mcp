@@ -167,9 +167,11 @@ export default {
       const result = await job.fetch(new Request(`https://job/${test}`));
       const state = await result.json();
       const { quantity: _quantity, ...metadata } = data;
+      const resultUrl = new URL(`/run/${run}/result5`, url.origin);
+      resultUrl.searchParams.set('attempt', requestId);
       status = result.status;
       body = html(
-        `<p>가상 작업 실험. pending은 조회 완료나 재고가 아닙니다.</p><pre>${JSON.stringify({ ...metadata, job: state }, null, 2)}</pre><p><a href="/run/${run}/result5">결과 확인</a></p><p>결과가 pending이면 잠시 후 같은 실제 링크를 한 번만 다시 확인하세요.</p>`,
+        `<p>가상 작업 실험. pending은 조회 완료나 재고가 아닙니다.</p><pre>${JSON.stringify({ ...metadata, resultUrl: resultUrl.href, job: state }, null, 2)}</pre><p><a href="${resultUrl.href}">결과 확인</a> · <code>${resultUrl.href}</code></p><p>결과가 pending이면 이 응답의 새 결과 확인 링크를 선택하세요. 이전 주소를 반복하지 마세요. 최대3번 확인하고 계속 pending이면 미확인으로 보고하세요.</p>`,
       );
     } else if (isComposer) {
       headers.set('X-Robots-Tag', 'noindex');
