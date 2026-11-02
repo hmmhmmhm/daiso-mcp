@@ -39,9 +39,9 @@ export function buildDiscoveryAssets(info: {
 </head><body><main>
 <h1>DAISO MCP</h1><p>${escapeHtml(AGENT_GUIDE_STAMP)} · <a href="${AGENT_GUIDE_PATH}">현재 버전 안내</a> · <a href="/guide/latest">항상 최신 안내로 이동</a></p><p>설치 없이 상품·매장·재고와 영화관 정보를 조회하세요. 사용자 API 키나 로그인 없이 쓸 수 있는 공개 서비스입니다.</p>
 <p>${escapeHtml(WEB_SEARCH_DESCRIPTION)}</p>
-<p><strong>${escapeHtml(WEB_READ_RULE)}</strong></p>
-<section><h2>바로 조회하기</h2><p><a href="${escapeHtml(firstQuery)}">상품·매장·재고 웹 조회 시작</a></p><p>빠른 상품 검색과 지역 선택에서 요청과 일치하는 단어를 통째로 선택하세요. 목록 밖 입력만 글자 링크를 쓰고 재고가 목적이면 상품 카드의 매장 지역 선택을 바로 여세요. 이전 HTML은 같은 조건으로 새 응답 확인 링크로 구분합니다. 원본 API 캐시는 유지됩니다.</p>
+<section id="web-start"><h2>ChatGPT에서 바로 조회하기</h2><p><a href="${escapeHtml(firstQuery)}">상품·매장·재고 웹 조회 시작</a></p><p>빠른 상품 검색과 지역 선택에서 요청과 일치하는 단어를 통째로 선택하세요. 목록 밖 입력만 글자 링크를 쓰고 재고가 목적이면 상품 카드의 매장 지역 선택을 바로 여세요. 이전 HTML은 같은 조건으로 새 응답 확인 링크로 구분합니다. 원본 API 캐시는 유지됩니다.</p>
 <p>위 링크는 셸·설치 없이 웹 읽기로 호출하는 공개 REST GET의 HTML 결과입니다. <a href="/browse">모든 서비스의 /browse/ 경로</a>는 자동 HTML이며 쿼리 문자열은 필요 없습니다. 검색한 상품의 실제 ID로 재고를 조회하세요. 상품 검색만으로 매장 재고를 단정하지 마세요.</p></section>
+<p><strong>${escapeHtml(WEB_READ_RULE)}</strong></p>
 <section><h2>에이전트에서 설치 없이 사용하기</h2><p>원격 MCP 주소: <code>${BASE}</code><br>전송: Streamable HTTP · 인증: 없음</p>
 <p>${escapeHtml(ROUTE_SELECTION_TEXT).replaceAll('\n', '<br>')}</p>
 <p><strong>${escapeHtml(IMAGE_SOURCE_RULE)}</strong></p>

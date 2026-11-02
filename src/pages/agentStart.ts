@@ -1,5 +1,5 @@
 /** 검색·읽기 사본의 안내 세대를 구분하는 고정 버전 */
-export const AGENT_GUIDE_VERSION = '2026-11-02.3';
+export const AGENT_GUIDE_VERSION = '2026-11-02.4';
 export const AGENT_GUIDE_UPDATED = '2026-11-02';
 export const AGENT_GUIDE_STAMP = `안내 버전: ${AGENT_GUIDE_VERSION} · 갱신일: ${AGENT_GUIDE_UPDATED}`;
 export const AGENT_GUIDE_PATH = `/guide/${AGENT_GUIDE_VERSION}`;
@@ -46,7 +46,7 @@ ${ROUTE_SELECTION_TEXT}
 
 웹 읽기 시작 (문서의 실제 링크 ID를 선택):
 ${baseUrl}/browse/quick
-응답의 글자 입력 링크에서 임의 상품명·매장 지역을 선택하세요. 수납박스·핫식스 등 예제도 이 화면의 실제 링크로 조회합니다. 동일 주소의 수집본이 오래됐으면 새 응답 확인 링크를 선택하세요. 새 HTML 주소도 원본 API의 캐시를 사용하며 원본 재고의 새 갱신을 보장하지 않습니다.
+요청과 일치하는 빠른 상품명·지역 링크를 먼저 선택하고 목록 밖 입력만 글자 링크를 쓰세요. 수납박스·핫식스 등 예제도 이 화면의 실제 링크로 조회합니다. 동일 주소의 수집본이 오래됐으면 새 응답 확인 링크를 선택하세요. 새 HTML 주소도 원본 API의 캐시를 사용하며 원본 재고의 새 갱신을 보장하지 않습니다.
 이것은 공개 REST GET의 웹 조회이며 MCP 프로토콜 호출이 아닙니다. 상품 결과의 실제 매장 지역 선택 링크를 바로 따르세요. 상세 정보가 필요할 때만 상품 상세를 여세요. 지역 입력 후 표시된 실제 재고 조회 링크를 선택합니다. 후속 URL을 새로 조립하지 마세요. 상품 검색만으로 매장 재고를 단정하지 마세요. 일반 API 클라이언트의 경로·필터 문법은 상세 사용 안내를 참고하세요.
 
 ${IMAGE_SOURCE_RULE}
