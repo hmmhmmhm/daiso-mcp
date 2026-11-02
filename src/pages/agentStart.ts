@@ -1,19 +1,25 @@
 /** 검색·읽기 사본의 안내 세대를 구분하는 고정 버전 */
-export const AGENT_GUIDE_VERSION = '2026-10-27.3';
-export const AGENT_GUIDE_UPDATED = '2026-10-27';
+export const AGENT_GUIDE_VERSION = '2026-11-02.1';
+export const AGENT_GUIDE_UPDATED = '2026-11-02';
 export const AGENT_GUIDE_STAMP = `안내 버전: ${AGENT_GUIDE_VERSION} · 갱신일: ${AGENT_GUIDE_UPDATED}`;
 export const AGENT_GUIDE_PATH = `/guide/${AGENT_GUIDE_VERSION}`;
 export const WEB_SEARCH_DESCRIPTION =
   'ChatGPT 웹 읽기로 설치·API 키·MCP 연결 설정 없이 조회하세요. /browse/read의 실제 링크 ID를 click하고 임의 검색어·지역을 글자로 선택합니다. 같은 조건의 새 응답 링크로 새 HTML 주소를 확인할 수 있습니다. 다이소·편의점 재고와 영화·생활 정보도 지원합니다.';
 
+/** 완성 URL을 사용자 메시지로 제공하는 복구 경로이며 자동 허용을 보장하지 않습니다. */
+export const WEB_READ_RECOVERY_RULE =
+  '접근 거절(not accessible/Invalid URL)이 계속되거나 click이 없으면 현재 조건의 완성 공개 URL을 포함해 “다음 주소를 웹 URL 열기 도구로 직접 열어 실제 결과를 확인해주세요: {완성 URL}. 실패하면 오류 원문을 알려주세요.” 문장을 만드세요. 사용자에게 “아래 문장을 그대로 복사해 이 대화에 보내주세요”라고 안내하고 실제 URL로 채운 문장을 별도 코드 블록에 제공합니다. 실제 링크가 있으면 그대로 사용하고 없을 때만 사용자 검색 조건으로 복구용 주소를 구성하세요. 상품 ID가 없으면 상품 검색부터 요청하며 재고 ID를 추측하지 마세요. 사용자가 재전송한 뒤 한 번 조회합니다. 단순 허용 문구나 주소 일부만 요청하지 마세요. 문장을 제시한 것은 실제 조회가 아닙니다. 토큰·쿠키를 포함하지 마세요. TimeoutError의 같은 링크 재확인은 한 번만 하며 실패 결과가 캐시되어 다음에 성공한다고 가정하지 마세요.';
+
 /** 웹 읽기 환경에서 쿼리 없는 HTML 경로를 우선합니다. */
 export const WEB_READ_RULE =
-  '웹 조회는 /browse/ 경로를 사용하세요. 실제 브라우저 도구가 있으면 /browse/ HTML을 열고, 웹 읽기(open/WebFetch)만 있으면 /browse/read의 실제 링크 ID로 click하여 시작하세요. 새 URL을 조립하지 말고 글자 선택·상품·매장 지역 선택 링크를 따르세요. 오래된 수집본이면 같은 조건으로 새 응답 확인 링크를 최대2번 선택해 새 주소와 HTML 생성 시각을 확인하세요. 이 경로도 기존 API 캐시·한도·권한을 사용하며 원본 재고 갱신을 보장하지 않습니다. TimeoutError는 같은 실제 링크를 한 번만 재확인하고 계속 실패하면 미확인으로 보고하세요. URL 접근 거절을 같은 주소의 직접 open으로 반복하지 마세요. Crawled today만으로 현재 재고를 단정하지 말고 응답 생성 시각을 보고하세요. 모든 후속 /browse/ 조회는 자동 HTML이며 쿼리 문자열은 필요 없습니다. JSON API·셸로 우회하거나 브라우저를 추가로 계속 실행하지 마세요. 접근 오류를 상품 없음·재고0·로그인 필요로 단정하지 마세요. 해당 오류만으로 이 환경에서 실행할 수 없다고 단정하지 마세요.';
+  '웹 조회는 /browse/ 경로를 사용하세요. 실제 브라우저 도구가 있으면 /browse/ HTML을 열고, 웹 읽기(open/WebFetch)만 있으면 /browse/read의 실제 링크 ID로 click하여 시작하세요. 새 URL을 조립하지 말고 글자 선택·상품·매장 지역 선택 링크를 따르세요. 오래된 수집본이면 같은 조건으로 새 응답 확인 링크를 최대2번 선택해 새 주소와 HTML 생성 시각을 확인하세요. 이 경로도 기존 API 캐시·한도·권한을 사용하며 원본 재고 갱신을 보장하지 않습니다. TimeoutError는 같은 실제 링크를 한 번만 재확인하고 계속 실패하면 미확인으로 보고하세요. URL 접근 거절을 같은 주소의 직접 open으로 반복하지 마세요. Crawled today만으로 현재 재고를 단정하지 말고 응답 생성 시각을 보고하세요. 모든 후속 /browse/ 조회는 자동 HTML이며 쿼리 문자열은 필요 없습니다. JSON API·셸로 우회하거나 브라우저를 추가로 계속 실행하지 마세요. 접근 오류를 상품 없음·재고0·로그인 필요로 단정하지 마세요. 해당 오류만으로 이 환경에서 실행할 수 없다고 단정하지 마세요.' +
+  WEB_READ_RECOVERY_RULE;
 
 /** 셸 존재를 네트워크 접근 가능 여부로 오해하지 않는 실행 순서 */
 export const ROUTE_SELECTION_TEXT = `1. 연결된 MCP 도구가 있으면 search_products {"service":"daiso","query":"수납박스","pageSize":3}를 호출합니다.
 2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 페이지의 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 이 경로를 사용합니다.
 3. 웹 읽기(open/WebFetch)만 가능하면 /browse/read의 실제 링크 ID로 click합니다. 임의 검색어를 글자로 선택하고 상품의 매장 지역 선택으로 재고를 조회합니다. 이전 HTML이면 같은 조건의 새 응답 링크를 최대2번 선택하고 생성 시각을 확인하세요. TimeoutError 재확인은 한 번만 합니다. 도구에 click이 없으면 실제 링크를 열되 같은 동작을 보장하지 않습니다. 수집본이나 미확인 수량을 현재 재고0으로 바꾸지 마세요.
+${WEB_READ_RECOVERY_RULE}
 4. 위 세 수단이 없거나 모두 실패하면 실제 조회 제약과 오류를 알립니다. 셸이 있어도 설치 없는 웹 조회가 우선입니다. 터미널·셸 호출로 우회하지 않습니다. 셸 DNS 오류를 웹 GET 실패나 서버 장애로 확대하지 말고 실제로 실행하지 않은 요청의 실패를 만들지 마세요.`;
 
 /** 유사 상품의 웹 검색 이미지를 실제 상품 사진으로 오인하지 않도록 제한합니다. */
@@ -68,16 +74,21 @@ export function createAgentStartResponse(baseUrl: string): Response {
 /** 웹 읽기 도구가 후속 주소를 실제 링크로 선택할 수 있는 안내입니다. */
 function createGuideHtmlResponse(baseUrl: string): Response {
   const text = buildAgentStartText(baseUrl)
-    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8">
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+  return new Response(
+    `<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DAISO MCP 사용 안내 ${AGENT_GUIDE_VERSION}</title></head><body><main>
 <h1>DAISO MCP: 설치 없이 시작하기</h1><p>${AGENT_GUIDE_STAMP}</p>
 <nav><a href="/browse/read">웹 조회 시작</a> · <a href="/guide/latest">최신 안내 확인</a> · <a href="/prompt">상세 사용법</a></nav>
 <p>안내 응답 생성 시각: <time>${new Date().toISOString()}</time>. 원본 재고 갱신 시각이 아닙니다.</p>
-<pre style="white-space:pre-wrap">${text}</pre></main></body></html>`, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-  });
+<pre style="white-space:pre-wrap">${text}</pre></main></body></html>`,
+    {
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    },
+  );
 }
 
 /** 오래된 버전 주소도 현재 안내로 연결하며 영구 리다이렉트 캐시를 만들지 않습니다. */

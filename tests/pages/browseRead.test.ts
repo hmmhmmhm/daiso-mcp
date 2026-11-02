@@ -23,7 +23,11 @@ function fixture() {
       ? c.json({ success: false }, 503)
       : c.html('<main>실패</main>', 503),
   );
-  app.get('/browse/existing-read', (c) => c.html('<a href="/browse/read">새 세션</a><a href="/browse/read/12345678-1234-4123-8123-123456789abc">기존 세션</a>'));
+  app.get('/browse/existing-read', (c) =>
+    c.html(
+      '<a href="/browse/read">새 세션</a><a href="/browse/read/12345678-1234-4123-8123-123456789abc">기존 세션</a>',
+    ),
+  );
   registerBrowseRoutes(app);
   return { app, hits };
 }
@@ -53,8 +57,16 @@ describe('웹 수집본과 구분할 수 있는 읽기 세션 링크', () => {
     const response = await app.request(prefix + '/daiso/products/연필/pageSize/3');
     expect(response.status).toBe(200);
     const body = await response.text();
+    expect(body).toContain('아래 문장을 그대로 복사해 이 대화에 보내주세요');
+    expect(body).toContain(`https://mcp.aka.page${prefix}/daiso/products/`);
+    expect(body).toContain('웹 URL 열기 도구로 직접 열어');
+    expect(body).not.toContain('https://localhost');
     expect(hits).toHaveLength(1);
-    expect(Object.fromEntries(hits[0].searchParams)).toEqual({ q: '연필', pageSize: '3', format: 'html' });
+    expect(Object.fromEntries(hits[0].searchParams)).toEqual({
+      q: '연필',
+      pageSize: '3',
+      format: 'html',
+    });
     expect(body).toContain(`href="${prefix}/daiso/product/58450"`);
     expect(body).toContain(`href="${prefix}/compose/daiso/inventory/58450/~"`);
     expect(body).toContain('href="https://cdn.daisomall.co.kr/image.jpg"');
@@ -99,7 +111,9 @@ describe('웹 수집본과 구분할 수 있는 읽기 세션 링크', () => {
     const detail = await app.request(prefix + '/daiso/product/redirect');
     expect(detail.status).toBe(302);
     expect(detail.headers.get('Location')).toBe(prefix + '/daiso/product/58450');
-    expect(await (await app.request(detail.headers.get('Location')!)).text()).toContain('상품 58450');
+    expect(await (await app.request(detail.headers.get('Location')!)).text()).toContain(
+      '상품 58450',
+    );
   });
   it('기존 읽기 링크는 이중으로 감싸지 않는다', async () => {
     const { app } = fixture();
@@ -115,11 +129,14 @@ describe('웹 수집본과 구분할 수 있는 읽기 세션 링크', () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ success: false });
   });
-  it.each(['invalid', '00000000-0000-0000-0000-000000000000'])('잘못된 ID를 거절한다: %s', async (id) => {
-    const { app, hits } = fixture();
-    expect((await app.request(`/browse/read/${id}/daiso/products/a`)).status).toBe(400);
-    expect(hits).toHaveLength(0);
-  });
+  it.each(['invalid', '00000000-0000-0000-0000-000000000000'])(
+    '잘못된 ID를 거절한다: %s',
+    async (id) => {
+      const { app, hits } = fixture();
+      expect((await app.request(`/browse/read/${id}/daiso/products/a`)).status).toBe(400);
+      expect(hits).toHaveLength(0);
+    },
+  );
   it('중첩 read와 관리·외부 URL 경로는 전달하지 않는다', async () => {
     const { app, hits } = fixture();
     const { prefix } = await seed(app);
