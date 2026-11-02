@@ -53,6 +53,10 @@ describe('웹 수집본과 구분할 수 있는 읽기 세션 링크', () => {
     const response = await app.request(prefix + '/daiso/products/연필/pageSize/3');
     expect(response.status).toBe(200);
     const body = await response.text();
+    expect(body).toContain('아래 문장을 그대로 복사해 이 대화에 보내주세요');
+    expect(body).toContain(`https://mcp.aka.page${prefix}/daiso/products/`);
+    expect(body).toContain('웹 URL 열기 도구로 직접 열어');
+    expect(body).not.toContain('https://localhost');
     expect(hits).toHaveLength(1);
     expect(Object.fromEntries(hits[0].searchParams)).toEqual({ q: '연필', pageSize: '3', format: 'html' });
     expect(body).toContain(`href="${prefix}/daiso/product/58450"`);
