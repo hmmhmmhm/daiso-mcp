@@ -160,6 +160,21 @@ describe('읽기 접수와 실제 결과 전달', () => {
     expect(await result.text()).toBe('원본 본문 실패');
     await Promise.all(f.pending);
   });
+  it('실제 읽기 작업의 시간 제한은 자식 요청을 취소하고 늦은 완료를 덮어쓰지 않는다', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    const work = f.get(`/browse/read/${id}/daiso/products/지갑`);
+    await vi.advanceTimersByTimeAsync(1001);
+    const link = (await (await work).text()).match(/href="(\/browse\/jobs\/[^" ]+)">결과 확인/)![1];
+    await vi.advanceTimersByTimeAsync(24000);
+    await Promise.all(f.pending);
+    expect(f.signal()?.aborted).toBe(true);
+    expect((await f.get(link)).status).toBe(504);
+    f.resolve(new Response('<main>늦은 결과</main>', { headers: { 'Content-Type': 'text/html' } }));
+    await vi.advanceTimersByTimeAsync(1);
+    expect((await f.get(link)).status).toBe(504);
+    expect(f.count()).toBe(1);
+  });
   it('작업 조회의 잘못된 ID·메서드·만료를 구별하고 원본을 재호출하지 않는다', async () => {
     const f = fixture();
     expect((await f.get('/browse/jobs/bad/bad')).status).toBe(400);
