@@ -130,6 +130,18 @@ describe('접수형 조회 실패 경계', () => {
       expect(f.writes).toEqual([expect.objectContaining({ status: error ? 504 : 502 })]);
     }
   });
+  it('본문이 없는 완료는 기본 HTML 타입으로 저장한다', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    const work = f.get();
+    await vi.advanceTimersByTimeAsync(1001);
+    await work;
+    f.resolve(new Response(null));
+    await Promise.all(f.pending);
+    expect(f.writes).toEqual([
+      expect.objectContaining({ status: 200, body: '', contentType: 'text/html; charset=utf-8' }),
+    ]);
+  });
   it('빈 응답·다중 UTF8 청크를 읽고 저장소 없는 주소는503으로 표시한다', async () => {
     expect(await readBrowseText(new Response(null))).toBe('');
     const bytes = new TextEncoder().encode('지갑');

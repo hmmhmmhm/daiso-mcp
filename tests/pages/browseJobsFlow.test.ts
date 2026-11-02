@@ -142,6 +142,24 @@ describe('읽기 접수와 실제 결과 전달', () => {
       expect(await result.text()).toContain('크기 제한');
     },
   );
+  it('원본 HTML 스트림 오류는 크기 초과로 오진하지 않는다', async () => {
+    const f = fixture();
+    f.app.onError((_e, c) => c.text('원본 본문 실패', 500));
+    f.resolve(
+      new Response(
+        new ReadableStream({
+          start(c) {
+            c.error(new Error('body failed'));
+          },
+        }),
+        { headers: { 'Content-Type': 'text/html' } },
+      ),
+    );
+    const result = await f.get(`/browse/read/${id}/daiso/products/지갑`);
+    expect(result.status).toBe(500);
+    expect(await result.text()).toBe('원본 본문 실패');
+    await Promise.all(f.pending);
+  });
   it('작업 조회의 잘못된 ID·메서드·만료를 구별하고 원본을 재호출하지 않는다', async () => {
     const f = fixture();
     expect((await f.get('/browse/jobs/bad/bad')).status).toBe(400);
