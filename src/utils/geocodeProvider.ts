@@ -1,3 +1,4 @@
+import { browseReadSignal } from './browseReadSignal.js';
 /** 공급자 URL·입력을 고정하며 API 키와 조회 응답은 저장하지 않습니다. */
 import type { AppBindings } from '../api/response.js';
 import type { GeocodeProvider, GeocodeReply } from './geocodeGate.js';
@@ -156,7 +157,7 @@ export async function requestGeocodeProvider(
       method: 'GET',
       headers: geocodeHeaders(row.provider, credentials),
       redirect: 'manual',
-      signal: controller.signal,
+      signal: browseReadSignal(controller.signal),
     });
     if (controller.signal.aborted) {
       await response.body?.cancel();

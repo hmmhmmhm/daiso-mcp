@@ -1,3 +1,4 @@
+import { browseReadSignal } from './browseReadSignal.js';
 import { parseRelayQuota, type RelayQuota } from './relayQuota.js';
 import { diagnosticEvent } from './diagnostics.js';
 /**
@@ -134,7 +135,7 @@ async function requestWithTimeout<T>(
   const {
     timeout = 10000,
     totalTimeout,
-    signal: callerSignal,
+    signal: optionSignal,
     fetchImpl = fetch,
     retries = 0,
     retryDelayMs = 250,
@@ -145,6 +146,7 @@ async function requestWithTimeout<T>(
     expectedStatus: _expectedStatus,
     ...restOptions
   } = options;
+  const callerSignal = browseReadSignal(optionSignal);
   const maxAttempts = Math.max(1, Math.trunc(retries) + 1);
   const method = normalizeMethod(restOptions.method);
   const retryAllowed = canRetryMethod(method, retryMethods, retryUnsafeMethods);
