@@ -41,7 +41,13 @@ export function registerBrowseReadRoutes(app: Hono<Bindings>): void {
       .replaceAll('"', '&quot;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;');
-    const note = `<footer><p>읽기 세션: <code>${id}</code> · HTML 응답 생성: ${new Date().toISOString()}</p><p>새 주소도 기존 API 캐시·한도·권한을 사용합니다. HTML 응답 생성 시각은 원본 재고 갱신 시각이 아닙니다.</p><p><a href="${refresh}">같은 조건으로 새 응답 확인</a></p></footer>`;
+    const copyUrl = `https://mcp.aka.page${prefix}${suffix}`
+      .replaceAll('&', '&amp;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+    const recovery = `<details><summary>웹 읽기 접근 거절 시 복사 재전송</summary><p>아래 문장을 그대로 복사해 이 대화에 보내주세요. 접수나 문장 제시는 재고 조회 완료가 아닙니다.</p><pre>다음 주소를 웹 URL 열기 도구로 직접 열어 실제 결과를 확인해주세요: ${copyUrl}. 실패하면 오류 원문을 알려주세요.</pre><p>사용자가 재전송한 뒤 한 번 조회합니다. 단순 허용 문구나 URL 일부로 대체하지 마세요. TimeoutError는 같은 실제 링크를 한 번만 재확인하고 계속 실패하면 미확인으로 보고합니다.</p></details>`;
+    const note = `<footer><p>읽기 세션: <code>${id}</code> · HTML 응답 생성: ${new Date().toISOString()}</p><p>새 주소도 기존 API 캐시·한도·권한을 사용합니다. HTML 응답 생성 시각은 원본 재고 갱신 시각이 아닙니다.</p><p><a href="${refresh}">같은 조건으로 새 응답 확인</a></p>${recovery}</footer>`;
     body = body.includes('</body>') ? body.replace('</body>', note + '</body>') : body + note;
     headers.delete('Content-Length');
     headers.delete('ETag');

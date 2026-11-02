@@ -1,5 +1,8 @@
 # DAISO MCP 에이전트 지침
 
+웹 읽기 접근 거절이 계속되면 **현재 조건의 완성 URL을 넣은 복사용 문장**을 제시하고 “아래 문장을 그대로 복사해 이 대화에 보내주세요”라고 안내하세요. 사용자 재전송 뒤 한 번 조회합니다. 단순 허용 문구·URL 일부 제공·실행하지 않은 실패 보고로 대체하지 마세요. [복사 재전송 및 오류 구분](https://github.com/hmmhmmhm/daiso-mcp/blob/main/docs/web-reading-troubleshooting.md)을 따릅니다.
+
+
 ## 설치 없이 첫 조회
 
 최신 서버 안내는 [현재 버전](https://mcp.aka.page/guide/2026-10-27.3)과 [최신 연결](https://mcp.aka.page/guide/latest)에서 제공합니다. 웹 도구는 과거 리디렉션·수집본을 반환할 수 있으므로 표시된 버전과 HTML 생성 시각을 확인하세요.

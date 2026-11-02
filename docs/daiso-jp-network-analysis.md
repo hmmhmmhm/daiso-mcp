@@ -20,7 +20,7 @@
 {"name":"find_stores","arguments":{"service":"daiso_jp","keyword":"東京都渋谷区","page":1}}
 ```
 
-연결된 MCP 도구가 없는 웹 읽기 에이전트는 open/WebFetch로 아래 `/browse/` 링크를 엽니다. 모든 후속 조회도 `/browse/`를 사용하며 자동 HTML이므로 쿼리 문자열이나 format 지정은 필요 없습니다.
+아래는 실제 브라우저·일반 HTTP 클라이언트의 조회 경로입니다. 웹 읽기 에이전트는 문서의 실제 링크를 선택하고 새 URL 조합을 반복하지 마세요. 접근 거절 시 [완성 URL 복사 재전송](web-reading-troubleshooting.md)을 안내합니다. 모든 후속 조회도 `/browse/`를 사용하며 자동 HTML이므로 쿼리 문자열이나 format 지정은 필요 없습니다.
 
 - [상품 검색](https://mcp.aka.page/browse/daiso-jp/products/%E3%83%9C%E3%82%A6%E3%83%AB)
 - [상품 상세](https://mcp.aka.page/browse/daiso-jp/product/4550746075917)

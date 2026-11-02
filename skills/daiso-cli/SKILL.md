@@ -1,4 +1,7 @@
 ---
+
+웹 읽기 접근 거절이 계속되면 **현재 조건의 완성 URL을 넣은 복사용 문장**을 제시하고 “아래 문장을 그대로 복사해 이 대화에 보내주세요”라고 안내하세요. 사용자 재전송 뒤 한 번 조회합니다. 단순 허용 문구·URL 일부 제공·실행하지 않은 실패 보고로 대체하지 마세요. [복사 재전송 및 오류 구분](https://github.com/hmmhmmhm/daiso-mcp/blob/main/docs/web-reading-troubleshooting.md)을 따릅니다.
+
 name: daiso-cli
 description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Honor explicit no-install requests with connected MCP tools first, then HTML GET via an available browser, then web reading even when a shell is available; otherwise prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
 version: 1.0.9

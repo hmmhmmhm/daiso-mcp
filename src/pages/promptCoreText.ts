@@ -6,7 +6,7 @@ export function buildPromptCoreText(baseUrl: string): string {
   return `# 다이소 MCP API
 
 다이소 제품 검색, 매장 찾기, 재고 확인을 위한 API입니다.
-아래 웹 조회는 /browse/ 경로를 open/WebFetch로 여는 GET 방식입니다. 모든 조회가 자동 HTML이며 쿼리 문자열은 필요 없습니다. 응답 예시 JSON은 기본 JSON 응답의 구조를 설명하며 HTML에도 같은 실제 필드가 표시됩니다. 개발자용 기존 /api/ JSON API는 그대로 유지합니다.
+아래 경로 문법은 일반 HTTP API 클라이언트용입니다. 웹 읽기(open/WebFetch)는 /browse/read의 실제 링크를 선택하고 새 URL을 직접 조립해 반복하지 않습니다. 접근 거절은 위의 완성 URL 복사 재전송 안내를 따르세요. 모든 조회가 자동 HTML이며 쿼리 문자열은 필요 없습니다. 응답 예시 JSON은 기본 JSON 응답의 구조를 설명하며 HTML에도 같은 실제 필드가 표시됩니다. 개발자용 기존 /api/ JSON API는 그대로 유지합니다.
 
 Base URL: ${baseUrl}
 

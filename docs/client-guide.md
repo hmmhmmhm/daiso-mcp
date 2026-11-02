@@ -1,5 +1,8 @@
 # 앱 연결·CLI·Skill 가이드
 
+웹 읽기 접근 거절이 계속되면 **현재 조건의 완성 URL을 넣은 복사용 문장**을 제시하고 “아래 문장을 그대로 복사해 이 대화에 보내주세요”라고 안내하세요. 사용자 재전송 뒤 한 번 조회합니다. 단순 허용 문구·URL 일부 제공·실행하지 않은 실패 보고로 대체하지 마세요. [복사 재전송 및 오류 구분](https://github.com/hmmhmmhm/daiso-mcp/blob/main/docs/web-reading-troubleshooting.md)을 따릅니다.
+
+
 실제 브라우저가 있으면 /browse/ HTML을 엽니다. 웹 읽기(open/WebFetch)만 있으면 /browse/read에서 실제 링크 ID로 click합니다. 이전 HTML은 같은 조건의 새 응답 링크를 최대2번 확인하고 TimeoutError 재확인은 한 번만 합니다. 응답 생성 시각과 원본 재고 갱신은 구분하며 새 브라우저를 반복 생성하지 마세요.
 
 웹 도구의 `Crawled: today`만으로 현재 재고라고 단정하지 마세요. 응답의 HTML 생성 시각과 실제 수량을 확인하고, 수량이 null이면 품절이 아닌 미확인으로 보고합니다.
