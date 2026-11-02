@@ -51,7 +51,12 @@ describe('웹 읽기 저장 결과와 접수 실험', () => {
     const body = await first.text();
     expect(body).toContain('pending');
     expect(body).not.toContain('quantity');
-    expect(body).toContain('href="/run/staged/result5"');
+    expect(body).toMatch(/href="https:\/\/lab.example\/run\/staged\/result5\?attempt=/);
+    const next = body.match(/href="([^"]+)">결과 확인/)![1];
+    const pendingBody = await (await get(new URL(next).pathname + new URL(next).search)).text();
+    expect(pendingBody).toContain('pending');
+    expect(pendingBody.match(/href="([^"]+)">결과 확인/)![1]).not.toBe(next);
+    expect(body).toContain('resultUrl');
     expect(await (await get('/run/staged/result5')).text()).toContain('pending');
     await vi.advanceTimersByTimeAsync(5000);
     await env.PROBE_LOG.get('job-staged').alarm();
