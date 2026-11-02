@@ -80,6 +80,7 @@ describe('읽기 접수와 실제 결과 전달', () => {
     expect(body).toContain('pending');
     expect(body).not.toContain('quantity');
     expect(f.address()).toBe('192.0.2.1');
+    expect(f.pending.length).toBeGreaterThan(0);
     controller.abort();
     expect(f.signal()?.aborted).toBe(false);
     const link = body.match(/href="(\/browse\/jobs\/[^" ]+)">결과 확인/)![1];
@@ -101,6 +102,7 @@ describe('읽기 접수와 실제 결과 전달', () => {
     expect(result.status).toBe(502);
     expect(await result.text()).toContain('원본 요청 거절');
     expect(result.headers.get('set-cookie')).toBeNull();
+    expect(result.headers.get('Retry-After')).toBe('12');
     expect(result.headers.get('cache-control')).toBe('no-store');
     expect(JSON.stringify([...f.values])).not.toContain('do-not-store');
     expect(f.count()).toBe(1);

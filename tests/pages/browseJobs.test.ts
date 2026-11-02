@@ -68,6 +68,19 @@ describe('느린 읽기 작업의 저장 경계', () => {
       vi.useRealTimers();
     }
   });
+  it('알람의 오래된 pending 관측으로 정상 결과를 덮어쓰지 않는다', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture();
+      await f.start();
+      const old = await (await f.get()).json();
+      await f.complete({ status: 200, body: '정상 완료', contentType: 'text/html' });
+      await vi.advanceTimersByTimeAsync(25001);
+      f.storage.get.mockResolvedValueOnce(old);
+      await f.job.alarm();
+      expect(await (await f.get()).json()).toMatchObject({ response: { body: '정상 완료' } });
+    } finally { vi.useRealTimers(); }
+  });
   it('잘못된 완료·과대한 본문·미생성 완료·지원하지 않는 요청을 거절한다', async () => {
     const { job, complete, start } = fixture();
     expect((await complete({ status: 200, body: 'ok', contentType: 'text/html' })).status).toBe(
