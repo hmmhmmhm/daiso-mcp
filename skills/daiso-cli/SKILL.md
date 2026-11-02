@@ -1,7 +1,5 @@
 ---
 
-웹 읽기 접근 거절이 계속되면 **현재 조건의 완성 URL을 넣은 복사용 문장**을 제시하고 “아래 문장을 그대로 복사해 이 대화에 보내주세요”라고 안내하세요. 사용자 재전송 뒤 한 번 조회합니다. 단순 허용 문구·URL 일부 제공·실행하지 않은 실패 보고로 대체하지 마세요. [복사 재전송 및 오류 구분](https://github.com/hmmhmmhm/daiso-mcp/blob/main/docs/web-reading-troubleshooting.md)을 따릅니다.
-
 name: daiso-cli
 description: Use this when a user wants to search Daiso/다이소, compare product price candidates, nearby restaurants/cafes/음식점/카페, convenience stores/편의점, marts, Olive Young/올리브영, Megabox/메가박스, Lotte Cinema/롯데시네마, or CGV data through the Daiso project. Honor explicit no-install requests with connected MCP tools first, then HTML GET via an available browser, then web reading even when a shell is available; otherwise prefer the daiso CLI for direct execution, use the MCP endpoint when the host app supports remote MCP, and choose commands for products, stores, inventory/재고, compare, places, movies, showtimes, seats, health checks, and raw JSON output.
 version: 1.0.9
@@ -17,6 +15,8 @@ metadata:
           - daiso
     homepage: https://github.com/hmmhmmhm/daiso-mcp
 ---
+웹 읽기 접근 거절이 계속되면 **현재 조건의 완성 URL을 넣은 복사용 문장**을 제시하고 “아래 문장을 그대로 복사해 이 대화에 보내주세요”라고 안내하세요. 사용자 재전송 뒤 한 번 조회합니다. 단순 허용 문구·URL 일부 제공·실행하지 않은 실패 보고로 대체하지 마세요. [복사 재전송 및 오류 구분](https://github.com/hmmhmmhm/daiso-mcp/blob/main/docs/web-reading-troubleshooting.md)을 따릅니다.
+
 
 # Daiso CLI
 
@@ -24,7 +24,7 @@ Use this skill to operate the Daiso MCP project through `npx daiso` and the publ
 
 ## 설치 없이 첫 조회
 
-최신 서버 안내는 [현재 버전](https://mcp.aka.page/guide/2026-10-27.3)과 [최신 연결](https://mcp.aka.page/guide/latest)에서 제공합니다. 웹 도구는 과거 리디렉션·수집본을 반환할 수 있으므로 표시된 버전과 HTML 생성 시각을 확인하세요.
+최신 서버 안내는 [현재 버전](https://mcp.aka.page/guide/2026-11-02.1)과 [최신 연결](https://mcp.aka.page/guide/latest)에서 제공합니다. 웹 도구는 과거 리디렉션·수집본을 반환할 수 있으므로 표시된 버전과 HTML 생성 시각을 확인하세요.
 
 1. 연결된 MCP 도구가 있으면 `search_products`에 `{"service":"daiso","query":"수납박스","pageSize":3}`를 전달합니다.
 2. 실제 브라우저 도구가 있으면 /browse/ HTML GET 주소를 열고 실제 상품·매장·재고를 읽습니다. Work의 내장 브라우저도 사용 가능합니다.
