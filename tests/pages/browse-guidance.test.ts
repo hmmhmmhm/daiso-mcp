@@ -43,7 +43,7 @@ it('완전한 웹 예시 URL은 공백 없이 열리고 등록된 조회로 해�
     if (!url) continue;
     expect(url).not.toMatch(/\s/);
     const source = new URL(url);
-    if (source.pathname === '/browse/read') {
+    if (['/browse/read', '/browse/quick'].includes(source.pathname)) {
       const { default: app } = await import('../../src/index.js');
       const response = await app.request(url);
       expect(response.status).toBe(200);

@@ -76,6 +76,23 @@ describe('첫 조회의 실제 링크 왕복 축소', () => {
     expect(partial).toContain('%EC%97%B0/pageSize/3');
     expect(hits).toHaveLength(0);
   });
+  it('상품과 지역의 빠른 선택을 폭넓게 제공하고 원문과 경로가 일치한다', async () => {
+    const { app, hits } = fixture();
+    for (const mode of ['products', 'stores']) {
+      const body = await (await app.request(`/browse/compose/daiso/${mode}/~`)).text();
+      const links = [...body.matchAll(/href="([^" ]+)">([^<]+)<\/a>/g)].filter((x) =>
+        x[1].startsWith(`/browse/daiso/${mode}/`),
+      );
+      expect(links.length).toBeGreaterThanOrEqual(24);
+      for (const [, href, label] of links) {
+        expect(decodeURIComponent(href.split('/')[4])).toBe(label);
+      }
+    }
+    const body = await (await app.request('/browse/compose/daiso/stores/외딴동네')).text();
+    expect(body).not.toContain('빠른 지역 선택');
+    expect(body).toContain(encodeURIComponent('외딴동네'));
+    expect(hits).toHaveLength(0);
+  });
   it('기존 읽기 시작과 매장 입력에서도 빠른 선택을 제공하고 GET만 허용한다', async () => {
     const { app, hits } = fixture();
     const body = await (await app.request('/browse/read')).text();
