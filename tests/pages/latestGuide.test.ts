@@ -4,7 +4,7 @@ import app from '../../src/index.js';
 import { buildDiscoveryAssets } from '../../src/pages/discovery.js';
 import { apiResultHtml } from '../../src/pages/apiResult.js';
 
-const version = '2026-11-02.2';
+const version = '2026-11-02.3';
 describe('최신 안내 경로와 원본 이미지', () => {
   it.each(['/guide/latest', '/guide/2026-10-21.2', '/guide/unknown'])(
     '%s는 캐시 없이 현재 버전으로 연결한다',
@@ -21,7 +21,7 @@ describe('최신 안내 경로와 원본 이미지', () => {
     expect(r.status).toBe(200);
     expect(r.headers.get('Cache-Control')).toBe('no-store');
     expect(text).toContain('안내 버전: ' + version);
-    expect(text).toContain('/browse/read');
+    expect(text).toContain('/browse/quick');
     expect(text).toContain('image_query');
     expect(text).toContain('이미지 검색');
   });
@@ -29,7 +29,7 @@ describe('최신 안내 경로와 원본 이미지', () => {
     const response = await app.request('/guide/' + version);
     const text = await response.text();
     expect(response.headers.get('Content-Type')).toContain('text/html');
-    expect(text).toContain('<a href="/browse/read">웹 조회 시작</a>');
+    expect(text).toContain('<a href="/browse/quick">웹 조회 시작</a>');
     expect(text).toContain('<a href="/guide/latest">최신 안내 확인</a>');
     expect(text).toContain('응답 생성 시각');
     expect(text).toContain('<html lang="ko">');
@@ -52,7 +52,7 @@ describe('최신 안내 경로와 원본 이미지', () => {
     const a = buildDiscoveryAssets({ services: [], tools: [] });
     for (const key of ['discovery.html', 'robots.txt', 'sitemap.xml'])
       expect(a[key]).toContain('/guide/' + version);
-    expect(a['discovery.html']).toContain('/browse/read');
+    expect(a['discovery.html']).toContain('/browse/quick');
     expect(a['_headers']).toContain('Cache-Control: no-store');
   });
   it('HTML 후속 링크와 원본 Markdown은 현재 버전을 사용하고 JSON 캐시는 유지한다', async () => {

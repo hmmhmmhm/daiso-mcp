@@ -15,7 +15,7 @@ export function registerBrowseReadRoutes(app: Hono<Bindings>): void {
       return c.text('읽기 세션 경로가 올바르지 않습니다.', 400);
     const prefix = `/browse/read/${id}`;
     const scoped = (path: string) =>
-      path === '/browse/read' || path.startsWith('/browse/read/')
+      path === '/browse/quick' || path === '/browse/read' || path.startsWith('/browse/read/')
         ? path
         : prefix + path.slice('/browse'.length);
     const target = new URL(c.req.url);
@@ -88,6 +88,7 @@ export function registerBrowseReadRoutes(app: Hono<Bindings>): void {
       ? withBrowseJob(c, operation, () => controller.abort())
       : operation();
   };
+  app.all('/browse/quick', (c) => forward(c, crypto.randomUUID(), ''));
   app.all('/browse/read', (c) => forward(c, crypto.randomUUID(), ''));
   const existing = (c: Context<Bindings>) => {
     const id = c.req.path.split('/')[3];

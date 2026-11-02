@@ -22,7 +22,7 @@ describe('에이전트 시작 안내', () => {
     expect(text).toContain('initialize');
     expect(text).toContain('REST GET');
     expect(text).toContain('MCP 프로토콜 호출이 아닙니다');
-    expect(text).toContain('/browse/read');
+    expect(text).toContain('/browse/quick');
     expect(text).toContain('https://example.com/prompt');
     expect(text).toContain('전체 도구 목록이나 OpenAPI를 먼저 읽을 필요는 없습니다');
     expect(text.split('\n').length).toBeLessThan(45);

@@ -1,6 +1,8 @@
 # 웹에서 다이소 MCP 발견하기
+빠른 조회는 요청과 일치하는 검색어·지역을 **통째로 선택**합니다. 목록에 없으면 기존 글자 입력을 쓰고 다른 단어로 바꾸지 않습니다. 재고가 목적이면 상품 카드의 **매장 지역 선택**을 바로 열고, 상세 정보가 필요할 때만 상품 상세를 조회하세요. 입력 중 원본 API를 호출하지 않습니다.
 
-실제 브라우저가 있으면 /browse/ HTML을 엽니다. 웹 읽기(open/WebFetch)만 있으면 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크 ID로 click합니다. 이전 HTML은 같은 조건의 새 응답 링크를 최대2번 확인하고 TimeoutError 재확인은 한 번만 합니다. HTML 생성 시각은 원본 재고 갱신 시각이 아닙니다.
+
+실제 브라우저가 있으면 /browse/ HTML을 엽니다. 웹 읽기(open/WebFetch)만 있으면 [웹 조회 시작](https://mcp.aka.page/browse/quick)의 실제 링크 ID로 click합니다. 이전 HTML은 같은 조건의 새 응답 링크를 최대2번 확인하고 TimeoutError 재확인은 한 번만 합니다. HTML 생성 시각은 원본 재고 갱신 시각이 아닙니다.
 
 웹 도구의 `Crawled: today`만으로 현재 재고라고 단정하지 마세요. 응답의 HTML 생성 시각과 실제 수량을 확인하고, 수량이 null이면 품절이 아닌 미확인으로 보고합니다.
 
@@ -41,7 +43,7 @@ OpenAI 검색·사용자 요청·학습 봇의 역할과 공개 IP는 [공식 �
 
 ## 웹 읽기만 가능한 채팅 에이전트
 
-샌드박스나 셸 없이 웹 읽기만 가능하면 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크 ID를 먼저 click합니다. 첫 화면과 llms.txt도 이 시작점을 안내합니다. click이 없는 도구의 동일 동작은 보장하지 않습니다. 결과는 서버에서 생성하므로 JavaScript 실행이 필요 없습니다.
+샌드박스나 셸 없이 웹 읽기만 가능하면 [웹 조회 시작](https://mcp.aka.page/browse/quick)의 실제 링크 ID를 먼저 click합니다. 첫 화면과 llms.txt도 이 시작점을 안내합니다. click이 없는 도구의 동일 동작은 보장하지 않습니다. 결과는 서버에서 생성하므로 JavaScript 실행이 필요 없습니다.
 
 공개 `/browse/` GET 경로는 같은 실제 조회 결과를 항상 HTML로 제공합니다. 쿼리 문자열은 필요 없습니다. 기존 `/api/`의 JSON과 구형 HTML 주소는 하위호환으로 유지합니다. 일반 API 클라이언트용 기본 경로 예시: `/browse/daiso/stores/%EA%B0%95%EB%82%A8`, `/browse/daiso/inventory/%EC%8B%A4%EC%A0%9C%EC%83%81%ED%92%88ID/%ED%99%95%EC%9D%B8%ED%95%9C%EB%A7%A4%EC%9E%A5%EB%AA%85/lat/%ED%99%95%EC%9D%B8%ED%95%9C%EC%9C%84%EB%8F%84/lng/%ED%99%95%EC%9D%B8%ED%95%9C%EA%B2%BD%EB%8F%84`. 상품 목록의 상세 링크도 HTML로 연결합니다. 다른 서비스의 필수 파라미터는 `/prompt`에서 확인합니다.
 

@@ -67,8 +67,8 @@ describe('GET HTML 결과', () => {
   });
   it('셸 없는 에이전트에게 HTML GET을 안내하며 txt charset을 명시한다', async () => {
     const assets = buildDiscoveryAssets({ services: [], tools: [] });
-    expect(assets['discovery.html']).toContain('/browse/read');
-    expect(assets['llms.txt']).toContain('/browse/read');
+    expect(assets['discovery.html']).toContain('/browse/quick');
+    expect(assets['llms.txt']).toContain('/browse/quick');
     const { default: app } = await import('../../src/index.js');
     const entry = await app.request('/browse/read');
     expect(entry.status).toBe(200);
