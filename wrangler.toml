@@ -50,3 +50,11 @@ class_name = "GeocodeGateway"
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["GeocodeGateway"]
+
+[[durable_objects.bindings]]
+name = "BROWSE_READ_JOBS"
+class_name = "BrowseReadJob"
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["BrowseReadJob"]

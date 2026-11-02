@@ -1,3 +1,4 @@
+export { BrowseReadJob } from './durableObjects/browseReadJob.js';
 import { registerBrowseRoutes } from './pages/browse.js';
 import { applyCompactTools } from './core/compact/server.js';
 import { COMPACT_CATALOG, PUBLIC_TOOL_NAMES } from './core/compact/catalog.js';
@@ -81,12 +82,17 @@ const createRegistry = (bindings?: AppBindings) => {
     createDaisoService,
     () => createDaisoJpService(japanProductTransportFromBindings(bindings)),
     () =>
-      createGs25Service({ ...convenienceTransportFromBindings(bindings),
+      createGs25Service({
+        ...convenienceTransportFromBindings(bindings),
         ...geocodeBindings(bindings),
         zyteApiKey: bindings?.ZYTE_API_KEY,
         apiKey: bindings?.GS25_API_KEY,
       }),
-    () => createSevenElevenService({ ...convenienceTransportFromBindings(bindings), zyteApiKey: bindings?.ZYTE_API_KEY }),
+    () =>
+      createSevenElevenService({
+        ...convenienceTransportFromBindings(bindings),
+        zyteApiKey: bindings?.ZYTE_API_KEY,
+      }),
     () => createCompareService(convenienceTransportFromBindings(bindings)),
     () =>
       createFeedbackService({
@@ -104,7 +110,8 @@ const createRegistry = (bindings?: AppBindings) => {
         ...geocodeBindings(bindings),
       }),
     () =>
-      createCuService({ ...convenienceTransportFromBindings(bindings),
+      createCuService({
+        ...convenienceTransportFromBindings(bindings),
         zyteApiKey: bindings?.ZYTE_API_KEY,
         ...geocodeBindings(bindings),
       }),
@@ -149,7 +156,14 @@ const createMcpServer = (bindings?: AppBindings) => {
 
 export function buildRootInfo() {
   const registry = createRegistry();
-  const services = registry.getServicesInfo().map(service => ({ ...service, tools: COMPACT_CATALOG.filter(group => group.routes.some(route => service.tools.includes(route.legacy))).map(group => group.name) }));
+  const services = registry
+    .getServicesInfo()
+    .map((service) => ({
+      ...service,
+      tools: COMPACT_CATALOG.filter((group) =>
+        group.routes.some((route) => service.tools.includes(route.legacy)),
+      ).map((group) => group.name),
+    }));
   const allTools = [...PUBLIC_TOOL_NAMES];
 
   return {
@@ -179,7 +193,9 @@ export function buildRootInfo() {
 }
 const ROOT_INFO_JSON = JSON.stringify(buildRootInfo());
 const ROOT_INFO_BODY = new TextEncoder().encode(ROOT_INFO_JSON);
-const ROOT_HTML_BODY = new TextEncoder().encode(buildDiscoveryAssets(buildRootInfo())['discovery.html']);
+const ROOT_HTML_BODY = new TextEncoder().encode(
+  buildDiscoveryAssets(buildRootInfo())['discovery.html'],
+);
 const ROOT_INFO_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
   'Content-Length': String(ROOT_INFO_BODY.byteLength),
@@ -199,9 +215,13 @@ function createRootInfoResponse(request: Request): Response {
   const body = json ? ROOT_INFO_BODY : ROOT_HTML_BODY;
   return new Response(request.method === 'HEAD' ? null : body, {
     status: 200,
-    headers: { ...ROOT_INFO_HEADERS,
+    headers: {
+      ...ROOT_INFO_HEADERS,
       'Content-Type': json ? 'application/json; charset=utf-8' : 'text/html; charset=utf-8',
-      'Content-Length': String(body.byteLength), 'Cache-Control': json ? ROOT_INFO_HEADERS['Cache-Control'] : 'no-store', Vary: 'Accept' },
+      'Content-Length': String(body.byteLength),
+      'Cache-Control': json ? ROOT_INFO_HEADERS['Cache-Control'] : 'no-store',
+      Vary: 'Accept',
+    },
   });
 }
 /**
@@ -366,7 +386,9 @@ registerServiceRoutes(app);
 registerBrowseRoutes(app);
 
 // 설치 없는 첫 조회 안내
-app.get('/guide/:version', (c) => createVersionedGuideResponse(new URL(c.req.url).origin, c.req.param('version')));
+app.get('/guide/:version', (c) =>
+  createVersionedGuideResponse(new URL(c.req.url).origin, c.req.param('version')),
+);
 app.get('/llms.txt', (c) => createAgentStartResponse(new URL(c.req.url).origin));
 
 // 프롬프트 페이지 (MCP 미지원 에이전트용)
@@ -402,7 +424,8 @@ app.get('/privacy', (c) => {
 // GET API 엔드포인트 (MCP 미지원 에이전트용)
 
 app.get('/api/actions/query', async (c) => {
-  if (['lottemartFindStores', 'lottemartSearchProducts'].includes(c.req.query('action') || '')) return handleLotteMartFindStores(c);
+  if (['lottemartFindStores', 'lottemartSearchProducts'].includes(c.req.query('action') || ''))
+    return handleLotteMartFindStores(c);
   try {
     const targetUrl = buildActionQueryTargetUrl(c.req.url);
     const headers = new Headers(c.req.raw.headers);
