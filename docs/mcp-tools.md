@@ -17,7 +17,7 @@
 
 ## 호출 예시
 
-아래 예시는 이미 연결된 MCP 도구의 호출 계약입니다. 웹 읽기만 가능한 환경에서는 설치·연결 설정 없이 [첫 HTML 조회](https://mcp.aka.page/browse/daiso/products/%EC%88%98%EB%82%A9%EB%B0%95%EC%8A%A4/pageSize/3)를 open/WebFetch로 엽니다. 모든 후속 조회는 `/browse/` 경로이며 쿼리 문자열이나 format 지정은 필요 없습니다.
+아래 예시는 이미 연결된 MCP 도구의 호출 계약입니다. 웹 읽기만 가능한 환경에서는 설치·연결 설정 없이 [웹 조회 시작](https://mcp.aka.page/browse/read)의 실제 링크를 선택합니다. 접근 거절이 계속되면 [완성 URL 복사 재전송](web-reading-troubleshooting.md)을 안내합니다. 모든 후속 조회는 `/browse/` 경로이며 쿼리 문자열이나 format 지정은 필요 없습니다.
 
 상품 검색: `search_products {"service":"daiso","query":"수납박스","pageSize":3}`
 
