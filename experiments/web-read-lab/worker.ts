@@ -1,4 +1,5 @@
 /** 운영 API와 분리된 고정 데이터 웹 읽기 실험. 개인정보는 기록하지 않습니다. */
+import { alarmJob, jobResponse } from './jobs.js';
 import { renderComposer } from './composer.js';
 type Event = {
   run: string;
@@ -35,6 +36,9 @@ const CASES = [
   'delay3',
   'delay5',
   'delay15',
+  'cold5',
+  'start5',
+  'result5',
   'large64',
   'large256',
   'cache',
@@ -47,6 +51,8 @@ const RUN = /^[a-zA-Z0-9-]{1,48}$/;
 export class ProbeLog {
   constructor(private state: { storage: Storage }) {}
   async fetch(request: Request): Promise<Response> {
+    const mode = new URL(request.url).pathname.slice(1);
+    if (['cold5', 'start5', 'result5'].includes(mode)) return jobResponse(this.state.storage, mode);
     if (request.method === 'POST') {
       const event = (await request.json()) as Event;
       await this.state.storage.transaction(async (tx) => {
@@ -67,7 +73,8 @@ export class ProbeLog {
     );
   }
   async alarm(): Promise<void> {
-    await this.state.storage.deleteAll();
+    if (await this.state.storage.get('job')) await alarmJob(this.state.storage);
+    else await this.state.storage.deleteAll();
   }
 }
 
@@ -155,7 +162,16 @@ export default {
       `<p>가상 실험 데이터, 실제 상품 재고가 아닙니다.</p><pre>${JSON.stringify(data, null, 2)}</pre>`,
     );
     let status = 200;
-    if (isComposer) {
+    if (['cold5', 'start5', 'result5'].includes(test)) {
+      const job = env.PROBE_LOG.get(env.PROBE_LOG.idFromName(`job-${run}`));
+      const result = await job.fetch(new Request(`https://job/${test}`));
+      const state = await result.json();
+      const { quantity: _quantity, ...metadata } = data;
+      status = result.status;
+      body = html(
+        `<p>가상 작업 실험. pending은 조회 완료나 재고가 아닙니다.</p><pre>${JSON.stringify({ ...metadata, job: state }, null, 2)}</pre><p><a href="/run/${run}/result5">결과 확인</a></p><p>결과가 pending이면 잠시 후 같은 실제 링크를 한 번만 다시 확인하세요.</p>`,
+      );
+    } else if (isComposer) {
       headers.set('X-Robots-Tag', 'noindex');
       body = html(composer!);
     } else if (test === 'index') {
