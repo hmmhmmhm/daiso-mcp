@@ -53,6 +53,11 @@ export const ACTION_QUERY_DEFINITIONS: ActionQueryDefinition[] = [
     summary: '올리브영 재고 조회',
     targetPath: '/api/oliveyoung/inventory',
   },
+  {
+    action: 'oliveyoungGetTodayDeals',
+    summary: '올리브영 오특(오늘의 특가) 조회',
+    targetPath: '/api/oliveyoung/today-deals',
+  },
   { action: 'cuFindStores', summary: 'CU 매장 검색', targetPath: '/api/cu/stores' },
   { action: 'cuCheckInventory', summary: 'CU 재고 조회', targetPath: '/api/cu/inventory' },
   { action: 'emart24FindStores', summary: '이마트24 매장 검색', targetPath: '/api/emart24/stores' },

@@ -31,12 +31,23 @@ export interface OliveyoungTodayDeal {
   productUrl: string;
 }
 
+/** coming soon 배너의 다음 오특 예고 상품입니다. 가격과 할인율은 원본에 없습니다. */
+export interface OliveyoungUpcomingDeal {
+  /** 썸네일 파일명에서 읽은 상품번호입니다. 파일명 형식이 다르면 null입니다. */
+  goodsNo: string | null;
+  name: string;
+  imageUrl: string;
+  productUrl: string | null;
+}
+
 export interface OliveyoungTodayDeals {
   date: string;
   brandDeals: OliveyoungTodayDeal[];
   todayDeals: OliveyoungTodayDeal[];
   /** 최대 페이지까지 모두 가득 차서 이후 상품이 남아 있을 수 있습니다. */
   truncated: boolean;
+  /** 다음 오특 예고입니다. 배너 구조를 확인하지 못하면 null(미확인)입니다. */
+  upcomingDeals: OliveyoungUpcomingDeal[] | null;
 }
 
 // 목록 조각은 한 번에 10개씩 내려옵니다. 이보다 적으면 마지막 페이지입니다.
@@ -142,6 +153,44 @@ export function parseOliveyoungTodayDeals(html: string, section?: string): Olive
   return deals;
 }
 
+/**
+ * 오특 페이지의 coming soon 배너에서 다음 오특 예고 상품을 읽습니다.
+ *
+ * 배너는 화면에서 숨겨져 있어도 페이지 HTML에 들어 있습니다. 2026-10-26 21:17 배너 31개가
+ * 10-27 오특 31개와 상품번호까지 일치했습니다. 썸네일 파일명은 상품번호 13자리로 시작합니다.
+ *
+ * @param html - 오특 페이지
+ * @returns 예고 상품 목록. 배너가 없거나 항목 구조가 바뀌면 일부 대신 null
+ */
+export function parseOliveyoungUpcomingDeals(html: string): OliveyoungUpcomingDeal[] | null {
+  const start = html.indexOf('<div class="comingSoonBan"');
+  if (start < 0) return null;
+  const banner = html.slice(start);
+  const items = banner.split('<div class="slideItem" tabindex="1">').slice(1);
+  if (items.length !== (banner.match(/class="slideItem\b/g) ?? []).length) return null;
+  const deals: OliveyoungUpcomingDeal[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    const name = text(item.match(/<span>([\s\S]*?)<\/span>/)?.[1]);
+    const imageUrl = decode(item.match(/background-image:\s*url\(['"]?([^'")]+)/)?.[1] ?? '');
+    if (!name || !imageUrl) return null;
+    const goodsNo = imageUrl.match(/\/([A-Z]\d{12})\d*[a-z]*\.(?:jpe?g|png|gif|webp)\b/i)?.[1];
+    const key = goodsNo ?? name;
+    // 슬라이드 배너라 같은 상품이 반복될 수 있습니다.
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deals.push({
+      goodsNo: goodsNo ?? null,
+      name,
+      imageUrl,
+      productUrl: goodsNo
+        ? `${OLIVEYOUNG_API.BASE_URL}/store/goods/getGoodsDetail.do?goodsNo=${goodsNo}`
+        : null,
+    });
+  }
+  return deals;
+}
+
 function htmlOf(response: { data?: { html?: string } }): string {
   const html = response.data?.html;
   if (typeof html !== 'string') invalid();
@@ -174,8 +223,8 @@ export async function fetchOliveyoungTodayDeals(
     }
     return requestOliveyoung(path, body, { ...options, timeout });
   };
-  const page = await request(OLIVEYOUNG_API.TODAY_DEALS_PAGE_PATH, { date });
-  const brandDeals = parseOliveyoungTodayDeals(htmlOf(page), '스페셜');
+  const page = htmlOf(await request(OLIVEYOUNG_API.TODAY_DEALS_PAGE_PATH, { date }));
+  const brandDeals = parseOliveyoungTodayDeals(page, '스페셜');
   if (!brandDeals.length) invalid();
   const todayDeals: OliveyoungTodayDeal[] = [];
   const seen = new Set<string>();
@@ -196,5 +245,7 @@ export async function fetchOliveyoungTodayDeals(
     brandDeals,
     todayDeals,
     truncated,
+    // 예고는 보조 정보라 배너를 읽지 못해도 오특 조회는 실패시키지 않습니다.
+    upcomingDeals: parseOliveyoungUpcomingDeals(page),
   };
 }

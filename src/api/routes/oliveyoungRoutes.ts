@@ -12,6 +12,8 @@ import {
   handleOliveyoungSearchProducts,
 } from '../handlers.js';
 import type { AppBindings } from '../response.js';
+import { handleOliveyoungGetTodayDeals } from '../oliveyoungTodayDealsHandler.js';
+import { toKstDate } from '../../services/oliveyoung/todayDeals.js';
 
 export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): void {
   app.get('/api/oliveyoung/products', async (c) =>
@@ -54,5 +56,19 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
           },
           () => handleOliveyoungCheckInventory(c),
         ),
+  );
+
+  // 오특은 한국 자정에 바뀌므로 날짜를 캐시 키에 넣어 자정 전후 응답이 섞이지 않게 합니다.
+  app.get('/api/oliveyoung/today-deals', async (c) =>
+    withEdgeCache(
+      c.req.url,
+      {
+        bypassCache: await isFreshOperationalRequest(c),
+        ttlSeconds: 60 * 5,
+        staleWhileRevalidateSeconds: 60,
+        keyPrefix: `oliveyoung-today-deals-v1-${toKstDate(new Date())}`,
+      },
+      () => handleOliveyoungGetTodayDeals(c),
+    ),
   );
 }

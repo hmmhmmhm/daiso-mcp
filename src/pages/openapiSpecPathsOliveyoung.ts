@@ -265,4 +265,47 @@ export const OPENAPI_PATHS_OLIVEYOUNG = {
             },
           },
         },
+      },
+      '/api/oliveyoung/today-deals': {
+        get: {
+          operationId: 'oliveyoungGetTodayDeals',
+          summary: '올리브영 오특(오늘의 특가) 조회',
+          description:
+            '올리브영 오특 화면의 오늘의 브랜드 특가, 오늘의 특가 전체 목록, 다음 오특 예고(가격 없음)를 한국 날짜 기준으로 조회합니다. 실시간 매장 재고가 아니므로 재고는 상품명으로 재고 조회를 사용하세요.',
+          parameters: [
+            {
+              name: 'timeoutMs',
+              in: 'query',
+              required: false,
+              description: '페이지 여러 개를 합친 전체 제한 시간(ms, 기본값: 무료 릴레이 60000 / 직접 15000)',
+              schema: { type: 'integer', minimum: 1 },
+            },
+          ],
+          responses: {
+            '200': {
+              description: '조회 성공',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/OliveyoungTodayDealsResponse' },
+                },
+              },
+            },
+            '502': {
+              description: '올리브영 오특 원본 형식 변경',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            '500': {
+              description: '올리브영 오특 조회 실패',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
       },};
