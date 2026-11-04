@@ -3,10 +3,12 @@ const mocks = vi.hoisted(() => ({
   browser: vi.fn(() => 'browser'),
   http: vi.fn(() => 'http'),
   launch: vi.fn(),
+  safari: vi.fn(() => 'safari'),
 }));
 vi.mock('../../scripts/relay/lifecycle.js', () => ({ createBrowserLifecycle: mocks.browser }));
 vi.mock('../../scripts/relay/http-lifecycle.js', () => ({ createHttpLifecycle: mocks.http }));
 vi.mock('../../scripts/relay/supervisor.js', () => ({ launchGuardedBrowser: mocks.launch }));
+vi.mock('../../scripts/relay/safari-lifecycle.js', () => ({ createSafariLifecycle: mocks.safari }));
 import { createTransportLifecycle } from '../../scripts/relay/transport-lifecycle.js';
 it('defaults to the existing browser lifecycle and forwards observer/ownership path', async () => {
   const observer = vi.fn();
@@ -31,4 +33,13 @@ it('브라우저 재시도에 별도 원본 할당량 함수를 전달한다', a
   const quota = vi.fn().mockResolvedValue(true);
   await createTransportLifecycle('browser', '/state', undefined, quota);
   expect(mocks.browser).toHaveBeenLastCalledWith(expect.any(Function), undefined, quota);
+});
+
+it('Safari 모드에서 Chrome 모듈을 실행하지 않는다', async () => {
+  mocks.browser.mockClear();
+  mocks.launch.mockClear();
+  expect(await createTransportLifecycle('safari', '/state')).toBe('safari');
+  expect(mocks.safari).toHaveBeenCalledWith('/state');
+  expect(mocks.browser).not.toHaveBeenCalled();
+  expect(mocks.launch).not.toHaveBeenCalled();
 });

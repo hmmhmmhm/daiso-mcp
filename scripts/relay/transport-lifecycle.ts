@@ -6,6 +6,10 @@ export async function createTransportLifecycle(
   onEvent?: (reason: string) => void | Promise<void>,
   takeRetryQuota?: () => Promise<boolean>,
 ) {
+  if (mode === 'safari') {
+    const { createSafariLifecycle } = await import('./safari-lifecycle.js');
+    return createSafariLifecycle(stateDir);
+  }
   if (mode === 'http') {
     const { createHttpLifecycle } = await import('./http-lifecycle.js');
     return createHttpLifecycle();

@@ -8,6 +8,16 @@
 - 브라우저 실험은 소유 세션 1개만 사용하며 성공·실패·중단 모두 finally에서 탭과 세션을 회수합니다. OY 운영 브라우저 외에 추가 본체를 계속 생성하지 않습니다. 종료 후 세션 목록과 프로세스 수를 확인합니다.
 - 공용 Codex `cua_node`나 사용자 브라우저를 임의 종료하지 않습니다. 공유 보조 프로세스가 누적되면 신규 브라우저 작업을 멈추고 상태를 보고합니다. 단일 RSS나 swap 값만으로 누수로 단정하지 않습니다.
 
+## 이 Mac의 수동 브라우저
+
+- 이 Mac의 수동 웹 검증과 ChatGPT 실험은 확장·별도 MCP 서버 없이 `safari-minimized` 스킬을 기본으로 사용합니다. 스킬의 고정 창 ID, 단일 작업 잠금, 실제 결과 대기와 정리를 따릅니다. 올리브영 운영 중계와 세븐일레븐 예외 복구도 Safari 전송을 사용하며 Chrome으로 자동 대체하지 않습니다.
+- `safari-live`의 사용자 탭 자동 채택과 keepalive 탭은 끕니다. 작업 페이지는 모든 브라우저를 합쳐 하나입니다. Safari의 DOM 성공을 화면 캡처·팝업·SSO·CDP 호환 성공으로 확대하지 않습니다.
+- Safari 로그인이나 권한이 필요하면 구체적으로 알립니다. Chrome을 자동으로 추가 실행하거나 인증 자료를 복사하지 않습니다. 과거 BSK 실험 스크립트는 기록이며 새 실험에 그대로 실행하지 않습니다. 정상 운영 인증을 브라우저 이전 시험만을 위해 교체하지 않습니다.
+
+- 운영 Safari도 같은 전역 작업 잠금을 사용합니다. 다른 작업의 잠금·창을 회수하지 않으며, 회수가 불확실하면 `failed` 및 페이지 수 미확인으로 보고합니다. 공유 Safari 전체를 메모리 상한 때문에 종료하지 않습니다.
+- 이 Mac의 운영 설정은 `OY_RELAY_TRANSPORT=safari`, `SEVEN_RELAY_TRANSPORT=safari`입니다. Chrome 숨김 도우미와 편의점의 `SEVEN_BROWSER_EXECUTABLE` 설정은 비활성화합니다. 인증·누적 한도 원장은 보존하며 [Safari 중계](docs/oliveyoung-safari-relay.md)의 검증과 복원 절차를 따릅니다.
+- Safari 사용자 창에 영향을 주는 정상 종료·재시작은 명시적인 승인을 받습니다. 전체 Mac 재부팅과 LaunchAgent 재기동 검증을 구분합니다.
+
 ## 최우선: 공개 MCP 도구는 10개 고정
 
 공개 `tools/list`의 도구는 정확히 **10개**이며 **절대 늘리지 않습니다**. 새 서비스와 기능은 기존 도구의 `service`/`operation`/`requestType`에 통합합니다. 기존 이름은 deprecated 호출 별칭으로만 보존하며 공개 목록에는 추가하지 않습니다. 일반 MCP와 PlayMCP에 동일하게 적용합니다. [공개 도구 계약](docs/mcp-tools.md)과 `tests/core/compact`, `tests/app/compact-contract.test.ts` 검사를 반드시 유지합니다.

@@ -11,6 +11,7 @@ import {
   assertSeparateQuotaDirectories,
   CONVENIENCE_QUOTA_LIMITS,
 } from './quota.js';
+import { createSevenSafariTransport } from './seven-safari.js';
 import { createSevenSessionTransport } from './seven-session.js';
 import { prepareSevenBrowserSession } from './seven-browser-session.js';
 import { createConvenienceRelay } from './convenience.js';
@@ -74,18 +75,21 @@ async function main() {
       void maintainAuthentication();
     }
     const sevenExecutable = process.env.SEVEN_BROWSER_EXECUTABLE?.trim();
-    const sevenSession = sevenExecutable
-      ? createSevenSessionTransport({
-          takeQuota: quota,
-          prepare: () =>
-            prepareSevenBrowserSession(
-              join(convenienceDir, 'seven-browser-owner.json'),
-              sevenExecutable,
-            ),
-          onEvent: (outcome) =>
-            convenienceLog!.append({ stage: 'session', operation: 'seven', outcome }),
-        })
-      : undefined;
+    const sevenSession =
+      process.env.SEVEN_RELAY_TRANSPORT === 'safari'
+        ? createSevenSafariTransport(convenienceDir, { takeQuota: quota })
+        : sevenExecutable
+          ? createSevenSessionTransport({
+              takeQuota: quota,
+              prepare: () =>
+                prepareSevenBrowserSession(
+                  join(convenienceDir, 'seven-browser-owner.json'),
+                  sevenExecutable,
+                ),
+              onEvent: (outcome) =>
+                convenienceLog!.append({ stage: 'session', operation: 'seven', outcome }),
+            })
+          : undefined;
     const convenienceHandler = createConvenienceRelay(convenienceToken, {
       takeQuota: quota,
       onEvent: convenienceLog.append,

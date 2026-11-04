@@ -61,6 +61,8 @@ export default defineConfig({
         'scripts/relay/seven-browser-session.ts',
         'scripts/relay/browser-environment.ts',
         'scripts/relay/http-lifecycle.ts',
+        'scripts/relay/safari-lifecycle.ts',
+        'scripts/relay/seven-safari.ts',
         'scripts/relay/transport-lifecycle.ts',
       ],
 
