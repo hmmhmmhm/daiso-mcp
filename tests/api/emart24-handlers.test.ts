@@ -133,7 +133,9 @@ describe('handleEmart24SearchProducts', () => {
 
   it('상품 검색 결과를 반환한다', async () => {
     mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ totalCnt: 1, productList: [{ pluCd: '8801', goodsNm: '과자' }] })),
+      new Response(
+        JSON.stringify({ totalCnt: 1, productList: [{ pluCd: '8801', goodsNm: '과자' }] }),
+      ),
     );
 
     const ctx = createMockContext({ keyword: '과자' });
@@ -176,7 +178,10 @@ describe('handleEmart24CheckInventory', () => {
     expect(ctx.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: { code: 'MISSING_PLU_CD', message: '상품 PLU 코드(pluCd) 또는 검색어(keyword)를 입력해주세요.' },
+        error: {
+          code: 'MISSING_PLU_CD',
+          message: '상품 PLU 코드(pluCd) 또는 검색어(keyword)를 입력해주세요.',
+        },
       }),
       400,
     );
@@ -299,7 +304,8 @@ describe('handleEmart24CheckInventory', () => {
         success: false,
         error: {
           code: 'MISSING_BIZ_NO_ARR',
-          message: '매장 코드 목록(bizNoArr) 또는 매장 검색 조건(storeKeyword/area1/area2/lat/lng)을 입력해주세요.',
+          message:
+            '매장 코드 목록(bizNoArr) 또는 매장 검색 조건(storeKeyword/area1/area2/lat/lng)을 입력해주세요.',
         },
       }),
       400,
@@ -325,7 +331,6 @@ describe('handleEmart24CheckInventory', () => {
   });
 });
 
-
 describe.each([
   ['stores', handleEmart24FindStores],
   ['products', handleEmart24SearchProducts],
@@ -343,7 +348,9 @@ describe.each([
       throw new DOMException('aborted', 'AbortError');
     });
     let settled = false;
-    const result = handler(createMockContext({ keyword: '강남', timeoutMs })).then(() => { settled = true; });
+    const result = handler(createMockContext({ keyword: '강남', timeoutMs })).then(() => {
+      settled = true;
+    });
     await vi.advanceTimersByTimeAsync(expected - 2);
     expect(settled).toBe(false);
     await vi.advanceTimersByTimeAsync(2);
@@ -352,3 +359,24 @@ describe.each([
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
+it.each([
+  ['products', handleEmart24SearchProducts, { keyword: '커피' }],
+  ['stores', handleEmart24FindStores, { keyword: '강남' }],
+] as const)(
+  '이마트24 %s의 외부 오류를 내부500으로 바꾸지 않는다',
+  async (_name, handler, query) => {
+    mockFetch.mockResolvedValue(
+      new Response('{}', { status: 502, headers: { 'x-relay-upstream-status': '403' } }),
+    );
+    const ctx = createMockContext(query);
+    ctx.env = { CONVENIENCE_RELAY_URL: 'http://localhost:3000', CONVENIENCE_RELAY_TOKEN: 'test' };
+    await handler(ctx);
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        diagnostics: expect.objectContaining({ upstreamStatus: 403, status: 502 }),
+      }),
+      502,
+    );
+  },
+);

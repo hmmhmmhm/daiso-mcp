@@ -93,6 +93,7 @@ export async function handleEmart24FindStores(c: ApiContext) {
       },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'emart24_stores');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'EMART24_STORE_SEARCH_FAILED', message, 500);
   }
@@ -148,6 +149,7 @@ export async function handleEmart24SearchProducts(c: ApiContext) {
       },
     );
   } catch (error) {
+    if (error instanceof ServiceError) return serviceErrorResponse(c, error, 'emart24_products');
     const message = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
     return errorResponse(c, 'EMART24_PRODUCT_SEARCH_FAILED', message, 500);
   }

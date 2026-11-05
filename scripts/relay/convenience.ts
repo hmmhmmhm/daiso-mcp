@@ -282,7 +282,7 @@ export function createConvenienceRelay(
         const response = await abortable(fetcher(url, { ...init, redirect: 'manual', signal }), signal);
         if (response.status !== 200) {
           void response.body?.cancel().catch(() => undefined);
-          throw new RelayError(502);
+          throw new RelayError(502, undefined, undefined, response.status);
         }
         const data = await readJson(response.body, 2 * 1024 * 1024, signal, 502);
         if (!spec.response.safeParse(data).success) throw new RelayError(502);

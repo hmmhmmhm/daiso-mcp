@@ -241,3 +241,13 @@ describe('이마트24 고정 HTTP 중계', () => {
     ]);
   });
 });
+it('원본403을 중계502와 별도로 보존하고 본문은 노출하지 않는다', async () => {
+  const relay = createConvenienceRelay('convenience', {
+    fetcher: vi.fn(async () => new Response('private upstream body', { status: 403 })),
+    takeQuota: async () => true,
+  });
+  const r = await relay(request('emart24-products', product, true));
+  expect(r.status).toBe(502);
+  expect(r.headers.get('x-relay-upstream-status')).toBe('403');
+  expect(await r.text()).not.toContain('private upstream body');
+});
