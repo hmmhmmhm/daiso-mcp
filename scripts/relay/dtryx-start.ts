@@ -15,6 +15,7 @@ import { createSevenSafariTransport } from './seven-safari.js';
 import { createSevenSessionTransport } from './seven-session.js';
 import { prepareSevenBrowserSession } from './seven-browser-session.js';
 import { createConvenienceRelay } from './convenience.js';
+import { createEmart24SessionTransport } from './emart24-session.js';
 import { createGs25SessionTransport } from './gs25-session.js';
 import { createJapanProductRelay } from './daiso-jp.js';
 import { createCgvRelay } from './cgv.js';
@@ -95,7 +96,7 @@ async function main() {
       onEvent: convenienceLog.append,
       gs25ApiKey: process.env.GS25_API_KEY,
       gs25Session: session,
-      fetcher: sevenSession?.fetch,
+      fetcher: createEmart24SessionTransport({ fetcher: sevenSession?.fetch, takeQuota: quota }).fetch,
     });
     convenience = observeRelay(async (request) => {
       const response = await convenienceHandler(request);

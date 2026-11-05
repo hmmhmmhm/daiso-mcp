@@ -47,6 +47,22 @@ export class RelayError extends Error {
       this.upstreamStatus = upstreamStatus;
   }
 }
+/** 원본 응답과 구분되는, 복구 요청의 검증된 로컬 정책 한도입니다. */
+export class RelayPolicyQuotaError extends RelayError {
+  constructor(quota?: RelayQuota) {
+    super(
+      429,
+      undefined,
+      quota &&
+        ['minute', 'daily'].includes(quota.quotaReason) &&
+        Number.isInteger(quota.retryAfter) &&
+        quota.retryAfter >= 1 &&
+        quota.retryAfter <= 86400
+        ? quota
+        : undefined,
+    );
+  }
+}
 const reply = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   Response.json(body, {
     status,
@@ -296,7 +312,7 @@ export function createHttpRelay(token: string, options: HttpRelayOptions) {
             ? { 'x-relay-upstream-status': String(error.upstreamStatus) }
             : {}),
           ...(status === 429 &&
-          work?.stage === 'quota' &&
+          (work?.stage === 'quota' || error instanceof RelayPolicyQuotaError) &&
           error instanceof RelayError &&
           error.quota
             ? {
