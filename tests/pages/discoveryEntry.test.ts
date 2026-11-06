@@ -14,7 +14,7 @@ it('공식 첫 화면은 연결 설정과 복구 규칙보다 웹 실행 입구�
 
 it('접힌 AI 안내 밖의 첫 시작 선택지는 웹 조회이며 기존 이미지와 안내는 보존한다', () => {
   const readme = readFileSync('README.md', 'utf8');
-  expect(readme).toMatch(/^<details>\n<summary>AI 에이전트 사용 안내<\/summary>/);
+  expect(readme).toMatch(/^<details>\r?\n<summary>AI 에이전트 사용 안내<\/summary>/);
   const visible = readme.slice(readme.indexOf('</details>') + '</details>'.length);
   const first = [...visible.matchAll(/\*\*\[([^\]]+)\]\(([^)]+)\)/g)][0];
   expect(first?.[1]).toBe('ChatGPT에서 바로 조회');

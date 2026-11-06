@@ -297,16 +297,17 @@ Zyte API 기반으로 올리브영 상품 재고를 조회하고 주변 매장 �
 
 ### 올리브영 오특 (get_catalog)
 
-공개 도구 `get_catalog {"service":"oliveyoung","operation":"today_deals"}`로 올리브영 오특(오늘의 특가) 화면의 두 목록을 한국 날짜 기준으로 조회합니다. 내부 작업 이름은 `oliveyoung_get_today_deals`입니다.
+공개 도구 `get_catalog {"service":"oliveyoung","operation":"today_deals"}`로 올리브영 오특(오늘의 특가) 화면의 두 목록과 다음 오특 예고를 한국 날짜 기준으로 조회합니다. 내부 작업 이름은 `oliveyoung_get_today_deals`입니다.
 
 - `brandDeals`: 오늘의 브랜드 특가
 - `todayDeals`: 오늘의 특가 전체 목록 (인기순)
+- `upcomingDeals`: coming soon 배너의 다음 오특 예고 (가격 없음)
 
 | 파라미터    | 필수 | 설명                                                                             |
 | :---------- | :--: | :------------------------------------------------------------------------------- |
 | `timeoutMs` |      | 페이지 여러 개를 합친 전체 제한 시간(ms, 기본값: 무료 릴레이 60000 / 직접 15000) |
 
-각 상품은 `rank`, `goodsNo`, `name`, `brand`, `category`, `price`, `priceFrom`, `originalPrice`, `discountRate`, `flags`, `todayDelivery`, `soldOut`, `imageUrl`, `productUrl`을 반환합니다. `priceFrom=true`는 화면에 "원~"으로 표시되는 옵션별 최저가이고, `soldOut=true`는 화면에 "일시품절"로 표시된 상품입니다. 실시간 매장 재고가 아니므로 재고는 상품명으로 `check_inventory`(service=oliveyoung)를 조회합니다. 원본 차단·형식 변경은 빈 목록이 아니라 오류로 반환합니다. 화면의 coming soon(다음 오특 예고)은 반환하지 않습니다. 원본 분석은 [오특 네트워크 분석](./oliveyoung-today-deals-analysis.md)에 있습니다.
+각 상품은 `rank`, `goodsNo`, `name`, `brand`, `category`, `price`, `priceFrom`, `originalPrice`, `discountRate`, `flags`, `todayDelivery`, `soldOut`, `imageUrl`, `productUrl`을 반환합니다. `priceFrom=true`는 화면에 "원~"으로 표시되는 옵션별 최저가이고, `soldOut=true`는 화면에 "일시품절"로 표시된 상품입니다. 실시간 매장 재고가 아니므로 재고는 상품명으로 `check_inventory`(service=oliveyoung)를 조회합니다. 원본 차단·형식 변경은 빈 목록이 아니라 오류로 반환합니다. `upcomingDeals`의 각 상품은 `goodsNo`, `name`, `imageUrl`, `productUrl`만 반환합니다. 상품번호는 썸네일 파일명에서 읽으며 형식이 다르면 `goodsNo`와 `productUrl`이 `null`입니다. 배너를 읽지 못하면 오특 조회는 성공하고 `upcomingDeals=null`(미확인)로 반환하며, 예고 상품이 없을 때의 빈 목록과 구분합니다. 원본 분석은 [오특 네트워크 분석](./oliveyoung-today-deals-analysis.md)에 있습니다.
 
 <br>
 
@@ -457,6 +458,7 @@ Cloudflare Edge Cache API(`caches.default`)를 사용해 올리브영 REST 응�
 
 - `GET /api/oliveyoung/stores`: 24시간 TTL
 - `GET /api/oliveyoung/inventory`: 10분 TTL
+- `GET /api/oliveyoung/today-deals`: 5분 TTL, 오특이 한국 자정에 바뀌므로 캐시 키에 한국 날짜 포함
 - 공통: `stale-while-revalidate` 적용, 오류 응답(4xx/5xx)은 캐시하지 않음
 
 <br>
@@ -553,6 +555,7 @@ MCP를 지원하지 않는 서비스를 위한 GET 기반 REST API입니다.
 | `GET /api/emart24/inventory`      | 이마트24 재고 확인                  |
 | `GET /api/oliveyoung/stores`      | 올리브영 매장 검색                  |
 | `GET /api/oliveyoung/inventory`   | 올리브영 재고 확인                  |
+| `GET /api/oliveyoung/today-deals` | 올리브영 오특(오늘의 특가) 조회     |
 | `GET /api/megabox/theaters`       | 메가박스 주변 지점 조회             |
 | `GET /api/megabox/movies`         | 메가박스 영화/회차 목록 조회        |
 | `GET /api/megabox/seats`          | 메가박스 잔여 좌석 조회             |
@@ -674,6 +677,18 @@ GET /api/oliveyoung/inventory?keyword={검색어}&lat={위도}&lng={경도}
 | `includeSoldOut` |      | 품절 포함 여부 (기본값: false) |
 
 응답의 `inventory.products[]`에는 `inStock`, `stockStatus`, `stockSource`, `storeInventory`가 포함될 수 있습니다. `stockSource=nearby_store`이면 `inStock`는 주변 매장 기준 결과입니다.
+
+### 올리브영 오특 조회
+
+```
+GET /api/oliveyoung/today-deals
+```
+
+| 파라미터    | 필수 | 설명                                                                             |
+| :---------- | :--: | :------------------------------------------------------------------------------- |
+| `timeoutMs` |      | 페이지 여러 개를 합친 전체 제한 시간(ms, 기본값: 무료 릴레이 60000 / 직접 15000) |
+
+`data`는 MCP `get_catalog {"service":"oliveyoung","operation":"today_deals"}`와 같은 본문입니다(`brandDeals`, `todayDeals`, `upcomingDeals`). 웹 조회 경로는 `/browse/oliveyoung/today-deals`이며 `/browse/quick` 첫 화면에도 링크가 있습니다.
 
 ### 메가박스 주변 지점 조회
 
@@ -843,6 +858,7 @@ GET /api/cgv/timetable?playDate={YYYYMMDD}&theaterCode={극장코드}&movieCode=
 | 강남역 다이소 매장             | `/browse/daiso/stores/강남역`                                          |
 | 선택한 매장의 진열 위치        | `/browse/daiso/display-location/{실제상품ID}/{재고응답의storeCode}`    |
 | 명동 올리브영 매장             | `/browse/oliveyoung/stores/명동`                                       |
+| 오늘의 올리브영 오특           | `/browse/oliveyoung/today-deals`                                       |
 | 강남 CU 과자 재고              | `/browse/cu/inventory/과자/강남`                                       |
 | 잠실 롯데시네마 극장           | `/browse/lottecinema/theaters/잠실`                                    |
 | 선택한 CGV 극장 시간표         | `/browse/cgv/timetable/playDate/{YYYYMMDD}/theaterCode/{실제극장코드}` |

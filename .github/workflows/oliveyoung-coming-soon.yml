@@ -1,0 +1,78 @@
+name: Oliveyoung Coming Soon
+
+on:
+  schedule:
+    # 한국시간 21:10 = UTC 12:10, coming soon 공개 이후 다음 오특 예고 저장
+    - cron: '10 12 * * *'
+    # 한국시간 00:20 = UTC 15:20 (전날), 전날 예고와 실제 오특 대조
+    - cron: '20 15 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'snapshot(21시 이후 예고 저장) 또는 compare(자정 이후 대조)'
+        required: true
+        default: snapshot
+        type: choice
+        options:
+          - snapshot
+          - compare
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oliveyoung-coming-soon-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  coming-soon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: Coming soon preview check
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+
+      - name: Select mode
+        id: mode
+        env:
+          INPUT_MODE: ${{ inputs.mode }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "${SCHEDULE:-}" = "20 15 * * *" ]; then MODE=compare
+          elif [ -n "${INPUT_MODE:-}" ]; then MODE="${INPUT_MODE}"
+          else MODE=snapshot; fi
+          echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
+          echo "today=$(TZ=Asia/Seoul date +%F)" >> "$GITHUB_OUTPUT"
+          echo "tomorrow=$(TZ=Asia/Seoul date -d tomorrow +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Save upcoming deals
+        if: steps.mode.outputs.mode == 'snapshot'
+        run: npx tsx scripts/ops/oliveyoung-coming-soon.ts snapshot coming-soon.json
+
+      - uses: actions/cache/save@v4
+        if: steps.mode.outputs.mode == 'snapshot'
+        with:
+          path: coming-soon.json
+          key: oliveyoung-coming-soon-${{ steps.mode.outputs.tomorrow }}-${{ github.run_id }}
+
+      - uses: actions/cache/restore@v4
+        if: steps.mode.outputs.mode == 'compare'
+        id: snapshot
+        with:
+          path: coming-soon.json
+          key: oliveyoung-coming-soon-${{ steps.mode.outputs.today }}-
+          restore-keys: oliveyoung-coming-soon-${{ steps.mode.outputs.today }}-
+
+      - name: Compare with today deals
+        if: steps.mode.outputs.mode == 'compare'
+        run: |
+          if [ ! -f coming-soon.json ]; then
+            echo "::warning::${{ steps.mode.outputs.today }} 대상 coming soon 예고 저장본이 없어 대조를 건너뜁니다"
+            exit 0
+          fi
+          npx tsx scripts/ops/oliveyoung-coming-soon.ts compare coming-soon.json

@@ -56,7 +56,13 @@ function renderValue(
       const rendered = renderValue(
         item,
         productLinks,
-        key === 'products' || key === 'product' || (key === 'data' && productLinks !== null),
+        key === 'products' ||
+          key === 'product' ||
+          // 올리브영 오특 목록도 상품명·원본 이미지를 카드로 보여줍니다.
+          key === 'brandDeals' ||
+          key === 'todayDeals' ||
+          key === 'upcomingDeals' ||
+          (key === 'data' && productLinks !== null),
         source,
       );
       let detail = '';

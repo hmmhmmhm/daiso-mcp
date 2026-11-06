@@ -28,6 +28,12 @@ const deal = {
   imageUrl: 'https://image.oliveyoung.co.kr/a.jpg',
   productUrl: 'https://www.oliveyoung.co.kr/store/goods/getGoodsDetail.do?goodsNo=A000000171422',
 };
+const upcoming = {
+  goodsNo: 'A000000202414',
+  name: '라보에이치 헤어라인앰플 더블기획',
+  imageUrl: 'https://image.oliveyoung.co.kr/A00000020241475ko.jpg',
+  productUrl: 'https://www.oliveyoung.co.kr/store/goods/getGoodsDetail.do?goodsNo=A000000202414',
+};
 
 beforeEach(() => {
   fetchOliveyoungTodayDeals.mockReset();
@@ -36,6 +42,7 @@ beforeEach(() => {
     brandDeals: [deal],
     todayDeals: [deal, { ...deal, rank: 2 }],
     truncated: false,
+    upcomingDeals: [upcoming, { ...upcoming, goodsNo: null, productUrl: null }],
   });
 });
 
@@ -50,8 +57,10 @@ describe('createGetTodayDealsTool', () => {
       date: '2026-10-26',
       brandDealCount: 1,
       todayDealCount: 2,
+      upcomingDealCount: 2,
       truncated: false,
       brandDeals: [deal],
+      upcomingDeals: [upcoming, { ...upcoming, goodsNo: null, productUrl: null }],
     });
     expect(body.note).toContain('check_inventory');
     expect(result.structuredContent).toEqual(body);
@@ -69,6 +78,19 @@ describe('createGetTodayDealsTool', () => {
     expect(fetchOliveyoungTodayDeals).toHaveBeenLastCalledWith({ ...transport, timeout: 30000 });
     await createGetTodayDealsTool({ timeout: 9000 }).handler({});
     expect(fetchOliveyoungTodayDeals).toHaveBeenLastCalledWith({ timeout: 9000 });
+  });
+  it('예고를 확인하지 못하면 빈 목록이 아니라 미확인(null)으로 반환한다', async () => {
+    fetchOliveyoungTodayDeals.mockResolvedValue({
+      date: '2026-10-26',
+      brandDeals: [deal],
+      todayDeals: [deal],
+      truncated: false,
+      upcomingDeals: null,
+    });
+    const tool = createGetTodayDealsTool();
+    const { structuredContent: body } = await tool.handler({});
+    expect(body).toMatchObject({ upcomingDealCount: null, upcomingDeals: null });
+    expect(z.object(tool.metadata.outputSchema!).parse(body)).toEqual(body);
   });
   it('원본 실패를 빈 목록으로 바꾸지 않는다', async () => {
     fetchOliveyoungTodayDeals.mockRejectedValue(new Error('올리브영 직접 요청 실패'));
