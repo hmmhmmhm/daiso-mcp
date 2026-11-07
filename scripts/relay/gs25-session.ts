@@ -62,8 +62,15 @@ export function createGs25SessionTransport(
   let current: Session | undefined;
   let refreshing: Promise<Session> | undefined;
   let revoked = false;
+  let stockRecheckAt = 0;
   let prepareFailures = 0;
   let retryAt = 0;
+
+  function rejectRemote(session: Session) {
+    if (revoked) return;
+    revoked = true;
+    if (expiration(session.accessToken) > now() + 120000) stockRecheckAt = now() + 60000;
+  }
 
   async function load(): Promise<Session> {
     if (revoked) throw new RelayError(403);
@@ -111,7 +118,7 @@ export function createGs25SessionTransport(
       if (!response.ok) {
         void response.body?.cancel().catch(() => undefined);
         if ([401, 403].includes(response.status)) {
-          revoked = true;
+          rejectRemote(session);
           throw new RelayError(403);
         }
         throw new RelayError(502);
@@ -217,13 +224,27 @@ export function createGs25SessionTransport(
         signal,
       );
     };
+    // 갱신 직후의 일시적 재고 거절이 프로세스를 영구 차단하지 않게 합니다.
+    // 유효한 현재 access로만 한 번 확인하며 추가 토큰 갱신은 하지 않습니다.
+    if (revoked && stockRecheckAt && now() >= stockRecheckAt) {
+      stockRecheckAt = 0;
+      if (current && expiration(current.accessToken) > now() + 60000) {
+        const check = await request(current);
+        if (check.status !== 200) return check;
+        const data = await readJson(check.body, 2 * 1024 * 1024, signal, 502);
+        if (!data || !Array.isArray((data as { stores?: unknown }).stores))
+          throw new RelayError(502);
+        revoked = false;
+        return Response.json(data);
+      }
+    }
     const session = await abortable(ready(), signal);
     const response = await request(session);
     if (![401, 403].includes(response.status)) return response;
     void response.body?.cancel().catch(() => undefined);
     const next = await abortable(ready(session.accessToken), signal);
     const retry = await request(next);
-    if ([401, 403].includes(retry.status)) revoked = true;
+    if ([401, 403].includes(retry.status)) rejectRemote(next);
     return retry;
   };
   let preparing: Promise<void> | undefined;
@@ -238,8 +259,9 @@ export function createGs25SessionTransport(
       return preparing;
     },
     status() {
+      const pendingRecheck = !!(stockRecheckAt && current && expiration(current.accessToken) > now() + 60000);
       return {
-        state: revoked
+        state: pendingRecheck ? 'retry_wait' : revoked
           ? 'login_required'
           : refreshing
             ? 'refreshing'
@@ -248,10 +270,10 @@ export function createGs25SessionTransport(
               : current
                 ? 'ready'
                 : 'unloaded',
-        loginRequired: revoked,
+        loginRequired: revoked && !pendingRecheck,
         accessExpiresAt: current ? expiration(current.accessToken) : null,
         refreshExpiresAt: current ? expiration(current.refreshToken) : null,
-        retryAt,
+        retryAt: pendingRecheck ? stockRecheckAt : retryAt,
       };
     },
   });

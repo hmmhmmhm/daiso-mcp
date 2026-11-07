@@ -84,7 +84,7 @@ JWT의 `exp`만 로컬에서 검사하고 토큰 자체·URL query·JWT 전체 c
 
 ### 만료된 access와 살아 있는 refresh를 구분한다
 
-운영 프로세스가 403을 유지하더라도 파일의 refresh가 서버에서 철회됐다고 단정하지 않는다. 전송기는 갱신 401/403 또는 재시도 인증 거절을 메모리에 유지하므로, 파일의 토큰과 프로세스가 보관한 토큰이 다르거나 이전 거절이 있었다면 재기동 전까지 실패할 수 있다. 만료 시각이 미래인 refresh도 서버 유효성의 증거는 아니다.
+운영 프로세스가 403을 유지하더라도 파일의 refresh가 서버에서 철회됐다고 단정하지 않는다. 전송기는 원격 401/403 뒤에도 access 유효기간이 충분히 남아 있으면 60초 뒤 실제 재고 요청을 한 번만 재확인한다. 이때 추가 토큰 갱신은 하지 않으며 HTTP200과 stores 배열을 확인해야 정상으로 복귀한다. 대기 중에는 retry_wait이며, 재확인도 실패하거나 access가 만료되면 login_required를 유지한다. 손상된 파일·만료된 refresh·저장 실패에는 재확인을 적용하지 않는다. 파일의 토큰과 프로세스의 메모리가 다르거나 제한된 재확인도 실패했다면 아래 복사본 검증 절차를 수행한다. 만료 시각이 미래인 refresh도 서버 유효성의 증거는 아니다.
 
 1. 두 서비스가 유휴 상태인지 확인하고 4절에 따라 기존 프로세스를 정상 종료한다. 비공개 작업 디렉터리에 현재 0600 세션의 복사본을 만든다.
 2. 복사본을 `createGs25SessionTransport`에 연결해 고정 재고 URL을 한 번 호출한다. access가 만료됐다면 기존 전송기가 정상 `tokenReissue`를 수행하고 회전된 두 토큰을 복사본에 저장한다. JWT 만료를 수정하거나 옛 refresh로 수동 갱신을 반복하지 않는다.
@@ -211,3 +211,10 @@ daiso get /api/gs25/inventory --itemCode 8801094017200 --storeKeyword 강남 --l
 - 실패한 접근과 버전 의존 모듈 변경 여부. 성공하지 못한 부분을 명확히 남긴다.
 
 2026-10-05의 로컬 증거는 개인 workspace의 `scratch/gs25-device-free-2026-10-05/`에 있다. `gs25-direct-auth-final.json`, `gs25-session-deploy.json`, `session-relay-verified.json`, `gs25-keyword-fixed-rest.json`, `gs25-keyword-operating-mcp.json`, `gs25-keyword-fixed-cli.json`, `oy-auth-validation-recovery.json` 및 check/coverage/build 로그가 공개 결과 증거다. 이 경로는 다른 머신에 없을 수 있으므로 이 운영 문서는 해당 scratch 파일에 의존하지 않는다. GS 세션·callback URL·회원 응답은 Git에 올리지 않는다. 개인 `PROJECT.md`에도 최신 Facts와 Action log를 갱신한다.
+
+
+### 2026-11-07 유효한 토큰의 실패 상태 고정 복구
+
+운영 중계가 login_required였지만, 정상 종료 후 보존한 같은 인증 파일의 복사본으로 원본 재고 HTTP200/51매장을 확인했다. 정상 갱신이나 사용자 재로그인 없이 중계를 재기동해 복구했다. 원격 거절이 영구적인 토큰 철회를 의미하지는 않는다는 사례다. 당시 거절 응답 본문이 없어 WAF 차단으로 단정하지 않는다.
+
+현재 전송기는 위와 같은 원격 거절 뒤 유효한 access에만 60초 후 재고 재확인 한 번을 허용한다. 동시·지연된 실패 응답이 재확인을 다시 예약하지 않는다. 재확인 실패를 무시하거나 무한 갱신하지 않으며, 실패 후에는 이 문서의 복사본 검증 및 정상 로그인 절차를 따른다.
