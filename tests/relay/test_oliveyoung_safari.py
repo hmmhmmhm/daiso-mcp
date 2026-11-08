@@ -37,6 +37,7 @@ class RelayTests(unittest.TestCase):
     def operate(self, _helper, _session, command, *_args):
         self.calls.append(command)
         if command == 'start':
+            self.assertIn('--independent-window', _args)
             self.session.write_text('{}')
         if command == 'stop':
             self.session.unlink()
@@ -97,8 +98,8 @@ class RelayTests(unittest.TestCase):
         with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
             self.assertEqual(self.run_main('--check'), {'ready': True})
         self.assertEqual(self.lock.read_text(), 'another-task')
-        self.assertEqual(self.run_main(), {'relayError': 'safari-busy'})
-        self.assertEqual(self.calls, [])
+        self.assertEqual(self.run_main(), {'status': 200})
+        self.assertEqual(self.calls, ['start', 'navigate', 'stop'])
 
     def test_insecure_or_symlink_session_is_preserved(self):
         original = self.old_session()
@@ -183,10 +184,10 @@ class RelayTests(unittest.TestCase):
         self.assertEqual(self.calls, [])
         self.assertTrue(self.lock.exists())
 
-    def test_foreign_lock_does_not_open_window(self):
+    def test_foreign_lock_does_not_block_independent_window(self):
         self.lock.write_text('another-task')
-        self.assertEqual(self.run_main(), {'relayError': 'safari-busy'})
-        self.assertEqual(self.calls, [])
+        self.assertEqual(self.run_main(), {'status': 200})
+        self.assertEqual(self.calls, ['start', 'navigate', 'stop'])
         self.assertEqual(self.lock.read_text(), 'another-task')
 
     def test_failed_acquisition_preserves_winners_session(self):
@@ -203,6 +204,26 @@ class RelayTests(unittest.TestCase):
             self.run_main()
         self.assertEqual(self.calls, ['start'])
         self.assertTrue(foreign.exists())
+
+    def test_independent_partial_start_remains_unresolved(self):
+        lock = self.session.with_name(self.session.name + '.lock')
+        lock.write_text(str(self.session))
+        with self.assertRaises(RuntimeError):
+            self.run_main('--check')
+        self.assertTrue(lock.exists())
+
+    def test_restart_returns_only_its_independent_slot(self):
+        self.old_session()
+        state = json.loads(self.session.read_text())
+        state['lock_scope'] = 'window'
+        self.session.write_text(json.dumps(state))
+        self.lock.write_text('another-task')
+        released = []
+        self.helper.release = lambda path, independent=False: released.append((path, independent))
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            self.assertEqual(self.run_main('--check'), {'ready': True})
+        self.assertEqual(released, [(self.session.resolve(), True)])
+        self.assertEqual(self.lock.read_text(), 'another-task')
 
     def test_success_returns_window(self):
         self.assertEqual(self.run_main(), {'status': 200})

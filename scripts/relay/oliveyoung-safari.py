@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""로컬 스킬의 고정 창과 전역 잠금으로 올리브영 조회를 직렬 실행합니다."""
+"""로컬 스킬의 고정 창과 개별 창 잠금으로 올리브영 조회를 실행합니다."""
 import contextlib
 import fcntl
 import hashlib
@@ -105,6 +105,8 @@ def retire_restarted_sessions(helper, base, current_pid):
                         raise RuntimeError('retirement-copy-mismatch')
                 sync_directory(archive)
                 sync_directory(base)
+                if state.get('lock_scope') == 'window':
+                    helper.release(path, True)
                 try:
                     held = Path(helper.LOCK.read_text().strip())
                 except FileNotFoundError:
@@ -134,7 +136,7 @@ def main():
             held = Path(helper.LOCK.read_text().strip()).resolve()
         except FileNotFoundError:
             held = None
-        return any(base.glob('safari-session*.json')) or (
+        return any(base.glob('safari-session*.json')) or any(base.glob('safari-session*.json.lock')) or (
             held is not None and held.parent == base and held.name.startswith('safari-session')
             and held.suffix == '.json')
     if '--check' in sys.argv:
@@ -165,13 +167,10 @@ def main():
         raise ValueError('invalid-path')
     if unresolved():
         raise RuntimeError('unresolved-session')
-    if helper.LOCK.exists():
-        print(json.dumps({'relayError': 'safari-busy'}))
-        return
     signal.signal(signal.SIGTERM, interrupt)
     result = None
     try:
-        operate(helper, session, 'start')
+        operate(helper, session, 'start', '--independent-window')
         operate(helper, session, 'navigate', origin + '/robots.txt')
         state = json.loads(session.read_text())
         key = '__daisoRelay_' + helper.uuid.uuid4().hex
