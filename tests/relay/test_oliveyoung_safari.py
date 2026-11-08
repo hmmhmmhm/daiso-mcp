@@ -58,6 +58,115 @@ class RelayTests(unittest.TestCase):
         self.assertEqual(self.run_main('--check'), {'ready': True})
         self.assertEqual(self.calls, [])
 
+    def old_session(self):
+        self.session.write_text(json.dumps({'safari_pid': '88', 'window_id': 123, 'snapshot': None}))
+        self.session.chmod(0o600)
+        self.helper.ensure_safari = lambda: '99'
+        def release(path):
+            if self.lock.exists() and self.lock.read_text() == str(path):
+                self.lock.unlink()
+        self.helper.release = release
+        return self.session.read_bytes()
+
+    def test_restarted_safari_dead_owner_is_archived_without_targeting_a_window(self):
+        original = self.old_session()
+        self.lock.write_text(str(self.session))
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            self.assertEqual(self.run_main('--check'), {'ready': True})
+            self.assertEqual(self.run_main('--check'), {'ready': True})
+        saved = list((self.base / 'retired-safari-sessions').glob('*.json'))
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0].read_bytes(), original)
+        self.assertEqual(saved[0].stat().st_mode & 0o777, 0o600)
+        self.assertFalse(self.lock.exists())
+        self.assertFalse(self.session.exists())
+        self.assertEqual(self.calls, [])
+
+    def test_same_safari_or_live_owner_is_not_retired(self):
+        original = self.old_session()
+        for current, effect in [('88', ProcessLookupError), ('99', None)]:
+            self.helper.ensure_safari = lambda: current
+            with patch.object(m.os, 'kill', side_effect=effect):
+                with self.assertRaises(RuntimeError):
+                    self.run_main('--check')
+            self.assertEqual(self.session.read_bytes(), original)
+
+    def test_retirement_does_not_release_foreign_lock(self):
+        self.old_session()
+        self.lock.write_text('another-task')
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            self.assertEqual(self.run_main('--check'), {'ready': True})
+        self.assertEqual(self.lock.read_text(), 'another-task')
+        self.assertEqual(self.run_main(), {'relayError': 'safari-busy'})
+        self.assertEqual(self.calls, [])
+
+    def test_insecure_or_symlink_session_is_preserved(self):
+        original = self.old_session()
+        self.session.chmod(0o644)
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            with self.assertRaises(RuntimeError):
+                self.run_main('--check')
+        self.assertEqual(self.session.read_bytes(), original)
+        target = self.base / 'target.json'
+        self.session.rename(target)
+        target.chmod(0o600)
+        self.session.symlink_to(target)
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            with self.assertRaises(RuntimeError):
+                self.run_main('--check')
+        self.assertTrue(self.session.is_symlink())
+        self.assertEqual(target.read_bytes(), original)
+
+    def test_failed_lock_release_keeps_original_and_reuses_saved_copy(self):
+        original = self.old_session()
+        self.lock.write_text(str(self.session))
+        self.helper.release = lambda _path: (_ for _ in ()).throw(OSError('denied'))
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            for _ in range(2):
+                with self.assertRaises(OSError):
+                    self.run_main('--check')
+        self.assertEqual(self.session.read_bytes(), original)
+        self.assertEqual(len(list((self.base / 'retired-safari-sessions').glob('*.json'))), 1)
+        self.assertEqual(self.lock.read_text(), str(self.session))
+
+    def test_failed_archive_write_removes_temporary_copy(self):
+        original = self.old_session()
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError), \
+             patch.object(m.os, 'fsync', side_effect=OSError('disk failure')):
+            with self.assertRaises(OSError):
+                self.run_main('--check')
+        self.assertEqual(self.session.read_bytes(), original)
+        self.assertEqual(list((self.base / 'retired-safari-sessions').iterdir()), [])
+
+    def test_retirement_is_serial_and_safe_to_retry(self):
+        self.old_session()
+        fd = os.open(self.base / '.safari-retire.lock', os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            m.fcntl.flock(fd, m.fcntl.LOCK_EX | m.fcntl.LOCK_NB)
+            with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+                with self.assertRaises(RuntimeError):
+                    self.run_main('--check')
+            self.assertTrue(self.session.exists())
+        finally:
+            os.close(fd)
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            self.assertEqual(self.run_main('--check'), {'ready': True})
+
+    def test_archive_directory_sync_failure_preserves_hot_state(self):
+        original = self.old_session()
+        self.lock.write_text(str(self.session))
+        actual = os.fsync
+        def fail_directory(fd):
+            if m.stat.S_ISDIR(os.fstat(fd).st_mode):
+                raise OSError('directory commit failed')
+            return actual(fd)
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError), \
+             patch.object(m.os, 'fsync', side_effect=fail_directory):
+            with self.assertRaises(OSError):
+                self.run_main('--check')
+        self.assertEqual(self.session.read_bytes(), original)
+        self.assertTrue(self.lock.exists())
+
     def test_unresolved_session_is_preserved(self):
         self.session.write_text('{}')
         with self.assertRaises(RuntimeError):
