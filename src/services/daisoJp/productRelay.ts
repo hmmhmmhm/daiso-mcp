@@ -16,6 +16,21 @@ export interface JapanProductRelayOptions extends DtryxTransportOptions {
 export interface JapanTransportOptions {
   productRelay?: JapanProductRelayOptions;
 }
+/** 인증 중계가 명시적으로 확인한 원본 제한이며 자체 한도와 구분합니다. */
+export class JapanProductRateLimitError extends ServiceError {
+  constructor(retryAfter?: number) {
+    super(
+      'DAISO_JP_RELAY_FAILED',
+      '일본 다이소 중계 요청에 실패했습니다.',
+      429,
+      true,
+      429,
+      undefined,
+      undefined,
+      retryAfter,
+    );
+  }
+}
 export function japanProductTransportFromBindings(
   bindings?: {
     DAISO_JP_PRODUCT_RELAY_ENABLED?: string;
@@ -91,6 +106,14 @@ export async function requestJapanProductRelay(
         )
           ? Number(response.headers.get('x-relay-upstream-status'))
           : status;
+        const retryAfter =
+          delay === null ? undefined : Math.max(1, Math.min(86400, Math.ceil(delay / 1000)));
+        if (
+          status === 429 &&
+          response.headers.get('x-relay-upstream-status') === '429' &&
+          response.headers.get('x-relay-quota-reason') === null
+        )
+          throw new JapanProductRateLimitError(retryAfter);
         throw new ServiceError(
           'DAISO_JP_RELAY_FAILED',
           '일본 다이소 중계 요청에 실패했습니다.',
@@ -99,7 +122,7 @@ export async function requestJapanProductRelay(
           upstreamStatus,
           parseRelayQuota(status, response.headers),
           undefined,
-          delay === null ? undefined : Math.max(1, Math.min(86400, Math.ceil(delay / 1000))),
+          retryAfter,
         );
       }
       return parseProductDetail(await response.json(), id);

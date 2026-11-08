@@ -1,7 +1,11 @@
 import { ServiceError } from '../../core/errors.js';
 import { fetchText, HttpError } from '../../utils/http.js';
 import { parseProductPage, parseProductSearch, parseStoreSearch } from './parser.js';
-import { requestJapanProductRelay, type JapanTransportOptions } from './productRelay.js';
+import {
+  JapanProductRateLimitError,
+  requestJapanProductRelay,
+  type JapanTransportOptions,
+} from './productRelay.js';
 import type { JapanProduct, JapanProductSearchResult, JapanStoreSearchResult } from './types.js';
 
 const OPTIONS = { timeout: 20000, retries: 0 };
@@ -45,11 +49,33 @@ export async function searchProducts(query: string, page = 1): Promise<JapanProd
   }));
 }
 
-export async function getProduct(id: string, options: JapanTransportOptions = {}): Promise<JapanProduct> {
+async function productByCode(id: string, originalError: unknown): Promise<JapanProduct> {
+  const result = await searchProducts(id, 1);
+  const match = result.products.find((item) => item.id === id);
+  if (!match) throw originalError;
+  return {
+    ...match,
+    onlineAvailable: null,
+    note: '상세 페이지 접근 제한으로 공식 상품 코드 검색 결과를 반환합니다. 온라인 판매 가능 여부는 확인하지 못했습니다.',
+  };
+}
+
+export async function getProduct(
+  id: string,
+  options: JapanTransportOptions = {},
+): Promise<JapanProduct> {
   if (typeof id !== 'string' || !/^\d{13}$/.test(id)) {
     throw new Error('상품 ID는 13자리 숫자여야 합니다.');
   }
-  if (options.productRelay) return requestJapanProductRelay(id, options.productRelay);
+  if (options.productRelay)
+    return requestJapanProductRelay(id, options.productRelay).catch(async (error: unknown) => {
+      if (!(error instanceof JapanProductRateLimitError)) throw error;
+      try {
+        return await productByCode(id, error);
+      } catch {
+        throw error;
+      }
+    });
   return upstream(async () => {
     try {
       return parseProductPage(
@@ -58,14 +84,7 @@ export async function getProduct(id: string, options: JapanTransportOptions = {}
       );
     } catch (error) {
       if (!(error instanceof HttpError) || error.status !== 403) throw error;
-      const result = await searchProducts(id, 1);
-      const match = result.products.find((item) => item.id === id);
-      if (!match) throw error;
-      return {
-        ...match,
-        onlineAvailable: null,
-        note: '상세 페이지 접근 제한으로 공식 상품 코드 검색 결과를 반환합니다. 온라인 판매 가능 여부는 확인하지 못했습니다.',
-      };
+      return productByCode(id, error);
     }
   });
 }

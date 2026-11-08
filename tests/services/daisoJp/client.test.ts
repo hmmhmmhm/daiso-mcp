@@ -12,9 +12,15 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('일본 공식 클라이언트', () => {
   it('명시적 상세 중계는 원본 차단 요청 없이 동일 상품을 반환한다', async () => {
-    const fetcher = vi.fn(async () => Response.json({ handle: '4550746075917', title: 'ボウル', price: 22000, available: true }));
+    const fetcher = vi.fn(async () =>
+      Response.json({ handle: '4550746075917', title: 'ボウル', price: 22000, available: true }),
+    );
     vi.stubGlobal('fetch', fetcher);
-    expect(await getProduct('4550746075917', { productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' } })).toMatchObject({ id: '4550746075917', onlineAvailable: true });
+    expect(
+      await getProduct('4550746075917', {
+        productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' },
+      }),
+    ).toMatchObject({ id: '4550746075917', onlineAvailable: true });
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0][0]).toBe('https://relay.example/v1/dtryx/daiso-jp-product');
   });
@@ -106,6 +112,80 @@ describe('일본 공식 클라이언트', () => {
 });
 
 describe('상세 페이지 차단 시 공식 상품 코드 검색', () => {
+  const relayOptions = {
+    productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' },
+  };
+  const limitedThen = (body: string, status = 200) => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response('limited', {
+          status: 429,
+          headers: { 'x-relay-upstream-status': '429', 'Retry-After': '60' },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(body, { status }));
+    vi.stubGlobal('fetch', mock);
+    return mock;
+  };
+  it('확인된 원본429는 상세 재시도 대신 정확한 공식 코드 검색을 사용한다', async () => {
+    const mock = limitedThen(fixture('products'));
+    expect(await getProduct('4550746075917', relayOptions)).toMatchObject({
+      id: '4550746075917',
+      name: 'ステンレスボウル',
+      price: null,
+      onlineAvailable: null,
+      note: expect.stringContaining('확인하지 못했습니다'),
+    });
+    expect(mock).toHaveBeenCalledTimes(2);
+    expect(new URL(mock.mock.calls[1][0]).searchParams.get('q')).toBe('4550746075917');
+  });
+  it('검색 결과에 명시된 가격만 보존한다', async () => {
+    limitedThen(fixture('products'));
+    expect(await getProduct('4550480417295', relayOptions)).toMatchObject({
+      id: '4550480417295',
+      price: 110,
+      onlineAvailable: null,
+    });
+  });
+  it.each([
+    new Headers({ 'Retry-After': '60' }),
+    new Headers({
+      'Retry-After': '60',
+      'x-relay-upstream-status': '429',
+      'x-relay-quota-reason': 'daily',
+    }),
+    new Headers({
+      'Retry-After': '60',
+      'x-relay-upstream-status': '429',
+      'x-relay-quota-reason': 'unknown',
+    }),
+  ])('자체 한도나 출처가 불명확한429에는 검색 요청을 추가하지 않는다', async (headers) => {
+    const mock = vi.fn(async () => new Response('', { status: 429, headers }));
+    vi.stubGlobal('fetch', mock);
+    await expect(getProduct('4550746075917', relayOptions)).rejects.toMatchObject({ status: 429 });
+    expect(mock).toHaveBeenCalledOnce();
+  });
+  it('공식 검색에 같은 코드가 없으면 원래 원본 제한과 대기 시간을 보존한다', async () => {
+    limitedThen(fixture('products'));
+    await expect(getProduct('4550746075918', relayOptions)).rejects.toMatchObject({
+      status: 429,
+      upstreamStatus: 429,
+      retryAfter: 60,
+    });
+  });
+  it.each([
+    ['search offline', 503],
+    ['<html>changed</html>', 200],
+  ])('대체 검색도 실패하면 원래 제한을 숨기지 않는다', async (body, status) => {
+    const mock = limitedThen(String(body), Number(status));
+    await expect(getProduct('4550746075917', relayOptions)).rejects.toMatchObject({
+      status: 429,
+      upstreamStatus: 429,
+      retryAfter: 60,
+    });
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
   const deniedThen = (body: string, status = 200) => {
     const mock = vi
       .fn()

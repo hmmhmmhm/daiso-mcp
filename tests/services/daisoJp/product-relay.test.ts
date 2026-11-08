@@ -5,6 +5,21 @@ import {
 } from '../../../src/services/daisoJp/productRelay.js';
 const raw = { handle: '4550746075917', title: 'ボウル', price: 22000, available: true };
 const options = { relayUrl: 'https://relay.example', relayToken: 'test-token' };
+it('명시된 원본429는 대기 헤더가 없어도 자체 한도와 구분된다', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async () =>
+        new Response(null, { status: 429, headers: { 'x-relay-upstream-status': '429' } }),
+    ),
+  );
+  await expect(requestJapanProductRelay(raw.handle, options)).rejects.toMatchObject({
+    status: 429,
+    upstreamStatus: 429,
+    retryAfter: undefined,
+    quotaReason: undefined,
+  });
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
