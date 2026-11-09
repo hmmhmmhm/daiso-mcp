@@ -169,3 +169,60 @@ it('대기 취소가 앞 원본을 취소하거나 뒤 요청을 먼저 시작�
   expect((await third).status).toBe(200);
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+
+it('검색 중계는 고정 공식 검색 경로만 허용하고 상세429와 독립적으로 원본 대기를 지킨다', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(
+    new URL('../services/daisoJp/fixtures/products.html', import.meta.url),
+    'utf8',
+  );
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(new Response(null, { status: 429 }))
+    .mockResolvedValue(new Response(html));
+  const handler = createJapanProductRelay('test-token', { takeQuota: async () => true, fetcher });
+  expect((await handler(req({ id: raw.handle }))).status).toBe(429);
+  const searchRequest = (body: unknown) =>
+    new Request('http://localhost/v1/dtryx/daiso-jp-search', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token' },
+      body: JSON.stringify(body),
+    });
+  for (const body of [
+    {},
+    { query: '', page: 1 },
+    { query: 'a', page: 0 },
+    { query: 'a', page: 1, url: 'https://other' },
+  ])
+    expect((await handler(searchRequest(body))).status).toBe(400);
+  const response = await handler(searchRequest({ query: 'ボウル', page: 2 }));
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ html });
+  const url = new URL(fetcher.mock.calls[1][0]);
+  expect(url.origin + url.pathname).toBe('https://jp.daisonet.com/search');
+  expect(url.searchParams.get('q')).toBe('ボウル');
+  expect(url.searchParams.get('page')).toBe('2');
+});
+
+it('검색 원본429도 전체 검색 대기를 공유하고 응답 형식 오류는 빈 결과가 되지 않는다', async () => {
+  const make = (query: string) =>
+    new Request('http://localhost/v1/dtryx/daiso-jp-search', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token' },
+      body: JSON.stringify({ query, page: 1 }),
+    });
+  const fetcher = vi.fn(
+    async () => new Response('', { status: 429, headers: { 'Retry-After': '120' } }),
+  );
+  const handler = createJapanProductRelay('test-token', { takeQuota: async () => true, fetcher });
+  const first = await handler(make('a'));
+  expect(first.status).toBe(429);
+  expect(Number(first.headers.get('Retry-After'))).toBeGreaterThan(100);
+  expect((await handler(make('b'))).status).toBe(429);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  const invalid = createJapanProductRelay('test-token', {
+    takeQuota: async () => true,
+    fetcher: async () => new Response('<html>login</html>'),
+  });
+  expect((await invalid(make('a'))).status).toBe(502);
+});

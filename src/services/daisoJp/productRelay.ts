@@ -1,14 +1,15 @@
-/** 일본 상세만 기존 인증 HTTP 중계에 명시적으로 연결합니다. */
+/** 일본 상세와 제한된 검색 대체를 기존 인증 HTTP 중계에 연결합니다. */
+import * as z from 'zod';
 import { ServiceError } from '../../core/errors.js';
 import { diagnosticHeaders } from '../../utils/diagnostics.js';
-import { parseRelayQuota } from '../../utils/relayQuota.js';
+import { parseRelayQuota, type RelayQuota } from '../../utils/relayQuota.js';
 import { parseRetryAfterDelayMs } from '../../utils/http.js';
 import {
   dtryxTransportFromBindings,
   isValidDtryxRelayUrl,
   type DtryxTransportOptions,
 } from '../dtryx/transport.js';
-import { parseProductDetail } from './parser.js';
+import { parseProductDetail, parseProductSearch } from './parser.js';
 import type { JapanProduct } from './types.js';
 export interface JapanProductRelayOptions extends DtryxTransportOptions {
   bypassCache?: boolean;
@@ -31,6 +32,20 @@ export class JapanProductRateLimitError extends ServiceError {
     );
   }
 }
+export class JapanRelayQuotaError extends ServiceError {
+  constructor(upstreamStatus: number, quota: RelayQuota) {
+    super(
+      'DAISO_JP_RELAY_FAILED',
+      '일본 다이소 중계 요청에 실패했습니다.',
+      429,
+      true,
+      upstreamStatus,
+      quota,
+      undefined,
+      quota.retryAfter,
+    );
+  }
+}
 export function japanProductTransportFromBindings(
   bindings?: {
     DAISO_JP_PRODUCT_RELAY_ENABLED?: string;
@@ -45,10 +60,12 @@ export function japanProductTransportFromBindings(
     ? { productRelay: { ...dtryxTransportFromBindings(bindings), bypassCache } }
     : {};
 }
-export async function requestJapanProductRelay(
-  id: string,
+async function requestJapanRelay<T>(
+  operation: 'daiso-jp-product' | 'daiso-jp-search',
+  body: unknown,
   options: JapanProductRelayOptions,
-): Promise<JapanProduct> {
+  parse: (value: unknown) => T,
+): Promise<T> {
   const { relayUrl, relayToken, accessClientId, accessClientSecret } = options;
   if (
     !isValidDtryxRelayUrl(relayUrl) ||
@@ -90,11 +107,11 @@ export async function requestJapanProductRelay(
   });
   try {
     const work = (async () => {
-      const response = await fetch(`${relayUrl!.replace(/\/$/, '')}/v1/dtryx/daiso-jp-product`, {
+      const response = await fetch(`${relayUrl!.replace(/\/$/, '')}/v1/dtryx/${operation}`, {
         method: 'POST',
         redirect: 'manual',
         headers,
-        body: JSON.stringify({ id }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
       if (response.status !== 200) {
@@ -114,18 +131,20 @@ export async function requestJapanProductRelay(
           response.headers.get('x-relay-quota-reason') === null
         )
           throw new JapanProductRateLimitError(retryAfter);
+        const quota = parseRelayQuota(status, response.headers);
+        if (quota) throw new JapanRelayQuotaError(upstreamStatus, quota);
         throw new ServiceError(
           'DAISO_JP_RELAY_FAILED',
           '일본 다이소 중계 요청에 실패했습니다.',
           status === 429 || status === 503 || status === 504 ? status : 502,
           status === 429 || status >= 500,
           upstreamStatus,
-          parseRelayQuota(status, response.headers),
+          undefined,
           undefined,
           retryAfter,
         );
       }
-      return parseProductDetail(await response.json(), id);
+      return parse(await response.json());
     })();
     return await Promise.race([work, timeout]);
   } catch (error) {
@@ -139,4 +158,23 @@ export async function requestJapanProductRelay(
   } finally {
     clearTimeout(timer!);
   }
+}
+
+export function requestJapanProductRelay(
+  id: string,
+  options: JapanProductRelayOptions,
+): Promise<JapanProduct> {
+  return requestJapanRelay('daiso-jp-product', { id }, options, (value) =>
+    parseProductDetail(value, id),
+  );
+}
+
+export function requestJapanSearchRelay(
+  query: string,
+  page: number,
+  options: JapanProductRelayOptions,
+) {
+  return requestJapanRelay('daiso-jp-search', { query, page }, options, (value) =>
+    parseProductSearch(z.object({ html: z.string() }).parse(value).html),
+  );
 }

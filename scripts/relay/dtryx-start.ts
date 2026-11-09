@@ -96,7 +96,8 @@ async function main() {
       onEvent: convenienceLog.append,
       gs25ApiKey: process.env.GS25_API_KEY,
       gs25Session: session,
-      fetcher: createEmart24SessionTransport({ fetcher: sevenSession?.fetch, takeQuota: quota }).fetch,
+      fetcher: createEmart24SessionTransport({ fetcher: sevenSession?.fetch, takeQuota: quota })
+        .fetch,
     });
     convenience = observeRelay(async (request) => {
       const response = await convenienceHandler(request);
@@ -142,7 +143,9 @@ async function main() {
       ? convenience
         ? convenience(request)
         : Promise.resolve(Response.json({ error: 'Not found' }, { status: 404 }))
-      : new URL(request.url).pathname === '/v1/dtryx/daiso-jp-product'
+      : ['/v1/dtryx/daiso-jp-product', '/v1/dtryx/daiso-jp-search'].includes(
+            new URL(request.url).pathname,
+          )
         ? japanHandler(request)
         : new URL(request.url).pathname.startsWith('/v1/cgv/')
           ? cgvHandler(request)

@@ -3,7 +3,9 @@ import { fetchText, HttpError } from '../../utils/http.js';
 import { parseProductPage, parseProductSearch, parseStoreSearch } from './parser.js';
 import {
   JapanProductRateLimitError,
+  JapanRelayQuotaError,
   requestJapanProductRelay,
+  requestJapanSearchRelay,
   type JapanTransportOptions,
 } from './productRelay.js';
 import type { JapanProduct, JapanProductSearchResult, JapanStoreSearchResult } from './types.js';
@@ -35,22 +37,44 @@ async function upstream<T>(action: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function searchProducts(query: string, page = 1): Promise<JapanProductSearchResult> {
+export async function searchProducts(
+  query: string,
+  page = 1,
+  options: JapanTransportOptions = {},
+): Promise<JapanProductSearchResult> {
   const keyword = validateSearch(query, page);
   const url = new URL('https://jp.daisonet.com/search');
   url.search = new URLSearchParams({ q: keyword, type: 'product', page: String(page) }).toString();
-  return upstream(async () => ({
-    country: 'JP',
-    currency: 'JPY',
-    query: keyword,
-    page,
-    ...parseProductSearch(await fetchText(url.toString(), OPTIONS)),
-    note: '일본 공식 온라인몰의 해당 검색 페이지입니다. 가격은 세금 포함 JPY이며, 온라인 판매 여부는 매장 재고가 아닙니다. 매장별 재고와 수량은 제공하지 않습니다.',
-  }));
+  return upstream(async () => {
+    let result: ReturnType<typeof parseProductSearch>;
+    try {
+      result = parseProductSearch(await fetchText(url.toString(), OPTIONS));
+    } catch (error) {
+      if (
+        !(error instanceof HttpError) ||
+        !options.productRelay ||
+        ![403, 429].includes(error.status)
+      )
+        throw error;
+      result = await requestJapanSearchRelay(keyword, page, options.productRelay);
+    }
+    return {
+      country: 'JP',
+      currency: 'JPY',
+      query: keyword,
+      page,
+      ...result,
+      note: '일본 공식 온라인몰의 해당 검색 페이지입니다. 가격은 세금 포함 JPY이며, 온라인 판매 여부는 매장 재고가 아닙니다. 매장별 재고와 수량은 제공하지 않습니다.',
+    };
+  });
 }
 
-async function productByCode(id: string, originalError: unknown): Promise<JapanProduct> {
-  const result = await searchProducts(id, 1);
+async function productByCode(
+  id: string,
+  originalError: unknown,
+  options: JapanTransportOptions,
+): Promise<JapanProduct> {
+  const result = await searchProducts(id, 1, options);
   const match = result.products.find((item) => item.id === id);
   if (!match) throw originalError;
   return {
@@ -71,8 +95,9 @@ export async function getProduct(
     return requestJapanProductRelay(id, options.productRelay).catch(async (error: unknown) => {
       if (!(error instanceof JapanProductRateLimitError)) throw error;
       try {
-        return await productByCode(id, error);
-      } catch {
+        return await productByCode(id, error, options);
+      } catch (fallbackError) {
+        if (fallbackError instanceof JapanRelayQuotaError) throw fallbackError;
         throw error;
       }
     });
@@ -84,7 +109,7 @@ export async function getProduct(
       );
     } catch (error) {
       if (!(error instanceof HttpError) || error.status !== 403) throw error;
-      return productByCode(id, error);
+      return productByCode(id, error, options);
     }
   });
 }

@@ -61,7 +61,7 @@ export function createDaisoJpService(options: JapanTransportOptions = {}): Servi
       },
       handler: async (args) => {
         const { query, page } = schemas.search.parse(args);
-        const result = await searchProducts(query, page);
+        const result = await searchProducts(query, page, options);
         return {
           content: [{ type: 'text', text: JSON.stringify(result) }],
           structuredContent: { ...result },

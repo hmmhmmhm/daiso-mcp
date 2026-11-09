@@ -81,7 +81,7 @@ describe('일본 다이소 연결', () => {
       expect(result.structuredContent).toBeDefined();
       expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
     }
-    expect(searchProducts).toHaveBeenCalledWith('ボウル', 1);
+    expect(searchProducts).toHaveBeenCalledWith('ボウル', 1, {});
     expect(findStores).toHaveBeenCalledWith('渋谷', 2);
     await expect(tools[0].handler({ query: ' ' })).rejects.toThrow();
     await expect(tools[1].handler({ id: '../' })).rejects.toThrow();
@@ -162,4 +162,14 @@ describe('일본 다이소 연결', () => {
     expect(await runCli([command, '--help'], { writeOut: out, writeErr: err })).toBe(0);
     expect(await runCli([command], { writeOut: out, writeErr: err })).toBe(1);
   });
+});
+
+it('REST와 MCP 검색도 같은 명시적 HTTP 중계를 전달한다', async () => {
+  vi.mocked(searchProducts).mockResolvedValue({ country: 'JP', currency: 'JPY', query: 'ボウル', page: 1, products: [], hasNext: false, note: 'test' });
+  const options = { productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' } };
+  await createDaisoJpService(options).getTools()[0].handler({ query: 'ボウル' });
+  expect(searchProducts).toHaveBeenLastCalledWith('ボウル', 1, options);
+  const response = await app().request('/api/daiso-jp/products?q=ボウル', {}, { DAISO_JP_PRODUCT_RELAY_ENABLED: 'true', DTRYX_RELAY_URL: 'https://relay.example', DTRYX_RELAY_TOKEN: 'test-token' });
+  expect(response.status).toBe(200);
+  expect(searchProducts).toHaveBeenLastCalledWith('ボウル', 1, { productRelay: expect.objectContaining({ relayUrl: 'https://relay.example', bypassCache: false }) });
 });

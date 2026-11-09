@@ -45,8 +45,9 @@ export function registerDaisoJpRoutes(app: Hono<{ Bindings: AppBindings }>): voi
     const page = jpPage.safeParse(Number(c.req.query('page') ?? '1'));
     if (!query.success || !page.success)
       return errorResponse(c, 'INVALID_INPUT', 'q는 1~100자, page는 1~100 사이 정수여야 합니다.');
-    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-search-v1', bypassCache: await isFreshOperationalRequest(c) }, () =>
-      execute(c, () => searchProducts(query.data, page.data)),
+    const bypassCache = await isFreshOperationalRequest(c);
+    return withEdgeCache(c.req.url, { ttlSeconds: 1800, keyPrefix: 'daiso-jp-search-v1', bypassCache }, () =>
+      execute(c, () => searchProducts(query.data, page.data, japanProductTransportFromBindings(c.env, bypassCache))),
     );
   });
   app.get('/api/daiso-jp/stores', async (c) => {

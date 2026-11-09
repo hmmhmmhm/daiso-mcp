@@ -56,6 +56,7 @@ it('CGV와 디트릭스 조회가 같은 쿼터를 소비하고 CGV 건강 상�
   const japan = await invoke('/v1/dtryx/daiso-jp-product', { id: '4550746075917' });
   expect(japan.status).toBe(200);
   expect(japan.body.handle).toBe('4550746075917');
+  expect((await invoke('/v1/dtryx/daiso-jp-search', { query: 'ボウル', page: 1 }, 'wrong')).status).toBe(401);
   const after = await invoke('/v1/cgv/health');
   expect(after.body.quota.dailyRemaining).toBe(before.body.quota.dailyRemaining - 3);
 });

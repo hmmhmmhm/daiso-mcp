@@ -241,3 +241,77 @@ describe('상세 페이지 차단 시 공식 상품 코드 검색', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('검색의 제한적인 HTTP 중계 대체', () => {
+  const options = { productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' } };
+  it.each([403, 429])('원본 %i이면 인증 중계에서 동일 검색과 페이지를 읽는다', async (status) => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('', { status }))
+      .mockResolvedValueOnce(Response.json({ html: fixture('products') }));
+    vi.stubGlobal('fetch', fetcher);
+    const result = await searchProducts('ボウル', 2, options);
+    expect(result.products.some((p) => p.id === '4550746075917')).toBe(true);
+    expect(result.page).toBe(2);
+    expect(fetcher.mock.calls[1][0]).toBe('https://relay.example/v1/dtryx/daiso-jp-search');
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ query: 'ボウル', page: 2 });
+  });
+  it('원본 성공 때 중계를 호출하지 않는다', async () => {
+    const fetcher = vi.fn(async () => new Response(fixture('products')));
+    vi.stubGlobal('fetch', fetcher);
+    expect((await searchProducts('ボウル', 1, options)).products.length).toBeGreaterThan(0);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
+it('검색 중계 대체는 다른 원본 오류를 우회하지 않는다', async () => {
+  const fetcher = vi.fn(async () => new Response('', { status: 500 }));
+  vi.stubGlobal('fetch', fetcher);
+  await expect(
+    searchProducts('ボウル', 1, {
+      productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' },
+    }),
+  ).rejects.toMatchObject({ status: 503, upstreamStatus: 500 });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it('상세 원본 제한과 Worker 검색 제한이 겹쳐도 같은 JAN 검색을 HTTP 중계에서 읽는다', async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response('', { status: 429, headers: { 'x-relay-upstream-status': '429' } }),
+    )
+    .mockResolvedValueOnce(new Response('', { status: 429 }))
+    .mockResolvedValueOnce(Response.json({ html: fixture('products') }));
+  vi.stubGlobal('fetch', fetcher);
+  await expect(
+    getProduct('4550746075917', {
+      productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' },
+    }),
+  ).resolves.toMatchObject({ id: '4550746075917', onlineAvailable: null });
+  expect(fetcher).toHaveBeenCalledTimes(3);
+});
+
+it('상세 대체 중 검색 중계 자체 한도와 Retry-After를 원본429로 덮지 않는다', async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response('', {
+        status: 429,
+        headers: { 'x-relay-upstream-status': '429', 'Retry-After': '60' },
+      }),
+    )
+    .mockResolvedValueOnce(new Response('', { status: 429 }))
+    .mockResolvedValueOnce(
+      new Response('', {
+        status: 429,
+        headers: { 'x-relay-quota-reason': 'daily', 'Retry-After': '86400' },
+      }),
+    );
+  vi.stubGlobal('fetch', fetcher);
+  await expect(
+    getProduct('4550746075917', {
+      productRelay: { relayUrl: 'https://relay.example', relayToken: 'test-token' },
+    }),
+  ).rejects.toMatchObject({ status: 429, quotaReason: 'daily', retryAfter: 86400 });
+  expect(fetcher).toHaveBeenCalledTimes(3);
+});

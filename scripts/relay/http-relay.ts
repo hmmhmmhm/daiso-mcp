@@ -82,12 +82,12 @@ export function abortable<T>(task: Promise<T>, signal: AbortSignal): Promise<T> 
   });
 }
 
-export async function readJson(
+export async function readText(
   body: ReadableStream<Uint8Array> | null,
   limit: number,
   signal: AbortSignal,
   status: number,
-): Promise<unknown> {
+): Promise<string> {
   if (!body) throw new RelayError(status);
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
@@ -100,12 +100,26 @@ export async function readJson(
       if (bytes > limit) throw new RelayError(status === 400 ? 413 : status);
       chunks.push(value);
     }
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return Buffer.concat(chunks).toString('utf8');
   } catch (error) {
     if (error instanceof RelayError) throw error;
     throw new RelayError(status);
   } finally {
     void reader.cancel().catch(() => undefined);
+  }
+}
+
+export async function readJson(
+  body: ReadableStream<Uint8Array> | null,
+  limit: number,
+  signal: AbortSignal,
+  status: number,
+): Promise<unknown> {
+  const text = await readText(body, limit, signal, status);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new RelayError(status);
   }
 }
 
