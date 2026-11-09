@@ -57,7 +57,7 @@ def retire_restarted_sessions(helper, base, current_pid):
         except BlockingIOError:
             return
         for path in base.glob('safari-session-*.json'):
-            match = re.fullmatch(r'safari-session-([0-9]+)\.json', path.name)
+            match = re.fullmatch(r'safari-session-([0-9]+)\.json(\.opening\.json)?', path.name)
             info = path.lstat()
             if (not match or not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
                     or info.st_mode & 0o077 or info.st_size > 65536):
@@ -70,8 +70,16 @@ def retire_restarted_sessions(helper, base, current_pid):
             if not isinstance(state, dict):
                 continue
             old_pid = str(state.get('safari_pid', ''))
-            if (not old_pid.isdigit() or int(old_pid) <= 0 or int(old_pid) == int(current_pid)
-                    or type(state.get('window_id')) is not int or state['window_id'] <= 0):
+            opening = bool(match[2])
+            session_path = path.with_name(path.name.removesuffix('.opening.json')) if opening else path
+            if not old_pid.isdigit() or int(old_pid) <= 0:
+                continue
+            if opening:
+                if not isinstance(state.get('nonce'), str) or not re.fullmatch(
+                        r'about:blank#safari-owned-[0-9a-f]{32}', state['nonce']):
+                    continue
+            elif (int(old_pid) == int(current_pid) or type(state.get('window_id')) is not int
+                    or state['window_id'] <= 0):
                 continue
             owner = int(match[1])
             if not 0 < owner < 2 ** 31:
@@ -105,13 +113,23 @@ def retire_restarted_sessions(helper, base, current_pid):
                         raise RuntimeError('retirement-copy-mismatch')
                 sync_directory(archive)
                 sync_directory(base)
-                if state.get('lock_scope') == 'window':
-                    helper.release(path, True)
+                if opening and int(old_pid) == int(current_pid):
+                    if getattr(helper, 'OPENING_CLEANUP_VERSION', 0) < 2:
+                        raise RuntimeError('opening-cleanup-helper-upgrade-required')
+                    if str(helper.safari_pid()) != str(current_pid):
+                        raise RuntimeError('safari-changed-during-opening-cleanup')
+                    result = helper.apple(helper.opening_cleanup_script(state['nonce']))
+                    if result != 'closed':
+                        raise RuntimeError('unresolved-opening-window')
+                own_lock = session_path.with_name(session_path.name + '.lock')
+                if state.get('lock_scope') == 'window' or (
+                        opening and own_lock.exists() and own_lock.read_text() == str(session_path)):
+                    helper.release(session_path, True)
                 try:
                     held = Path(helper.LOCK.read_text().strip())
                 except FileNotFoundError:
                     held = None
-                if held is not None and held.resolve() == path:
+                if held is not None and held.resolve() == session_path:
                     helper.release(held)
                 sync_directory(helper.LOCK.parent)
                 path.unlink()

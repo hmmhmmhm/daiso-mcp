@@ -83,6 +83,71 @@ class RelayTests(unittest.TestCase):
         self.assertFalse(self.session.exists())
         self.assertEqual(self.calls, [])
 
+    def test_dead_owned_opening_is_reconciled_by_its_nonce(self):
+        opening = self.session.with_name(self.session.name + '.opening.json')
+        raw = json.dumps({'safari_pid': '99', 'nonce': 'about:blank#safari-owned-' + 'a' * 32})
+        opening.write_text(raw); opening.chmod(0o600)
+        self.helper.ensure_safari = lambda: '99'
+        self.helper.safari_pid = lambda: '99'
+        self.helper.OPENING_CLEANUP_VERSION = 2
+        scripts = []
+        self.helper.opening_cleanup_script = lambda nonce: nonce
+        self.helper.apple = lambda script: scripts.append(script) or 'closed'
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            self.assertEqual(self.run_main('--check'), {'ready': True})
+        self.assertEqual(scripts, ['about:blank#safari-owned-' + 'a' * 32])
+        self.assertFalse(opening.exists())
+        self.assertEqual(next((self.base / 'retired-safari-sessions').glob('*.json')).read_text(), raw)
+
+    def test_live_or_ambiguous_opening_is_preserved(self):
+        opening = self.session.with_name(self.session.name + '.opening.json')
+        opening.write_text(json.dumps({'safari_pid': '99', 'nonce': 'invalid'})); opening.chmod(0o600)
+        self.helper.ensure_safari = lambda: '99'
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            with self.assertRaises(RuntimeError):self.run_main('--check')
+        self.assertTrue(opening.exists())
+
+    def test_opening_cleanup_failure_keeps_retry_state(self):
+        opening = self.session.with_name(self.session.name + '.opening.json')
+        opening.write_text(json.dumps({'safari_pid': '99', 'nonce': 'about:blank#safari-owned-' + 'b' * 32})); opening.chmod(0o600)
+        self.helper.ensure_safari = self.helper.safari_pid = lambda: '99'
+        self.helper.OPENING_CLEANUP_VERSION = 2
+        self.helper.OPENING_CLEANUP_VERSION = 2
+        self.helper.opening_cleanup_script = lambda nonce: nonce
+        self.helper.apple = lambda script: (_ for _ in []).throw(RuntimeError('ambiguous'))
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            with self.assertRaises(RuntimeError):self.run_main('--check')
+        self.assertTrue(opening.exists())
+        self.assertEqual(len(list((self.base/'retired-safari-sessions').glob('*.json'))), 1)
+
+    def test_live_valid_opening_is_not_touched(self):
+        opening = self.session.with_name(self.session.name + '.opening.json')
+        opening.write_text(json.dumps({'safari_pid': '99', 'nonce': 'about:blank#safari-owned-' + 'b' * 32})); opening.chmod(0o600)
+        self.helper.ensure_safari = lambda: '99'
+        with patch.object(m.os, 'kill', return_value=None):
+            with self.assertRaises(RuntimeError):self.run_main('--check')
+        self.assertTrue(opening.exists())
+        self.assertFalse((self.base/'retired-safari-sessions').exists())
+
+    def test_old_cleanup_helper_preserves_opening(self):
+        opening = self.session.with_name(self.session.name + '.opening.json')
+        opening.write_text(json.dumps({'safari_pid': '99', 'nonce': 'about:blank#safari-owned-' + 'c' * 32})); opening.chmod(0o600)
+        self.helper.ensure_safari = lambda: '99'
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            with self.assertRaisesRegex(RuntimeError, 'upgrade-required'):self.run_main('--check')
+        self.assertTrue(opening.exists())
+
+    def test_absent_nonce_is_uncertain_and_preserved(self):
+        opening = self.session.with_name(self.session.name + '.opening.json')
+        opening.write_text(json.dumps({'safari_pid': '99', 'nonce': 'about:blank#safari-owned-' + 'c' * 32})); opening.chmod(0o600)
+        self.helper.ensure_safari = self.helper.safari_pid = lambda: '99'
+        self.helper.OPENING_CLEANUP_VERSION = 2
+        self.helper.opening_cleanup_script = lambda nonce: nonce
+        self.helper.apple = lambda script: 'absent'
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            with self.assertRaisesRegex(RuntimeError, 'unresolved-opening'):self.run_main('--check')
+        self.assertTrue(opening.exists())
+
     def test_same_safari_or_live_owner_is_not_retired(self):
         original = self.old_session()
         for current, effect in [('88', ProcessLookupError), ('99', None)]:
