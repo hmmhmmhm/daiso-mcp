@@ -18,6 +18,8 @@ export function createSafariLifecycle(stateDir: string) {
   let child: ChildProcess | undefined;
   let pending: Promise<unknown> | undefined;
   let starting: Promise<void> | undefined;
+  let recoveryTimer: ReturnType<typeof setTimeout> | undefined;
+  let retryAt = 0;
   const closed = () => state === 'closed';
   const execute = (input?: string): Promise<unknown> => {
     pending = new Promise((resolve, reject) => {
@@ -66,6 +68,16 @@ export function createSafariLifecycle(stateDir: string) {
     evaluate: ((fn: unknown, args: unknown) =>
       execute(JSON.stringify({ script: String(fn), args }))) as Page['evaluate'],
   });
+  const scheduleRecovery = () => {
+    if (recoveryTimer || closed()) return;
+    retryAt = Date.now() + 60000;
+    recoveryTimer = setTimeout(() => {
+      recoveryTimer = undefined;
+      retryAt = 0;
+      void start().catch(() => undefined);
+    }, 60000);
+    recoveryTimer.unref();
+  };
   const runTask = async <T>(task: () => Promise<T>): Promise<T> => {
     if (closed()) throw new Error('Safari lifecycle closed');
     if (state !== 'ready') throw new Error('Safari lifecycle not ready');
@@ -78,48 +90,58 @@ export function createSafariLifecycle(stateDir: string) {
       if (error instanceof BrowserRequestError && error.reason === 'safari-helper') {
         uncertain = true;
         if (!closed()) state = 'failed';
+        scheduleRecovery();
       }
       throw error;
     } finally {
       active = false;
     }
   };
+  const start = async () => {
+    clearTimeout(recoveryTimer);
+    recoveryTimer = undefined;
+    retryAt = 0;
+    if (closed()) throw new Error('Safari lifecycle closed');
+    if (state === 'ready') return;
+    starting ??= (async () => {
+      state = 'starting';
+      try {
+        if (((await execute()) as { ready?: boolean })?.ready !== true)
+          throw new BrowserRequestError('safari-helper');
+        state = 'ready';
+        uncertain = false;
+      } catch (error) {
+        uncertain = true;
+        if (!closed()) state = 'failed';
+        throw error;
+      } finally {
+        starting = undefined;
+      }
+    })();
+    await starting;
+  };
   return {
-    async start() {
-      if (closed()) throw new Error('Safari lifecycle closed');
-      if (state === 'ready') return;
-      starting ??= (async () => {
-        state = 'starting';
-        try {
-          if (((await execute()) as { ready?: boolean })?.ready !== true)
-            throw new BrowserRequestError('safari-helper');
-          state = 'ready';
-          uncertain = false;
-        } catch (error) {
-          uncertain = true;
-          if (!closed()) state = 'failed';
-          throw error;
-        } finally {
-          starting = undefined;
-        }
-      })();
-      await starting;
-    },
+    start,
     run: (path: string, body: Record<string, unknown>) => runTask(() => runner(path, body)),
     evaluate: (script: string, args: Record<string, unknown>) =>
       runTask(() => execute(JSON.stringify({ script, args }))),
     async close() {
       state = 'closed';
+      clearTimeout(recoveryTimer);
+      recoveryTimer = undefined;
+      retryAt = 0;
       child?.kill('SIGTERM');
       await pending?.catch(() => undefined);
     },
     status: () => ({
       state,
       transport: 'safari',
+      recoveryManaged: true,
       browserRequired: true,
       sharedBrowser: true,
       pages: uncertain ? null : active ? 1 : 0,
       recoveryRequired: uncertain,
+      retryAt,
       active,
       calls,
       totalCalls: calls,

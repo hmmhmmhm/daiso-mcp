@@ -4,6 +4,7 @@ import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 const exec = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', () => ({ execFile: exec }));
 import { createSafariLifecycle } from '../../scripts/relay/safari-lifecycle.js';
+import { createRelayWatchdog } from '../../scripts/relay/watchdog.js';
 let done: (error: Error | null, stdout: string) => void;
 let child: EventEmitter & { stdin: PassThrough; kill: ReturnType<typeof vi.fn> };
 beforeEach(() => {
@@ -173,5 +174,85 @@ it('세븐일레븐의 고정 공개 조회도 같은 수명 보호로 실행한
   });
   done(null, '{"status":200,"text":"{}"}');
   await expect(a).resolves.toEqual({ status: 200, text: '{}' });
+  await x.close();
+});
+
+it('helper 오류 뒤60초에 소유 상태만 한 번 재확인하고 정상 복귀한다', async () => {
+  vi.useFakeTimers();
+  const x = await ready();
+  const call = x.run('x', {});
+  done(new Error('helper failed'), '');
+  await expect(call).rejects.toThrow();
+  await vi.advanceTimersByTimeAsync(59999);
+  expect(exec).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(1);
+  expect(exec).toHaveBeenCalledTimes(3);
+  expect(exec.mock.calls[2][1]).toContain('--check');
+  done(null, '{"ready":true}');
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(x.status()).toMatchObject({ state: 'ready', recoveryRequired: false });
+  await x.close();
+});
+it('소유 확인 실패는 무한 재시도하지 않고 종료하면 예약도 취소한다', async () => {
+  vi.useFakeTimers();
+  const x = await ready();
+  const call = x.run('x', {});
+  done(new Error('failed'), '');
+  await expect(call).rejects.toThrow();
+  await vi.advanceTimersByTimeAsync(60000);
+  done(new Error('ownership unresolved'), '');
+  await Promise.resolve();
+  await Promise.resolve();
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(exec).toHaveBeenCalledTimes(3);
+  expect(x.status().state).toBe('failed');
+  await x.close();
+});
+
+it('정상 종료는 예약된 소유 상태 재확인을 취소한다', async () => {
+  vi.useFakeTimers();
+  const x = await ready();
+  const call = x.run('x', {});
+  done(new Error('failed'), '');
+  await expect(call).rejects.toThrow();
+  await x.close();
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(exec).toHaveBeenCalledTimes(2);
+  expect(x.status()).toMatchObject({ state: 'closed', retryAt: 0 });
+});
+it('수동 준비 성공은 이전 실패의 재확인 예약을 취소한다', async () => {
+  vi.useFakeTimers();
+  const x = await ready();
+  const call = x.run('x', {});
+  done(new Error('failed'), '');
+  await expect(call).rejects.toThrow();
+  const start = x.start();
+  done(null, '{"ready":true}');
+  await start;
+  await vi.advanceTimersByTimeAsync(60000);
+  expect(exec).toHaveBeenCalledTimes(3);
+  expect(x.status()).toMatchObject({ state: 'ready', retryAt: 0 });
+  await x.close();
+});
+
+it('실제 watchdog과 같이 써도 Safari의 단발 재확인을 앞당기거나 반복하지 않는다', async () => {
+  vi.useFakeTimers();
+  const x = await ready();
+  const tick = createRelayWatchdog(x);
+  const call = x.run('x', {});
+  done(new Error('failed'), '');
+  await expect(call).rejects.toThrow();
+  const firstTick = tick();
+  expect(exec).toHaveBeenCalledTimes(2);
+  await firstTick;
+  await vi.advanceTimersByTimeAsync(60000);
+  done(new Error('still unresolved'), '');
+  await Promise.resolve();
+  await Promise.resolve();
+  await tick();
+  await vi.advanceTimersByTimeAsync(60000);
+  await tick();
+  expect(exec).toHaveBeenCalledTimes(3);
   await x.close();
 });

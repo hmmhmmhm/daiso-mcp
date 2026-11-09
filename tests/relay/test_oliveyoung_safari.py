@@ -148,8 +148,32 @@ class RelayTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'unresolved-opening'):self.run_main('--check')
         self.assertTrue(opening.exists())
 
+    def test_same_safari_missing_owned_window_is_retired_without_closing(self):
+        original = self.old_session()
+        self.helper.ensure_safari = self.helper.safari_pid = lambda: '88'
+        scripts = []
+        self.helper.apple = lambda script: scripts.append(script) or '456, 789'
+        self.lock.write_text('another-task')
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            self.assertEqual(self.run_main('--check'), {'ready': True})
+        self.assertFalse(self.session.exists())
+        self.assertEqual(self.lock.read_text(), 'another-task')
+        self.assertEqual(len(scripts), 1)
+        self.assertNotIn('close', scripts[0])
+        self.assertEqual(next((self.base/'retired-safari-sessions').glob('*.json')).read_bytes(), original)
+
+    def test_unreadable_window_inventory_preserves_same_pid_session(self):
+        self.old_session()
+        self.helper.ensure_safari = self.helper.safari_pid = lambda: '88'
+        self.helper.apple = lambda script: 'unknown'
+        with patch.object(m.os, 'kill', side_effect=ProcessLookupError):
+            with self.assertRaises(RuntimeError):self.run_main('--check')
+        self.assertTrue(self.session.exists())
+
     def test_same_safari_or_live_owner_is_not_retired(self):
         original = self.old_session()
+        self.helper.safari_pid = lambda: '88'
+        self.helper.apple = lambda script: '123'
         for current, effect in [('88', ProcessLookupError), ('99', None)]:
             self.helper.ensure_safari = lambda: current
             with patch.object(m.os, 'kill', side_effect=effect):

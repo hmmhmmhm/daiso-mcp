@@ -78,7 +78,7 @@ def retire_restarted_sessions(helper, base, current_pid):
                 if not isinstance(state.get('nonce'), str) or not re.fullmatch(
                         r'about:blank#safari-owned-[0-9a-f]{32}', state['nonce']):
                     continue
-            elif (int(old_pid) == int(current_pid) or type(state.get('window_id')) is not int
+            elif (type(state.get('window_id')) is not int
                     or state['window_id'] <= 0):
                 continue
             owner = int(match[1])
@@ -92,6 +92,13 @@ def retire_restarted_sessions(helper, base, current_pid):
                 continue
             else:
                 continue
+            if not opening and int(old_pid) == int(current_pid):
+                ids = helper.apple('tell application "Safari" to get id of every window').strip()
+                if (not re.fullmatch(r'(?:[0-9]+(?:,\s*[0-9]+)*)?', ids)
+                        or str(helper.safari_pid()) != str(current_pid)):
+                    raise RuntimeError('window-inventory-unconfirmed')
+                if state['window_id'] in [int(value) for value in ids.split(',') if value.strip()]:
+                    continue
             archive = base / 'retired-safari-sessions'
             if archive.is_symlink():
                 raise RuntimeError('unsafe-retirement-directory')

@@ -1,7 +1,7 @@
 /** 원본 조회 없이 중계 수명을 감시하고 복구 실패 간격을 늘립니다. */
 interface RecoverableLifecycle {
   start(): Promise<void>;
-  status(): { state: string; active: boolean };
+  status(): { state: string; active: boolean; recoveryManaged?: boolean };
 }
 export function createRelayWatchdog(
   lifecycle: RecoverableLifecycle,
@@ -20,7 +20,8 @@ export function createRelayWatchdog(
   };
   return async () => {
     if (pending) return pending;
-    const { state, active } = lifecycle.status();
+    const { state, active, recoveryManaged } = lifecycle.status();
+    if (recoveryManaged) return;
     if (state === 'ready') {
       failures = 0;
       nextAttempt = 0;
