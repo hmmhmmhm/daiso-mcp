@@ -13,6 +13,7 @@ const evening = Date.parse('2026-11-03T12:10:00Z');
 const deal = (goodsNo: string) => ({ goodsNo, name: `상품 ${goodsNo}` });
 const body = (patch: Partial<TodayDealsBody> = {}): TodayDealsBody => ({
   date: '2026-11-03',
+  truncated: false,
   brandDeals: [deal('A000000000001')],
   todayDeals: [deal('A000000000002')],
   upcomingDeals: [deal('A000000000003'), deal('A000000000004')],
@@ -50,6 +51,10 @@ describe('다음 날 오특 대조', () => {
       upcomingDeals: null,
       ...patch,
     });
+
+  it('잘린 실제 목록은 완전한 대조로 판단하지 않는다', () => {
+    expect(() => compareUpcoming(snapshot, next({ truncated: true }))).toThrow('목록이 잘려');
+  });
 
   it('예고 상품번호가 실제 오특과 모두 같으면 통과한다', () => {
     expect(compareUpcoming(snapshot, next())).toEqual({

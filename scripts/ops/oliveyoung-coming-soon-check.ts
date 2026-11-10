@@ -12,6 +12,7 @@ export interface UpcomingDeal {
 
 export interface TodayDealsBody {
   date: string;
+  truncated: boolean;
   brandDeals: Array<{ goodsNo: string; name: string }>;
   todayDeals: Array<{ goodsNo: string; name: string }>;
   upcomingDeals: UpcomingDeal[] | null;
@@ -76,6 +77,7 @@ export function compareUpcoming(
   if (body.date !== snapshot.targetDate) {
     throw new Error(`대조 날짜가 다릅니다: 예고 ${snapshot.targetDate}, 오특 ${body.date}`);
   }
+  if (body.truncated) throw new Error('오특 목록이 잘려 전체 대조를 확인할 수 없습니다');
   const deals = [...body.brandDeals, ...body.todayDeals];
   const dealNos = new Set(deals.map((deal) => deal.goodsNo));
   const previewNos = new Set(snapshot.upcomingDeals.map((deal) => deal.goodsNo));

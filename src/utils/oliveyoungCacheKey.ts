@@ -3,6 +3,7 @@ const product = { keyword: '', page: '1', size: '20', sort: '01', includeSoldOut
 const location = { lat: '37.5665', lng: '126.978' };
 const defaults: Record<string, Record<string, string>> = {
   '/api/oliveyoung/products': product,
+  '/api/oliveyoung/today-deals': {},
   '/api/oliveyoung/stores': { keyword: '', ...location, pageIdx: '1', limit: '20' },
   '/api/oliveyoung/inventory': {
     ...product,

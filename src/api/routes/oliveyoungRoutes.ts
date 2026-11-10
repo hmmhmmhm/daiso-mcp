@@ -61,7 +61,7 @@ export function registerOliveyoungRoutes(app: Hono<{ Bindings: AppBindings }>): 
   // 오특은 한국 자정에 바뀌므로 날짜를 캐시 키에 넣어 자정 전후 응답이 섞이지 않게 합니다.
   app.get('/api/oliveyoung/today-deals', async (c) =>
     withEdgeCache(
-      c.req.url,
+      oliveyoungCacheKey(c.req.url),
       {
         bypassCache: await isFreshOperationalRequest(c),
         ttlSeconds: 60 * 5,

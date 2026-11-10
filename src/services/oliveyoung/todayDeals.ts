@@ -153,6 +153,16 @@ export function parseOliveyoungTodayDeals(html: string, section?: string): Olive
   return deals;
 }
 
+/** 중첩 div의 닫힘까지 잘라 뒤쪽 카드나 푸터의 필드를 빌리지 않습니다. */
+function divElement(source: string): string | null {
+  let depth = 0;
+  for (const tag of source.matchAll(/<div\b[^>]*>|<\/div\s*>/g)) {
+    depth += tag[0].startsWith('</') ? -1 : 1;
+    if (depth === 0) return source.slice(0, tag.index + tag[0].length);
+  }
+  return null;
+}
+
 /**
  * 오특 페이지의 coming soon 배너에서 다음 오특 예고 상품을 읽습니다.
  *
@@ -165,12 +175,16 @@ export function parseOliveyoungTodayDeals(html: string, section?: string): Olive
 export function parseOliveyoungUpcomingDeals(html: string): OliveyoungUpcomingDeal[] | null {
   const start = html.indexOf('<div class="comingSoonBan"');
   if (start < 0) return null;
-  const banner = html.slice(start);
+  const banner = divElement(html.slice(start));
+  if (banner === null) return null;
   const items = banner.split('<div class="slideItem" tabindex="1">').slice(1);
   if (items.length !== (banner.match(/class="slideItem\b/g) ?? []).length) return null;
   const deals: OliveyoungUpcomingDeal[] = [];
   const seen = new Set<string>();
-  for (const item of items) {
+  if (!items.length && !/<div class="sliderCenter">\s*<\/div>/.test(banner)) return null;
+  for (const fragment of items) {
+    const item = divElement('<div>' + fragment);
+    if (item === null) return null;
     const name = text(item.match(/<span>([\s\S]*?)<\/span>/)?.[1]);
     const imageUrl = decode(item.match(/background-image:\s*url\(['"]?([^'")]+)/)?.[1] ?? '');
     if (!name || !imageUrl) return null;

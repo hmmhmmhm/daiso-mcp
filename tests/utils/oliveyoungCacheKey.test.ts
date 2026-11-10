@@ -7,6 +7,11 @@ describe('올리브영 캐시 키', () => {
       oliveyoungCacheKey(base + '&page=1&size=20&includeSoldOut=false&unused=nonce'),
     );
   });
+  it('오특 조회는 추적 파라미터를 무시하고 제한 시간만 보존한다', () => {
+    const base = 'https://x/api/oliveyoung/today-deals';
+    expect(oliveyoungCacheKey(base)).toBe(oliveyoungCacheKey(base + '?utm_source=test'));
+    expect(oliveyoungCacheKey(base)).not.toBe(oliveyoungCacheKey(base + '?timeoutMs=60000'));
+  });
   it('실제 검색조건과 강제 점검은 분리한다', () => {
     const base = 'https://x/api/oliveyoung/products?keyword=lip';
     expect(oliveyoungCacheKey(base)).not.toBe(oliveyoungCacheKey(base + '&_healthCheck=123'));

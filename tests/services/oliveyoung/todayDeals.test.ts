@@ -303,6 +303,24 @@ describe('오특 coming soon 예고', () => {
     )!;
     expect(first).toMatchObject({ goodsNo: null, productUrl: null, name: expect.any(String) });
   });
+  it('배너 밖의 슬라이드와 푸터는 예고에 포함하지 않는다', () => {
+    const footer = '<div class="slideItem" tabindex="1"><span>푸터</span></div>';
+    expect(parseOliveyoungUpcomingDeals(comingSoon + footer)).toHaveLength(3);
+    const missingName = comingSoon.replace('<span>제로이드 인텐시브 크림 미스트 100ml</span>', '');
+    expect(parseOliveyoungUpcomingDeals(missingName + '<span>푸터 이름</span>')).toBeNull();
+  });
+  it('항목 이름이 바뀌거나 배너가 잘리면 빈 목록으로 판단하지 않는다', () => {
+    expect(parseOliveyoungUpcomingDeals(comingSoon.replaceAll('slideItem', 'newItem'))).toBeNull();
+    expect(
+      parseOliveyoungUpcomingDeals(comingSoon.slice(0, comingSoon.lastIndexOf('</div>'))),
+    ).toBeNull();
+    expect(parseOliveyoungUpcomingDeals('<div class="comingSoonBan"></div>')).toBeNull();
+    expect(
+      parseOliveyoungUpcomingDeals(
+        comingSoon.replace('</span>\n\t\t\t\t\t\t\t</div>', '</span>') + '</div>',
+      ),
+    ).toBeNull();
+  });
   it('배너는 있지만 예고 상품이 없으면 빈 목록이다', () => {
     expect(parseOliveyoungUpcomingDeals(empty)).toEqual([]);
   });
