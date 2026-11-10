@@ -7,6 +7,7 @@
 - `generate-openapi.ts`: 배포/패키징에 필요한 OpenAPI 산출물을 생성합니다.
 - `generate-discovery.ts`: 현재 레지스트리에서 공개 HTML·JSON·robots·sitemap·llms 정적 자산을 생성합니다. [웹 발견 배포 절차](../../docs/web-discovery.md)를 참고하세요.
 - `workers-chart-data.ts`, `workers-chart-helpers.ts`, `update-workers-invocations-chart.ts`: Cloudflare Workers 호출량 차트를 갱신합니다.
+- `oliveyoung-coming-soon.ts`, `oliveyoung-coming-soon-check.ts`: 올리브영 coming soon 예고를 한국 시간 21시 이후 저장(`snapshot`)하고 자정 이후 실제 오특과 상품번호로 대조(`compare`)합니다. `Oliveyoung Coming Soon` workflow가 매일 실행하며, `OY_COMING_SOON_URL`로 대상 서버를 바꿀 수 있습니다(기본 `https://mcp.aka.page`).
 
 운영 스크립트는 `npm run` 명령에서 참조되며, 입력과 실패 메시지는 자동화 로그만으로 원인 추적이 가능해야 합니다.
 

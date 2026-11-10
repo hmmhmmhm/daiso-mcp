@@ -342,4 +342,29 @@ export const OPENAPI_DAISO_OLIVEYOUNG_COMPONENT_SCHEMAS = {
             },
           },
         },
+        OliveyoungTodayDealsResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            data: {
+              type: 'object',
+              properties: {
+                date: { type: 'string', example: '2026-11-02', description: '한국 날짜' },
+                brandDealCount: { type: 'integer' },
+                todayDealCount: { type: 'integer' },
+                upcomingDealCount: { type: 'integer', nullable: true },
+                truncated: { type: 'boolean' },
+                brandDeals: { type: 'array', items: { type: 'object' }, description: '오늘의 브랜드 특가' },
+                todayDeals: { type: 'array', items: { type: 'object' }, description: '오늘의 특가 전체 (인기순)' },
+                upcomingDeals: {
+                  type: 'array',
+                  nullable: true,
+                  items: { type: 'object' },
+                  description: '다음 오특 예고 (가격 없음). null은 미확인, 빈 목록은 예고 없음',
+                },
+                note: { type: 'string' },
+              },
+            },
+          },
+        },
 };

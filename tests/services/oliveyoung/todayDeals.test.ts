@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchOliveyoungTodayDeals,
   parseOliveyoungTodayDeals,
+  parseOliveyoungUpcomingDeals,
   toKstDate,
 } from '../../../src/services/oliveyoung/todayDeals.js';
 
@@ -13,6 +14,8 @@ const list1 = fixture('today-deals-list-1.html');
 const list3 = fixture('today-deals-list-3.html');
 // 2026-10-27 화면에 일시품절로 표시된 실제 카드
 const soldOutCard = fixture('today-deals-list-soldout.html');
+// 2026-10-26 21:17 페이지의 coming soon 배너 일부. 배너 31개가 10-27 오특 31개와 상품번호까지 일치
+const comingSoon = fixture('today-deals-coming-soon.html');
 // 2026-10-26 10:00 KST
 const now = new Date('2026-10-26T01:00:00Z');
 const card = (goodsNo: string, rank: number, extra = '') =>
@@ -259,4 +262,81 @@ it.each([
   page.replace(/data-impression="[^"]*"/, 'data-impression="A000000171422"'),
 ])('브랜드 카드의 섹션 추적 정보가 불일치해도 일부 결과를 반환하지 않는다', (html) => {
   expect(() => parseOliveyoungTodayDeals(html, '스페셜')).toThrow('형식이 변경');
+});
+
+describe('오특 coming soon 예고', () => {
+  const thumb =
+    'https://image.oliveyoung.co.kr/cfimages/cf-goods/uploads/images/thumbnails/10/0000';
+  const detail = 'https://www.oliveyoung.co.kr/store/goods/getGoodsDetail.do?goodsNo=';
+  const empty = comingSoon.replace(/<div class="slideItem"[\s\S]*<\/span>\s*<\/div>/, '');
+
+  it('배너의 상품명·이미지와 썸네일 파일명의 상품번호를 읽는다', () => {
+    expect(parseOliveyoungUpcomingDeals(comingSoon)).toEqual([
+      {
+        goodsNo: 'A000000202414',
+        name: '[10월 올영픽/몬치치] 라보에이치 헤어라인앰플 더블기획(+샴푸50ML)',
+        imageUrl: `${thumb}/0020/A00000020241475ko.jpg?l=ko`,
+        productUrl: `${detail}A000000202414`,
+      },
+      {
+        goodsNo: 'A000000263579',
+        name: 'VT 피디알엔 리들샷 마이크로 포어 패치 4매',
+        imageUrl: `${thumb}/0026/A00000026357916ko.jpg?l=ko`,
+        productUrl: `${detail}A000000263579`,
+      },
+      {
+        goodsNo: 'A000000264125',
+        name: '제로이드 인텐시브 크림 미스트 100ml',
+        imageUrl: `${thumb}/0026/A00000026412510ko.jpg?l=ko`,
+        productUrl: `${detail}A000000264125`,
+      },
+    ]);
+  });
+  it('슬라이드에서 반복된 상품은 한 번만 반환한다', () => {
+    const item = comingSoon.match(/<div class="slideItem"[\s\S]*?<\/span>\s*<\/div>/)![0];
+    const repeated = comingSoon.replace(item, `${item}${item}`).replace('</h2>', `</h2>${item}`);
+    expect(parseOliveyoungUpcomingDeals(repeated)).toHaveLength(3);
+  });
+  it('썸네일 파일명에 상품번호가 없으면 상품번호와 상품 링크를 비운다', () => {
+    const [first] = parseOliveyoungUpcomingDeals(
+      comingSoon.replace('A00000020241475ko.jpg', 'banner.jpg'),
+    )!;
+    expect(first).toMatchObject({ goodsNo: null, productUrl: null, name: expect.any(String) });
+  });
+  it('배너는 있지만 예고 상품이 없으면 빈 목록이다', () => {
+    expect(parseOliveyoungUpcomingDeals(empty)).toEqual([]);
+  });
+  it.each([
+    ['배너 없음', page],
+    ['상품명 없음', comingSoon.replace(/<span>VT[^<]*<\/span>/, '')],
+    [
+      '이미지 없음',
+      comingSoon.replace(/style="background-image:url\([^)]*A00000026357916[^)]*\)"/, ''),
+    ],
+    [
+      '항목 구조 변경',
+      comingSoon.replace('<div class="slideItem" tabindex="1">', '<div class="slideItem new">'),
+    ],
+  ])('%s이면 일부나 빈 목록 대신 미확인(null)으로 반환한다', (_, html) => {
+    expect(parseOliveyoungUpcomingDeals(html)).toBeNull();
+  });
+  it('페이지 요청 하나로 예고를 함께 반환하고 예고를 읽지 못해도 오특은 성공한다', async () => {
+    for (const [html, expected] of [
+      [page + comingSoon, 3],
+      [page, null],
+    ] as const) {
+      const fetch = vi.fn(
+        async (url: string) =>
+          new Response(
+            url.includes('getHotdealList.do') ? html : url.includes('pageIdx=1') ? list1 : list3,
+          ),
+      );
+      vi.stubGlobal('fetch', fetch);
+      const result = await fetchOliveyoungTodayDeals({}, now);
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(result.todayDeals).toHaveLength(17);
+      if (expected === null) expect(result.upcomingDeals).toBeNull();
+      else expect(result.upcomingDeals).toHaveLength(expected);
+    }
+  });
 });

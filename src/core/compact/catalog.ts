@@ -117,7 +117,7 @@ export const COMPACT_CATALOG: CompactGroup[] = [
     name: 'get_catalog',
     title: '인기 검색어와 기획전',
     description:
-      '공개 카탈로그. operation은 필수입니다. service를 생략하면 세븐일레븐이며 operation=popwords 인기 검색어, snapshot 기획전/이슈 목록입니다. includeIssues/includeExhibition/limit은 snapshot 전용이며 popwords에는 label만 지정합니다. service=oliveyoung, operation=today_deals는 올리브영 오특(오늘의 브랜드 특가와 오늘의 특가)입니다. 실시간 재고를 의미하지 않습니다.',
+      '공개 카탈로그. operation은 필수입니다. service를 생략하면 세븐일레븐이며 operation=popwords 인기 검색어, snapshot 기획전/이슈 목록입니다. includeIssues/includeExhibition/limit은 snapshot 전용이며 popwords에는 label만 지정합니다. service=oliveyoung, operation=today_deals는 올리브영 오특(오늘의 브랜드 특가, 오늘의 특가, 다음 오특 예고)입니다. 실시간 재고를 의미하지 않습니다.',
     defaultService: 'seveneleven',
     routes: [
       { service: 'seveneleven', operation: 'popwords', legacy: 'seveneleven_get_search_popwords' },

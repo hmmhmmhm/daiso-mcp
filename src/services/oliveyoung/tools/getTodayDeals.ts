@@ -3,15 +3,31 @@ import type { OliveyoungRequestOptions } from '../transport.js';
  * 올리브영 오특(오늘의 특가) 조회 도구
  *
  * 오늘의 브랜드 특가와 오늘의 특가 전체 목록을 한국 날짜 기준으로 반환합니다.
+ * coming soon 배너의 다음 오특 예고도 같은 페이지 요청에서 함께 반환합니다.
  * 공개 MCP에서는 get_catalog의 service=oliveyoung, operation=today_deals로 호출합니다.
  */
 
 import * as z from 'zod';
 import type { McpToolResponse, ToolRegistration } from '../../../core/types.js';
-import { fetchOliveyoungTodayDeals } from '../todayDeals.js';
+import { fetchOliveyoungTodayDeals, type OliveyoungTodayDeals } from '../todayDeals.js';
 
 interface GetTodayDealsArgs {
   timeoutMs?: number;
+}
+
+/** MCP와 REST(웹 조회)가 같은 오특 응답을 쓰도록 본문을 만듭니다. */
+export function buildTodayDealsBody(result: OliveyoungTodayDeals) {
+  return {
+    date: result.date,
+    brandDealCount: result.brandDeals.length,
+    todayDealCount: result.todayDeals.length,
+    upcomingDealCount: result.upcomingDeals?.length ?? null,
+    truncated: result.truncated,
+    brandDeals: result.brandDeals,
+    todayDeals: result.todayDeals,
+    upcomingDeals: result.upcomingDeals,
+    note: '가격과 할인율은 조회 시점의 오특 화면 기준입니다. priceFrom=true는 옵션별 최저가, soldOut=true는 일시품절입니다. upcomingDeals는 coming soon 배너의 다음 오특 예고로 가격이 없으며, null이면 예고를 확인하지 못한 것이고 빈 목록이면 예고 상품이 없는 것입니다. 매장 재고는 check_inventory(service=oliveyoung)에 상품명을 keyword로 조회하세요.',
+  };
 }
 
 async function getTodayDeals(
@@ -19,16 +35,9 @@ async function getTodayDeals(
   transport: OliveyoungRequestOptions,
 ): Promise<McpToolResponse> {
   const { timeoutMs = transport.timeout ?? (transport.relayUrl ? 60000 : 15000) } = args;
-  const result = await fetchOliveyoungTodayDeals({ ...transport, timeout: timeoutMs });
-  const body = {
-    date: result.date,
-    brandDealCount: result.brandDeals.length,
-    todayDealCount: result.todayDeals.length,
-    truncated: result.truncated,
-    brandDeals: result.brandDeals,
-    todayDeals: result.todayDeals,
-    note: '가격과 할인율은 조회 시점의 오특 화면 기준입니다. priceFrom=true는 옵션별 최저가, soldOut=true는 일시품절입니다. 매장 재고는 check_inventory(service=oliveyoung)에 상품명을 keyword로 조회하세요.',
-  };
+  const body = buildTodayDealsBody(
+    await fetchOliveyoungTodayDeals({ ...transport, timeout: timeoutMs }),
+  );
   return {
     content: [{ type: 'text', text: JSON.stringify(body, null, 2) }],
     structuredContent: body,
@@ -52,6 +61,13 @@ const dealSchema = z.object({
   productUrl: z.string(),
 });
 
+const upcomingSchema = z.object({
+  goodsNo: z.string().nullable(),
+  name: z.string(),
+  imageUrl: z.string(),
+  productUrl: z.string().nullable(),
+});
+
 export function createGetTodayDealsTool(
   transport: OliveyoungRequestOptions = {},
 ): ToolRegistration {
@@ -61,7 +77,7 @@ export function createGetTodayDealsTool(
     metadata: {
       title: '올리브영 오특 조회',
       description:
-        '올리브영 오특(오늘의 특가)의 오늘의 브랜드 특가와 오늘의 특가 상품 목록을 한국 날짜 기준으로 조회합니다. 실시간 매장 재고를 의미하지 않습니다.',
+        '올리브영 오특(오늘의 특가)의 오늘의 브랜드 특가와 오늘의 특가 상품 목록을 한국 날짜 기준으로 조회하고, coming soon 배너의 다음 오특 예고(가격 없음)를 함께 반환합니다. 실시간 매장 재고를 의미하지 않습니다.',
       inputSchema: {
         timeoutMs: z
           .number()
@@ -75,9 +91,11 @@ export function createGetTodayDealsTool(
         date: z.string(),
         brandDealCount: z.number(),
         todayDealCount: z.number(),
+        upcomingDealCount: z.number().nullable(),
         truncated: z.boolean(),
         brandDeals: z.array(dealSchema),
         todayDeals: z.array(dealSchema),
+        upcomingDeals: z.array(upcomingSchema).nullable(),
         note: z.string(),
       },
     },

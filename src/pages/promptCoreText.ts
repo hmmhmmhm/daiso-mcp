@@ -275,5 +275,19 @@ Base URL: ${baseUrl}
 
 ---
 
+### 8. 올리브영 오특(오늘의 특가)
+
+**설명**: 올리브영 오특 화면의 오늘의 브랜드 특가, 오늘의 특가 전체 목록, coming soon 다음 오특 예고(가격 없음)를 한국 날짜 기준으로 반환합니다. 실시간 매장 재고가 아니므로 재고는 상품명으로 올리브영 재고 확인을 사용하세요. upcomingDeals=null은 예고 미확인, 빈 목록은 예고 없음입니다.
+
+**URL**: ${baseUrl}/browse/oliveyoung/today-deals
+
+**선택 파라미터**:
+- timeoutMs: 전체 조회 제한 시간(ms)
+
+**예시**:
+- ${baseUrl}/browse/oliveyoung/today-deals
+
+---
+
 `;
 }

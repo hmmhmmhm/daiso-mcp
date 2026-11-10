@@ -40,6 +40,7 @@ export default defineConfig({
         'scripts/ops/mcp-smoke-validation.ts',
         'scripts/relay/daiso-jp.ts',
         'scripts/ops/health-check-retry.ts',
+        'scripts/ops/oliveyoung-coming-soon-check.ts',
         'src/**/*.ts',
         'scripts/relay/cache.ts',
         'scripts/relay/logging.ts',

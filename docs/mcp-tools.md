@@ -39,7 +39,7 @@
 
 `get_catalog`는 공개 콘텐츠 조회입니다. `operation`은 필수입니다. `service`를 생략하면 기존 호출과 같이 세븐일레븐이며 `popwords`(인기 검색어) 또는 `snapshot`(상품·이슈·기획전)을 지정합니다. `includeIssues`와 `includeExhibition`은 `snapshot` 전용입니다. 인기 검색어 원본 목록이 비어 있으면 `available=false`이며 외부 오류와 구분합니다. 원본 차단·중계 실패는 오류로 반환하며 빈 성공으로 바꾸지 않습니다.
 
-`service=oliveyoung`, `operation=today_deals`는 올리브영 오특(오늘의 특가) 화면의 `brandDeals`(오늘의 브랜드 특가)와 `todayDeals`(오늘의 특가 전체 목록)를 한국 날짜 기준으로 반환합니다. 가격은 조회 시점 화면 기준이며 `priceFrom=true`는 옵션별 최저가입니다. 실시간 재고가 아니므로 재고는 상품명으로 `check_inventory`(service=oliveyoung)를 조회합니다. 원본 차단·형식 변경은 빈 목록이 아니라 오류입니다.
+`service=oliveyoung`, `operation=today_deals`는 올리브영 오특(오늘의 특가) 화면의 `brandDeals`(오늘의 브랜드 특가)와 `todayDeals`(오늘의 특가 전체 목록), `upcomingDeals`(coming soon 다음 오특 예고, 가격 없음)를 한국 날짜 기준으로 반환합니다. 가격은 조회 시점 화면 기준이며 `priceFrom=true`는 옵션별 최저가입니다. 실시간 재고가 아니므로 재고는 상품명으로 `check_inventory`(service=oliveyoung)를 조회합니다. 원본 차단·형식 변경은 빈 목록이 아니라 오류입니다.
 
 다이소 `check_inventory`에서 `storeLimit`은 `pageSize`와 같은 매장 수 조건입니다. 함께 전달하면 두 값이 같아야 합니다. `productLimit`은 상품 후보 수이며 여러 상품의 재고를 모두 조회하는 옵션이 아닙니다. 결과의 `selectedProduct`가 재고 조회 기준 상품입니다.
 
