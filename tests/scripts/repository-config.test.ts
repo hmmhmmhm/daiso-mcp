@@ -53,7 +53,7 @@ describe('repository maintenance configuration', () => {
     };
 
     expect(pkg.overrides?.['@modelcontextprotocol/sdk']).toEqual({
-      '@hono/node-server': '2.1.3',
+      '@hono/node-server': '2.1.6',
     });
   });
 
