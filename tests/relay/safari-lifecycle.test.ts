@@ -121,7 +121,7 @@ it('정상 종료가 멈춘 helper만 강제 종료하고 Safari 본체는 대�
   const x = await ready();
   const a = x.run('x', {});
   const rejected = expect(a).rejects.toThrow('safari-helper');
-  await vi.advanceTimersByTimeAsync(35000);
+  await vi.advanceTimersByTimeAsync(45000);
   await rejected;
   expect(child.kill).toHaveBeenCalledWith('SIGKILL');
   await x.close();
@@ -138,7 +138,7 @@ it.each([false, true])('소유 helper 그룹만 회수한다: kill 오류 %s', a
   const a = x.run('x', {});
   const rejection = expect(a).rejects.toThrow('safari-helper');
   Object.assign(child, { pid: 12345 });
-  await vi.advanceTimersByTimeAsync(35000);
+  await vi.advanceTimersByTimeAsync(45000);
   await rejection;
   expect(kill).toHaveBeenCalledWith(-12345, 'SIGKILL');
   await x.close();
@@ -254,5 +254,25 @@ it('실제 watchdog과 같이 써도 Safari의 단발 재확인을 앞당기거�
   await vi.advanceTimersByTimeAsync(60000);
   await tick();
   expect(exec).toHaveBeenCalledTimes(3);
+  await x.close();
+});
+
+it('창 준비 시간을 포함해도15초 이내 원본 응답을 중간 종료하지 않는다', async () => {
+  vi.useFakeTimers();
+  const x = await ready();
+  exec.mockImplementationOnce((_cmd, _args, opts, callback) => {
+    child = Object.assign(new EventEmitter(), { stdin: new PassThrough(), kill: vi.fn() });
+    const limit = setTimeout(() => callback(new Error('helper timeout'), ''), opts.timeout);
+    setTimeout(() => {
+      clearTimeout(limit);
+      callback(null, JSON.stringify({ status: 200, body: { status: 'SUCCESS', data: {} } }));
+    }, 22000);
+    return child;
+  });
+  const call = x.run('/oystore/api/stock/stock-stores', { productId: 'x' });
+  const result = Promise.allSettled([call]);
+  expect(JSON.parse(child.stdin.read().toString()).args.timeout).toBe(15000);
+  await vi.advanceTimersByTimeAsync(22000);
+  expect(await result).toEqual([{ status: 'fulfilled', value: { status: 'SUCCESS', data: {} } }]);
   await x.close();
 });

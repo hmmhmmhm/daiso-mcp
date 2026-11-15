@@ -29,7 +29,8 @@ export function createSafariLifecycle(stateDir: string) {
         {
           env,
           detached: true,
-          timeout: 18000,
+          // 창 준비·이동·회수 시간은 원본 fetch의15초 예산과 별도로 둡니다.
+          timeout: 30000,
           killSignal: 'SIGTERM',
           maxBuffer: 16 * 1024 * 1024,
         },
@@ -56,7 +57,7 @@ export function createSafariLifecycle(stateDir: string) {
             owned.kill('SIGKILL');
           }
         } else owned.kill('SIGKILL');
-      }, 35000);
+      }, 45000);
       hardStop.unref();
       // SIGTERM은 소유 창 정리 finally를 실행하며 공유 Safari를 종료하지 않습니다.
       child.stdin!.on('error', () => owned.kill('SIGTERM'));
