@@ -30,6 +30,8 @@ Safari PID가 기록과 달라졌고 요청 프로세스도 종료된 경우에�
 
 ## 검사
 
+인증된 Health 진단의 `timeoutMs`는 기본 7초, 최대 60초입니다. 콜드 재고 조회를 진단할 때 요청한 60초가 내부에서 20초로 잘리지 않도록 전달합니다. 이는 진단의 응답 대기 상한이며, 원본 fetch 15초·본문 2MiB·9초 초과 느림 판정·실제 재고 수량 검증을 완화하지 않습니다. 정기 Health 워크플로의 기존 20초 제한도 유지합니다.
+
 ```sh
 python3 tests/relay/test_oliveyoung_safari.py
 npm test -- tests/relay/safari-lifecycle.test.ts tests/relay/transport-lifecycle.test.ts

@@ -1034,6 +1034,32 @@ describe('runHealthChecks', () => {
     expect(stringResult.checks[0].message).toBe('알 수 없는 오류가 발생했습니다.');
   });
 
+  it('요청한60초를 전달하고25초 성공도9초 기준의 느림으로 판정한다', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    const fetchImpl = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ success: true, data: { products: [{ name: '상품' }] } }),
+    );
+    const timestamps = [0, 1000, 26000, 26000];
+    try {
+      const result = await runHealthChecks({
+        baseUrl: 'https://example.com',
+        check: 'daiso.products',
+        mode: 'full',
+        timeoutMs: 60000,
+        slowThresholdMs: 9000,
+        fetchImpl,
+        now: () => timestamps.shift() ?? 26000,
+        fresh: true,
+      });
+      expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=60000');
+      expect(timeout).toHaveBeenCalledWith(60000);
+      expect(result.status).toBe('degraded');
+      expect(result.checks[0]).toMatchObject({ status: 'degraded', durationMs: 25000 });
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
   it('timeoutMs를 기본값과 최대값으로 보정한다', async () => {
     const fetchImpl = vi
       .fn()
@@ -1050,14 +1076,14 @@ describe('runHealthChecks', () => {
     await runHealthChecks({
       baseUrl: 'https://example.com',
       check: 'daiso.products',
-      timeoutMs: 50000,
+      timeoutMs: 120000,
       fetchImpl,
       now: () => 2000,
       fresh: true,
     });
 
     expect(String(fetchImpl.mock.calls[0][0])).toContain('timeoutMs=7000');
-    expect(String(fetchImpl.mock.calls[1][0])).toContain('timeoutMs=20000');
+    expect(String(fetchImpl.mock.calls[1][0])).toContain('timeoutMs=60000');
   });
 
   it('timeoutMs가 1보다 작으면 기본값으로 보정한다', async () => {
