@@ -34,11 +34,11 @@ OY는 기존 단일 소유권 잠금, 페이지 1개 재사용, 팝업 회수, 1
 <!-- WORKERS_INVOCATIONS_CHART:START -->
 <div align="center">
 
-<h3>Cloudflare 요청 수 (2026-10-19 ~ 2026-11-17, 30일)</h3>
+<h3>Cloudflare 요청 수 (2026-10-20 ~ 2026-11-18, 30일)</h3>
 
-<img src="../../assets/analytics/workers-invocations.png?v=2026-11-17T22:58:05.825Z" alt="Cloudflare 요청 수 그래프 (2026-10-19 ~ 2026-11-17)" width="100%">
+<img src="../../assets/analytics/workers-invocations.png?v=2026-11-18T22:36:27.508Z" alt="Cloudflare 요청 수 그래프 (2026-10-20 ~ 2026-11-18)" width="100%">
 
-<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-11-18 07:58 KST</sub>
+<sub>기준 워커: <code>daiso-mcp</code> · 마지막 갱신: 2026-11-19 07:36 KST</sub>
 <br><sub>집계: Worker 실행 + 루트 GET 리디렉션 요청 · 사용자 수와 다릅니다.</sub>
 
 </div>
