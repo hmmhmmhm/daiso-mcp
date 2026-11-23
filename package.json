@@ -95,7 +95,7 @@
     "sharp": "^0.35.5",
     "tsx": "^4.23.1",
     "typescript": "6.0.3",
-    "typescript-eslint": "^8.72.1",
+    "typescript-eslint": "^8.73.0",
     "vitest": "^5.1.0",
     "wrangler": "^4.158.0"
   },
