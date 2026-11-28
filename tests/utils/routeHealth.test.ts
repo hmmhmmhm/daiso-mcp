@@ -314,6 +314,13 @@ describe('routing edge cases', () => {
       routes: {
         'cu-stock': { key: 'cu-stock', direct: false, checkedAt, reason: 'http-403' },
         'cu-prime': { key: 'cu-prime', direct: false, checkedAt, reason: 'http-error' },
+        'cu-store': {
+          key: 'cu-store',
+          direct: false,
+          checkedAt,
+          reason: 'http-302',
+          cuRedirectLocation: 'same-origin',
+        },
       },
       relays: {},
     });
@@ -321,8 +328,24 @@ describe('routing edge cases', () => {
       routes: {
         'cu-stock': { direct: false, reason: 'http-403' },
         'cu-prime': { direct: false, reason: 'http-error' },
+        'cu-store': { direct: false, reason: 'http-302', cuRedirectLocation: 'same-origin' },
       },
     });
+  });
+  it('drops CU redirect metadata when its reason context is invalid', async () => {
+    const n = namespace({
+      routes: {
+        'cu-stock': {
+          key: 'cu-stock',
+          direct: false,
+          checkedAt: Date.now(),
+          reason: 'http-403',
+          cuRedirectLocation: 'same-origin',
+        },
+      },
+      relays: {},
+    });
+    expect((await readRouteSnapshot(n.ns)).routes['cu-stock']).toBeUndefined();
   });
   it('rejects malformed entries while copying only safe metadata', async () => {
     const n = namespace();

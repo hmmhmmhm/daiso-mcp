@@ -50,7 +50,8 @@ describe('operational route health', () => {
           key: 'cu-stock',
           direct: false,
           checkedAt: 100,
-          reason: 'http-403',
+          reason: 'http-302',
+          cuRedirectLocation: 'other-origin',
         },
       },
       relays: {},
@@ -63,7 +64,15 @@ describe('operational route health', () => {
     expect(result.status).toBe(200);
     expect(await result.json()).toMatchObject({
       success: true,
-      data: { routes: { 'cu-stock': { direct: false, reason: 'http-403' } } },
+      data: {
+        routes: {
+          'cu-stock': {
+            direct: false,
+            reason: 'http-302',
+            cuRedirectLocation: 'other-origin',
+          },
+        },
+      },
     });
     expect(mocks.read).toHaveBeenCalledWith(env.UPSTREAM_ROUTE_HEALTH);
     expect(mocks.refresh).not.toHaveBeenCalled();

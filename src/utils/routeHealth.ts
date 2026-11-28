@@ -36,11 +36,19 @@ export const ROUTE_KEYS = [
 export type RouteKey = (typeof ROUTE_KEYS)[number];
 export const ROUTE_GROUPS = ['oliveyoung', 'convenience', 'dtryx', 'cgv'] as const;
 export type RelayGroup = (typeof ROUTE_GROUPS)[number];
+export const CU_REDIRECT_LOCATION_CLASSES = [
+  'missing',
+  'invalid-or-unsafe',
+  'same-origin',
+  'other-origin',
+] as const;
+export type CuRedirectLocationClass = (typeof CU_REDIRECT_LOCATION_CLASSES)[number];
 export interface RouteCheck {
   key: RouteKey;
   direct: boolean;
   checkedAt: number;
   reason?: string;
+  cuRedirectLocation?: CuRedirectLocationClass;
 }
 export interface RelayCheck {
   group: RelayGroup;
@@ -106,11 +114,17 @@ export function validTime(value: unknown): value is number {
 export function validRouteCheck(value: unknown): value is RouteCheck {
   if (!value || typeof value !== 'object') return false;
   const row = value as RouteCheck;
+  const cuRedirectLocation = row.cuRedirectLocation;
   return (
     isRouteKey(row.key) &&
     typeof row.direct === 'boolean' &&
     validTime(row.checkedAt) &&
-    validReason(row.reason)
+    validReason(row.reason) &&
+    (cuRedirectLocation === undefined ||
+      ((row.key === 'cu-prime' || row.key === 'cu-stock' || row.key === 'cu-store') &&
+        row.direct === false &&
+        row.reason === 'http-302' &&
+        CU_REDIRECT_LOCATION_CLASSES.includes(cuRedirectLocation)))
   );
 }
 export function validRelayCheck(value: unknown): value is RelayCheck {
@@ -188,6 +202,9 @@ export async function readRouteSnapshot(namespace: DurableObjectNamespace): Prom
         direct: key !== 'gs25-stock' && row.direct,
         checkedAt: row.checkedAt,
         ...(row.reason === undefined ? {} : { reason: row.reason }),
+        ...(row.cuRedirectLocation === undefined
+          ? {}
+          : { cuRedirectLocation: row.cuRedirectLocation }),
         ...(validTime(row.failedAt) ? { failedAt: row.failedAt } : {}),
         ...(typeof row.blockedUntil === 'number' &&
         Number.isSafeInteger(row.blockedUntil) &&

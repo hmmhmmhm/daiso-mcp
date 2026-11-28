@@ -207,6 +207,50 @@ it('persists precise HTTP reason codes and legacy generic reasons', async () => 
   });
 });
 
+it.each(['missing', 'invalid-or-unsafe', 'same-origin', 'other-origin'] as const)(
+  'stores only the fixed CU redirect class %s',
+  async (cuRedirectLocation) => {
+    const s = store();
+    const checkedAt = Date.now();
+    const rawLocation = 'https://private.example/path?token=synthetic';
+    await s.call('/checks', {
+      checks: [
+        {
+          key: 'cu-stock',
+          direct: false,
+          checkedAt,
+          reason: 'http-302',
+          cuRedirectLocation,
+          location: rawLocation,
+        },
+      ],
+      relays: [],
+    });
+    const snapshot = await (await s.call('/snapshot')).text();
+    expect(snapshot).toContain(cuRedirectLocation);
+    expect(snapshot).not.toContain(rawLocation);
+    expect(JSON.parse(snapshot)).toMatchObject({
+      routes: { 'cu-stock': { direct: false, reason: 'http-302', cuRedirectLocation } },
+    });
+  },
+);
+
+it.each([
+  { key: 'seven-goods', direct: false, reason: 'http-302', cuRedirectLocation: 'same-origin' },
+  { key: 'cu-stock', direct: true, reason: 'http-302', cuRedirectLocation: 'same-origin' },
+  { key: 'cu-stock', direct: false, reason: 'http-403', cuRedirectLocation: 'same-origin' },
+  { key: 'cu-stock', direct: false, reason: 'http-302', cuRedirectLocation: 'unknown' },
+])('rejects CU redirect metadata outside its allowed context: %j', async (check) => {
+  expect(
+    (
+      await store().call('/checks', {
+        checks: [{ ...check, checkedAt: Date.now() }],
+        relays: [],
+      })
+    ).status,
+  ).toBe(400);
+});
+
 it('keeps cooldown when a newer probe arrives before a delayed actual failure', async () => {
   const s = store();
   const at = Date.now();
