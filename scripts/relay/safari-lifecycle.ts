@@ -6,11 +6,16 @@ import type { Page } from 'playwright';
 
 type SafariFailureStage =
   'preflight' | 'start' | 'navigate' | 'initial-evaluate' | 'result-poll' | 'stop';
-type SafariCleanupResult = 'success' | 'failed' | 'not-attempted';
+type SafariCleanupResult =
+  | 'success' | 'failed' | 'not-attempted';
+type SafariCleanupDetail =
+  | 'stop-timeout' | 'stop-os-error' | 'stop-output-decode-error' | 'stop-unknown';
 type SafariDiagnosticOutcome =
-  `safari-stage-${SafariFailureStage}` | `safari-cleanup-${SafariCleanupResult}`;
+  | `safari-stage-${SafariFailureStage}`
+  | `safari-cleanup-${SafariCleanupResult}`
+  | `safari-cleanup-detail-${SafariCleanupDetail}`;
 const safariDiagnostic =
-  /^Safari relay diagnostic stage=(preflight|start|navigate|initial-evaluate|result-poll|stop) cleanup=(success|failed|not-attempted)$/;
+  /^Safari relay diagnostic stage=(preflight|start|navigate|initial-evaluate|result-poll|stop) cleanup=(success|failed|not-attempted)(?: detail=(stop-timeout|stop-os-error|stop-output-decode-error|stop-unknown))?$/;
 
 export function createSafariLifecycle(
   stateDir: string,
@@ -47,7 +52,6 @@ export function createSafariLifecycle(
         ['-I', helper, stateDir, ...(input ? [] : ['--check'])],
         {
           env,
-          detached: true,
           // 창 준비·이동·회수 시간은 원본 fetch의15초 예산과 별도로 둡니다.
           timeout: 30000,
           killSignal: 'SIGTERM',
@@ -60,11 +64,12 @@ export function createSafariLifecycle(
             if (error && typeof stderr === 'string' && stderr.length <= 128) {
               const line = stderr.endsWith('\n') ? stderr.slice(0, -1) : stderr;
               const match = safariDiagnostic.exec(line);
-              if (match) {
+              if (match && (!match[3] || match[2] === 'failed')) {
                 const stage = match[1] as SafariFailureStage;
                 const cleanup = match[2] as SafariCleanupResult;
                 report(`safari-stage-${stage}`);
                 report(`safari-cleanup-${cleanup}`);
+                if (match[3]) report(`safari-cleanup-detail-${match[3] as SafariCleanupDetail}`);
               }
             }
             return reject(new BrowserRequestError('safari-helper'));
@@ -81,13 +86,7 @@ export function createSafariLifecycle(
       );
       const owned = child;
       const hardStop = setTimeout(() => {
-        if (owned.pid) {
-          try {
-            process.kill(-owned.pid, 'SIGKILL');
-          } catch {
-            owned.kill('SIGKILL');
-          }
-        } else owned.kill('SIGKILL');
+        owned.kill('SIGKILL');
       }, 45000);
       hardStop.unref();
       // SIGTERM은 소유 창 정리 finally를 실행하며 공유 Safari를 종료하지 않습니다.

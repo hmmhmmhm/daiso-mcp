@@ -142,9 +142,13 @@ it.each([
   ['initial-evaluate', 'success'],
   ['result-poll', 'success'],
   ['stop', 'failed'],
+  ['stop', 'failed', 'stop-timeout'],
+  ['stop', 'failed', 'stop-os-error'],
+  ['navigate', 'failed', 'stop-output-decode-error'],
+  ['initial-evaluate', 'failed', 'stop-unknown'],
 ] as const)(
   'helper의 검증된 단계/정리 enum만 고정 이벤트로 전달한다: %s',
-  async (stage, cleanup) => {
+  async (stage, cleanup, detail?) => {
     const onEvent = vi.fn();
     const x = createSafariLifecycle('/state', onEvent);
     const start = x.start();
@@ -156,10 +160,14 @@ it.each([
     done(
       new Error('private detail URL cookie'),
       '',
-      `Safari relay diagnostic stage=${stage} cleanup=${cleanup}\n`,
+      `Safari relay diagnostic stage=${stage} cleanup=${cleanup}${detail ? ` detail=${detail}` : ''}\n`,
     );
     await rejection;
-    expect(onEvent.mock.calls).toEqual([[`safari-stage-${stage}`], [`safari-cleanup-${cleanup}`]]);
+    expect(onEvent.mock.calls).toEqual([
+      [`safari-stage-${stage}`],
+      [`safari-cleanup-${cleanup}`],
+      ...(detail ? [[`safari-cleanup-detail-${detail}`]] : []),
+    ]);
     expect(JSON.stringify(onEvent.mock.calls)).not.toMatch(/private|URL|cookie/);
     await x.close();
   },
@@ -250,6 +258,9 @@ it.each([
   'untrusted stderr with private detail',
   `Safari relay diagnostic stage=navigate cleanup=failed${'x'.repeat(2048)}`,
   'Safari relay diagnostic stage=invalid cleanup=failed',
+  'Safari relay diagnostic stage=navigate cleanup=failed\n\n',
+  'Safari relay diagnostic stage=navigate cleanup=failed\nextra',
+  'Safari relay diagnostic stage=navigate cleanup=success detail=stop-timeout',
 ])('helper stderr가 enum/크기 계약을 어기면 원문을 기록하지 않는다', async (stderr) => {
   const onEvent = vi.fn();
   const x = createSafariLifecycle('/state', onEvent);
@@ -265,6 +276,32 @@ it.each([
   await x.close();
 });
 
+it('상세 cleanup 이벤트가 있어도 기존 failed 집계 이벤트를 보존하고 logger 실패를 격리한다', async () => {
+  const onEvent = vi.fn((outcome: string) => {
+    if (outcome === 'safari-cleanup-failed') throw new Error('private logger failure');
+  });
+  const x = createSafariLifecycle('/state', onEvent);
+  const start = x.start();
+  done(null, '{"ready":true}');
+  await start;
+
+  const call = x.run('x', {});
+  const rejection = expect(call).rejects.toThrow('safari-helper');
+  done(
+    new Error('private helper failure'),
+    '',
+    'Safari relay diagnostic stage=stop cleanup=failed detail=stop-timeout\n',
+  );
+  await rejection;
+  expect(onEvent.mock.calls).toEqual([
+    ['safari-stage-stop'],
+    ['safari-cleanup-failed'],
+    ['safari-cleanup-detail-stop-timeout'],
+  ]);
+  expect(x.status()).toMatchObject({ state: 'failed', recoveryRequired: true });
+  await x.close();
+});
+
 it('다른 Safari 작업의 잠금을 원본 오류와 구분한다', async () => {
   const x = await ready();
   const a = x.run('x', {});
@@ -272,31 +309,87 @@ it('다른 Safari 작업의 잠금을 원본 오류와 구분한다', async () =
   await expect(a).rejects.toThrow('safari-busy');
   await x.close();
 });
-it('정상 종료가 멈춘 helper만 강제 종료하고 Safari 본체는 대상으로 삼지 않는다', async () => {
+it('45초 경계에서 소유 child만 SIGKILL하고 process group kill은 호출하지 않는다', async () => {
   vi.useFakeTimers();
+  const processKill = vi.spyOn(process, 'kill').mockReturnValue(true);
   const x = await ready();
   const a = x.run('x', {});
   const rejected = expect(a).rejects.toThrow('safari-helper');
-  await vi.advanceTimersByTimeAsync(45000);
-  await rejected;
-  expect(child.kill).toHaveBeenCalledWith('SIGKILL');
-  await x.close();
-});
-
-it.each([false, true])('소유 helper 그룹만 회수한다: kill 오류 %s', async (failure) => {
-  vi.useFakeTimers();
-  const kill = vi.spyOn(process, 'kill').mockImplementation(() => {
-    if (failure) throw new Error('exited');
-    done(new Error('killed'), '');
+  const owned = child;
+  Object.assign(owned, { pid: 12345 });
+  let callbackCompleted = false;
+  const complete = (error: Error) => {
+    if (callbackCompleted) return;
+    callbackCompleted = true;
+    done(error, '');
+  };
+  owned.kill.mockImplementation(() => {
+    complete(new Error('synthetic SIGKILL'));
     return true;
   });
+  try {
+    await vi.advanceTimersByTimeAsync(44999);
+    expect(owned.kill).not.toHaveBeenCalledWith('SIGKILL');
+    expect(processKill).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(owned.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+    expect(processKill).not.toHaveBeenCalled();
+    await rejected;
+  } finally {
+    complete(new Error('synthetic test cleanup'));
+    await Promise.allSettled([a, rejected]);
+    await x.close();
+  }
+});
+
+it('30초 child timeout은 SIGTERM 설정을 유지하고 lifecycle 실패 의미를 보존한다', async () => {
+  vi.useFakeTimers();
+  const processKill = vi.spyOn(process, 'kill').mockReturnValue(true);
   const x = await ready();
   const a = x.run('x', {});
   const rejection = expect(a).rejects.toThrow('safari-helper');
-  Object.assign(child, { pid: 12345 });
+  const owned = child;
+  const options = exec.mock.calls[1][2];
+  let callbackCompleted = false;
+  const complete = (error: Error) => {
+    if (callbackCompleted) return;
+    callbackCompleted = true;
+    done(error, '');
+  };
+  let simulatedTimeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    expect(options).toMatchObject({ timeout: 30000, killSignal: 'SIGTERM' });
+    simulatedTimeout = setTimeout(() => {
+      owned.kill(options.killSignal);
+      complete(new Error('synthetic timeout'));
+    }, options.timeout);
+    await vi.advanceTimersByTimeAsync(29999);
+    expect(owned.kill).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    await rejection;
+    expect(owned.kill).toHaveBeenCalledExactlyOnceWith('SIGTERM');
+    expect(processKill).not.toHaveBeenCalled();
+    expect(x.status()).toMatchObject({ state: 'failed', pages: null, recoveryRequired: true });
+  } finally {
+    if (simulatedTimeout) clearTimeout(simulatedTimeout);
+    complete(new Error('synthetic test cleanup'));
+    await Promise.allSettled([a, rejection]);
+    await x.close();
+  }
+});
+
+it('helper callback 완료 뒤에는 45초 강제 종료 timer가 남지 않는다', async () => {
+  vi.useFakeTimers();
+  const processKill = vi.spyOn(process, 'kill').mockReturnValue(true);
+  const x = await ready();
+  const call = x.run('x', {});
+  const owned = child;
+  done(null, JSON.stringify({ status: 200, body: { status: 'SUCCESS', data: {} } }));
+  await expect(call).resolves.toEqual({ status: 'SUCCESS', data: {} });
+
   await vi.advanceTimersByTimeAsync(45000);
-  await rejection;
-  expect(kill).toHaveBeenCalledWith(-12345, 'SIGKILL');
+  expect(owned.kill).not.toHaveBeenCalled();
+  expect(processKill).not.toHaveBeenCalled();
   await x.close();
 });
 

@@ -12,7 +12,7 @@
 
 요청마다 개별 Safari 창 잠금을 얻어 고정 PID·창 ID의 최소화 창 하나를 만들고, 고정 올리브영 원점에서만 조회한 뒤 정리합니다. 일반 요청은 사용자 창을 채택하거나 공유 Safari 프로세스를 종료하지 않습니다. 장애 복구를 위한 재시작은 위 승인 범위를 따릅니다. 수동 작업과 다른 중계의 창은 독립적으로 동작하며, 창 생성만 짧게 직렬화합니다. 전체 작업 창은 최대 4개이며 메모리 여유 20% 미만 또는 CPU 85% 초과 시 새 작업을 거절합니다. 상한·자원·창 생성 잠금 실패를 원본 차단이나 정상 품절로 바꾸지 않습니다. 기존 전역 잠금은 다른 작업의 소유권으로 보존하고 슬롯 하나로 계산합니다. 설치된 스킬의 인접 파일 `safari_window_leases.py`가 상한과 자원 확인을 담당합니다. 이 저장소의 동일 파일을 함께 설치해야 합니다.
 
-원본 fetch의 15초 제한과 2MiB 응답 상한은 기존 실행부를 재사용합니다. Python helper는 창 준비·이동·회수를 포함해 30초에 SIGTERM으로 소유 창 회수를 시도하고, 종료가 멈추면 45초에 helper의 전용 프로세스 그룹만 강제 종료합니다. 최후 강제 종료 시 창·잠금이 남을 수 있습니다. `safari-session-<PID>.json`이나 잠금이 남아 있으면 자동 삭제하지 말고 소유 PID·창 ID와 정리 가능 여부를 확인합니다. 이 상한은 모든 대기 시간을 포함한 공개 응답 시간 보장이 아닙니다.
+원본 fetch의 15초 제한과 2MiB 응답 상한은 기존 실행부를 재사용합니다. Node는 Python helper가 창 준비·이동·회수를 포함해 30초 안에 끝나지 않으면 SIGTERM을 보내도록 설정하고, 종료 callback이 오지 않으면 45초에 해당 `ChildProcess`에만 SIGKILL을 요청합니다. 이 종료 요청은 직계 child에만 보내며 자손 프로세스가 끝났는지, Safari 창이나 잠금이 회수됐는지는 확인하지 않습니다. helper callback이 오지 않으면 `close()`도 계속 기다릴 수 있고, 최후 강제 종료 뒤 창·잠금이 남을 수 있습니다. `safari-session-<PID>.json`이나 잠금이 남아 있으면 자동 삭제하지 말고 소유 PID·창 ID와 정리 가능 여부를 확인합니다. 이 상한은 모든 대기 시간을 포함한 공개 응답 시간 보장이 아닙니다.
 
 ## Safari 재시작 뒤 남은 세션 기록
 
@@ -26,7 +26,31 @@ Safari PID가 기록과 달라졌고 요청 프로세스도 종료된 경우에�
 
 ## 전환과 복원
 
-검증한 코드를 runtime에 복사한 뒤 환경 파일의 전송 모드만 변경합니다. 토큰과 quota 파일은 보존합니다. 기존 OY LaunchAgent 정상 중지와 소유 Chrome 회수 확인 후 Safari 모드로 시작합니다. OY Chrome 숨김 도우미는 별도 중지해야 하며 Tunnel과 다른 서비스 중계는 유지합니다.
+OY runtime 경로를 저장소나 Dtryx runtime 이름으로 추정하지 않습니다. 먼저 현재 사용자 OY LaunchAgent plist의 `WorkingDirectory`를 읽고, 그 값과 `ProgramArguments`가 같은 runtime의 `scripts/relay/start.ts`를 가리키는지 확인합니다. 아래 preflight는 label, `ProgramArguments`, `WorkingDirectory`를 서로 대조합니다. 현재 운영 argv의 엄격한 허용 형식은 Node, `--max-old-space-size=256`, 절대 경로를 가진 `--env-file=...`, `--import tsx`, runtime 아래의 `scripts/relay/start.ts` 순서이며 `Program` override와 추가·순서 변경 인수는 거절합니다. 다른 OY argv 형식은 유효하다고 가정하지 않습니다. Node 실행 경로는 심볼릭 링크일 수 있어 실제 경로 해석이나 링크 거절을 하지 않습니다. 대상 `oliveyoung-safari.py`·`safari-lifecycle.ts`와 시작 스크립트는 no-follow 방식으로 열어 일반 파일인지 확인합니다. `plan`은 복사 전 경로·파일 안전성만 확인하고, `exact`은 복사 뒤 두 파일이 지정한 소스와 바이트 단위로 같은지 확인합니다. 출력은 고정 결과만 허용하며 plist 원문, 경로, 환경 변수 값은 출력하지 않습니다. 어느 단계든 거절하면 복사·재기동을 진행하지 않습니다.
+
+```sh
+OY_PLIST="$HOME/Library/LaunchAgents/page.aka.daiso-oliveyoung.plist"
+OY_SOURCE_ROOT="$PWD"
+OY_RUNTIME=$(/usr/libexec/PlistBuddy -c 'Print :WorkingDirectory' "$OY_PLIST" 2>/dev/null) || {
+  echo 'OY runtime preflight rejected'
+  exit 1
+}
+python3 scripts/relay/verify-oliveyoung-runtime.py plan \
+  "$OY_PLIST" "$OY_RUNTIME" "$OY_SOURCE_ROOT" || exit 1
+```
+
+이 검사는 디스크의 plist만 읽습니다. launchd가 이미 적재한 설정을 조회하거나 파일을 잠그지 않으므로, 실행 중인 배포와 동시에 사용하지 않습니다. plist, runtime 경로, checkout은 신뢰할 수 있는 안정된 경로여야 합니다. preflight와 교체 사이에 다른 배포나 plist 변경을 하지 않습니다. 파일의 device/inode/size가 유지돼도 동시 쓰기가 없었다는 증거는 아닙니다. 서비스 중지 뒤 혼자 변경을 수행하고 exact 검사를 재등록 직전에 다시 실행합니다.
+
+교체가 필요하면 먼저 OY 중계가 유휴 상태인지 확인하고 해당 LaunchAgent에 정상 종료를 요청합니다. 기존 프로세스가 끝나고 포트가 닫히기 전에는 파일을 바꾸지 않습니다. 두 기존 파일을 비공개 백업에 `scripts/relay/` 아래 동일한 상대 경로로 보관합니다. 첫 파일을 교체하기 직전에 `plan`을 다시 실행합니다. preflight에서 확인한 `$OY_RUNTIME/scripts/relay/`에 새 파일을 같은 파일시스템의 임시 파일로 준비하고 각 파일을 원자 교체합니다. 환경 파일, 인증 토큰, quota 원장과 상태 디렉터리는 복사·교체하지 않습니다. 두 파일 중 하나라도 교체가 실패하면 LaunchAgent를 계속 중지하고 두 원본을 모두 백업에서 원자 복원합니다. 복원된 쌍은 `exact`의 source root로 백업 root를 지정해 바이트 대조한 뒤에만 재등록합니다. 교체된 두 파일은 재등록 직전에 source root를 checkout으로 둔 다음 검사를 다시 통과해야 합니다.
+
+```sh
+python3 scripts/relay/verify-oliveyoung-runtime.py exact \
+  "$OY_PLIST" "$OY_RUNTIME" "$OY_SOURCE_ROOT" || exit 1
+```
+
+이어서 기존 OY LaunchAgent를 정상적으로 다시 등록하고 `ready`, `pages=0`, `recoveryRequired=false`, `retryAt=0`을 확인합니다. 실패하면 LaunchAgent를 다시 중지하고 보존한 두 파일만 원자 복원합니다. plist/runtime 연결이 모호하거나 파일 대조가 실패하면 다른 runtime으로 추정해 계속하지 않습니다. Preflight 성공은 검사 시점의 경로·파일 대응만 증명하며, 검사 직후 변경 경쟁이나 launchd에 이미 적재된 설정을 잠그거나 증명하지 않습니다. 이 상태 확인은 작동 준비를 확인할 뿐 실제 상품·재고 정상까지 증명하지 않습니다. 정상 기능 검증은 검사 절의 순차적인 실제 조회 절차로 별도 수행합니다.
+
+일반적인 설치 전환에서는 검증한 코드를 runtime에 반영한 뒤 환경 파일의 전송 모드를 바꿉니다. 토큰과 quota 파일은 보존합니다. 기존 OY LaunchAgent 정상 중지와 소유 Chrome 회수 확인 후 Safari 모드로 시작합니다. OY Chrome 숨김 도우미는 별도 중지해야 하며 Tunnel과 다른 서비스 중계는 유지합니다.
 
 실패 시 OY LaunchAgent를 중지하고 소유 Safari 창 회수와 세션 상태를 확인한 뒤 Safari 전송으로 복구합니다. 이 Mac에서는 Chrome 전송이나 숨김 도우미를 자동 복원하지 않습니다. 소유권이 불명확한 창을 개별 회수하지 않습니다. Safari 자체 장애라면 위 승인 범위에서 정상 종료·재시작 후 중계를 복구합니다. 실제 캐시 우회 상품·매장·재고·오특과 CLI/MCP 검증 전에는 운영 전환 완료로 기록하지 않습니다.
 
@@ -47,7 +71,6 @@ npm run test:coverage
 `SEVEN_RELAY_TRANSPORT=safari`는 기존의 일반 HTTP 조회를 유지하며 403일 때만 Safari에서 동일한 공개 조회를 한 번 실행합니다. `SEVEN_BROWSER_EXECUTABLE`의 Chrome 준비 경로 대신 선택하며, 개인 쿠키를 읽거나 외부로 복사하지 않습니다. 추가 조회는 기존 quota를 차감합니다. 원본 상태와 Retry-After를 보존하고, 실패 대기 60초·취소·대기열 재확인·2MiB 상한을 적용합니다. 잘못된 결과나 fetch 실패를 빈 HTTP200으로 만들지 않습니다. 올리브영과 별도의 요청 창·잠금을 사용하며 같은 전체 4창 상한을 적용합니다.
 
 이 Mac은 운영 Node v24.15.0에 대한 Safari 자동화 권한을 별도로 승인받았습니다. ChatGPT에서 성공해도 다른 Node 실행 파일의 LaunchAgent 권한은 동일하지 않습니다. macOS 시스템 확인창은 사용자가 직접 승인해야 할 수 있습니다. 코드만으로 TCC 권한을 우회하거나 초기화하지 않습니다.
-
 
 ## 일시적인 helper 실패 뒤 준비 상태 재확인
 

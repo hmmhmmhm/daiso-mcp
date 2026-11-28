@@ -10,20 +10,26 @@ import os
 import re
 import signal
 import stat
+import subprocess
 import sys
 import tempfile
 import time
 from pathlib import Path
 
 
-def operate(helper, session, *args):
+def decode_output(output):
+    return json.loads(output)
+
+
+def operate(helper, session, *args, decode=True):
     old = sys.argv
     output = io.StringIO()
     try:
         sys.argv = ['safari.py', '--session', str(session), *args]
         with contextlib.redirect_stdout(output):
             helper.main()
-        return json.loads(output.getvalue())
+        captured = output.getvalue()
+        return decode_output(captured) if decode else captured
     finally:
         sys.argv = old
 
@@ -278,6 +284,7 @@ def main():
     signal.signal(signal.SIGTERM, interrupt)
     stage = 'start'
     cleanup = 'not-attempted'
+    cleanup_detail = None
     failed = False
     primary_error = None
     result = None
@@ -313,18 +320,63 @@ def main():
         # 중단 시에도 소유 창만 회수하고 불명확한 소유권은 덮어쓰지 않습니다.
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         try:
-            if session.exists():
-                operate(helper, session, 'stop')
-                cleanup = 'success'
+            has_session = session.exists()
         except Exception as error:
             cleanup = 'failed'
             if not failed:
                 stage = 'stop'
                 failed = True
                 primary_error = error
+        else:
+            if has_session:
+                # Separate helper invocation from its stdout parsing so a failed
+                # stop can be classified without exposing its output or exception.
+                try:
+                    output = operate(helper, session, 'stop', decode=False)
+                except subprocess.TimeoutExpired as error:
+                    cleanup = 'failed'
+                    cleanup_detail = 'stop-timeout'
+                    if not failed:
+                        stage = 'stop'
+                        failed = True
+                        primary_error = error
+                except TimeoutError as error:
+                    cleanup = 'failed'
+                    cleanup_detail = 'stop-timeout'
+                    if not failed:
+                        stage = 'stop'
+                        failed = True
+                        primary_error = error
+                except OSError as error:
+                    cleanup = 'failed'
+                    cleanup_detail = 'stop-os-error'
+                    if not failed:
+                        stage = 'stop'
+                        failed = True
+                        primary_error = error
+                except Exception as error:
+                    cleanup = 'failed'
+                    cleanup_detail = 'stop-unknown'
+                    if not failed:
+                        stage = 'stop'
+                        failed = True
+                        primary_error = error
+                else:
+                    try:
+                        decode_output(output)
+                    except Exception as error:
+                        cleanup = 'failed'
+                        cleanup_detail = 'stop-output-decode-error'
+                        if not failed:
+                            stage = 'stop'
+                            failed = True
+                            primary_error = error
+                    else:
+                        cleanup = 'success'
     if failed:
         primary_error.safari_stage = stage
         primary_error.safari_cleanup = cleanup
+        primary_error.safari_cleanup_detail = cleanup_detail
         raise primary_error from None
     print(json.dumps(result, ensure_ascii=False))
 
@@ -336,12 +388,18 @@ def cli():
         # 진단은 고정 단계/정리 enum만 기록하며 원문은 출력하지 않습니다.
         stage = getattr(error, 'safari_stage', 'preflight')
         cleanup = getattr(error, 'safari_cleanup', 'not-attempted')
+        cleanup_detail = getattr(error, 'safari_cleanup_detail', None)
         if stage not in ('preflight', 'start', 'navigate', 'initial-evaluate', 'result-poll', 'stop'):
             stage = 'preflight'
         if cleanup not in ('success', 'failed', 'not-attempted'):
             cleanup = 'not-attempted'
+        if cleanup_detail not in (
+            'stop-timeout', 'stop-os-error', 'stop-output-decode-error', 'stop-unknown',
+        ) or cleanup != 'failed':
+            cleanup_detail = None
+        detail = f' detail={cleanup_detail}' if cleanup_detail else ''
         print(
-            f'Safari relay diagnostic stage={stage} cleanup={cleanup}',
+            f'Safari relay diagnostic stage={stage} cleanup={cleanup}{detail}',
             file=sys.stderr,
         )
         sys.exit(1)
