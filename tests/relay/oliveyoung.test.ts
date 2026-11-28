@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { BrowserRequestError } from '../../scripts/relay/browser.js';
 import { createOliveyoungRelay } from '../../scripts/relay/oliveyoung.js';
 let consumerSequence = 0;
 const consumerHeaders = () => ({
@@ -201,6 +202,221 @@ it('성공 응답을 캐시하고 캐시 조회는 예산을 사용하지 않는
   expect((await relay(request())).headers.get('x-relay-cache')).toBe('hit');
   expect(takeQuota).toHaveBeenCalledTimes(1);
 });
+const productSearchBody = {
+  includeSoldOut: false,
+  keyword: 'SECRET_SEARCH',
+  page: 1,
+  sort: '01',
+  size: 1,
+};
+const productSearchRequest = (bypassCache = false) =>
+  new Request('http://localhost/v1/oliveyoung/product-search-v3', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer test',
+      ...consumerHeaders(),
+      ...(bypassCache ? { 'x-relay-cache-bypass': 'true' } : {}),
+    },
+    body: JSON.stringify(productSearchBody),
+  });
+interface ProductShapeEvent {
+  stage: 'product-search-shape';
+  operation: 'product-search-v3';
+  outcome: string;
+}
+const productShapeEvents = (events: unknown[]): ProductShapeEvent[] =>
+  events.filter(
+    (event): event is ProductShapeEvent =>
+      typeof event === 'object' &&
+      event !== null &&
+      'stage' in event &&
+      event.stage === 'product-search-shape' &&
+      'operation' in event &&
+      event.operation === 'product-search-v3' &&
+      'outcome' in event &&
+      typeof event.outcome === 'string',
+  );
+const productSearchShapes: Array<[string, unknown]> = [
+  ['payload-invalid', { status: 'SUCCESS', data: null }],
+  ['list-missing', { status: 'SUCCESS', data: {} }],
+  ['list-invalid', { status: 'SUCCESS', data: { serachList: 'SECRET_RAW_LIST' } }],
+  ['list-invalid', { status: 'SUCCESS', data: { serachList: null } }],
+  ['list-empty', { status: 'SUCCESS', data: { serachList: [] } }],
+  ['first-goods-number-missing', { status: 'SUCCESS', data: { serachList: [null] } }],
+  ['first-goods-number-missing', { status: 'SUCCESS', data: { serachList: [{}] } }],
+  ['first-goods-number-missing', { status: 'SUCCESS', data: { serachList: [{ goodsNumber: '  ' }] } }],
+  [
+    'first-goods-number-present',
+    { status: 'SUCCESS', data: { serachList: [{ goodsNumber: 'SECRET_CODE', goodsName: 'SECRET_NAME' }] } },
+  ],
+  [
+    'list-empty',
+    {
+      status: 'SUCCESS',
+      data: {
+        serachList: [],
+        searchList: [{ goodsNumber: 'SECRET_FALLBACK_CODE' }],
+      },
+    },
+  ],
+  [
+    'first-goods-number-present',
+    { status: 'SUCCESS', data: { searchList: [{ goodsNumber: 'SECRET_LEGACY_CODE' }] } },
+  ],
+];
+it.each(productSearchShapes)('product search %s shape는 miss와 cache hit에서 같은 안전 enum을 남긴다', async (outcome, result) => {
+  const events: unknown[] = [];
+  const runner = vi.fn().mockResolvedValue(result);
+  const relay = createOliveyoungRelay('test', runner, { onEvent: (event) => { events.push(event); } });
+  const first = await relay(productSearchRequest());
+  const firstBody = await first.text();
+  const second = await relay(productSearchRequest());
+  const secondBody = await second.text();
+  expect(first.status).toBe(200);
+  expect(second.status).toBe(200);
+  expect(first.headers.get('x-relay-cache')).toBe('miss');
+  expect(second.headers.get('x-relay-cache')).toBe('hit');
+  expect(secondBody).toBe(firstBody);
+  expect(runner).toHaveBeenCalledOnce();
+  expect(productShapeEvents(events).map((event) => event.outcome)).toEqual([outcome, outcome]);
+  const serializedEvents = JSON.stringify(events);
+  for (const secret of ['SECRET_SEARCH', 'SECRET_RAW_LIST', 'SECRET_CODE', 'SECRET_NAME', 'SECRET_FALLBACK_CODE', 'SECRET_LEGACY_CODE'])
+    expect(serializedEvents).not.toContain(secret);
+});
+it('관측 callback이 없으면 cache hit 응답 분석을 위해 JSON 파싱하지 않는다', async () => {
+  const runner = vi.fn().mockResolvedValue({ status: 'SUCCESS', data: { serachList: [] } });
+  const relay = createOliveyoungRelay('test', runner);
+  await relay(productSearchRequest());
+  const parse = vi.spyOn(JSON, 'parse');
+  const response = await relay(productSearchRequest());
+  expect(response.headers.get('x-relay-cache')).toBe('hit');
+  expect(parse).toHaveBeenCalledOnce();
+  parse.mockRestore();
+});
+it.each([
+  ['sync', () => { throw new Error('SECRET_LOGGER_ERROR'); }],
+  ['async', async () => { throw new Error('SECRET_LOGGER_ERROR'); }],
+])('product shape logger %s failure does not change body, status, or cache', async (_kind, onEvent) => {
+  const result = { status: 'SUCCESS', data: { serachList: [{ goodsNumber: 'SECRET_CODE' }] } };
+  const runner = vi.fn().mockResolvedValue(result);
+  const takeQuota = vi.fn().mockResolvedValue(true);
+  const relay = createOliveyoungRelay('test', runner, { onEvent, takeQuota });
+  const first = await relay(productSearchRequest());
+  const firstBody = await first.text();
+  const second = await relay(productSearchRequest());
+  expect(first.status).toBe(200);
+  expect(second.status).toBe(200);
+  expect(first.headers.get('x-relay-cache')).toBe('miss');
+  expect(second.headers.get('x-relay-cache')).toBe('hit');
+  expect(second.headers.get('content-type')).toBe('application/json');
+  expect(await second.text()).toBe(firstBody);
+  expect(runner).toHaveBeenCalledOnce();
+  expect(takeQuota).toHaveBeenCalledOnce();
+});
+it('cache hit JSON parse failure keeps the cached response and emits only a fixed invalid outcome', async () => {
+  const events: unknown[] = [];
+  const runner = vi.fn().mockResolvedValue({ status: 'SUCCESS', data: { serachList: [] } });
+  const relay = createOliveyoungRelay('test', runner, { onEvent: (event) => { events.push(event); } });
+  const first = await relay(productSearchRequest());
+  const firstBody = await first.text();
+  const originalParse = JSON.parse;
+  let parseCalls = 0;
+  const parse = vi.spyOn(JSON, 'parse').mockImplementation((text, reviver) => {
+    parseCalls++;
+    if (parseCalls === 2) throw new Error('SECRET_PARSE_ERROR');
+    return originalParse(text, reviver);
+  });
+  try {
+    const cached = await relay(productSearchRequest());
+    expect(cached.status).toBe(200);
+    expect(cached.headers.get('x-relay-cache')).toBe('hit');
+    expect(await cached.text()).toBe(firstBody);
+    expect(productShapeEvents(events).map((event) => event.outcome)).toEqual(['list-empty', 'payload-invalid']);
+    expect(JSON.stringify(events)).not.toContain('SECRET_PARSE_ERROR');
+    expect(runner).toHaveBeenCalledOnce();
+  } finally {
+    parse.mockRestore();
+  }
+});
+it('shape 분류 중 예외는 응답을 보존하고 payload-invalid만 남긴다', async () => {
+  const events: unknown[] = [];
+  let reads = 0;
+  const data = {};
+  Object.defineProperty(data, 'serachList', {
+    enumerable: true,
+    get: () => {
+      reads++;
+      if (reads === 2) throw new Error('SECRET_SHAPE_ERROR');
+      return [];
+    },
+  });
+  const result = { status: 'SUCCESS', data };
+  const relay = createOliveyoungRelay('test', vi.fn().mockResolvedValue(result), {
+    onEvent: (event) => { events.push(event); },
+  });
+  const response = await relay(productSearchRequest());
+  expect(response.status).toBe(200);
+  expect(JSON.parse(await response.text()).data.serachList).toEqual([]);
+  expect(productShapeEvents(events).map((event) => event.outcome)).toEqual(['payload-invalid']);
+  expect(JSON.stringify(events)).not.toContain('SECRET_SHAPE_ERROR');
+});
+it('shape 진단은 product-search bypass와 cache hit에만 붙고 비대상 operation은 제외한다', async () => {
+  const events: unknown[] = [];
+  const runner = vi.fn().mockResolvedValue({ status: 'SUCCESS', data: { serachList: [] } });
+  const relay = createOliveyoungRelay('test', runner, { onEvent: (event) => { events.push(event); } });
+  expect((await relay(productSearchRequest(true))).headers.get('x-relay-cache')).toBe('miss');
+  expect((await relay(productSearchRequest(true))).headers.get('x-relay-cache')).toBe('miss');
+  expect((await relay(request())).status).toBe(200);
+  expect(productShapeEvents(events).map((event) => event.outcome)).toEqual(['list-empty', 'list-empty']);
+  expect(runner).toHaveBeenCalledTimes(3);
+});
+it('product-search 실패에는 성공 shape 진단을 남기지 않고 캐시하지 않는다', async () => {
+  const events: unknown[] = [];
+  const runner = vi.fn().mockResolvedValue({ status: 'FAIL', data: { serachList: [] } });
+  const relay = createOliveyoungRelay('test', runner, { onEvent: (event) => { events.push(event); } });
+  expect((await relay(productSearchRequest())).status).toBe(502);
+  expect((await relay(productSearchRequest())).status).toBe(502);
+  expect(runner).toHaveBeenCalledTimes(2);
+  expect(productShapeEvents(events)).toEqual([]);
+});
+it('logger failure does not interrupt coalescing or upstream 429 cooldown', async () => {
+  let finish!: (value: { status: string; data: { serachList: [] } }) => void;
+  const events: unknown[] = [];
+  const runner = vi
+    .fn()
+    .mockImplementationOnce(
+      () => new Promise((resolve) => { finish = resolve; }),
+    );
+  const relay = createOliveyoungRelay('test', runner, {
+    takeQuota: async () => true,
+    onEvent: async (event) => {
+      events.push(event);
+      throw new Error('SECRET_LOGGER_ERROR');
+    },
+  });
+  const first = relay(productSearchRequest());
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledOnce());
+  const duplicate = relay(productSearchRequest());
+  await vi.waitFor(() =>
+    expect(events).toContainEqual(expect.objectContaining({ stage: 'cache', outcome: 'coalesced' })),
+  );
+  finish({ status: 'SUCCESS', data: { serachList: [] } });
+  const responses = await Promise.all([first, duplicate]);
+  expect(responses.map((response) => response.headers.get('x-relay-cache'))).toEqual(['miss', 'coalesced']);
+  expect((await responses[0].text())).toBe(await responses[1].text());
+  expect(runner).toHaveBeenCalledOnce();
+  expect(productShapeEvents(events).map((event) => event.outcome)).toEqual(['list-empty']);
+
+  const limitedRunner = vi.fn().mockRejectedValue(new BrowserRequestError('http-429', 429, 30));
+  const limited = createOliveyoungRelay('test', limitedRunner, {
+    onEvent: () => { throw new Error('SECRET_LOGGER_ERROR'); },
+  });
+  const firstLimited = await limited(productSearchRequest());
+  const cooled = await limited(productSearchRequest());
+  expect(firstLimited.status).toBe(429);
+  expect(cooled.status).toBe(429);
+  expect(limitedRunner).toHaveBeenCalledOnce();
+});
 it('Safari 준비 실패는 캐시를 유지하고 새 miss의 quota와 원본 실행을 막는다', async () => {
   let ready = true;
   const assertReady = vi.fn(() => {
@@ -332,7 +548,7 @@ it('모든 중복 대기 요청이 취소되면 quota 없이 건너뛰고 reserv
   const relay = createOliveyoungRelay('test', runner, {
     assertReady: () => {},
     takeQuota,
-    onEvent: (event) => events.push(event),
+    onEvent: (event) => { events.push(event); },
   });
   const blocker = relay(requestForConsumer('c'.repeat(64), { goodsNo: 'block' }));
   await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
