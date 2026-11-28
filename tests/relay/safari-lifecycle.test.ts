@@ -142,9 +142,13 @@ it.each([
   ['initial-evaluate', 'success'],
   ['result-poll', 'success'],
   ['stop', 'failed'],
+  ['stop', 'failed', 'stop-timeout'],
+  ['stop', 'failed', 'stop-os-error'],
+  ['navigate', 'failed', 'stop-output-decode-error'],
+  ['initial-evaluate', 'failed', 'stop-unknown'],
 ] as const)(
   'helper의 검증된 단계/정리 enum만 고정 이벤트로 전달한다: %s',
-  async (stage, cleanup) => {
+  async (stage, cleanup, detail?) => {
     const onEvent = vi.fn();
     const x = createSafariLifecycle('/state', onEvent);
     const start = x.start();
@@ -156,10 +160,14 @@ it.each([
     done(
       new Error('private detail URL cookie'),
       '',
-      `Safari relay diagnostic stage=${stage} cleanup=${cleanup}\n`,
+      `Safari relay diagnostic stage=${stage} cleanup=${cleanup}${detail ? ` detail=${detail}` : ''}\n`,
     );
     await rejection;
-    expect(onEvent.mock.calls).toEqual([[`safari-stage-${stage}`], [`safari-cleanup-${cleanup}`]]);
+    expect(onEvent.mock.calls).toEqual([
+      [`safari-stage-${stage}`],
+      [`safari-cleanup-${cleanup}`],
+      ...(detail ? [[`safari-cleanup-detail-${detail}`]] : []),
+    ]);
     expect(JSON.stringify(onEvent.mock.calls)).not.toMatch(/private|URL|cookie/);
     await x.close();
   },
@@ -250,6 +258,9 @@ it.each([
   'untrusted stderr with private detail',
   `Safari relay diagnostic stage=navigate cleanup=failed${'x'.repeat(2048)}`,
   'Safari relay diagnostic stage=invalid cleanup=failed',
+  'Safari relay diagnostic stage=navigate cleanup=failed\n\n',
+  'Safari relay diagnostic stage=navigate cleanup=failed\nextra',
+  'Safari relay diagnostic stage=navigate cleanup=success detail=stop-timeout',
 ])('helper stderr가 enum/크기 계약을 어기면 원문을 기록하지 않는다', async (stderr) => {
   const onEvent = vi.fn();
   const x = createSafariLifecycle('/state', onEvent);
@@ -262,6 +273,32 @@ it.each([
   done(new Error('private original exception'), '', stderr);
   await rejection;
   expect(onEvent).not.toHaveBeenCalled();
+  await x.close();
+});
+
+it('상세 cleanup 이벤트가 있어도 기존 failed 집계 이벤트를 보존하고 logger 실패를 격리한다', async () => {
+  const onEvent = vi.fn((outcome: string) => {
+    if (outcome === 'safari-cleanup-failed') throw new Error('private logger failure');
+  });
+  const x = createSafariLifecycle('/state', onEvent);
+  const start = x.start();
+  done(null, '{"ready":true}');
+  await start;
+
+  const call = x.run('x', {});
+  const rejection = expect(call).rejects.toThrow('safari-helper');
+  done(
+    new Error('private helper failure'),
+    '',
+    'Safari relay diagnostic stage=stop cleanup=failed detail=stop-timeout\n',
+  );
+  await rejection;
+  expect(onEvent.mock.calls).toEqual([
+    ['safari-stage-stop'],
+    ['safari-cleanup-failed'],
+    ['safari-cleanup-detail-stop-timeout'],
+  ]);
+  expect(x.status()).toMatchObject({ state: 'failed', recoveryRequired: true });
   await x.close();
 });
 

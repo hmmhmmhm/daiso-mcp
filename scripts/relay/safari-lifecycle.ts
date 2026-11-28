@@ -6,11 +6,16 @@ import type { Page } from 'playwright';
 
 type SafariFailureStage =
   'preflight' | 'start' | 'navigate' | 'initial-evaluate' | 'result-poll' | 'stop';
-type SafariCleanupResult = 'success' | 'failed' | 'not-attempted';
+type SafariCleanupResult =
+  | 'success' | 'failed' | 'not-attempted';
+type SafariCleanupDetail =
+  | 'stop-timeout' | 'stop-os-error' | 'stop-output-decode-error' | 'stop-unknown';
 type SafariDiagnosticOutcome =
-  `safari-stage-${SafariFailureStage}` | `safari-cleanup-${SafariCleanupResult}`;
+  | `safari-stage-${SafariFailureStage}`
+  | `safari-cleanup-${SafariCleanupResult}`
+  | `safari-cleanup-detail-${SafariCleanupDetail}`;
 const safariDiagnostic =
-  /^Safari relay diagnostic stage=(preflight|start|navigate|initial-evaluate|result-poll|stop) cleanup=(success|failed|not-attempted)$/;
+  /^Safari relay diagnostic stage=(preflight|start|navigate|initial-evaluate|result-poll|stop) cleanup=(success|failed|not-attempted)(?: detail=(stop-timeout|stop-os-error|stop-output-decode-error|stop-unknown))?$/;
 
 export function createSafariLifecycle(
   stateDir: string,
@@ -59,11 +64,12 @@ export function createSafariLifecycle(
             if (error && typeof stderr === 'string' && stderr.length <= 128) {
               const line = stderr.endsWith('\n') ? stderr.slice(0, -1) : stderr;
               const match = safariDiagnostic.exec(line);
-              if (match) {
+              if (match && (!match[3] || match[2] === 'failed')) {
                 const stage = match[1] as SafariFailureStage;
                 const cleanup = match[2] as SafariCleanupResult;
                 report(`safari-stage-${stage}`);
                 report(`safari-cleanup-${cleanup}`);
+                if (match[3]) report(`safari-cleanup-detail-${match[3] as SafariCleanupDetail}`);
               }
             }
             return reject(new BrowserRequestError('safari-helper'));

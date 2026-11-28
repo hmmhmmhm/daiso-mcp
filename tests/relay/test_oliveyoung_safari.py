@@ -6,6 +6,7 @@ import json
 import os
 import signal
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,14 +39,14 @@ class RelayTests(unittest.TestCase):
         self.lock.write_text(value)
         self.lock.chmod(0o600)
 
-    def operate(self, _helper, _session, command, *_args):
+    def operate(self, _helper, _session, command, *_args, decode=True):
         self.calls.append(command)
         if command == 'start':
             self.assertIn('--independent-window', _args)
             self.session.write_text('{}')
         if command == 'stop':
             self.session.unlink()
-        return {'ok': True}
+        return {'ok': True} if decode else '{"ok":true}'
 
     def run_main(self, *flags, values=None):
         loader = SimpleNamespace(exec_module=lambda _h: None)
@@ -60,7 +61,9 @@ class RelayTests(unittest.TestCase):
         return json.loads(stdout.getvalue())
 
     def run_cli_failure(
-        self, fail_at, *, stop_fails=False, flags=(), preserve_session=False, interrupt_at=None,
+        self, fail_at, *, stop_fails=False, stop_error=None, stop_output='{"ok":true}',
+        stop_parse_error=None,
+        flags=(), preserve_session=False, interrupt_at=None,
     ):
         if self.session.exists() and not preserve_session:
             self.session.unlink()
@@ -69,16 +72,19 @@ class RelayTests(unittest.TestCase):
         stderr = io.StringIO()
         calls = {'evaluate': 0}
 
-        def operate(_helper, _session, command, *_args):
+        def operate(_helper, _session, command, *_args, decode=True):
             self.calls.append(command)
             if command == fail_at:
                 raise RuntimeError('private URL cookie body detail')
             if command == 'start':
                 self.session.write_text('{}')
             if command == 'stop':
+                if stop_error is not None:
+                    raise stop_error
                 if stop_fails:
                     raise RuntimeError('private stop detail')
                 self.session.unlink()
+                return {'ok': True} if decode else stop_output
             return {'ok': True}
 
         def evaluate(_helper, _state, _code):
@@ -94,6 +100,7 @@ class RelayTests(unittest.TestCase):
         with patch.object(m.importlib.util, 'spec_from_file_location', return_value=SimpleNamespace(loader=loader)), \
              patch.object(m.importlib.util, 'module_from_spec', return_value=self.helper), \
              patch.object(m, 'operate', side_effect=operate), \
+             patch.object(m, 'decode_output', side_effect=stop_parse_error or m.decode_output), \
              patch.object(m, 'evaluate', side_effect=evaluate), \
              patch.object(m, 'retire_restarted_sessions', side_effect=RuntimeError('private preflight detail') if fail_at == 'preflight' else None), \
              patch.object(sys, 'argv', ['helper', str(self.base), *flags]), \
@@ -623,7 +630,7 @@ class RelayTests(unittest.TestCase):
         expected = {
             'preflight': 'stage=preflight cleanup=not-attempted',
             'start': 'stage=start cleanup=not-attempted',
-            'navigate': 'stage=navigate cleanup=failed',
+            'navigate': 'stage=navigate cleanup=failed detail=stop-unknown',
             'initial-evaluate': 'stage=initial-evaluate cleanup=success',
             'result-poll': 'stage=result-poll cleanup=success',
         }
@@ -637,15 +644,50 @@ class RelayTests(unittest.TestCase):
                 self.assertNotIn('https://', stderr)
 
     def test_stop_failure_does_not_replace_primary_stage_and_preserves_session(self):
-        stdout, stderr = self.run_cli_failure('navigate', stop_fails=True)
+        stdout, stderr = self.run_cli_failure('navigate', stop_error=TimeoutError('secret timeout'))
         self.assertEqual(stdout, '')
-        self.assertEqual(stderr.strip(), 'Safari relay diagnostic stage=navigate cleanup=failed')
+        self.assertEqual(
+            stderr.strip(),
+            'Safari relay diagnostic stage=navigate cleanup=failed detail=stop-timeout',
+        )
         self.assertTrue(self.session.exists())
 
-    def test_stop_only_failure_is_reported_as_stop_failure(self):
-        stdout, stderr = self.run_cli_failure(None, stop_fails=True)
+    def test_stop_only_failures_use_fixed_subtypes_without_exposing_details(self):
+        cases = (
+            (subprocess.TimeoutExpired('private command', 30), 'stop-timeout'),
+            (TimeoutError('private timeout URL'), 'stop-timeout'),
+            (OSError('private path cookie'), 'stop-os-error'),
+            (RuntimeError('private unknown body'), 'stop-unknown'),
+        )
+        for error, cleanup in cases:
+            with self.subTest(cleanup=cleanup):
+                stdout, stderr = self.run_cli_failure(None, stop_error=error)
+                self.assertEqual(stdout, '')
+                self.assertEqual(
+                    stderr.strip(),
+                    f'Safari relay diagnostic stage=stop cleanup=failed detail={cleanup}',
+                )
+                self.assertNotRegex(stderr, r'private|URL|cookie|body|path')
+
+    def test_stop_output_decode_failure_is_separate_from_invocation_failure(self):
+        stdout, stderr = self.run_cli_failure(None, stop_output='not-json secret URL')
         self.assertEqual(stdout, '')
-        self.assertEqual(stderr.strip(), 'Safari relay diagnostic stage=stop cleanup=failed')
+        self.assertEqual(
+            stderr.strip(),
+            'Safari relay diagnostic stage=stop cleanup=failed detail=stop-output-decode-error',
+        )
+        self.assertNotRegex(stderr, r'secret|URL|not-json')
+
+    def test_stop_decode_exception_does_not_replace_primary_failure(self):
+        stdout, stderr = self.run_cli_failure(
+            'navigate', stop_parse_error=RecursionError('private recursive payload'),
+        )
+        self.assertEqual(stdout, '')
+        self.assertEqual(
+            stderr.strip(),
+            'Safari relay diagnostic stage=navigate cleanup=failed detail=stop-output-decode-error',
+        )
+        self.assertNotRegex(stderr, r'private|recursive|payload')
 
     def test_check_failure_is_a_preflight_diagnostic_without_window_operations(self):
         stdout, stderr = self.run_cli_failure('preflight', flags=('--check',))
