@@ -39,6 +39,91 @@ it('403만 Safari 동일 출처에서 재시도하고 쿠키를 내보내지 않
   });
   expect(x.status().state).toBe('ready');
 });
+it.each([
+  [200, 'safari-success'],
+  [403, 'safari-http-403'],
+  [429, 'safari-http-429'],
+  [500, 'safari-http-other'],
+] as const)('Safari HTTP %i 결과를 고정 진단값으로 알린다', async (status, outcome) => {
+  const onEvent = vi.fn();
+  mock.evaluate.mockResolvedValue({ status, text: '{}' });
+  const x = createSevenSafariTransport('/state', {
+    fetcher: vi.fn().mockResolvedValue(new Response('', { status: 403 })),
+    takeQuota: vi.fn().mockResolvedValue(true),
+    onEvent,
+  });
+  expect((await x.fetch(url)).status).toBe(status);
+  expect(onEvent).toHaveBeenCalledExactlyOnceWith(outcome);
+});
+it('Safari 폴백 예외는 원문 대신 고정 진단값만 알린다', async () => {
+  const onEvent = vi.fn();
+  mock.start.mockRejectedValue(new Error('private-helper-detail'));
+  const x = createSevenSafariTransport('/state', {
+    fetcher: vi.fn().mockResolvedValue(new Response('', { status: 403 })),
+    takeQuota: vi.fn().mockResolvedValue(true),
+    onEvent,
+  });
+  await expect(x.fetch(url)).rejects.toThrow();
+  expect(onEvent).toHaveBeenCalledExactlyOnceWith('safari-fallback-error');
+  expect(JSON.stringify(onEvent.mock.calls)).not.toContain('private-helper-detail');
+});
+it('진단 callback 예외가 Safari 성공 응답을 바꾸지 않는다', async () => {
+  const onEvent = vi.fn(() => {
+    throw new Error('logger failed');
+  });
+  const x = createSevenSafariTransport('/state', {
+    fetcher: vi.fn().mockResolvedValue(new Response('', { status: 403 })),
+    takeQuota: vi.fn().mockResolvedValue(true),
+    onEvent,
+  });
+  expect((await x.fetch(url)).status).toBe(200);
+  expect(x.status().state).toBe('ready');
+  expect(onEvent).toHaveBeenCalledExactlyOnceWith('safari-success');
+});
+it('진단 callback 예외가 Safari 실패와 60초 재시도 대기를 바꾸지 않는다', async () => {
+  const onEvent = vi.fn(() => {
+    throw new Error('logger failed');
+  });
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+  mock.evaluate.mockResolvedValue({ status: 403, text: '' });
+  const x = createSevenSafariTransport('/state', {
+    fetcher: vi.fn().mockResolvedValue(new Response('', { status: 403 })),
+    takeQuota: vi.fn().mockResolvedValue(true),
+    onEvent,
+  });
+  expect((await x.fetch(url)).status).toBe(403);
+  expect(x.status()).toMatchObject({ state: 'failed', retryAt: 61000 });
+  now.mockReturnValue(2000);
+  expect((await x.fetch(url)).status).toBe(403);
+  expect(mock.start).toHaveBeenCalledOnce();
+  expect(onEvent).toHaveBeenLastCalledWith('safari-skipped-cooldown');
+});
+it('냉각 중에는 Safari 생략을 구분해 기록한다', async () => {
+  const onEvent = vi.fn();
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+  mock.evaluate.mockResolvedValue({ status: 403, text: '' });
+  const x = createSevenSafariTransport('/state', {
+    fetcher: vi.fn().mockResolvedValue(new Response('', { status: 403 })),
+    takeQuota: vi.fn().mockResolvedValue(true),
+    onEvent,
+  });
+  await x.fetch(url);
+  onEvent.mockClear();
+  now.mockReturnValue(2000);
+  expect((await x.fetch(url)).status).toBe(403);
+  expect(onEvent).toHaveBeenCalledExactlyOnceWith('safari-skipped-cooldown');
+  expect(mock.start).toHaveBeenCalledOnce();
+});
+it('로컬 원본 한도 거절은 Safari HTTP 결과와 구분해 기록한다', async () => {
+  const onEvent = vi.fn();
+  const x = createSevenSafariTransport('/state', {
+    fetcher: vi.fn().mockResolvedValue(new Response('', { status: 403 })),
+    takeQuota: vi.fn().mockResolvedValue(false),
+    onEvent,
+  });
+  await expect(x.fetch(url)).rejects.toMatchObject({ status: 429 });
+  expect(onEvent).toHaveBeenCalledExactlyOnceWith('safari-quota-rejected');
+});
 it('추가 원본 한도 없이 Safari 재시도를 하지 않는다', async () => {
   const x = createSevenSafariTransport('/state', {
     fetcher: vi.fn().mockResolvedValue(new Response('', { status: 403 })),

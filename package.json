@@ -1,6 +1,6 @@
 {
   "name": "daiso",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "DAISO MCP for retail inventory, cinema showtimes, and local information. Public MCP endpoint with no installation or API key required; CLI and agent skills included.",
   "main": "dist/index.js",
   "bin": {
@@ -111,7 +111,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "hono": "^4.13.16",
+    "hono": "^4.13.19",
     "proj4": "^2.22.0"
   }
 }

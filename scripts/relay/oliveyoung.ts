@@ -65,6 +65,7 @@ export interface RelayEvent {
 }
 export interface RelayOptions {
   takeQuota?: (() => Promise<boolean>) & { status?: () => QuotaStatus };
+  assertReady?: () => void;
   onEvent?: (event: RelayEvent) => void | Promise<void>;
   status?: () => Record<string, unknown>;
 }
@@ -238,6 +239,7 @@ export function createOliveyoungRelay(
               return null;
             const cooling = cooldownError(operation);
             if (cooling) throw cooling;
+            options.assertReady?.();
             if (options.takeQuota) {
               try {
                 if (!(await options.takeQuota())) {

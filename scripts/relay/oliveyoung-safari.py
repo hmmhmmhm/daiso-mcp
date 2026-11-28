@@ -193,9 +193,14 @@ def main():
     if unresolved():
         raise RuntimeError('unresolved-session')
     signal.signal(signal.SIGTERM, interrupt)
+    stage = 'start'
+    cleanup = 'not-attempted'
+    failed = False
+    primary_error = None
     result = None
     try:
         operate(helper, session, 'start', '--independent-window')
+        stage = 'navigate'
         operate(helper, session, 'navigate', origin + '/robots.txt')
         state = json.loads(session.read_text())
         key = '__daisoRelay_' + helper.uuid.uuid4().hex
@@ -204,8 +209,10 @@ def main():
                 'window[key]={done:false};Promise.resolve((' + payload['script'] + ')('
                 + json.dumps(payload['args']) + ')).then(value=>window[key]={done:true,value},'
                 '()=>window[key]={done:true,value:{reason:"network",body:null}});return {started:true};')
+        stage = 'initial-evaluate'
         evaluate(helper, state, code)
         deadline = time.monotonic() + 16
+        stage = 'result-poll'
         while time.monotonic() < deadline:
             observed = evaluate(helper, state, 'return window[' + json.dumps(key) + ']||{lost:true};')
             if observed.get('lost'):
@@ -216,18 +223,46 @@ def main():
             time.sleep(.15)
         if result is None:
             raise TimeoutError('fetch-timeout')
+    except Exception as error:
+        failed = True
+        primary_error = error
     finally:
         # 중단 시에도 소유 창만 회수하고 불명확한 소유권은 덮어쓰지 않습니다.
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        if session.exists():
-            operate(helper, session, 'stop')
+        try:
+            if session.exists():
+                operate(helper, session, 'stop')
+                cleanup = 'success'
+        except Exception as error:
+            cleanup = 'failed'
+            if not failed:
+                stage = 'stop'
+                failed = True
+                primary_error = error
+    if failed:
+        primary_error.safari_stage = stage
+        primary_error.safari_cleanup = cleanup
+        raise primary_error from None
     print(json.dumps(result, ensure_ascii=False))
 
 
-if __name__ == '__main__':
+def cli():
     try:
         main()
-    except Exception:
-        # URL·원문·토큰은 출력하지 않고 미회수 state/lock은 보존합니다.
-        print('Safari relay request failed', file=sys.stderr)
+    except Exception as error:
+        # 진단은 고정 단계/정리 enum만 기록하며 원문은 출력하지 않습니다.
+        stage = getattr(error, 'safari_stage', 'preflight')
+        cleanup = getattr(error, 'safari_cleanup', 'not-attempted')
+        if stage not in ('preflight', 'start', 'navigate', 'initial-evaluate', 'result-poll', 'stop'):
+            stage = 'preflight'
+        if cleanup not in ('success', 'failed', 'not-attempted'):
+            cleanup = 'not-attempted'
+        print(
+            f'Safari relay diagnostic stage={stage} cleanup={cleanup}',
+            file=sys.stderr,
+        )
         sys.exit(1)
+
+
+if __name__ == '__main__':
+    cli()

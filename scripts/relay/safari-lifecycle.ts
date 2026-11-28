@@ -4,7 +4,18 @@ import { fileURLToPath } from 'node:url';
 import { createBrowserRunner, BrowserRequestError } from './browser.js';
 import type { Page } from 'playwright';
 
-export function createSafariLifecycle(stateDir: string) {
+type SafariFailureStage =
+  'preflight' | 'start' | 'navigate' | 'initial-evaluate' | 'result-poll' | 'stop';
+type SafariCleanupResult = 'success' | 'failed' | 'not-attempted';
+type SafariDiagnosticOutcome =
+  `safari-stage-${SafariFailureStage}` | `safari-cleanup-${SafariCleanupResult}`;
+const safariDiagnostic =
+  /^Safari relay diagnostic stage=(preflight|start|navigate|initial-evaluate|result-poll|stop) cleanup=(success|failed|not-attempted)$/;
+
+export function createSafariLifecycle(
+  stateDir: string,
+  onEvent?: (outcome: SafariDiagnosticOutcome) => void | Promise<void>,
+) {
   const helper = fileURLToPath(new URL('./oliveyoung-safari.py', import.meta.url));
   const env = Object.fromEntries(
     ['PATH', 'HOME', 'LANG', '__CF_USER_TEXT_ENCODING']
@@ -20,6 +31,14 @@ export function createSafariLifecycle(stateDir: string) {
   let starting: Promise<void> | undefined;
   let recoveryTimer: ReturnType<typeof setTimeout> | undefined;
   let retryAt = 0;
+  const report = (outcome: SafariDiagnosticOutcome) => {
+    try {
+      const result = onEvent?.(outcome);
+      if (result) void result.catch(() => undefined);
+    } catch {
+      // 진단 기록 실패는 helper 오류 처리를 바꾸지 않습니다.
+    }
+  };
   const closed = () => state === 'closed';
   const execute = (input?: string): Promise<unknown> => {
     pending = new Promise((resolve, reject) => {
@@ -34,10 +53,22 @@ export function createSafariLifecycle(stateDir: string) {
           killSignal: 'SIGTERM',
           maxBuffer: 16 * 1024 * 1024,
         },
-        (error, stdout) => {
+        (error, stdout, stderr) => {
           clearTimeout(hardStop);
           child = undefined;
-          if (error || closed()) return reject(new BrowserRequestError('safari-helper'));
+          if (error || closed()) {
+            if (error && typeof stderr === 'string' && stderr.length <= 128) {
+              const line = stderr.endsWith('\n') ? stderr.slice(0, -1) : stderr;
+              const match = safariDiagnostic.exec(line);
+              if (match) {
+                const stage = match[1] as SafariFailureStage;
+                const cleanup = match[2] as SafariCleanupResult;
+                report(`safari-stage-${stage}`);
+                report(`safari-cleanup-${cleanup}`);
+              }
+            }
+            return reject(new BrowserRequestError('safari-helper'));
+          }
           try {
             const output = JSON.parse(stdout);
             if (output?.relayError === 'safari-busy')
@@ -79,10 +110,13 @@ export function createSafariLifecycle(stateDir: string) {
     }, 60000);
     recoveryTimer.unref();
   };
-  const runTask = async <T>(task: () => Promise<T>): Promise<T> => {
+  const assertReady = () => {
     if (closed()) throw new Error('Safari lifecycle closed');
     if (state !== 'ready') throw new Error('Safari lifecycle not ready');
     if (active) throw new Error('Safari lifecycle already active');
+  };
+  const runTask = async <T>(task: () => Promise<T>): Promise<T> => {
+    assertReady();
     active = true;
     calls++;
     try {
@@ -123,6 +157,7 @@ export function createSafariLifecycle(stateDir: string) {
   };
   return {
     start,
+    assertReady,
     run: (path: string, body: Record<string, unknown>) => runTask(() => runner(path, body)),
     evaluate: (script: string, args: Record<string, unknown>) =>
       runTask(() => execute(JSON.stringify({ script, args }))),
