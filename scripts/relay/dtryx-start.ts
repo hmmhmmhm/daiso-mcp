@@ -78,7 +78,11 @@ async function main() {
     const sevenExecutable = process.env.SEVEN_BROWSER_EXECUTABLE?.trim();
     const sevenSession =
       process.env.SEVEN_RELAY_TRANSPORT === 'safari'
-        ? createSevenSafariTransport(convenienceDir, { takeQuota: quota })
+        ? createSevenSafariTransport(convenienceDir, {
+            takeQuota: quota,
+            onEvent: (outcome) =>
+              convenienceLog!.append({ stage: 'session', operation: 'seven', outcome }),
+          })
         : sevenExecutable
           ? createSevenSessionTransport({
               takeQuota: quota,

@@ -29,6 +29,8 @@ Cloudflare Workers Observability에서 `event = diagnostic`, `requestId = <ID>`�
 
 인증된 health의 `logging`에서 `queued`, `written`, `dropped`, `errors`, `lowSpace`를 확인한다. 이 카운터는 프로세스 재시작 시 초기화된다. 시작과 heartbeat에 quota 잔여량이 기록되고 `quota/consumed`는 OY 실제 실행 전에 차감된 호출을 의미한다. 집계는 JSONL의 UTC time, operation, stage, outcome을 사용한다. 보존 기간/용량/드롭을 함께 보고 숫자를 해석한다.
 
+세븐 Safari 폴백은 기존 안전 로그에 `stage=session`, `operation=seven`으로 남긴다. `outcome`은 `safari-success`(Safari HTTP 200), `safari-http-403`, `safari-http-429`, `safari-http-other`, `safari-fallback-error`, `safari-skipped-cooldown`, `safari-quota-rejected` 중 하나다. `safari-fallback-error`는 helper 실패뿐 아니라 잘못된 응답이나 취소 등 Safari 폴백 중 예외를 포함한다. 이 이벤트에는 `requestId`가 없어 집계용이며 개별 호출과 상관관계를 만들 수 없다.
+
 기록하는 값은 고정 분류, 요청 ID, 작업 종류, 단계, 상태, 소요 시간, 캐시 결과, 제한 사유, quota 잔여량이다. 검색어, 위치 좌표, 요청/응답 본문, 인증 헤더, IP, 임의 예외 메시지는 넣지 않는다. 조회 예:
 
 ```sh
