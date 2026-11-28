@@ -43,3 +43,19 @@ it('Safari 모드에서 Chrome 모듈을 실행하지 않는다', async () => {
   expect(mocks.browser).not.toHaveBeenCalled();
   expect(mocks.launch).not.toHaveBeenCalled();
 });
+
+it('Safari 진단 callback만 helper에 연결하고 기존 전송 분기는 보존한다', async () => {
+  const observer = vi.fn();
+  const quota = vi.fn();
+  await createTransportLifecycle('safari', '/state', observer, quota);
+  expect(mocks.safari).toHaveBeenLastCalledWith('/state', observer);
+
+  mocks.safari.mockClear();
+  mocks.browser.mockClear();
+  mocks.http.mockClear();
+  await createTransportLifecycle('http', '/state', observer, quota);
+  expect(mocks.http).toHaveBeenCalledOnce();
+  expect(mocks.safari).not.toHaveBeenCalled();
+  await createTransportLifecycle('browser', '/state', observer, quota);
+  expect(mocks.safari).not.toHaveBeenCalled();
+});

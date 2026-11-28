@@ -343,6 +343,29 @@ describe('CLI', () => {
     );
   });
 
+  it('stores --json은 보정된 검색 결과를 유효한 JSON으로 출력한다', async () => {
+    const { deps, output } = createDeps();
+    const empty = { success: true, data: { stores: [] } };
+    const found = { success: true, data: { stores: [{ name: '안산중앙본점' }] } };
+    deps.fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce({ ok: true, json: async () => empty } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => found } as Response);
+
+    expect(await runCli(['stores', '안산 중앙역', '--json'], deps)).toBe(0);
+    expect(JSON.parse(output.join('\n'))).toEqual(found);
+  });
+
+  it('stores --json은 검색 결과가 없어도 유효한 JSON으로 출력한다', async () => {
+    const { deps, output } = createDeps();
+    const empty = { success: true, data: { stores: [] } };
+    deps.fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true, json: async () => empty,
+    } as Response);
+
+    expect(await runCli(['stores', '안산 중앙역', '--json'], deps)).toBe(0);
+    expect(JSON.parse(output.join('\n'))).toEqual(empty);
+  });
+
   it('inventory 명령은 productId로 재고 API를 호출한다', async () => {
     const { deps } = createDeps();
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue({

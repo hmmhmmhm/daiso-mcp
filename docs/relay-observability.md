@@ -29,6 +29,14 @@ Cloudflare Workers Observability에서 `event = diagnostic`, `requestId = <ID>`�
 
 인증된 health의 `logging`에서 `queued`, `written`, `dropped`, `errors`, `lowSpace`를 확인한다. 이 카운터는 프로세스 재시작 시 초기화된다. 시작과 heartbeat에 quota 잔여량이 기록되고 `quota/consumed`는 OY 실제 실행 전에 차감된 호출을 의미한다. 집계는 JSONL의 UTC time, operation, stage, outcome을 사용한다. 보존 기간/용량/드롭을 함께 보고 숫자를 해석한다.
 
+세븐 Safari 폴백은 기존 안전 로그에 `stage=session`, `operation=seven`으로 남긴다. `outcome`은 `safari-success`(Safari HTTP 200), `safari-http-403`, `safari-http-429`, `safari-http-other`, `safari-fallback-error`, `safari-skipped-cooldown`, `safari-quota-rejected` 중 하나다. `safari-fallback-error`는 helper 실패뿐 아니라 잘못된 응답이나 취소 등 Safari 폴백 중 예외를 포함한다. 이 이벤트에는 `requestId`가 없어 집계용이며 개별 호출과 상관관계를 만들 수 없다.
+
+OY Safari helper 실패는 기존 안전 logger에 `safari-stage-<enum>`과 `safari-cleanup-<enum>`을 각각 기록한다. 단계 enum은 `preflight`, `start`, `navigate`, `initial-evaluate`, `result-poll`, `stop`이고 정리 enum은 `success`, `failed`, `not-attempted`다. Python stderr의 고정 형식과 enum을 Node 경계에서 검증하며 다른 문자열은 버린다. URL, 요청·응답 데이터, 쿠키, 헤더, 예외 원문은 로그에 넣지 않는다. 이벤트에는 `requestId`가 없어 집계용이며 개별 호출과 상관관계를 만들 수 없다. Seven은 같은 helper를 사용해도 이 OY 상세 이벤트 callback을 연결하지 않는다.
+
+OY `product-search-v3` 성공 결과는 `stage=product-search-shape`로만 구조를 기록한다. `outcome`은 `payload-invalid`, `list-missing`, `list-invalid`, `list-empty`, `first-goods-number-missing`, `first-goods-number-present` 중 하나다. 상품명·상품 코드·검색어·좌표·본문은 포함하지 않는다. 성공 miss와 cache hit만 관측하며, cache hit의 shape 분류는 callback이 연결된 경우에만 저장된 응답을 `JSON.parse`하므로 응답 크기에 비례하는 추가 CPU 비용이 있다. callback이 없으면 cache hit 본문은 진단용으로 파싱하지 않는다. 이 분류는 로그 전용이며 응답, 캐시 적재 및 품절/미확인 해석을 바꾸지 않는다.
+
+올리브영 Safari가 준비되지 않았으면 캐시된 정상 응답은 그대로 제공하고 새로운 원본 작업은 quota 차감 전에 거절한다. quota 기록이 이미 시작된 뒤 전송이 종료되는 경합에서는 차감이 남을 수 있으며, 실행 직전 준비 상태를 다시 검사해 원본 호출을 막는다.
+
 기록하는 값은 고정 분류, 요청 ID, 작업 종류, 단계, 상태, 소요 시간, 캐시 결과, 제한 사유, quota 잔여량이다. 검색어, 위치 좌표, 요청/응답 본문, 인증 헤더, IP, 임의 예외 메시지는 넣지 않는다. 조회 예:
 
 ```sh
@@ -48,7 +56,6 @@ rg --fixed-strings '확인할-request-id' "$OY_RELAY_STATE_DIR/logs" "$DTRYX_REL
 인증과 payload 검증 뒤 공통 릴레이 캐시를 확인한다. REST와 MCP가 같은 조건을 요청하면 공유된다. 상품 검색/매장은 5분, 상품 ID는 10분, 재고는 1분 TTL이다. 최대 256항목 및 키·값 직렬화 16MiB, 오래된 항목부터 퇴출한다. 성공만 저장하며 동일 진행 요청은 합친다. 탭이나 브라우저를 추가하지 않는다.
 
 캐시 적중은 quota를 소비하지 않는다. `x-relay-cache: hit/miss/coalesced` 및 health.cache로 확인한다. 서로 다른 검색이 대부분이면 절감 효과는 작다. 현재 OY quota는 분당 300회·UTC 일일 300,000회다. 소비자별 신규 원본 작업은 분당 240회이며, 사용한 원장은 유지한다. REST 캐시도 별도로 존재하며 products5분/stores24시간/inventory10분이므로 외부 REST 응답의 최신성은 두 계층의 영향을 받는다. 공개 REST 요청의 `_healthCheck`는 REST 캐시 키만 바꾸며 공통 릴레이 캐시는 계속 적용된다. 운영 인증이 유효한 `x-health-check-force-fresh: true` 요청은 REST 캐시와 OY 내부 캐시를 우회하고, 릴레이에도 `x-relay-cache-bypass: true`를 전달하여 저장 응답과 진행 중인 동일 요청을 재사용하지 않는다. 인증 없는 헤더나 `_healthCheck`만으로 이 우회를 활성화할 수 없다.
-
 
 ## 과거 OY 요청 집중 보호 (1.2.7)
 

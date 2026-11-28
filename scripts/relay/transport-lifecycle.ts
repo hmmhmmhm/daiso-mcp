@@ -8,7 +8,7 @@ export async function createTransportLifecycle(
 ) {
   if (mode === 'safari') {
     const { createSafariLifecycle } = await import('./safari-lifecycle.js');
-    return createSafariLifecycle(stateDir);
+    return onEvent ? createSafariLifecycle(stateDir, onEvent) : createSafariLifecycle(stateDir);
   }
   if (mode === 'http') {
     const { createHttpLifecycle } = await import('./http-lifecycle.js');

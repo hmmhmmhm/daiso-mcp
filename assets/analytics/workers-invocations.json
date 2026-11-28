@@ -14,81 +14,33 @@
   "timezone": "Asia/Seoul",
   "coverageVersion": 1,
   "days": 30,
-  "startDate": "2026-10-17",
-  "endDate": "2026-11-15",
-  "updatedAt": "2026-11-15T20:25:01.460Z",
-  "renderedAt": "2026-11-15T20:25:01.460Z",
-  "total": 449915256,
-  "average": 14997175,
-  "median": 15472857,
+  "startDate": "2026-10-29",
+  "endDate": "2026-11-27",
+  "updatedAt": "2026-11-27T23:29:46.541Z",
+  "renderedAt": "2026-11-27T23:29:46.541Z",
+  "total": 471270773,
+  "average": 15709026,
+  "median": 16110773,
   "peak": {
     "date": "2026-11-03",
     "requests": 20954671
   },
-  "recent7Total": 108983497,
-  "recent7Average": 15569071,
-  "previous7Total": 122475744,
-  "weekOverWeekDiff": -13492247,
-  "weekOverWeekPercent": -11.016260493179777,
+  "recent7Total": 102741852,
+  "recent7Average": 14677407,
+  "previous7Total": 98477471,
+  "weekOverWeekDiff": 4264381,
+  "weekOverWeekPercent": 4.330311244487584,
   "latest": {
-    "date": "2026-11-15",
-    "requests": 10570129
+    "date": "2026-11-27",
+    "requests": 19290007
   },
   "previous": {
-    "date": "2026-11-14",
-    "requests": 10349891
+    "date": "2026-11-26",
+    "requests": 17831888
   },
-  "dayOverDayDiff": 220238,
-  "dayOverDayPercent": 2.1279257916822507,
+  "dayOverDayDiff": 1458119,
+  "dayOverDayPercent": 8.177030945909934,
   "points": [
-    {
-      "date": "2026-10-17",
-      "requests": 9209755
-    },
-    {
-      "date": "2026-10-18",
-      "requests": 8026253
-    },
-    {
-      "date": "2026-10-19",
-      "requests": 11182492
-    },
-    {
-      "date": "2026-10-20",
-      "requests": 15108995
-    },
-    {
-      "date": "2026-10-21",
-      "requests": 13953558
-    },
-    {
-      "date": "2026-10-22",
-      "requests": 13875230
-    },
-    {
-      "date": "2026-10-23",
-      "requests": 15836868
-    },
-    {
-      "date": "2026-10-24",
-      "requests": 12211903
-    },
-    {
-      "date": "2026-10-25",
-      "requests": 13309763
-    },
-    {
-      "date": "2026-10-26",
-      "requests": 16967613
-    },
-    {
-      "date": "2026-10-27",
-      "requests": 14504992
-    },
-    {
-      "date": "2026-10-28",
-      "requests": 14756364
-    },
     {
       "date": "2026-10-29",
       "requests": 15480241
@@ -159,7 +111,55 @@
     },
     {
       "date": "2026-11-15",
-      "requests": 10570129
+      "requests": 10570132
+    },
+    {
+      "date": "2026-11-16",
+      "requests": 14504026
+    },
+    {
+      "date": "2026-11-17",
+      "requests": 17136343
+    },
+    {
+      "date": "2026-11-18",
+      "requests": 16126764
+    },
+    {
+      "date": "2026-11-19",
+      "requests": 15579456
+    },
+    {
+      "date": "2026-11-20",
+      "requests": 14210859
+    },
+    {
+      "date": "2026-11-21",
+      "requests": 10202163
+    },
+    {
+      "date": "2026-11-22",
+      "requests": 10879715
+    },
+    {
+      "date": "2026-11-23",
+      "requests": 12699420
+    },
+    {
+      "date": "2026-11-24",
+      "requests": 15230335
+    },
+    {
+      "date": "2026-11-25",
+      "requests": 16608324
+    },
+    {
+      "date": "2026-11-26",
+      "requests": 17831888
+    },
+    {
+      "date": "2026-11-27",
+      "requests": 19290007
     }
   ]
 }
