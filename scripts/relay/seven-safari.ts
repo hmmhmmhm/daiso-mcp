@@ -7,6 +7,15 @@ const paths = new Set([
   ...Object.values(SEVENELEVEN_API).filter((path) => path.startsWith('/api/')),
   `${SEVENELEVEN_API.REAL_STOCK_MULTI_PATH}/01/stocks`,
 ]);
+export type SevenSafariOutcome =
+  | 'safari-success'
+  | 'safari-http-403'
+  | 'safari-http-429'
+  | 'safari-http-other'
+  | 'safari-fallback-error'
+  | 'safari-skipped-cooldown'
+  | 'safari-quota-rejected';
+
 export async function browserFetch(args: {
   origin: string;
   path: string;
@@ -56,9 +65,17 @@ export function createSevenSafariTransport(
   options: {
     fetcher?: typeof fetch;
     takeQuota: HttpRelayOptions['takeQuota'];
+    onEvent?: (outcome: SevenSafariOutcome) => void;
   },
 ) {
   const fetcher = options.fetcher ?? fetch;
+  const report = (outcome: SevenSafariOutcome) => {
+    try {
+      options.onEvent?.(outcome);
+    } catch {
+      // 진단 기록 실패는 Safari 요청을 바꾸지 않습니다.
+    }
+  };
   let state = 'idle';
   let retryAt = 0;
   let tail: Promise<unknown> = Promise.resolve();
@@ -67,12 +84,20 @@ export function createSevenSafariTransport(
     const url = new URL(input);
     if (url.origin !== origin || !paths.has(url.pathname)) return fetcher(input, init);
     const response = await fetcher(input, init);
-    if (response.status !== 403 || Date.now() < retryAt) return response;
+    if (response.status !== 403) return response;
+    if (Date.now() < retryAt) {
+      report('safari-skipped-cooldown');
+      return response;
+    }
     const task = tail.then(async () => {
-      if (Date.now() < retryAt) return response;
+      if (Date.now() < retryAt) {
+        report('safari-skipped-cooldown');
+        return response;
+      }
       await response.body?.cancel();
       init?.signal?.throwIfAborted();
       if (!(await options.takeQuota())) {
+        report('safari-quota-rejected');
         const quota = options.takeQuota.status?.();
         throw new RelayError(
           429,
@@ -115,10 +140,20 @@ export function createSevenSafariTransport(
           status: value.status,
           headers,
         });
+        report(
+          value.status === 200
+            ? 'safari-success'
+            : value.status === 403
+              ? 'safari-http-403'
+              : value.status === 429
+                ? 'safari-http-429'
+                : 'safari-http-other',
+        );
         state = value.status === 200 ? 'ready' : 'failed';
         if (value.status === 403 || value.status === 429) retryAt = Date.now() + 60000;
         return result;
       } catch (error) {
+        report('safari-fallback-error');
         state = 'failed';
         retryAt = Date.now() + 60000;
         throw error;

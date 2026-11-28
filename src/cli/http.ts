@@ -160,7 +160,7 @@ export async function requestAndPrintStoresWithKeywordFallback(
       lastPayload = payload;
 
       if (toStoreCount(payload) > 0) {
-        if (keyword !== originalKeyword) {
+        if (!asJson && keyword !== originalKeyword) {
           writeOut(`입력 키워드 "${originalKeyword}" 대신 "${keyword}"로 매장을 찾았습니다.`);
         }
         if (asJson) {
@@ -176,8 +176,8 @@ export async function requestAndPrintStoresWithKeywordFallback(
       writeOut(JSON.stringify(lastPayload, null, 2));
     } else {
       writeOut(renderApiEnvelope('stores', lastUrl, lastPayload));
+      writeOut('힌트: "안산 중앙역" 대신 "안산중앙" 또는 "고잔"으로 검색해보세요.');
     }
-    writeOut('힌트: "안산 중앙역" 대신 "안산중앙" 또는 "고잔"으로 검색해보세요.');
     return 0;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
