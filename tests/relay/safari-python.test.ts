@@ -11,6 +11,15 @@ it('실제 브라우저 없이 Python 잠금·회수 회귀를 실행한다', ()
   expect(output).toBe('');
 });
 
+it('실제 LaunchAgent 없이 OY runtime 경로 preflight 회귀를 실행한다', () => {
+  const output = execFileSync(
+    'python3',
+    [fileURLToPath(new URL('./test_oliveyoung_runtime_preflight.py', import.meta.url))],
+    { encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  expect(output).toBe('');
+});
+
 it('개별 Safari 창의 전체 상한과 자원 거절을 검증한다', () => {
   expect(
     execFileSync(

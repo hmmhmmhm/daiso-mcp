@@ -31,7 +31,9 @@ Cloudflare Workers Observability에서 `event = diagnostic`, `requestId = <ID>`�
 
 세븐 Safari 폴백은 기존 안전 로그에 `stage=session`, `operation=seven`으로 남긴다. `outcome`은 `safari-success`(Safari HTTP 200), `safari-http-403`, `safari-http-429`, `safari-http-other`, `safari-fallback-error`, `safari-skipped-cooldown`, `safari-quota-rejected` 중 하나다. `safari-fallback-error`는 helper 실패뿐 아니라 잘못된 응답이나 취소 등 Safari 폴백 중 예외를 포함한다. 이 이벤트에는 `requestId`가 없어 집계용이며 개별 호출과 상관관계를 만들 수 없다.
 
-OY Safari helper 실패는 기존 안전 logger에 `safari-stage-<enum>`과 `safari-cleanup-<enum>`을 각각 기록한다. 단계 enum은 `preflight`, `start`, `navigate`, `initial-evaluate`, `result-poll`, `stop`이고 정리 enum은 `success`, `failed`, `not-attempted`다. Python stderr의 고정 형식과 enum을 Node 경계에서 검증하며 다른 문자열은 버린다. URL, 요청·응답 데이터, 쿠키, 헤더, 예외 원문은 로그에 넣지 않는다. 이벤트에는 `requestId`가 없어 집계용이며 개별 호출과 상관관계를 만들 수 없다. Seven은 같은 helper를 사용해도 이 OY 상세 이벤트 callback을 연결하지 않는다.
+OY Safari helper 실패는 기존 안전 logger에 `safari-stage-<enum>`과 `safari-cleanup-<enum>`을 기록한다. 단계 enum은 `preflight`, `start`, `navigate`, `initial-evaluate`, `result-poll`, `stop`이고 기존 정리 enum은 `success`, `failed`, `not-attempted`다. stop 세부 정보가 있으면 기존 cleanup 결과를 유지하면서 별도의 `safari-cleanup-detail-<enum>` 이벤트를 추가한다. 세부 enum은 `stop-timeout`, `stop-os-error`, `stop-output-decode-error`, `stop-unknown`이며 호출 실패와 stdout JSON 파싱 실패를 구분한다. 앞선 작업 실패의 stage는 그대로 보존한다. Python stderr의 고정 형식과 enum을 Node 경계에서 검증하며 다른 문자열은 버린다. URL, 요청·응답 데이터, 쿠키, 헤더, 예외 원문은 로그에 넣지 않는다. 이벤트에는 `requestId`가 없어 집계용이며 개별 호출과 상관관계를 만들 수 없다. Seven은 같은 helper를 사용해도 이 OY 상세 이벤트 callback을 연결하지 않는다.
+
+OY `product-search-v3` 성공 결과는 `stage=product-search-shape`로만 구조를 기록한다. `outcome`은 `payload-invalid`, `list-missing`, `list-invalid`, `list-empty`, `first-goods-number-missing`, `first-goods-number-present` 중 하나다. 상품명·상품 코드·검색어·좌표·본문은 포함하지 않는다. 성공 miss와 cache hit만 관측하며, cache hit의 shape 분류는 callback이 연결된 경우에만 저장된 응답을 `JSON.parse`하므로 응답 크기에 비례하는 추가 CPU 비용이 있다. callback이 없으면 cache hit 본문은 진단용으로 파싱하지 않는다. 이 분류는 로그 전용이며 응답, 캐시 적재 및 품절/미확인 해석을 바꾸지 않는다.
 
 올리브영 Safari가 준비되지 않았으면 캐시된 정상 응답은 그대로 제공하고 새로운 원본 작업은 quota 차감 전에 거절한다. quota 기록이 이미 시작된 뒤 전송이 종료되는 경합에서는 차감이 남을 수 있으며, 실행 직전 준비 상태를 다시 검사해 원본 호출을 막는다.
 

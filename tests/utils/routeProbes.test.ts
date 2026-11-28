@@ -58,6 +58,24 @@ it('모든 경로와 고정된 인증 중계 헬스 경로를 점검한다', asy
   expect(payload.checks.map((c: { key: string }) => c.key)).toEqual(ROUTE_KEYS);
   expect(payload.relays).toHaveLength(4);
 });
+it('cron passes the CU 302 class through to snapshot storage', async () => {
+  vi.mocked(checkDirectRoute).mockImplementation(async (key) => ({
+    key,
+    direct: false,
+    checkedAt: 100,
+    reason: key === 'cu-stock' ? 'http-302' : undefined,
+    cuRedirectLocation: key === 'cu-stock' ? 'other-origin' : undefined,
+  }));
+  await refreshRouteChecks({ UPSTREAM_ROUTE_HEALTH: namespace });
+  const payload = JSON.parse(
+    (fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body as string,
+  );
+  expect(payload.checks.find((check: { key: string }) => check.key === 'cu-stock')).toMatchObject({
+    direct: false,
+    reason: 'http-302',
+    cuRedirectLocation: 'other-origin',
+  });
+});
 it('writes partial failures independently without exposing exception details', async () => {
   vi.mocked(checkDirectRoute).mockRejectedValueOnce(new Error('private'));
   await refreshRouteChecks({ UPSTREAM_ROUTE_HEALTH: namespace });

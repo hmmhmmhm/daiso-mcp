@@ -55,6 +55,40 @@ const fields: Record<string, Record<string, 'string' | 'number' | 'boolean'>> = 
 };
 const error = (status: number, message: string) => Response.json({ error: message }, { status });
 
+type ProductSearchShapeOutcome =
+  | 'payload-invalid'
+  | 'list-missing'
+  | 'list-invalid'
+  | 'list-empty'
+  | 'first-goods-number-missing'
+  | 'first-goods-number-present';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function classifyProductSearchShape(value: unknown): ProductSearchShapeOutcome {
+  try {
+    if (!isRecord(value) || !isRecord(value.data)) return 'payload-invalid';
+    const legacyList = value.data.serachList;
+    const searchList = value.data.searchList;
+    // API clients use `serachList || searchList`; an empty legacy array is truthy and wins.
+    const list = legacyList || searchList;
+    if (list === undefined)
+      return legacyList === undefined && searchList === undefined ? 'list-missing' : 'list-invalid';
+    if (!Array.isArray(list)) return 'list-invalid';
+    if (list.length === 0) return 'list-empty';
+    const first = list[0];
+    if (!isRecord(first)) return 'first-goods-number-missing';
+    const goodsNumber = first.goodsNumber;
+    return typeof goodsNumber === 'string' && goodsNumber.trim().length > 0
+      ? 'first-goods-number-present'
+      : 'first-goods-number-missing';
+  } catch {
+    return 'payload-invalid';
+  }
+}
+
 export interface RelayEvent {
   stage: string;
   operation: string;
@@ -208,11 +242,26 @@ export function createOliveyoungRelay(
           /* 관측 실패는 요청 처리에 영향을 주지 않습니다. */
         }
       };
+      const emitProductSearchShape = (value: unknown) => {
+        try {
+          if (operation !== 'product-search-v3' || !options.onEvent) return;
+          emit('product-search-shape', classifyProductSearchShape(value));
+        } catch {
+          /* 진단 분류 실패는 응답 처리에 영향을 주지 않습니다. */
+        }
+      };
       const bypassCache = request.headers.get('x-relay-cache-bypass') === 'true';
       const key = bypassCache ? randomUUID() : canonicalKey(operation, body);
       const cached = bypassCache ? undefined : cache.get(key);
       if (cached !== undefined) {
         emit('cache', 'hit');
+        if (operation === 'product-search-v3') {
+          try {
+            if (options.onEvent) emitProductSearchShape(JSON.parse(cached));
+          } catch {
+            emit('product-search-shape', 'payload-invalid');
+          }
+        }
         return new Response(cached, {
           headers: { 'content-type': 'application/json', 'x-relay-cache': 'hit' },
         });
@@ -274,6 +323,7 @@ export function createOliveyoungRelay(
             if (!bypassCache && result?.status === 'SUCCESS')
               cache.set(key, JSON.stringify(result), ttl[operation]);
             emit('upstream', result?.status === 'SUCCESS' ? 'success' : 'error');
+            if (result?.status === 'SUCCESS') emitProductSearchShape(result);
             return result;
           })
           .finally(() => {

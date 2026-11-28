@@ -54,6 +54,9 @@ export class UpstreamRouteHealth {
             direct: row.key !== 'gs25-stock' && !blocked && row.direct,
             checkedAt: row.checkedAt,
             ...(row.reason === undefined ? {} : { reason: row.reason }),
+            ...(row.cuRedirectLocation === undefined
+              ? {}
+              : { cuRedirectLocation: row.cuRedirectLocation }),
             ...(old?.failedAt === undefined ? {} : { failedAt: old.failedAt }),
             ...(old?.blockedUntil === undefined ? {} : { blockedUntil: old.blockedUntil }),
           };

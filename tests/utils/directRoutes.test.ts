@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { requestDirectRoute, checkDirectRoute } from '../../src/utils/directRoutes.js';
+import {
+  requestDirectRoute,
+  checkDirectRoute,
+  boundedRouteJson,
+} from '../../src/utils/directRoutes.js';
 import { ROUTE_KEYS } from '../../src/utils/routeHealth.js';
 import { directRouteSpecs } from '../../src/utils/directRouteSpecs.js';
 
@@ -262,7 +266,7 @@ it('absorbs cancellation cleanup failures and classifies invalid probe input', a
       },
     })),
   );
-  expect(await checkDirectRoute('cu-stock')).toMatchObject({ reason: 'http-error' });
+  expect(await checkDirectRoute('cu-stock')).toMatchObject({ reason: 'http-403' });
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => ({
@@ -278,6 +282,136 @@ it('absorbs cancellation cleanup failures and classifies invalid probe input', a
     })),
   );
   expect(await checkDirectRoute('cu-stock')).toMatchObject({ reason: 'invalid-response' });
+});
+
+it.each([403, 429, 503])(
+  'records only valid HTTP status in the route reason: %i',
+  async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status })));
+    expect(await checkDirectRoute('cu-stock')).toMatchObject({
+      key: 'cu-stock',
+      direct: false,
+      reason: `http-${status}`,
+    });
+  },
+);
+
+it.each([99, 600, 403.5, Number.NaN])(
+  'keeps invalid HTTP status out of the route reason: %s',
+  async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status, body: null }));
+    expect(await checkDirectRoute('cu-stock')).toMatchObject({
+      key: 'cu-stock',
+      direct: false,
+      reason: 'http-error',
+    });
+  },
+);
+
+it.each([
+  ['missing', null, 'missing'],
+  ['empty', '', 'invalid-or-unsafe'],
+  ['relative', '/notice', 'same-origin'],
+  ['absolute same origin', 'https://www.pocketcu.co.kr/notice', 'same-origin'],
+  ['different origin', 'https://www.pocketcu.co.kr.example/notice', 'other-origin'],
+  ['userinfo', 'https://user:password@www.pocketcu.co.kr/notice', 'invalid-or-unsafe'],
+  ['empty userinfo', 'https://@www.pocketcu.co.kr/notice', 'invalid-or-unsafe'],
+  ['plain HTTP', 'http://www.pocketcu.co.kr/notice', 'invalid-or-unsafe'],
+  ['non HTTP scheme', 'javascript:alert(1)', 'invalid-or-unsafe'],
+  ['absolute with excess slashes', 'https:////@www.pocketcu.co.kr/notice', 'invalid-or-unsafe'],
+  ['relative with excess slashes', '///@www.pocketcu.co.kr/notice', 'invalid-or-unsafe'],
+  ['combined location values', '/notice, https://other.invalid/', 'invalid-or-unsafe'],
+  ['control character', '/notice\nsecret', 'invalid-or-unsafe'],
+  ['C0 upper boundary', '/notice\u001f', 'invalid-or-unsafe'],
+  ['C1 lower boundary', '/notice\u007f', 'invalid-or-unsafe'],
+  ['C1 upper boundary', '/notice\u009f', 'invalid-or-unsafe'],
+  ['normal ASCII boundary', '/notice\u0020', 'same-origin'],
+  ['normal post-C1 boundary', '/notice\u00a0', 'same-origin'],
+  ['backslash authority', 'https:\\@www.pocketcu.co.kr/notice', 'invalid-or-unsafe'],
+  ['oversized', `/notice${'x'.repeat(2048)}`, 'invalid-or-unsafe'],
+  ['invalid URL', 'https://[', 'invalid-or-unsafe'],
+] as const)(
+  'classifies only a fixed CU redirect value: %s',
+  async (_label, location, resultClass) => {
+    const fetcher = vi.fn().mockResolvedValue({
+      status: 302,
+      headers: { get: () => location },
+      body: { cancel: async () => undefined },
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const result = await checkDirectRoute('cu-stock');
+    expect(result).toMatchObject({
+      direct: false,
+      reason: 'http-302',
+      cuRedirectLocation: resultClass,
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(fetcher.mock.calls[0]?.[1]).toMatchObject({
+      credentials: 'omit',
+      redirect: 'manual',
+    });
+    if (location) expect(JSON.stringify(result)).not.toContain(location);
+  },
+);
+
+it.each(['cu-prime', 'cu-stock', 'cu-store'] as const)(
+  'captures 302 only for the CU direct probe %s',
+  async (key) => {
+    const fetcher = vi.fn().mockResolvedValue({
+      status: 302,
+      headers: { get: () => '/notice' },
+      body: { cancel: async () => undefined },
+    });
+    vi.stubGlobal('fetch', fetcher);
+    expect(await checkDirectRoute(key)).toMatchObject({
+      key,
+      direct: false,
+      reason: 'http-302',
+      cuRedirectLocation: 'same-origin',
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
+  },
+);
+
+it.each([
+  ['non-CU route', 'seven-goods', 302],
+  ['non-302 status', 'cu-stock', 301],
+] as const)('does not add CU redirect metadata for %s', async (_label, key, status) => {
+  const fetcher = vi.fn().mockResolvedValue({
+    status,
+    headers: { get: () => 'https://elsewhere.invalid/' },
+    body: { cancel: async () => undefined },
+  });
+  vi.stubGlobal('fetch', fetcher);
+  const result = await checkDirectRoute(key);
+  expect(result).toMatchObject({ direct: false, reason: `http-${status}` });
+  expect(result).not.toHaveProperty('cuRedirectLocation');
+  expect(fetcher).toHaveBeenCalledOnce();
+});
+
+it('exposes only a fixed redirect class and ignores observer failure for a 302 response', async () => {
+  const cancel = vi.fn(async () => undefined);
+  const fetcher = vi.fn().mockResolvedValue({
+    status: 302,
+    headers: { get: () => '/notice?private=synthetic' },
+    body: { cancel },
+  });
+  vi.stubGlobal('fetch', fetcher);
+  const observer = vi.fn(() => {
+    throw new Error('private observer detail');
+  });
+  await expect(
+    boundedRouteJson(
+      new URL('https://www.pocketcu.co.kr/api/search/rest/stock/main'),
+      { method: 'POST' },
+      1000,
+      undefined,
+      observer,
+    ),
+  ).rejects.toMatchObject({ status: 302 });
+  expect(observer).toHaveBeenCalledExactlyOnceWith('same-origin');
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(fetcher).toHaveBeenCalledOnce();
 });
 
 it('distinguishes its deadline from caller cancellation when fetch respects abort', async () => {

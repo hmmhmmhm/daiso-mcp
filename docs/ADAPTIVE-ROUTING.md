@@ -42,3 +42,7 @@ Cloudflare Worker가 5분마다 조회 종류별 직접 API와 맥 중계 상태
 인증 헤더는 `Authorization: Bearer <운영 시크릿>` 또는 `x-health-check-key`입니다. 새 배포 직후에는 POST로 판정을 채우고, 이후 GET의 `checkedAt`이 Cron 실행으로 갱신되는지 확인합니다. 공유 저장소 바인딩이 없는 기존 설치·로컬 사용은 기존 중계 우선 동작을 유지합니다.
 
 장애 확인 시 직접 점검의 `reason`, 점검 시각, `failedAt`과 `blockedUntil`, 중계 그룹의 `healthy`를 먼저 확인합니다. 원문 응답·쿠키·인증 코드는 저장하지 않으며 고정된 진단 코드만 남깁니다.
+
+직접 경로 점검이 HTTP 200이 아닌 응답을 받으면 `reason`에 유효한 상태 번호만 `http-NNN`으로 기록합니다. 예전 snapshot의 일반 `http-error`도 계속 읽습니다. 응답 본문·헤더·URL은 저장하지 않습니다.
+
+CU 직접 점검의 HTTP 302에는 인증된 경로 snapshot에 `cuRedirectLocation` 분류만 추가할 수 있습니다. 값은 `missing`, `invalid-or-unsafe`, `same-origin`, `other-origin` 중 하나이며 CU 경로·`http-302`·직접 경로 실패 문맥에서만 읽고 씁니다. Location 원문은 메모리에서 분류한 뒤 버리고 저장하거나 출력하지 않습니다. 점검은 redirect를 따라가지 않습니다.
