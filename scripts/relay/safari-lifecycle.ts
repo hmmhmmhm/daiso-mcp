@@ -79,10 +79,13 @@ export function createSafariLifecycle(stateDir: string) {
     }, 60000);
     recoveryTimer.unref();
   };
-  const runTask = async <T>(task: () => Promise<T>): Promise<T> => {
+  const assertReady = () => {
     if (closed()) throw new Error('Safari lifecycle closed');
     if (state !== 'ready') throw new Error('Safari lifecycle not ready');
     if (active) throw new Error('Safari lifecycle already active');
+  };
+  const runTask = async <T>(task: () => Promise<T>): Promise<T> => {
+    assertReady();
     active = true;
     calls++;
     try {
@@ -123,6 +126,7 @@ export function createSafariLifecycle(stateDir: string) {
   };
   return {
     start,
+    assertReady,
     run: (path: string, body: Record<string, unknown>) => runTask(() => runner(path, body)),
     evaluate: (script: string, args: Record<string, unknown>) =>
       runTask(() => execute(JSON.stringify({ script, args }))),

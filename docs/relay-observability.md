@@ -31,6 +31,8 @@ Cloudflare Workers Observability에서 `event = diagnostic`, `requestId = <ID>`�
 
 세븐 Safari 폴백은 기존 안전 로그에 `stage=session`, `operation=seven`으로 남긴다. `outcome`은 `safari-success`(Safari HTTP 200), `safari-http-403`, `safari-http-429`, `safari-http-other`, `safari-fallback-error`, `safari-skipped-cooldown`, `safari-quota-rejected` 중 하나다. `safari-fallback-error`는 helper 실패뿐 아니라 잘못된 응답이나 취소 등 Safari 폴백 중 예외를 포함한다. 이 이벤트에는 `requestId`가 없어 집계용이며 개별 호출과 상관관계를 만들 수 없다.
 
+올리브영 Safari가 준비되지 않았으면 캐시된 정상 응답은 그대로 제공하고 새로운 원본 작업은 quota 차감 전에 거절한다. quota 기록이 이미 시작된 뒤 전송이 종료되는 경합에서는 차감이 남을 수 있으며, 실행 직전 준비 상태를 다시 검사해 원본 호출을 막는다.
+
 기록하는 값은 고정 분류, 요청 ID, 작업 종류, 단계, 상태, 소요 시간, 캐시 결과, 제한 사유, quota 잔여량이다. 검색어, 위치 좌표, 요청/응답 본문, 인증 헤더, IP, 임의 예외 메시지는 넣지 않는다. 조회 예:
 
 ```sh

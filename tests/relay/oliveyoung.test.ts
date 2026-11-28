@@ -11,6 +11,12 @@ const request = (path = 'stock-goods-info-v3', body = JSON.stringify(payload), t
     headers: { Authorization: `Bearer ${token}`, ...consumerHeaders() },
     body,
   });
+const requestForConsumer = (identity: string, body: Record<string, unknown>) =>
+  new Request('http://localhost/v1/oliveyoung/stock-goods-info-v3', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer test', 'x-relay-consumer': identity },
+    body: JSON.stringify(body),
+  });
 it('인증 실패 시 브라우저를 호출하지 않는다', async () => {
   const runner = vi.fn();
   const relay = createOliveyoungRelay('test', runner);
@@ -195,6 +201,77 @@ it('성공 응답을 캐시하고 캐시 조회는 예산을 사용하지 않는
   expect((await relay(request())).headers.get('x-relay-cache')).toBe('hit');
   expect(takeQuota).toHaveBeenCalledTimes(1);
 });
+it('Safari 준비 실패는 캐시를 유지하고 새 miss의 quota와 원본 실행을 막는다', async () => {
+  let ready = true;
+  const assertReady = vi.fn(() => {
+    if (!ready) throw new Error('Safari lifecycle not ready');
+  });
+  const runner = vi.fn().mockResolvedValue({ status: 'SUCCESS' });
+  const takeQuota = vi.fn().mockResolvedValue(true);
+  const relay = createOliveyoungRelay('test', runner, { assertReady, takeQuota });
+  const identity = 'a'.repeat(64);
+
+  expect((await relay(requestForConsumer(identity, payload))).status).toBe(200);
+  ready = false;
+  const cached = await relay(requestForConsumer(identity, payload));
+  expect(cached.status).toBe(200);
+  expect(cached.headers.get('x-relay-cache')).toBe('hit');
+  expect((await relay(requestForConsumer(identity, { goodsNo: 'B2' }))).status).toBe(502);
+  expect(assertReady).toHaveBeenCalledTimes(2);
+  expect(takeQuota).toHaveBeenCalledTimes(1);
+  expect(runner).toHaveBeenCalledTimes(1);
+
+  ready = true;
+  expect((await relay(requestForConsumer(identity, { goodsNo: 'B2' }))).status).toBe(200);
+  expect(takeQuota).toHaveBeenCalledTimes(2);
+  expect(runner).toHaveBeenCalledTimes(2);
+});
+it('Safari guard 실패 전 reservation을 반환해 소비자 상한을 소진하지 않는다', async () => {
+  const assertReady = vi.fn(() => {
+    throw new Error('Safari lifecycle not ready');
+  });
+  const runner = vi.fn();
+  const takeQuota = vi.fn();
+  const relay = createOliveyoungRelay('test', runner, { assertReady, takeQuota });
+  const identity = 'b'.repeat(64);
+
+  for (let i = 0; i < 241; i++) {
+    const response = await relay(requestForConsumer(identity, { goodsNo: `item-${i}` }));
+    expect(response.status).toBe(502);
+  }
+  expect(assertReady).toHaveBeenCalledTimes(241);
+  expect(takeQuota).not.toHaveBeenCalled();
+  expect(runner).not.toHaveBeenCalled();
+});
+it('quota 대기 중 Safari 종료는 실행 guard가 막지만 이미 차감된 quota는 남을 수 있다', async () => {
+  let ready = true;
+  let resolveQuota!: (allowed: boolean) => void;
+  let upstreamCalls = 0;
+  const assertReady = vi.fn(() => {
+    if (!ready) throw new Error('Safari lifecycle not ready');
+  });
+  const takeQuota = vi.fn(
+    () =>
+      new Promise<boolean>((resolve) => {
+        resolveQuota = resolve;
+      }),
+  );
+  const runner = vi.fn(() => {
+    assertReady();
+    upstreamCalls++;
+    return Promise.resolve({ status: 'SUCCESS' });
+  });
+  const relay = createOliveyoungRelay('test', runner, { assertReady, takeQuota });
+  const pending = relay(request());
+  await vi.waitFor(() => expect(takeQuota).toHaveBeenCalledOnce());
+  ready = false;
+  resolveQuota(true);
+
+  expect((await pending).status).toBe(502);
+  expect(takeQuota).toHaveBeenCalledOnce();
+  expect(runner).toHaveBeenCalledOnce();
+  expect(upstreamCalls).toBe(0);
+});
 it('동일 요청을 병합하고 첫 요청 취소가 다른 대기자를 중단하지 않는다', async () => {
   let release!: (value: { status: string }) => void;
   const runner = vi
@@ -238,6 +315,57 @@ it('동일 요청을 병합하고 첫 요청 취소가 다른 대기자를 중�
   expect(events).toContainEqual(
     expect.objectContaining({ requestId: 'safe-id', stage: 'cache', outcome: 'miss' }),
   );
+});
+it('모든 중복 대기 요청이 취소되면 quota 없이 건너뛰고 reservation을 반환한다', async () => {
+  let release!: (value: { status: string }) => void;
+  const runner = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    )
+    .mockResolvedValue({ status: 'SUCCESS' });
+  const events: unknown[] = [];
+  const takeQuota = vi.fn().mockResolvedValue(true);
+  const relay = createOliveyoungRelay('test', runner, {
+    assertReady: () => {},
+    takeQuota,
+    onEvent: (event) => events.push(event),
+  });
+  const blocker = relay(requestForConsumer('c'.repeat(64), { goodsNo: 'block' }));
+  await vi.waitFor(() => expect(runner).toHaveBeenCalledTimes(1));
+
+  const firstAbort = new AbortController();
+  const secondAbort = new AbortController();
+  const identity = 'd'.repeat(64);
+  const first = relay(
+    new Request(requestForConsumer(identity, payload), { signal: firstAbort.signal }),
+  );
+  await vi.waitFor(() =>
+    expect(events).toContainEqual(expect.objectContaining({ stage: 'cache', outcome: 'miss' })),
+  );
+  const second = relay(
+    new Request(requestForConsumer(identity, payload), { signal: secondAbort.signal }),
+  );
+  await vi.waitFor(() =>
+    expect(events).toContainEqual(
+      expect.objectContaining({ stage: 'cache', outcome: 'coalesced' }),
+    ),
+  );
+  firstAbort.abort();
+  secondAbort.abort();
+  release({ status: 'SUCCESS' });
+
+  expect((await blocker).status).toBe(200);
+  expect((await first).status).toBe(503);
+  expect((await second).status).toBe(503);
+  expect(takeQuota).toHaveBeenCalledTimes(1);
+  expect(runner).toHaveBeenCalledTimes(1);
+  expect((await relay(requestForConsumer(identity, payload))).status).toBe(200);
+  expect(takeQuota).toHaveBeenCalledTimes(2);
+  expect(runner).toHaveBeenCalledTimes(2);
 });
 it('만료된 대기는 실행하지 않고 실패한 응답을 캐시하지 않는다', async () => {
   const clock = vi.spyOn(Date, 'now').mockReturnValue(1000);

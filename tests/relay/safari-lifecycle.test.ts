@@ -71,6 +71,32 @@ it('시작 전 요청을 거절한다', async () => {
   await expect(x.run('x', {})).rejects.toThrow('ready');
   await x.close();
 });
+it('동기 readiness guard가 idle, active, failed, ready, closed 상태를 구분한다', async () => {
+  const x = createSafariLifecycle('/state');
+  expect(() => x.assertReady()).toThrow('ready');
+
+  const start = x.start();
+  done(null, '{"ready":true}');
+  await start;
+  expect(() => x.assertReady()).not.toThrow();
+
+  const active = x.run('x', {});
+  expect(() => x.assertReady()).toThrow('active');
+  done(null, JSON.stringify({ status: 200, body: { status: 'SUCCESS', data: {} } }));
+  await active;
+
+  const failed = x.run('x', {});
+  done(new Error('helper failed'), '');
+  await expect(failed).rejects.toThrow('safari-helper');
+  expect(() => x.assertReady()).toThrow('ready');
+
+  const recovery = x.start();
+  done(null, '{"ready":true}');
+  await recovery;
+  expect(() => x.assertReady()).not.toThrow();
+  await x.close();
+  expect(() => x.assertReady()).toThrow('closed');
+});
 it('자식 오류 원문을 노출하지 않고 정상 정리 신호를 보낸다', async () => {
   const x = await ready();
   const call = x.run('x', {});
