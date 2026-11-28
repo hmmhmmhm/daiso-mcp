@@ -55,6 +55,51 @@ class RelayTests(unittest.TestCase):
             m.main()
         return json.loads(stdout.getvalue())
 
+    def run_cli_failure(
+        self, fail_at, *, stop_fails=False, flags=(), preserve_session=False, interrupt_at=None,
+    ):
+        if self.session.exists() and not preserve_session:
+            self.session.unlink()
+        loader = SimpleNamespace(exec_module=lambda _h: None)
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        calls = {'evaluate': 0}
+
+        def operate(_helper, _session, command, *_args):
+            self.calls.append(command)
+            if command == fail_at:
+                raise RuntimeError('private URL cookie body detail')
+            if command == 'start':
+                self.session.write_text('{}')
+            if command == 'stop':
+                if stop_fails:
+                    raise RuntimeError('private stop detail')
+                self.session.unlink()
+            return {'ok': True}
+
+        def evaluate(_helper, _state, _code):
+            calls['evaluate'] += 1
+            if interrupt_at == calls['evaluate']:
+                m.interrupt(signal.SIGTERM, None)
+            if fail_at == 'initial-evaluate' and calls['evaluate'] == 1:
+                raise RuntimeError('private evaluate detail')
+            if fail_at == 'result-poll' and calls['evaluate'] == 2:
+                raise RuntimeError('private poll detail')
+            return {'started': True} if calls['evaluate'] == 1 else {'done': True, 'value': {'status': 200}}
+
+        with patch.object(m.importlib.util, 'spec_from_file_location', return_value=SimpleNamespace(loader=loader)), \
+             patch.object(m.importlib.util, 'module_from_spec', return_value=self.helper), \
+             patch.object(m, 'operate', side_effect=operate), \
+             patch.object(m, 'evaluate', side_effect=evaluate), \
+             patch.object(m, 'retire_restarted_sessions', side_effect=RuntimeError('private preflight detail') if fail_at == 'preflight' else None), \
+             patch.object(sys, 'argv', ['helper', str(self.base), *flags]), \
+             patch.object(sys, 'stdin', io.StringIO(json.dumps(self.payload))), \
+             contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as result:
+                m.cli()
+        self.assertEqual(result.exception.code, 1)
+        return stdout.getvalue(), stderr.getvalue()
+
     def test_check_does_not_create_page(self):
         self.assertEqual(self.run_main('--check'), {'ready': True})
         self.assertEqual(self.calls, [])
@@ -279,6 +324,57 @@ class RelayTests(unittest.TestCase):
         self.assertEqual(self.calls, ['start', 'navigate', 'stop'])
         self.assertEqual(self.lock.read_text(), 'another-task')
 
+    def test_stage_diagnostics_are_fixed_and_do_not_expose_exception_data(self):
+        expected = {
+            'preflight': 'stage=preflight cleanup=not-attempted',
+            'start': 'stage=start cleanup=not-attempted',
+            'navigate': 'stage=navigate cleanup=failed',
+            'initial-evaluate': 'stage=initial-evaluate cleanup=success',
+            'result-poll': 'stage=result-poll cleanup=success',
+        }
+        for stage, diagnostic in expected.items():
+            with self.subTest(stage=stage):
+                stdout, stderr = self.run_cli_failure(stage, stop_fails=(stage == 'navigate'))
+                self.assertEqual(stdout, '')
+                self.assertEqual(stderr.strip(), 'Safari relay diagnostic ' + diagnostic)
+                self.assertNotIn('private', stderr)
+                self.assertNotIn('cookie', stderr)
+                self.assertNotIn('https://', stderr)
+
+    def test_stop_failure_does_not_replace_primary_stage_and_preserves_session(self):
+        stdout, stderr = self.run_cli_failure('navigate', stop_fails=True)
+        self.assertEqual(stdout, '')
+        self.assertEqual(stderr.strip(), 'Safari relay diagnostic stage=navigate cleanup=failed')
+        self.assertTrue(self.session.exists())
+
+    def test_stop_only_failure_is_reported_as_stop_failure(self):
+        stdout, stderr = self.run_cli_failure(None, stop_fails=True)
+        self.assertEqual(stdout, '')
+        self.assertEqual(stderr.strip(), 'Safari relay diagnostic stage=stop cleanup=failed')
+
+    def test_check_failure_is_a_preflight_diagnostic_without_window_operations(self):
+        stdout, stderr = self.run_cli_failure('preflight', flags=('--check',))
+        self.assertEqual(stdout, '')
+        self.assertEqual(stderr.strip(), 'Safari relay diagnostic stage=preflight cleanup=not-attempted')
+        self.assertEqual(self.calls, [])
+
+    def test_preflight_failure_preserves_an_existing_session_without_stopping_it(self):
+        self.session.write_text('another-owner')
+        stdout, stderr = self.run_cli_failure(
+            'preflight', flags=('--check',), preserve_session=True,
+        )
+        self.assertEqual(stdout, '')
+        self.assertEqual(stderr.strip(), 'Safari relay diagnostic stage=preflight cleanup=not-attempted')
+        self.assertEqual(self.session.read_text(), 'another-owner')
+        self.assertEqual(self.calls, [])
+
+    def test_sigterm_interrupt_stops_only_the_owned_window_and_keeps_diagnostic_stage(self):
+        stdout, stderr = self.run_cli_failure(None, interrupt_at=1)
+        self.assertEqual(stdout, '')
+        self.assertEqual(stderr.strip(), 'Safari relay diagnostic stage=initial-evaluate cleanup=success')
+        self.assertEqual(self.calls, ['start', 'navigate', 'stop'])
+        self.assertFalse(self.session.exists())
+
     def test_failed_acquisition_preserves_winners_session(self):
         foreign = self.base / 'safari-session.json'
         def lose_lock(_helper, _session, command, *_args):
@@ -315,8 +411,11 @@ class RelayTests(unittest.TestCase):
         self.assertEqual(self.lock.read_text(), 'another-task')
 
     def test_success_returns_window(self):
-        self.assertEqual(self.run_main(), {'status': 200})
+        signals = []
+        with patch.object(m.signal, 'signal', side_effect=lambda *args: signals.append(args)):
+            self.assertEqual(self.run_main(), {'status': 200})
         self.assertEqual(self.calls, ['start', 'navigate', 'stop'])
+        self.assertEqual(signals, [(signal.SIGTERM, m.interrupt), (signal.SIGTERM, signal.SIG_IGN)])
         self.assertFalse(self.session.exists())
 
     def test_context_loss_returns_window(self):
