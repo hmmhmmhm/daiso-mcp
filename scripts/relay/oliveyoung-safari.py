@@ -44,9 +44,57 @@ def sync_directory(path):
         os.close(fd)
 
 
+def read_lock_target(path):
+    """잠금 대상 경로를 비차단·nofollow로 읽고 안전하지 않으면 실패합니다."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        raise RuntimeError('unsafe-lock') from None
+    try:
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or info.st_mode & 0o077 or not 0 < info.st_size <= 4096):
+            raise RuntimeError('unsafe-lock')
+        content = bytearray()
+        while len(content) <= 4096:
+            chunk = os.read(fd, 4097 - len(content))
+            if not chunk:
+                break
+            content.extend(chunk)
+        if len(content) > 4096:
+            raise RuntimeError('unsafe-lock')
+        try:
+            value = bytes(content).decode('utf-8')
+        except UnicodeError:
+            raise RuntimeError('unsafe-lock') from None
+        if not value or '\n' in value or '\r' in value or '\0' in value:
+            raise RuntimeError('unsafe-lock')
+        target = Path(value)
+        if not target.is_absolute():
+            raise RuntimeError('unsafe-lock')
+        try:
+            return value, target, target.resolve()
+        except (OSError, RuntimeError):
+            raise RuntimeError('unsafe-lock') from None
+    finally:
+        os.close(fd)
+
+
+def lock_points_to_session(lock_target, session_path):
+    if lock_target is None or lock_target[2] != session_path.resolve():
+        return False
+    if lock_target[0] != str(session_path):
+        raise RuntimeError('unsafe-lock')
+    return True
+
+
 def retire_restarted_sessions(helper, base, current_pid):
     if not str(current_pid).isdigit() or int(current_pid) <= 0:
         return
+    # 확인할 수 없는 잠금은 archive, nonce 정리, 소유권 반환보다 먼저 거절합니다.
+    initial_global_lock = read_lock_target(helper.LOCK)
     fd = os.open(base / '.safari-retire.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         info = os.fstat(fd)
@@ -92,6 +140,21 @@ def retire_restarted_sessions(helper, base, current_pid):
                 continue
             else:
                 continue
+            own_lock = session_path.with_name(session_path.name + '.lock')
+            own_lock_target = read_lock_target(own_lock)
+            release_own = state.get('lock_scope') == 'window' or (
+                opening and own_lock_target is not None)
+            if state.get('lock_scope') == 'window' and own_lock_target is None:
+                raise RuntimeError('unsafe-lock')
+            if own_lock_target is not None and own_lock_target[0] != str(session_path):
+                raise RuntimeError('unsafe-lock')
+            if own_lock_target is not None and not release_own:
+                raise RuntimeError('unsafe-lock')
+            global_owned_initial = lock_points_to_session(
+                initial_global_lock, session_path)
+            if opening and own_lock_target is None and not global_owned_initial:
+                raise RuntimeError('unsafe-lock')
+            global_only_opening = opening and own_lock_target is None
             if not opening and int(old_pid) == int(current_pid):
                 ids = helper.apple('tell application "Safari" to get id of every window').strip()
                 if (not re.fullmatch(r'(?:[0-9]+(?:,\s*[0-9]+)*)?', ids)
@@ -99,6 +162,9 @@ def retire_restarted_sessions(helper, base, current_pid):
                     raise RuntimeError('window-inventory-unconfirmed')
                 if state['window_id'] in [int(value) for value in ids.split(',') if value.strip()]:
                     continue
+            if (lock_points_to_session(read_lock_target(helper.LOCK), session_path)
+                    and not global_owned_initial) or read_lock_target(own_lock) != own_lock_target:
+                raise RuntimeError('lock-changed-before-archive')
             archive = base / 'retired-safari-sessions'
             if archive.is_symlink():
                 raise RuntimeError('unsafe-retirement-directory')
@@ -120,6 +186,12 @@ def retire_restarted_sessions(helper, base, current_pid):
                         raise RuntimeError('retirement-copy-mismatch')
                 sync_directory(archive)
                 sync_directory(base)
+                if (lock_points_to_session(read_lock_target(helper.LOCK), session_path)
+                        and not global_owned_initial) or read_lock_target(own_lock) != own_lock_target:
+                    raise RuntimeError('lock-changed-before-opening-cleanup')
+                if global_only_opening and not lock_points_to_session(
+                        read_lock_target(helper.LOCK), session_path):
+                    raise RuntimeError('opening-global-owner-lost')
                 if opening and int(old_pid) == int(current_pid):
                     if getattr(helper, 'OPENING_CLEANUP_VERSION', 0) < 2:
                         raise RuntimeError('opening-cleanup-helper-upgrade-required')
@@ -128,17 +200,28 @@ def retire_restarted_sessions(helper, base, current_pid):
                     result = helper.apple(helper.opening_cleanup_script(state['nonce']))
                     if result != 'closed':
                         raise RuntimeError('unresolved-opening-window')
-                own_lock = session_path.with_name(session_path.name + '.lock')
-                if state.get('lock_scope') == 'window' or (
-                        opening and own_lock.exists() and own_lock.read_text() == str(session_path)):
+                if (lock_points_to_session(read_lock_target(helper.LOCK), session_path)
+                        and not global_owned_initial) or read_lock_target(own_lock) != own_lock_target:
+                    raise RuntimeError('lock-changed-during-retirement')
+                if release_own:
                     helper.release(session_path, True)
-                try:
-                    held = Path(helper.LOCK.read_text().strip())
-                except FileNotFoundError:
-                    held = None
-                if held is not None and held.resolve() == session_path:
-                    helper.release(held)
+                    if read_lock_target(own_lock) is not None:
+                        raise RuntimeError('own-lock-release-unconfirmed')
+                    own_lock_target = None
+                current_global = read_lock_target(helper.LOCK)
+                owns_global_now = lock_points_to_session(current_global, session_path)
+                if owns_global_now and not global_owned_initial:
+                    raise RuntimeError('global-lock-changed-during-retirement')
+                if owns_global_now:
+                    helper.release(Path(current_global[0]))
+                    current_global = read_lock_target(helper.LOCK)
+                    if lock_points_to_session(current_global, session_path):
+                        raise RuntimeError('global-lock-release-unconfirmed')
                 sync_directory(helper.LOCK.parent)
+                current_global = read_lock_target(helper.LOCK)
+                if (lock_points_to_session(current_global, session_path)
+                        or read_lock_target(own_lock) != own_lock_target):
+                    raise RuntimeError('lock-changed-before-retirement')
                 path.unlink()
                 sync_directory(base)
             finally:
@@ -156,11 +239,11 @@ def main():
     spec.loader.exec_module(helper)
     session = base / ('safari-session-' + str(os.getpid()) + '.json')
     def unresolved():
+        # 확인할 수 없는 global lock에서 ensure_safari나 retirement가 먼저 실행되지 않게 합니다.
+        read_lock_target(helper.LOCK)
         retire_restarted_sessions(helper, base, helper.ensure_safari())
-        try:
-            held = Path(helper.LOCK.read_text().strip()).resolve()
-        except FileNotFoundError:
-            held = None
+        held_lock = read_lock_target(helper.LOCK)
+        held = held_lock[2] if held_lock is not None else None
         return any(base.glob('safari-session*.json')) or any(base.glob('safari-session*.json.lock')) or (
             held is not None and held.parent == base and held.name.startswith('safari-session')
             and held.suffix == '.json')
