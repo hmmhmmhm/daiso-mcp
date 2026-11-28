@@ -96,70 +96,87 @@ export function createSevenSafariTransport(
       }
       await response.body?.cancel();
       init?.signal?.throwIfAborted();
-      if (!(await options.takeQuota())) {
-        report('safari-quota-rejected');
-        const quota = options.takeQuota.status?.();
-        throw new RelayError(
-          429,
-          undefined,
-          quota?.blockedBy === 'minute' || quota?.blockedBy === 'daily'
-            ? { quotaReason: quota.blockedBy, retryAfter: quota.retryAfter }
-            : undefined,
-        );
-      }
-      init?.signal?.throwIfAborted();
       if (init?.body != null && typeof init.body !== 'string')
         throw new Error('Safari JSON body required');
       const lifecycle = createSafariLifecycle(stateDir);
-      state = 'preparing';
       const abort = () => {
         void lifecycle.close();
       };
       init?.signal?.addEventListener('abort', abort, { once: true });
+      const previousState = state;
+      state = 'preparing';
       try {
-        await lifecycle.start();
-        const value = (await lifecycle.evaluate(String(browserFetch), {
-          origin,
-          path: url.pathname + url.search,
-          method: init?.method ?? 'GET',
-          body: typeof init?.body === 'string' ? init.body : null,
-        })) as { status?: unknown; text?: unknown; retryAfter?: string; reason?: string } | null;
-        if (
-          !value ||
-          typeof value.status !== 'number' ||
-          !Number.isInteger(value.status) ||
-          value.status < 200 ||
-          value.status > 599 ||
-          typeof value.text !== 'string' ||
-          value.reason
-        )
-          throw new Error('Invalid Safari response');
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        if (value.retryAfter) headers.set('Retry-After', value.retryAfter);
-        const result = new Response(value.status === 204 ? null : value.text, {
-          status: value.status,
-          headers,
-        });
-        report(
-          value.status === 200
-            ? 'safari-success'
-            : value.status === 403
-              ? 'safari-http-403'
-              : value.status === 429
-                ? 'safari-http-429'
-                : 'safari-http-other',
-        );
-        state = value.status === 200 ? 'ready' : 'failed';
-        if (value.status === 403 || value.status === 429) retryAt = Date.now() + 60000;
-        return result;
-      } catch (error) {
-        report('safari-fallback-error');
-        state = 'failed';
-        retryAt = Date.now() + 60000;
-        throw error;
+        try {
+          await lifecycle.start();
+        } catch (error) {
+          init?.signal?.throwIfAborted();
+          report('safari-fallback-error');
+          state = 'failed';
+          retryAt = Date.now() + 60000;
+          throw error;
+        }
+        init?.signal?.throwIfAborted();
+        const allowed = await options.takeQuota();
+        init?.signal?.throwIfAborted();
+        if (!allowed) {
+          report('safari-quota-rejected');
+          const quota = options.takeQuota.status?.();
+          throw new RelayError(
+            429,
+            undefined,
+            quota?.blockedBy === 'minute' || quota?.blockedBy === 'daily'
+              ? { quotaReason: quota.blockedBy, retryAfter: quota.retryAfter }
+              : undefined,
+          );
+        }
+        try {
+          const value = (await lifecycle.evaluate(String(browserFetch), {
+            origin,
+            path: url.pathname + url.search,
+            method: init?.method ?? 'GET',
+            body: typeof init?.body === 'string' ? init.body : null,
+          })) as { status?: unknown; text?: unknown; retryAfter?: string; reason?: string } | null;
+          if (
+            !value ||
+            typeof value.status !== 'number' ||
+            !Number.isInteger(value.status) ||
+            value.status < 200 ||
+            value.status > 599 ||
+            typeof value.text !== 'string' ||
+            value.reason
+          )
+            throw new Error('Invalid Safari response');
+          const headers = new Headers({ 'Content-Type': 'application/json' });
+          if (value.retryAfter) headers.set('Retry-After', value.retryAfter);
+          const result = new Response(value.status === 204 ? null : value.text, {
+            status: value.status,
+            headers,
+          });
+          report(
+            value.status === 200
+              ? 'safari-success'
+              : value.status === 403
+                ? 'safari-http-403'
+                : value.status === 429
+                  ? 'safari-http-429'
+                  : 'safari-http-other',
+          );
+          state = value.status === 200 ? 'ready' : 'failed';
+          if (value.status === 403 || value.status === 429) retryAt = Date.now() + 60000;
+          return result;
+        } catch (error) {
+          report('safari-fallback-error');
+          state = 'failed';
+          retryAt = Date.now() + 60000;
+          throw error;
+        }
       } finally {
         init?.signal?.removeEventListener('abort', abort);
-        await lifecycle.close();
+        try {
+          await lifecycle.close();
+        } finally {
+          if (state === 'preparing') state = previousState;
+        }
       }
     });
     tail = task.catch(() => undefined);
