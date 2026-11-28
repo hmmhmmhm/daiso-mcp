@@ -26,7 +26,31 @@ Safari PID가 기록과 달라졌고 요청 프로세스도 종료된 경우에�
 
 ## 전환과 복원
 
-검증한 코드를 runtime에 복사한 뒤 환경 파일의 전송 모드만 변경합니다. 토큰과 quota 파일은 보존합니다. 기존 OY LaunchAgent 정상 중지와 소유 Chrome 회수 확인 후 Safari 모드로 시작합니다. OY Chrome 숨김 도우미는 별도 중지해야 하며 Tunnel과 다른 서비스 중계는 유지합니다.
+OY runtime 경로를 저장소나 Dtryx runtime 이름으로 추정하지 않습니다. 먼저 현재 사용자 OY LaunchAgent plist의 `WorkingDirectory`를 읽고, 그 값과 `ProgramArguments`가 같은 runtime의 `scripts/relay/start.ts`를 가리키는지 확인합니다. 아래 preflight는 label, `ProgramArguments`, `WorkingDirectory`를 서로 대조합니다. 현재 운영 argv의 엄격한 허용 형식은 Node, `--max-old-space-size=256`, 절대 경로를 가진 `--env-file=...`, `--import tsx`, runtime 아래의 `scripts/relay/start.ts` 순서이며 `Program` override와 추가·순서 변경 인수는 거절합니다. 다른 OY argv 형식은 유효하다고 가정하지 않습니다. Node 실행 경로는 심볼릭 링크일 수 있어 실제 경로 해석이나 링크 거절을 하지 않습니다. 대상 `oliveyoung-safari.py`·`safari-lifecycle.ts`와 시작 스크립트는 no-follow 방식으로 열어 일반 파일인지 확인합니다. `plan`은 복사 전 경로·파일 안전성만 확인하고, `exact`은 복사 뒤 두 파일이 지정한 소스와 바이트 단위로 같은지 확인합니다. 출력은 고정 결과만 허용하며 plist 원문, 경로, 환경 변수 값은 출력하지 않습니다. 어느 단계든 거절하면 복사·재기동을 진행하지 않습니다.
+
+```sh
+OY_PLIST="$HOME/Library/LaunchAgents/page.aka.daiso-oliveyoung.plist"
+OY_SOURCE_ROOT="$PWD"
+OY_RUNTIME=$(/usr/libexec/PlistBuddy -c 'Print :WorkingDirectory' "$OY_PLIST" 2>/dev/null) || {
+  echo 'OY runtime preflight rejected'
+  exit 1
+}
+python3 scripts/relay/verify-oliveyoung-runtime.py plan \
+  "$OY_PLIST" "$OY_RUNTIME" "$OY_SOURCE_ROOT" || exit 1
+```
+
+이 검사는 디스크의 plist만 읽습니다. launchd가 이미 적재한 설정을 조회하거나 파일을 잠그지 않으므로, 실행 중인 배포와 동시에 사용하지 않습니다. plist, runtime 경로, checkout은 신뢰할 수 있는 안정된 경로여야 합니다. preflight와 교체 사이에 다른 배포나 plist 변경을 하지 않습니다. 파일의 device/inode/size가 유지돼도 동시 쓰기가 없었다는 증거는 아닙니다. 서비스 중지 뒤 혼자 변경을 수행하고 exact 검사를 재등록 직전에 다시 실행합니다.
+
+교체가 필요하면 먼저 OY 중계가 유휴 상태인지 확인하고 해당 LaunchAgent에 정상 종료를 요청합니다. 기존 프로세스가 끝나고 포트가 닫히기 전에는 파일을 바꾸지 않습니다. 두 기존 파일을 비공개 백업에 `scripts/relay/` 아래 동일한 상대 경로로 보관합니다. 첫 파일을 교체하기 직전에 `plan`을 다시 실행합니다. preflight에서 확인한 `$OY_RUNTIME/scripts/relay/`에 새 파일을 같은 파일시스템의 임시 파일로 준비하고 각 파일을 원자 교체합니다. 환경 파일, 인증 토큰, quota 원장과 상태 디렉터리는 복사·교체하지 않습니다. 두 파일 중 하나라도 교체가 실패하면 LaunchAgent를 계속 중지하고 두 원본을 모두 백업에서 원자 복원합니다. 복원된 쌍은 `exact`의 source root로 백업 root를 지정해 바이트 대조한 뒤에만 재등록합니다. 교체된 두 파일은 재등록 직전에 source root를 checkout으로 둔 다음 검사를 다시 통과해야 합니다.
+
+```sh
+python3 scripts/relay/verify-oliveyoung-runtime.py exact \
+  "$OY_PLIST" "$OY_RUNTIME" "$OY_SOURCE_ROOT" || exit 1
+```
+
+이어서 기존 OY LaunchAgent를 정상적으로 다시 등록하고 `ready`, `pages=0`, `recoveryRequired=false`, `retryAt=0`을 확인합니다. 실패하면 LaunchAgent를 다시 중지하고 보존한 두 파일만 원자 복원합니다. plist/runtime 연결이 모호하거나 파일 대조가 실패하면 다른 runtime으로 추정해 계속하지 않습니다. Preflight 성공은 검사 시점의 경로·파일 대응만 증명하며, 검사 직후 변경 경쟁이나 launchd에 이미 적재된 설정을 잠그거나 증명하지 않습니다. 이 상태 확인은 작동 준비를 확인할 뿐 실제 상품·재고 정상까지 증명하지 않습니다. 정상 기능 검증은 검사 절의 순차적인 실제 조회 절차로 별도 수행합니다.
+
+일반적인 설치 전환에서는 검증한 코드를 runtime에 반영한 뒤 환경 파일의 전송 모드를 바꿉니다. 토큰과 quota 파일은 보존합니다. 기존 OY LaunchAgent 정상 중지와 소유 Chrome 회수 확인 후 Safari 모드로 시작합니다. OY Chrome 숨김 도우미는 별도 중지해야 하며 Tunnel과 다른 서비스 중계는 유지합니다.
 
 실패 시 OY LaunchAgent를 중지하고 소유 Safari 창 회수와 세션 상태를 확인한 뒤 Safari 전송으로 복구합니다. 이 Mac에서는 Chrome 전송이나 숨김 도우미를 자동 복원하지 않습니다. 소유권이 불명확한 창을 개별 회수하지 않습니다. Safari 자체 장애라면 위 승인 범위에서 정상 종료·재시작 후 중계를 복구합니다. 실제 캐시 우회 상품·매장·재고·오특과 CLI/MCP 검증 전에는 운영 전환 완료로 기록하지 않습니다.
 
