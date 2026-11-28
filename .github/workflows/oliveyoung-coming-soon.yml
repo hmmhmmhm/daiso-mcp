@@ -54,13 +54,13 @@ jobs:
         if: steps.mode.outputs.mode == 'snapshot'
         run: npx tsx scripts/ops/oliveyoung-coming-soon.ts snapshot coming-soon.json
 
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: steps.mode.outputs.mode == 'snapshot'
         with:
           path: coming-soon.json
           key: oliveyoung-coming-soon-${{ steps.mode.outputs.tomorrow }}-${{ github.run_id }}
 
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         if: steps.mode.outputs.mode == 'compare'
         id: snapshot
         with:
