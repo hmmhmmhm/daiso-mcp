@@ -113,7 +113,9 @@ export async function checkDirectRoute(key: RouteKey, timeoutMs = 3000): Promise
         error instanceof DirectRouteError
           ? error.reason
           : error instanceof HttpError
-            ? 'http-error'
+            ? Number.isInteger(error.status) && error.status >= 100 && error.status <= 599
+              ? `http-${error.status}`
+              : 'http-error'
             : 'invalid-input',
     };
   }

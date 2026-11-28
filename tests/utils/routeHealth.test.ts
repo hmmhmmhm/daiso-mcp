@@ -308,6 +308,22 @@ describe('routing edge cases', () => {
     n.fetch.mockResolvedValue(new Response('', { status: 500 }));
     expect(await readRouteSnapshot(n.ns)).toEqual({ routes: {}, relays: {} });
   });
+  it('reads precise HTTP reasons and legacy generic HTTP errors', async () => {
+    const checkedAt = Date.now();
+    const n = namespace({
+      routes: {
+        'cu-stock': { key: 'cu-stock', direct: false, checkedAt, reason: 'http-403' },
+        'cu-prime': { key: 'cu-prime', direct: false, checkedAt, reason: 'http-error' },
+      },
+      relays: {},
+    });
+    expect(await readRouteSnapshot(n.ns)).toMatchObject({
+      routes: {
+        'cu-stock': { direct: false, reason: 'http-403' },
+        'cu-prime': { direct: false, reason: 'http-error' },
+      },
+    });
+  });
   it('rejects malformed entries while copying only safe metadata', async () => {
     const n = namespace();
     n.fetch.mockResolvedValue(

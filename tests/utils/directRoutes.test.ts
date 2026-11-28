@@ -262,7 +262,7 @@ it('absorbs cancellation cleanup failures and classifies invalid probe input', a
       },
     })),
   );
-  expect(await checkDirectRoute('cu-stock')).toMatchObject({ reason: 'http-error' });
+  expect(await checkDirectRoute('cu-stock')).toMatchObject({ reason: 'http-403' });
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => ({
@@ -279,6 +279,30 @@ it('absorbs cancellation cleanup failures and classifies invalid probe input', a
   );
   expect(await checkDirectRoute('cu-stock')).toMatchObject({ reason: 'invalid-response' });
 });
+
+it.each([403, 429, 503])(
+  'records only valid HTTP status in the route reason: %i',
+  async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status })));
+    expect(await checkDirectRoute('cu-stock')).toMatchObject({
+      key: 'cu-stock',
+      direct: false,
+      reason: `http-${status}`,
+    });
+  },
+);
+
+it.each([99, 600, 403.5, Number.NaN])(
+  'keeps invalid HTTP status out of the route reason: %s',
+  async (status) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status, body: null }));
+    expect(await checkDirectRoute('cu-stock')).toMatchObject({
+      key: 'cu-stock',
+      direct: false,
+      reason: 'http-error',
+    });
+  },
+);
 
 it('distinguishes its deadline from caller cancellation when fetch respects abort', async () => {
   vi.useFakeTimers();

@@ -170,6 +170,9 @@ describe('durable state edge cases', () => {
 it.each([
   'pinned-relay',
   'http-error',
+  'http-403',
+  'http-429',
+  'http-503',
   'network-error',
   'invalid-response',
   'response-too-large',
@@ -184,6 +187,24 @@ it.each([
       })
     ).status,
   ).toBe(204);
+});
+
+it('persists precise HTTP reason codes and legacy generic reasons', async () => {
+  const s = store();
+  const checkedAt = Date.now();
+  await s.call('/checks', {
+    checks: [
+      { key: 'cu-stock', direct: false, checkedAt, reason: 'http-403' },
+      { key: 'cu-prime', direct: false, checkedAt, reason: 'http-error' },
+    ],
+    relays: [],
+  });
+  expect(await (await s.call('/snapshot')).json()).toMatchObject({
+    routes: {
+      'cu-stock': { direct: false, reason: 'http-403' },
+      'cu-prime': { direct: false, reason: 'http-error' },
+    },
+  });
 });
 
 it('keeps cooldown when a newer probe arrives before a delayed actual failure', async () => {

@@ -43,6 +43,31 @@ describe('operational route health', () => {
     expect(mocks.read).toHaveBeenCalledWith(env.UPSTREAM_ROUTE_HEALTH);
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
+  it('authenticated GET returns the saved HTTP reason without refreshing probes', async () => {
+    mocks.read.mockResolvedValue({
+      routes: {
+        'cu-stock': {
+          key: 'cu-stock',
+          direct: false,
+          checkedAt: 100,
+          reason: 'http-403',
+        },
+      },
+      relays: {},
+    });
+    const result = await worker.request(
+      '/api/health/routes',
+      { headers: { 'x-health-check-key': 'secret' } },
+      env,
+    );
+    expect(result.status).toBe(200);
+    expect(await result.json()).toMatchObject({
+      success: true,
+      data: { routes: { 'cu-stock': { direct: false, reason: 'http-403' } } },
+    });
+    expect(mocks.read).toHaveBeenCalledWith(env.UPSTREAM_ROUTE_HEALTH);
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
   it('POST performs fixed checks and returns the resulting snapshot', async () => {
     const result = await worker.request(
       '/api/health/routes',
