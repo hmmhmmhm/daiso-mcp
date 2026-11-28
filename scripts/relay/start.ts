@@ -50,6 +50,7 @@ async function main() {
     const handler = observeRelay(
       createOliveyoungRelay(token, lifecycle.run, {
         takeQuota,
+        ...('assertReady' in lifecycle ? { assertReady: lifecycle.assertReady } : {}),
         status: () => ({ ...lifecycle.status(), logging: log.status() }),
         onEvent: log.append,
       }),

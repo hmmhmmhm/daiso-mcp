@@ -5,7 +5,7 @@ const exec = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', () => ({ execFile: exec }));
 import { createSafariLifecycle } from '../../scripts/relay/safari-lifecycle.js';
 import { createRelayWatchdog } from '../../scripts/relay/watchdog.js';
-let done: (error: Error | null, stdout: string) => void;
+let done: (error: Error | null, stdout: string, stderr?: string) => void;
 let child: EventEmitter & { stdin: PassThrough; kill: ReturnType<typeof vi.fn> };
 beforeEach(() => {
   exec.mockReset();
@@ -71,6 +71,32 @@ it('시작 전 요청을 거절한다', async () => {
   await expect(x.run('x', {})).rejects.toThrow('ready');
   await x.close();
 });
+it('동기 readiness guard가 idle, active, failed, ready, closed 상태를 구분한다', async () => {
+  const x = createSafariLifecycle('/state');
+  expect(() => x.assertReady()).toThrow('ready');
+
+  const start = x.start();
+  done(null, '{"ready":true}');
+  await start;
+  expect(() => x.assertReady()).not.toThrow();
+
+  const active = x.run('x', {});
+  expect(() => x.assertReady()).toThrow('active');
+  done(null, JSON.stringify({ status: 200, body: { status: 'SUCCESS', data: {} } }));
+  await active;
+
+  const failed = x.run('x', {});
+  done(new Error('helper failed'), '');
+  await expect(failed).rejects.toThrow('safari-helper');
+  expect(() => x.assertReady()).toThrow('ready');
+
+  const recovery = x.start();
+  done(null, '{"ready":true}');
+  await recovery;
+  expect(() => x.assertReady()).not.toThrow();
+  await x.close();
+  expect(() => x.assertReady()).toThrow('closed');
+});
 it('자식 오류 원문을 노출하지 않고 정상 정리 신호를 보낸다', async () => {
   const x = await ready();
   const call = x.run('x', {});
@@ -106,6 +132,136 @@ it('요청 중 helper 실패와 stdin 오류는 인증 정보를 감춘다', asy
   const a = x.run('x', {});
   child.stdin.emit('error', new Error('private'));
   await expect(a).rejects.toThrow('safari-helper');
+  await x.close();
+});
+
+it.each([
+  ['preflight', 'not-attempted'],
+  ['start', 'not-attempted'],
+  ['navigate', 'success'],
+  ['initial-evaluate', 'success'],
+  ['result-poll', 'success'],
+  ['stop', 'failed'],
+] as const)(
+  'helper의 검증된 단계/정리 enum만 고정 이벤트로 전달한다: %s',
+  async (stage, cleanup) => {
+    const onEvent = vi.fn();
+    const x = createSafariLifecycle('/state', onEvent);
+    const start = x.start();
+    done(null, '{"ready":true}');
+    await start;
+
+    const call = x.run('x', {});
+    const rejection = expect(call).rejects.toThrow('safari-helper');
+    done(
+      new Error('private detail URL cookie'),
+      '',
+      `Safari relay diagnostic stage=${stage} cleanup=${cleanup}\n`,
+    );
+    await rejection;
+    expect(onEvent.mock.calls).toEqual([[`safari-stage-${stage}`], [`safari-cleanup-${cleanup}`]]);
+    expect(JSON.stringify(onEvent.mock.calls)).not.toMatch(/private|URL|cookie/);
+    await x.close();
+  },
+);
+
+it('진단 callback 실패가 helper 오류와 failed 상태를 덮지 않는다', async () => {
+  const onEvent = vi.fn(() => {
+    throw new Error('private logger failure');
+  });
+  const x = createSafariLifecycle('/state', onEvent);
+  const start = x.start();
+  done(null, '{"ready":true}');
+  await start;
+
+  const call = x.run('x', {});
+  const rejection = expect(call).rejects.toThrow('safari-helper');
+  done(
+    new Error('private helper failure'),
+    '',
+    'Safari relay diagnostic stage=navigate cleanup=failed\n',
+  );
+  await rejection;
+  expect(x.status()).toMatchObject({ state: 'failed', recoveryRequired: true });
+  expect(onEvent).toHaveBeenCalledTimes(2);
+  await x.close();
+});
+
+it('비동기 진단 callback reject는 소비하고 helper 실패 상태를 유지한다', async () => {
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => unhandled.push(reason);
+  const onEvent = vi.fn(async () => {
+    throw new Error('private async logger failure');
+  });
+  const x = createSafariLifecycle('/state', onEvent);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const start = x.start();
+    done(null, '{"ready":true}');
+    await start;
+
+    const call = x.run('x', {});
+    const rejection = expect(call).rejects.toThrow('safari-helper');
+    done(
+      new Error('private helper failure'),
+      '',
+      'Safari relay diagnostic stage=navigate cleanup=failed\n',
+    );
+    await rejection;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(x.status()).toMatchObject({ state: 'failed', recoveryRequired: true });
+    expect(onEvent).toHaveBeenCalledTimes(2);
+    expect(unhandled).toEqual([]);
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+    await x.close();
+  }
+});
+
+it('진단을 추가해도 check 실패 후 기존 수동 재시도를 유지한다', async () => {
+  const onEvent = vi.fn();
+  const x = createSafariLifecycle('/state', onEvent);
+  const start = x.start();
+  const rejection = expect(start).rejects.toThrow('safari-helper');
+  done(
+    new Error('private readiness failure'),
+    '',
+    'Safari relay diagnostic stage=preflight cleanup=not-attempted\n',
+  );
+  await rejection;
+  expect(x.status().state).toBe('failed');
+  expect(onEvent.mock.calls).toEqual([
+    ['safari-stage-preflight'],
+    ['safari-cleanup-not-attempted'],
+  ]);
+
+  expect(exec).toHaveBeenCalledOnce();
+  const retry = x.start();
+  expect(exec).toHaveBeenCalledTimes(2);
+  done(null, '{"ready":true}');
+  await retry;
+  expect(x.status().state).toBe('ready');
+  expect(exec).toHaveBeenCalledTimes(2);
+  await x.close();
+});
+
+it.each([
+  'untrusted stderr with private detail',
+  `Safari relay diagnostic stage=navigate cleanup=failed${'x'.repeat(2048)}`,
+  'Safari relay diagnostic stage=invalid cleanup=failed',
+])('helper stderr가 enum/크기 계약을 어기면 원문을 기록하지 않는다', async (stderr) => {
+  const onEvent = vi.fn();
+  const x = createSafariLifecycle('/state', onEvent);
+  const start = x.start();
+  done(null, '{"ready":true}');
+  await start;
+
+  const call = x.run('x', {});
+  const rejection = expect(call).rejects.toThrow('safari-helper');
+  done(new Error('private original exception'), '', stderr);
+  await rejection;
+  expect(onEvent).not.toHaveBeenCalled();
   await x.close();
 });
 
